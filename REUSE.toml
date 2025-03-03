@@ -1,0 +1,13 @@
+# SPDX-FileCopyrightText: 2024 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: CC0-1.0    
+
+# See https://reuse.software/spec-3.2/#reusetoml for specification
+version = 1
+
+## Example:
+# [[annotations]]
+# path = [".github/workflows/*.yml"]
+# precedence = "aggregate"
+# SPDX-FileCopyrightText = "2022 Free Software Foundation Europe e.V. <https://fsfe.org>"
+# SPDX-License-Identifier = "CC0-1.0"
