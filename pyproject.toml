@@ -28,7 +28,6 @@ classifiers = [
     'Intended Audience :: Information Technology',
     'License :: OSI Approved :: Apache Software License',
     'Operating System :: OS Independent',
-    'Framework :: wurzel',
     'Topic :: Internet',
     'Topic :: Scientific/Engineering :: Information Analysis',
     'Topic :: Software Development :: Libraries :: Python Modules',
