@@ -12,6 +12,7 @@ build: install
 
 $(VENV)/touchfile: pyproject.toml $(UV)
 	$(UV) --no-progress pip install -r pyproject.toml --all-extras
+	$(UV) --no-progress pip install -r DIRECT_REQUIREMENTS.txt
 	@touch $(VENV)/touchfile
 $(PY):
 	python3.11 -m venv $(VENV)

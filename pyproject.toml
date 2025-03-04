@@ -64,7 +64,6 @@ lint = [
     "pylint-json2html==0.5.0"
 ]
 test = [
-    "de_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/de_core_news_sm-3.7.0/de_core_news_sm-3.7.0-py3-none-any.whl",
     "pytest==8.*",
     "pytest-asyncio==0.23.*",
     "pytest-cov==4.*",
@@ -91,7 +90,7 @@ python_version = "3.11"
 disable_error_code = ["import-untyped"]
 [tool.pylint.'MESSAGES CONTROL']
 max-line-length = 140
-max-positional-arguments = 7
+#max-positional-arguments = 7
 max-locals = 18
 max-returns = 10
 max-args = 10
