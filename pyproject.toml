@@ -73,7 +73,7 @@ test = [
     "pytest-xdist==3.*",
     "pytest-mock==3.*",
     "requests-mock==1.*",
-    "milvus==2.*", # used for miluvs mock
+    "milvus-lite==2.*", # used for miluvs mock
 ]
 
 
