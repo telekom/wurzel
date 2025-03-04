@@ -11,7 +11,6 @@ authors = [{name ="Thomas Weigel", email="thomas.weigel@telekom.de"},
 readme = "README.md"
 requires-python = ">= 3.10"
 dependencies= [
-    "de_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/de_core_news_sm-3.7.0/de_core_news_sm-3.7.0-py3-none-any.whl",
     "tqdm==4.66.5",
     "pandas==2.2.2",
     "numpy < 2.0.0",
