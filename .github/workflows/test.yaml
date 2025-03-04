@@ -1,0 +1,31 @@
+name: Run Tests with pytest
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv --no-progress pip install -r pyproject.toml --all-extras
+
+      - name: Run pytest
+        run: |
+          python3 -m pytest ./tests --cov-branch --cov-report term --cov-fail-under=80 --cov=wurzel/
