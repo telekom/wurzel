@@ -5,11 +5,36 @@
 name = "wurzel"
 dynamic = ["version"]
 description = ""
-authors = [{name ="Thomas Weigel", email="thomas.weigel@telekom.de"},
-            {name ="Paul Bauriegel", email="paul.bauriegel@telekom.de"},
-            {name ="Maximilian Erren", email="maximilian.erren@telekom.de"}]
+authors = [
+    {name ="Thomas Weigel", email="thomas.weigel@telekom.de"},
+    {name ="Paul Bauriegel", email="paul.bauriegel@telekom.de"},
+    {name ="Maximilian Erren", email="maximilian.erren@telekom.de"}
+]
 readme = "README.md"
 requires-python = ">= 3.10"
+
+license = {file = "LICENSES/Apache-2.0.txt"}
+classifiers = [
+    'Development Status :: 3 - Alpha',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3',
+    'Programming Language :: Python :: 3 :: Only',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Programming Language :: Python :: 3.13',
+    'Intended Audience :: Developers',
+    'Intended Audience :: Information Technology',
+    'License :: OSI Approved :: Apache Software License',
+    'Operating System :: OS Independent',
+    'Framework :: wurzel',
+    'Topic :: Internet',
+    'Topic :: Scientific/Engineering :: Information Analysis',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+    'Topic :: Software Development :: Pre-processors',
+    'Topic :: Software Development :: Version Control',
+]
 dependencies= [
     "tqdm==4.66.5",
     "pandas==2.2.2",
@@ -64,7 +89,14 @@ namespaces = false
 [tool.mypy]
 python_version = "3.11"
 disable_error_code = ["import-untyped"]
-
+[tool.pylint.'MESSAGES CONTROL']
+max-line-length = 140
+max-positional-arguments = 7
+max-locals = 18
+max-returns = 10
+max-args = 10
+min-public-methods = 0
+disable = "W1203, C0114"
 [tool.setuptools.dynamic]
 version = {file = "VERSION"}
 [project.scripts]
