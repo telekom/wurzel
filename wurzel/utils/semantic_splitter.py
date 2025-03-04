@@ -659,9 +659,8 @@ class SemanticSplitter:
         """Remove irrelevant nodes for LLMs from Mistletoe document"""
         if not hasattr(doc, "children"):
             return doc
-        else:
-            if doc.children is None:
-                return doc
+        if doc.children is None:
+            return doc
         cleaned_children = [
             self._remove_irrelevant_nodes(x)
             for x in doc.children
