@@ -1,4 +1,4 @@
-name: Publish Python distribution to PyPI and TestPyPI
+name: CI for Wurzel (Lint, Test & Release)
 
 on: push
 jobs:
