@@ -11,12 +11,11 @@ from prometheus_client import (
     Counter, Histogram,
     push_to_gateway)
 
-from wurzel.step_executor.base_executor import StepReport
-
 from .base_executor import (
     BaseStepExecutor,
     TypedStep,
-    PathToFolderWithBaseModels
+    PathToFolderWithBaseModels,
+    StepReport
 )
 from .settings import PrometheusSettings as Settings
 log = getLogger(__name__)

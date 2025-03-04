@@ -10,7 +10,7 @@ from pydantic import (
     BaseModel
 )
 
-from wurzel.step import TypedStep
+from wurzel.step.typed_step import TypedStep
 from wurzel.step.settings import StepSettings, SettingsBase
 #pylint: disable-next=invalid-name
 def WZ(typ: Type[TypedStep]):
