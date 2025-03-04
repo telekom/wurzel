@@ -20,9 +20,9 @@ $(UV): $(PY)
 install: $(VENV)/touchfile
 
 test: install
-	$(PY) -m pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov-fail-under=90  --cov=$(SRC_DIR)
+	$(UV) run pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov-fail-under=90  --cov=$(SRC_DIR)
 lint: install
-	$(PY) -m pylint $(SRC_DIR)
+	$(UV) run pylint $(SRC_DIR)
 
 clean: 
 	@rm -rf __pycache__ ${SRC_DIR}/*.egg-info **/__pycache__ .pytest_cache
