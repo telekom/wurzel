@@ -65,6 +65,7 @@ lint = [
     "pylint-json2html==0.5.0"
 ]
 test = [
+    "de_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/de_core_news_sm-3.7.0/de_core_news_sm-3.7.0-py3-none-any.whl",
     "pytest==8.*",
     "pytest-asyncio==0.23.*",
     "pytest-cov==4.*",
