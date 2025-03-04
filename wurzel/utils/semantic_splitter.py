@@ -94,7 +94,7 @@ def _get_heading_text(token: block_token.Heading):
     """Get heading text from Mistletoe heading block token"""
     if token.content:
         return token.content
-    elif "children" in vars(token) and len(token.children) > 0:
+    if "children" in vars(token) and len(token.children) > 0:
         return " ".join([c.content for c in token.children if hasattr(c, "content")])
     return ''
 
@@ -130,7 +130,9 @@ def _format_markdown_docs(
     ]
 
 
-class AICCMarkdownRenderer(markdown_renderer.MarkdownRenderer):
+class WurzelMarkdownRenderer(markdown_renderer.MarkdownRenderer):
+    """Fix For markdown_renderer.MarkdownRenderer"""
+    #pylint: disable=unused-argument, arguments-differ
     def render_table_cell(self, token: block_token.TableCell, max_line_length:int) -> str:
         return self.render_inner(token)
 
@@ -161,7 +163,7 @@ class SemanticSplitter:
 
     def _is_table(self,doc:DocumentNode)->bool:
         return doc["highest_level"] == LEVEL_MAPPING[block_token.Table]
-            
+
 
     def _is_within_targetlen_w_buffer(self, text: str) -> bool:
         length = _get_token_len(text)
@@ -174,7 +176,7 @@ class SemanticSplitter:
     def _render_doc(self, doc: MisDocument) -> str:
         """Render Mistletoe Markdown Document"""
         try:
-            with AICCMarkdownRenderer() as renderer:
+            with WurzelMarkdownRenderer() as renderer:
                 return renderer.render(doc)  # type: ignore[no-any-return]
         except Exception as e:
             raise MarkdownException(e) from e

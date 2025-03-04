@@ -12,8 +12,9 @@ from pydantic import (
 
 from wurzel.step import TypedStep
 from wurzel.step.settings import StepSettings, SettingsBase
-
+#pylint: disable-next=invalid-name
 def WZ(typ: Type[TypedStep]):
+    """Creates a Pipeline Element"""
     return TypedStep.__new__(typ)
 
 def create_model(fields: Union[list[Union[TypedStep, Type[TypedStep]]], TypedStep], allow_extra_fields = False) -> SettingsBase:
