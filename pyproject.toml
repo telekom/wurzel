@@ -90,7 +90,6 @@ python_version = "3.11"
 disable_error_code = ["import-untyped"]
 [tool.pylint.'MESSAGES CONTROL']
 max-line-length = 140
-#max-positional-arguments = 7
 max-locals = 18
 max-returns = 10
 max-args = 10

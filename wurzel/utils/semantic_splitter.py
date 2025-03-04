@@ -452,7 +452,7 @@ class SemanticSplitter:
         for chunk in chunks:
             assert self._is_within_targetlen_w_buffer(chunk) or self._is_short(chunk)
         return chunks
-
+    #pylint: disable-next=too-many-positional-arguments
     def _handle_parsing_of_children(
         self,
         doc: DocumentNode,
