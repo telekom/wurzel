@@ -36,4 +36,6 @@ reuse-lint:
 	uvx reuse lint
 
 install-for-tests:
-	uv --no-progress pip install -r pyproject.toml --all-extras
+	uv sync --all-extras --dev
+	uv pip install -r DIRECT_REQUIREMENTS.txt
+	
