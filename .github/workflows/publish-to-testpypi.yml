@@ -34,7 +34,7 @@ jobs:
       name: testpypi
       url: https://test.pypi.org/p/wurzel
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v3
 
       - name: Install the latest version of uv and set the python version
         uses: astral-sh/setup-uv@v5
