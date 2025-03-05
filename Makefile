@@ -34,3 +34,8 @@ documentation:
 
 reuse-lint:
 	uvx reuse lint
+
+install-for-tests:
+	uv sync --all-extras --dev
+	uv pip install -r DIRECT_REQUIREMENTS.txt
+	
