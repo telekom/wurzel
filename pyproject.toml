@@ -92,3 +92,7 @@ disable = "W1203, C0114"
 version = {file = "VERSION"}
 [project.scripts]
 wurzel = "wurzel.cli._main:main"
+
+[project.urls]
+"Release notes" = "https://github.com/telekom/wurzel/releases/"
+Source = "https://github.com/telekom/wurzel"
