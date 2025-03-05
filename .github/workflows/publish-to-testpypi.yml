@@ -1,9 +1,10 @@
 name: test.pypi.org Release
 on:
-  workflow_run:
-    workflows: ["test"]
-    types:
-      - completed
+  push:
+  # workflow_run:
+  #   workflows: ["test"]
+  #   types:
+  #     - completed
   # workflow_dispatch:
   #   inputs:
   #     verbose:
