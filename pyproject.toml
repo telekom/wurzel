@@ -11,7 +11,7 @@ authors = [
     {name ="Maximilian Erren", email="maximilian.erren@telekom.de"}
 ]
 readme = "README.md"
-requires-python = ">= 3.10"
+requires-python = ">= 3.11, < 3.13"
 
 license = {file = "LICENSES/Apache-2.0.txt"}
 classifiers = [
@@ -86,7 +86,7 @@ include = ["wurzel*"]
 namespaces = false
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.11 | 3.12"
 disable_error_code = ["import-untyped"]
 [tool.pylint.'MESSAGES CONTROL']
 max-line-length = 140
