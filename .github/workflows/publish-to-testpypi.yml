@@ -8,17 +8,17 @@ on:
      types:
        - completed
   workflow_dispatch:
-  #   inputs:
-  #     verbose:
-  #       description: 'Verbosity for pypi release'
-  #       required: true
-  #       type: boolean
-  #       default: false
-  #     dev_version:
-  #       description: '*.dev<XYZ> version number'
-  #       required: true
-  #       type: number
-  #       default: $(date +%s)
+     inputs:
+       verbose:
+         description: 'Verbosity for pypi release'
+         required: true
+         type: boolean
+         default: false
+       dev_version:
+         description: '*.dev<XYZ> version number'
+         required: true
+         type: number
+         default: $(date +%s)
 
 
 jobs:
