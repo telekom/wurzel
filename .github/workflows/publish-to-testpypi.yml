@@ -34,20 +34,19 @@ jobs:
       name: testpypi
       url: https://test.pypi.org/p/wurzel
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.RELEASE_GITHUB_TOKEN }}
+      - uses: actions/checkout@v4
 
-      - name: Python Semantic Release
-        id: release
-        uses: python-semantic-release/python-semantic-release@v9.21.0
+      - name: Install the latest version of uv and set the python version
+        uses: astral-sh/setup-uv@v5
         with:
-          github_token: ${{ secrets.RELEASE_GITHUB_TOKEN }}
-          changelog: "false"
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+          python-version: "3.11"
+      
+      - name: Build 📦
+        run: uv build
     
-      - name: Publish test package distributions to PyPI
+      - name: Publish test 📦 to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         if: steps.release.outputs.released == 'true'
         with:
