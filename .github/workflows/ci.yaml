@@ -51,5 +51,5 @@ jobs:
           uv sync --all-extras --dev
           uv pip install -r DIRECT_REQUIREMENTS.txt
       - name: Run lint
-        run: uv run pylint wurzel/
+        run: uv run pylint .
   
