@@ -1,21 +1,21 @@
 name: test.pypi.org Release
 on:
-  #workflow_run:
-  #  workflows: ["test"]
-  #  types:
-  #    - completed
-  workflow_dispatch:
-    inputs:
-      verbose:
-        description: 'Verbosity for pypi release'
-        required: true
-        type: boolean
-        default: false
-      dev_version:
-        description: '*.dev<XYZ> version number'
-        required: true
-        type: number
-        default: $(date +%s)
+  workflow_run:
+    workflows: ["test"]
+    types:
+      - completed
+  # workflow_dispatch:
+  #   inputs:
+  #     verbose:
+  #       description: 'Verbosity for pypi release'
+  #       required: true
+  #       type: boolean
+  #       default: false
+  #     dev_version:
+  #       description: '*.dev<XYZ> version number'
+  #       required: true
+  #       type: number
+  #       default: $(date +%s)
 
 
 jobs:
@@ -38,7 +38,7 @@ jobs:
 
       - name: Python Semantic Release
         id: release
-        uses: python-semantic-release/python-semantic-release@v8.0.4
+        uses: python-semantic-release/python-semantic-release@v9.21.0
         with:
           github_token: ${{ secrets.RELEASE_GITHUB_TOKEN }}
           changelog: "false"
