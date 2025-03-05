@@ -25,4 +25,4 @@ jobs:
 
       - name: Run pylint
         run: |
-          pylint **/*.py
+          pylint wurzel/
