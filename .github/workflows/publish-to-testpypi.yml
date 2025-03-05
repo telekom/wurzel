@@ -28,13 +28,14 @@ jobs:
     runs-on: ubuntu-latest
     concurrency: release
     permissions:
+      contents: read # https://github.com/orgs/community/discussions/57621
       id-token: write  # IMPORTANT: mandatory for trusted publishing
 
     environment:
       name: testpypi
       url: https://test.pypi.org/p/wurzel
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install the latest version of uv and set the python version
         uses: astral-sh/setup-uv@v5
