@@ -34,6 +34,5 @@ documentation:
 reuse-lint:
 	uvx reuse lint
 
-install-for-test:
-	pip install uv
+install-for-tests:
     uv --no-progress pip install -r pyproject.toml --all-extras

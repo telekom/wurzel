@@ -5,22 +5,25 @@ on:
     branches: [main]
   pull_request:
 
+env:
+  UV_SYSTEM_PYTHON: 1
+
 jobs:
   lint:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v4
+      - name: Install the latest version of uv and set the python version
+        uses: astral-sh/setup-uv@v5
         with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
           python-version: "3.10"
-          cache: "pip"
 
       - name: Install dependencies
-        run: |
-          make install-for-test
+        run: make install-for-tests
 
       - name: Run pylint
         run: |

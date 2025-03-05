@@ -1,5 +1,8 @@
 name: Run Tests with pytest
 
+env:
+  UV_SYSTEM_PYTHON: 1
+
 on:
   push:
     branches: [main]
@@ -15,18 +18,17 @@ jobs:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Setup Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - name: Install the latest version of uv and set the python version
+        uses: astral-sh/setup-uv@v5
         with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
           python-version: ${{ matrix.python-version }}
-          cache: "pip"
-
+      
       - name: Install dependencies
-        run: |
-          make install-for-test
+        run: make install-for-tests
 
-      - name: Run pytest
-        run: |
-          python3 -m pytest ./tests --cov-branch --cov-report term --cov-fail-under=80 --cov=wurzel/
+      - name: Test with python ${{ matrix.python-version }}
+        run: uv run --frozen pytest ./tests --cov-branch --cov-report term --cov-fail-under=80 --cov=wurzel/
