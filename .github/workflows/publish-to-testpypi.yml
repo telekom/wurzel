@@ -1,3 +1,4 @@
+name: test.pypi.org Release
 on:
   workflow_dispatch:
     inputs:
