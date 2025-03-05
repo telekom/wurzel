@@ -21,7 +21,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: make install-for-tests
+        run: make install
 
       - name: Run pylint
         run: |
