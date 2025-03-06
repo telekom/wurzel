@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: CC0-1.0
 [project]
 name = "wurzel"
-dynamic = ["version"]
+version = "0.0.1.dev0"
 description = ""
 authors = [
     {name ="Thomas Weigel", email="thomas.weigel@telekom.de"},
@@ -96,3 +96,16 @@ wurzel = "wurzel.cli._main:main"
 [project.urls]
 "Release notes" = "https://github.com/telekom/wurzel/releases/"
 Source = "https://github.com/telekom/wurzel"
+
+[tool.semantic_release]
+branch = "main"
+version_toml = ["pyproject.toml:project.version"]
+build_command = "uv build"
+tag_format = "{version}"
+
+[tool.semantic_release.commit_parser_options]
+major_types = ["breaking"]
+minor_types = ["feat"]
+patch_types = ["fix", "perf"]
+allowed_tags = ["feat", "fix", "perf", "build", "chore", "ci", "docs", "style", "refactor", "test"]
+default_bump_level = 0
