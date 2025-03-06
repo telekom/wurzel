@@ -52,7 +52,7 @@ jobs:
         with:
           github_token: ${{ secrets.RELEASE_GITHUB_TOKEN }}
           changelog: false
-          build_metadata: ${{ github.ref_name | replace('/', '') }}.${{ github.run_id }}
+          build_metadata: ${{ github.run_id }}.dev
           prerelease: true
 
     

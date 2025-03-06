@@ -115,6 +115,6 @@ match = "(main)"
 prerelease = false
 
 [tool.semantic_release.branches."dev"]
-match = "(feature/*)"
+match = "(feature//*)"
 prerelease = true
 prerelease_token = "dev"
