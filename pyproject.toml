@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: CC0-1.0
 [project]
 name = "wurzel"
-version = "0.0.1.dev0"
+version = "0.0.0"
 description = ""
 authors = [
     {name ="Thomas Weigel", email="thomas.weigel@telekom.de"},
@@ -98,7 +98,7 @@ wurzel = "wurzel.cli._main:main"
 Source = "https://github.com/telekom/wurzel"
 
 [tool.semantic_release]
-branch = "main"
+branch = "feature/pypi-release"
 version_toml = ["pyproject.toml:project.version"]
 build_command = "uv build"
 tag_format = "{version}"
@@ -109,3 +109,12 @@ minor_types = ["feat"]
 patch_types = ["fix", "perf"]
 allowed_tags = ["feat", "fix", "perf", "build", "chore", "ci", "docs", "style", "refactor", "test"]
 default_bump_level = 0
+
+[tool.semantic_release.branches.main]
+match = "(main)"
+prerelease = false
+
+[tool.semantic_release.branches.pre_release]
+match = "(feature/*)"
+prerelease = true
+prerelease_token = "dev"
