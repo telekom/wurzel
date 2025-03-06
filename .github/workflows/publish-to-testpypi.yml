@@ -4,10 +4,10 @@
 name: test.pypi.org Release
 on:
   workflow_run:
-     workflows: ["test"]
+     workflows: ["Test"]
      types:
        - completed
-  workflow_dispatch:
+  #workflow_dispatch:
   #    inputs:
   #      verbose:
   #        description: 'Verbosity for pypi release'
