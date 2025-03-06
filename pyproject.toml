@@ -100,7 +100,7 @@ Source = "https://github.com/telekom/wurzel"
 [tool.semantic_release]
 branch = "feature/pypi-release"
 version_toml = ["pyproject.toml:project.version"]
-build_command = "uv build"
+build_command = "python -m uv build"
 tag_format = "{version}"
 
 [tool.semantic_release.commit_parser_options]
