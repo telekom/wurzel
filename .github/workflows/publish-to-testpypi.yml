@@ -29,9 +29,8 @@ jobs:
     name: TestPyPI Release
     runs-on: ubuntu-latest
     concurrency: release
-    permissions:
-      contents: read # https://github.com/orgs/community/discussions/57621
-      id-token: write  # IMPORTANT: mandatory for trusted publishing
+    permissions: write-all
+
 
     environment:
       name: testpypi
