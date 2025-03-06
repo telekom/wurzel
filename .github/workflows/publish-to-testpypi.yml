@@ -53,7 +53,7 @@ jobs:
           changelog: false
           git_committer_name: "github-actions"
           git_committer_email: "actions@users.noreply.github.com"
-          build_metadata: ${{ github.run_id }}.dev
+          build_metadata: ${{ github.run_id }}dev
           prerelease: true
 
     
