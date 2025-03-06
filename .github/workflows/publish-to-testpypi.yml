@@ -4,8 +4,6 @@
 name: test.pypi.org Release
 on:
   push:
-    branches: [main]
-  pull_request:
 
   # workflow_run:
   #    workflows: ["test"]
