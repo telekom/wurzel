@@ -38,6 +38,9 @@ jobs:
       url: https://test.pypi.org/p/wurzel
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.RELEASE_GITHUB_TOKEN }}
 
       - name: Install the latest version of uv and set the python version
         uses: astral-sh/setup-uv@v5
