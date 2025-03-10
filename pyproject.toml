@@ -28,7 +28,7 @@ dependencies= [
     "spacy==3.7.5",
     "tiktoken==0.7.0",
     "joblib>=1.4.0"
-    # 
+    #
 ]
 
 [project.optional-dependencies]
@@ -38,7 +38,8 @@ milvus = [
 ]
 lint = [
     "pylint==3.3.4",
-    "pylint-json2html==0.5.0"
+    "pylint-json2html==0.5.0",
+    "pre-commit==4.1.*",
 ]
 test = [
     "pytest==8.*",

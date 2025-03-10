@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2024 Deutsche Telekom AG
 #
-# SPDX-License-Identifier: CC0-1.0   
+# SPDX-License-Identifier: CC0-1.0
 .PHONY: install test clean
 SRC_DIR = ./wurzel
 TEST_DIR= ./tests
@@ -18,13 +18,14 @@ $(PY):
 $(UV): $(PY)
 	$(VENV)/bin/pip install uv
 install: $(VENV)/touchfile
+	$(VENV)/bin/pre-commit install -f --hook-type pre-commit
 
 test: install
 	$(PY) -m pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov-fail-under=90  --cov=$(SRC_DIR)
 lint: install
 	$(PY) -m pylint $(SRC_DIR)
 
-clean: 
+clean:
 	@rm -rf __pycache__ ${SRC_DIR}/*.egg-info **/__pycache__ .pytest_cache
 	@rm -rf .coverage reports dist
 
