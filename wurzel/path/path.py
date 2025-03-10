@@ -17,13 +17,13 @@ B = TypeVar('B',
             patyp.DataFrame, list[pydantic.BaseModel],
             list[patyp.DataFrame], list[None])
 class PathToFolderWithBaseModels(type(Path()), Generic[B]): #type: ignore[misc]
-    """Used to Store both path information 
+    """Used to Store both path information
     as well as pydantic.BaseModel info.
-    
+
     Inherits from Pathlib.Path:
     - Supports all path operations like / etc.
-    
-    
+
+
     #### Example:
     ```python
         class Person(pydantic.BaseModel):
@@ -61,7 +61,7 @@ class PathToFolderWithBaseModels(type(Path()), Generic[B]): #type: ignore[misc]
     @classmethod
     def model_type(cls) -> Type[B]:
         """_summary_
-        
+
         Raises:
             RuntimeError: if type can't be found
         Returns:

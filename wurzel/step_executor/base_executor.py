@@ -88,12 +88,12 @@ def step_env_encapsulation(step_cls: Type[TypedStep]):
 
 class BaseStepExecutor():
     """Execution Environment for Typed KP Steps
-    
+
     An Executer takes care of loading & storing data from `PathToBaseModel`.
     The Executor makes use of strong & enforced types in combination with the
     KP step itself.
 
-    The Executor is responsible for running single KP Steps. However in the 
+    The Executor is responsible for running single KP Steps. However in the
     future this might get extendend.
 
 
@@ -104,9 +104,9 @@ class BaseStepExecutor():
     with BaseStepExecutor() as exc:
         exc(MyStep, [], Path("output"))
         # exc(...) == exc.execute_step(...)
-    ``` 
-    
-    
+    ```
+
+
     """
     __dont_encapsulate: bool
     @classmethod
@@ -258,7 +258,7 @@ class BaseStepExecutor():
             step_cls (Type[TypedStep]): class to execute
             inputs (Optional[set[PathToFolderWithBaseModels]]): Either objects or a folder path
             output_dir (Optional[PathToFolderWithBaseModels]): If folder is supllied, save to folder
-        
+
         Returns:
             list[tuple[Any, StepReport]]: Result of step and repots in list
         """

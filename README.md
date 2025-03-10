@@ -46,7 +46,7 @@ wurzel inspect wurzel.steps.manual_markdown.ManualMarkdownStep
 ### Building your one step
 #### Building a new WurzelTip(new data source)
 A WurzelStep requires Settings[Optional] InputDatacontract[Optional], OutoutDataContract[Mandatory]. Datasources do not have a prerequisite Step, thus the InputDatacontract is *None*.
-We are using MarkdownDataContract as the first common contract in document retrieval. Of cause you may define your own. 
+We are using MarkdownDataContract as the first common contract in document retrieval. Of cause you may define your own.
 
 ```python
 class MySettings(Settings):
@@ -76,7 +76,7 @@ class MyEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract], D
         """ Executes the embedding step by processing input markdown files, generating embeddings,
         and saving them to a CSV file.
         """
-        ### your code here 
+        ### your code here
         return df
 ```
 The *run* function may be executed multiple times. Each time per previous Step. So if you want to do some preparation only once, like creating tables/collection or connections we recommend to do so in the *__init__*
@@ -106,8 +106,8 @@ def pipeline() -> TypedStep:
     md = WZ(ManualMarkdownStep)
     embed = WZ(EmbeddingStep)
     db = WZ(QdrantConnectorStep)
-    
-    md >> embed >> db 
+
+    md >> embed >> db
     return db
 
 ```
@@ -127,7 +127,7 @@ Wurzel is a collaborative project aiming to combine the best ideas in the field 
 
 ### Milvus Mock
 
-Milvus provides Milvus lite or Milvus standalone for docker. Unfortunately both does not work in the ci runners. 
+Milvus provides Milvus lite or Milvus standalone for docker. Unfortunately both does not work in the ci runners.
 We decided to skip all Milvus related tests in the pipeline but takeing care of them local and ensure that they can interact with Milvus by running a standalone version of it local.
 
 ### qdrant mock
@@ -142,6 +142,6 @@ By participating in this project, you agree to abide by its [Code of Conduct](./
 
 ## Licensing
 
-This project follows the [REUSE standard for software licensing](https://reuse.software/).    
-Each file contains copyright and license information, and license texts can be found in the [./LICENSES](./LICENSES) folder. For more information visit https://reuse.software/.    
-You can find a guide for developers at https://telekom.github.io/reuse-template/.   
+This project follows the [REUSE standard for software licensing](https://reuse.software/).
+Each file contains copyright and license information, and license texts can be found in the [./LICENSES](./LICENSES) folder. For more information visit https://reuse.software/.
+You can find a guide for developers at https://telekom.github.io/reuse-template/.

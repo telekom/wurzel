@@ -15,7 +15,7 @@ class MyToBeTestedStep(TypedStep[NoSettings, None, MyModel]):
     def finalize(self) -> None:
         raise NiecheException()
 def test_finalize_called(tmp_path):
-    
+
     with BaseStepExecutor() as ex:
         with pytest.raises(Exception) as e:
             r = ex(MyToBeTestedStep, None, tmp_path)

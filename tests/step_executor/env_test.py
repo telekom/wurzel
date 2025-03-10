@@ -22,7 +22,7 @@ class MyResult(PydanticModel):
 class MyStep(TypedStep[MySettings, None, MyResult]):
     def run(self, inpt: None) -> MyResult:
         return MyResult(data=self.settings.model_dump())
-    
+
 @pytest.mark.parametrize("base_env", [
     MySettings(a=1,b="b", c=[1,2], d=None),
     MySettings(a=1,b="b", c=[], d=None),

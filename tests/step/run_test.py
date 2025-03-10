@@ -25,7 +25,7 @@ def test_run_ok(tmp_path):
     pytest.param([],id="EmptyList"),
     pytest.param(None,id="None"),
     pytest.param(B(b=-1),id="WrongType"),
-    
+
 ])
 def test_run_wrong_return(tmp_path, return_value):
     class MyStep(TypedStep[NoSettings, A, A]):

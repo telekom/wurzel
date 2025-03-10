@@ -161,7 +161,7 @@ class SemanticSplitter:
 
     def _is_table(self,doc:DocumentNode)->bool:
         return doc["highest_level"] == LEVEL_MAPPING[block_token.Table]
-            
+
 
     def _is_within_targetlen_w_buffer(self, text: str) -> bool:
         length = _get_token_len(text)

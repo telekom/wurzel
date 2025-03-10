@@ -7,7 +7,7 @@ import pytest
 from wurzel.step.settings import StepSettings
 from wurzel.step import TypedStep
 from wurzel.datacontract import (
-    PanderaDataFrameModel, 
+    PanderaDataFrameModel,
     PydanticModel
     )
 from typing import Any, Type
@@ -79,12 +79,12 @@ def test_generate():
     class Step2(TypedStep[None, MyCSV, SuccessModel]):
         def run(self, inpt: MyCSV) -> SuccessModel:
             return SuccessModel()
-    
-    
+
+
     a = Step0()
     b = Step1()
     c = Step2()
-    a >> b >> c 
+    a >> b >> c
     steps = [a,b,c]
     res = DvcAdapter.generate_dict(c,"/")
     assert res != {}

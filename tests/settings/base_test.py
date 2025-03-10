@@ -175,7 +175,7 @@ from pydantic_core import Url as pyd_c_Url
 
 def url_param(scheme: Union[Literal["http"], Literal["https"]] ,host: str,port: int,path:str) -> pytest.param:
     tpl = (scheme,host,port,path)
-    return pytest.param(*tpl, id=f"{scheme}://{host}:{port}/{path}") 
+    return pytest.param(*tpl, id=f"{scheme}://{host}:{port}/{path}")
 
 @pytest.mark.parametrize("url_class", [pyd_c_Url, str])
 @pytest.mark.parametrize("scheme,host,port,path", [

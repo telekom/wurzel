@@ -15,7 +15,7 @@ class TestableXXStep(TypedStep[NoSettings, None, list[MarkdownDataContract]]):
         return []
 
 def test_setting_of_history(tmp_path):
-    with BaseStepExecutor() as ex:            
+    with BaseStepExecutor() as ex:
         assert step_history.get() is None, "Before should be None"
         ex(TestableXXStep, set(), tmp_path/"Hey")
         assert step_history.get() is None, "Cleanup after"
