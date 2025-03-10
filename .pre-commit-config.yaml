@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: CC0-1.0
+
 fail_fast: false
 
 repos:
@@ -5,6 +9,12 @@ repos:
     rev: v0.23
     hooks:
       - id: validate-pyproject
+
+
+  - repo: https://github.com/fsfe/reuse-tool
+    rev: v5.0.2
+    hooks:
+      - id: reuse
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v2.3.0
