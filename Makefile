@@ -22,7 +22,7 @@ install: $(VENV)/touchfile
 
 test: install
 	$(UV) run pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov-fail-under=90  --cov=$(SRC_DIR)
-lint: install
+lint: install reuse-lint
 	$(UV) run pylint $(SRC_DIR)
 
 clean: 
@@ -33,7 +33,7 @@ documentation:
 	sphinx-apidoc  -o ./docs . -f && cd docs && make html && cd .. && firefox ./docs/build/html/index.html
 
 reuse-lint:
-	uvx reuse lint
+	$(UV) run  reuse lint
 
 install-for-tests:
 	uv sync --all-extras --dev

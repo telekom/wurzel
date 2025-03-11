@@ -44,7 +44,6 @@ dependencies= [
     "spacy==3.7.5",
     "tiktoken==0.7.0",
     "joblib>=1.4.0"
-    # 
 ]
 
 [project.optional-dependencies]
@@ -54,7 +53,8 @@ milvus = [
 ]
 lint = [
     "pylint==3.3.4",
-    "pylint-json2html==0.5.0"
+    "pylint-json2html==0.5.0",
+    "reuse==5.0.2",
 ]
 test = [
     "pytest==8.*",
@@ -70,6 +70,7 @@ test = [
 
 
 dev = ["wurzel[lint,test,qdrant,milvus]"]
+
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
@@ -107,7 +108,7 @@ tag_format = "{version}"
 major_types = ["breaking"]
 minor_types = ["feat"]
 patch_types = ["fix", "perf"]
-allowed_tags = ["feat", "fix", "perf", "build", "chore", "ci", "docs", "style", "refactor", "test"]
+allowed_tags = ["feat", "fix", "perf", "build", "chore", "ci", "docs", "style", "refactor", "ref", "test"]
 default_bump_level = 0
 
 [tool.semantic_release.branches.main]
