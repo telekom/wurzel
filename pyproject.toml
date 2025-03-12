@@ -99,7 +99,6 @@ wurzel = "wurzel.cli._main:main"
 Source = "https://github.com/telekom/wurzel"
 
 [tool.semantic_release]
-branch = "feature/pypi-release"
 version_toml = ["pyproject.toml:project.version"]
 build_command = "python -m pip install build; python -m build"
 tag_format = "{version}"
@@ -115,7 +114,7 @@ default_bump_level = 0
 match = "(main)"
 prerelease = false
 
-[tool.semantic_release.branches."dev"]
-match = "(feature//*)"
+[tool.semantic_release.branches.dev]
+match = "^(feature|feat|fix|perf)/.+"
 prerelease = true
 prerelease_token = "dev"
