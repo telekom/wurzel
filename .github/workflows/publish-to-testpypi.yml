@@ -3,7 +3,14 @@
 # SPDX-License-Identifier: Apache-2.0
 name: test.pypi.org Release
 on:
-  pull_request:
+  push:
+    branches:
+      - feature/**
+      - ci/**
+      - feat/**
+      - fix/**
+      - perf/**
+
 
   #    inputs:
   #      verbose:
