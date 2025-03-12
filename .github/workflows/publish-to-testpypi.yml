@@ -4,11 +4,7 @@
 name: test.pypi.org Release
 on:
   pull_request:
-    branches:
-      - 'feature/*'
-      - 'feat/*'
-      - 'fix/*'
-      - 'perf/*'
+
   #    inputs:
   #      verbose:
   #        description: 'Verbosity for pypi release'
