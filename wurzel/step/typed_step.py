@@ -39,12 +39,12 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     # Description:
     A (Knowledge / Wurzel) pipeline consists of many steps chained together.
     First data is gathered, then (>>) transformed etc.
-    
+
     Each step (TypedStep) is defined by a triplet of Optional[Settings], Optional[input_d_type], output_d_type.
     Only if the output of a given step is compatible with the next, chaining is allowed.
     ## Settings
     The first part of the triplet. Is either None or a Subtype of wurzel.Settings (internally StepSettings).
-    These settings are a special form of pydantic settings meaning they will try to load 
+    These settings are a special form of pydantic settings meaning they will try to load
     their values from the environment with the prefix `UPPERCASE_STEP_NAME`.
     For more information take a look at wurzel.step.settings
     ## Contract / Input-Output Classes
@@ -56,7 +56,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     ### Input
     If the Input of a step is set to be None the step is a leaf and will always run.
     The `inputs` arg in the run method of the step can be ignored.
-    ### Ouput 
+    ### Ouput
     The Step output can't be None.
     ### Input
     ## Example:
@@ -74,7 +74,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         key: str = "Value"
     class MyTable(PanderaDataFrameModel):
         col1: Series[int]
-    
+
     # Step definition
     class MyStep(TypedStep[NoSettings, None, list[MyData]]):
         def run(self, inpt: None) -> list[MyData]:
@@ -157,7 +157,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     @classmethod #pylint: disable-next=unused-private-member # used in __new__
     def __static_type_check_run(cls):
         """Confirms the type annotations of child classes run method.
-        Currently allows missing type annotations with a warning 
+        Currently allows missing type annotations with a warning
         """
         # Since type annotation of class does not want list container
         # but run adds it, we add it manually
@@ -211,7 +211,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
             raise ContractFailedException("Could not get annotations from run") from k
     def finalize(self) -> None:
         """Called after execution in Executor finished
-        
+
         Can be used for cleanup etc.
 
         One Example would be the retirement of collections in a db step.
@@ -276,6 +276,6 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         """abstract function which is called with the parsed data in the shape of INCONTRACT.
         It's implementation should return the OUTCONTRACT
         ### It will be called mutliple times.
-        
+
         """
         raise NotImplementedError()

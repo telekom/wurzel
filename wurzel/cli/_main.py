@@ -54,8 +54,8 @@ def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path:
     """Converts a cli-str to a TypedStep
 
     Args:
-        _ctx (typer.Context): 
-        _param (typer.CallbackParam): 
+        _ctx (typer.Context):
+        _param (typer.CallbackParam):
         path (str): user-typed string
 
     Raises:

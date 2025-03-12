@@ -98,6 +98,6 @@ class EmbeddingMultiVectorStep(EmbeddingStep,
         return {"text": doc.md,
                 "vectors":vectors,
                 "url":doc.url,
-                "keywords": context, 
+                "keywords": context,
                 "splits":[split.md for split in splitted_md_rows]
         }

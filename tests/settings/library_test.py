@@ -49,4 +49,4 @@ def test_no_override_of_root(env):
     class A(SettingsBase):
         UVICORN: CSettings = CSettings()
     a = A()
-    assert a.UVICORN.WORKERS == 1 
+    assert a.UVICORN.WORKERS == 1

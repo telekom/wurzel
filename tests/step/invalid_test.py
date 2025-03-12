@@ -32,7 +32,7 @@ def test_pydantic_invalid_return(result,base, tmp_path):
     pytest.param({"i":"a"}, dict[str, str], id="wrong_dict"),
     pytest.param(["i","a"], list[str], id="wrong_list_types"),
     pytest.param("str", str, id="string")
-    
+
 ])
 @pytest.mark.parametrize("base", [
     MyModel,

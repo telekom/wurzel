@@ -142,7 +142,7 @@ class StepSettings(SettingsLeaf):
         SSL_CA_FILE: str = Field("./kafka_ca.pem", description="Path to ca file")
         TOPIC: str = "cc_mm_coupon_meta_bot"
         CONSUMER_TIMEOUT: int = Field(5*1000, description="timeout for kafka consumer in ms")
-    ``` 
+    ```
     """
 #pylint: disable-next=invalid-name
 NoSettings: TypeAlias = None

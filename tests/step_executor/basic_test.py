@@ -82,7 +82,7 @@ def test_2_to_2_to_1(tmp_path):
     # A  > B  \
     #          > C
     # A2 > B  /
-    
+
     out_as = [
         tmp_path / "out_a1",
         tmp_path / "out_a2"
@@ -98,12 +98,12 @@ def test_2_to_2_to_1(tmp_path):
         c = ex.execute_step(TestCStep, (out_b1,), final)
     assert len(c) == 2
     assert len(list(final.glob("*"))) == 2
-    
+
     assert list(out_as[0].glob("*"))[0].name == "TestA.json"
     assert list(out_as[1].glob("*"))[0].name == "TestA2.json"
     for p in out_b1.glob("*"):
         assert p.name in ["TestA-TestB.json", "TestA2-TestB.json"]
-    
+
     for p in final.glob("*"):
         assert p.name in ["TestA-TestB-TestC.json", "TestA2-TestB-TestC.json"]
 
@@ -111,7 +111,7 @@ def test_2_to_1_to_1(tmp_path):
     # A   \
     #      > B  > C
     # A2  /
-    
+
     out_as = [
         tmp_path / "out_a1",
         tmp_path / "out_a2"

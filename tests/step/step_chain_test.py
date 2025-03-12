@@ -36,5 +36,3 @@ def test_invalid_chain(chain):
         assert "Cannot chain" in str(err)
         return
     pytest.fail("chaining did not result in TypeError")
-
-        

@@ -25,7 +25,7 @@ class StepB(TypedStep[MySettingsB, PydanticModel, PydanticModel]):
         return PydanticModel()
 class StepC(TypedStep[MySettingsC, PydanticModel, PydanticModel]):
     def run(self, inpt: PydanticModel) -> PydanticModel:
-        return PydanticModel() 
+        return PydanticModel()
 
 @pytest.fixture()
 def dummy_with_env_prep(env) -> tuple[Callable[[], TypedStep], list[TypedStep]]:
