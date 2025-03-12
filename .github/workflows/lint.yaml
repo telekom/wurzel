@@ -26,5 +26,3 @@ jobs:
       - name: Run pylint
         run: |
           pylint wurzel/
-
-
