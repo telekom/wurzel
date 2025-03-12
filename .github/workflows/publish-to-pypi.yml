@@ -4,11 +4,6 @@
 
 name: pypi.org Release
 on:
-  workflow_run:
-    branches: [main]
-    workflows: ["test"]
-    types:
-      - completed
   workflow_dispatch:
 
 jobs:
