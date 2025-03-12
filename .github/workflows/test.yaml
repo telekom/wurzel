@@ -25,7 +25,8 @@ jobs:
           python-version: ${{ matrix.python-version }}
       
       - name: Install dependencies
-        run: UV=`which uv` &&  PIP=`which pip` && make install
+        run: UV=$(which uv) PIP=$(which pip) make install
+
 
       - name: Test with python ${{ matrix.python-version }}
         run: uv run --frozen pytest ./tests --cov-branch --cov-report term --cov-fail-under=80 --cov=wurzel/
