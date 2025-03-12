@@ -114,7 +114,7 @@ default_bump_level = 0
 match = "(main)"
 prerelease = false
 
-[tool.semantic_release.branches.dev]
-match = "^(feature|feat|fix|perf|ci)/.+"
-prerelease = true
+#[tool.semantic_release.branches.dev]
+#match = "^(feature|feat|fix|perf|ci)/.+"
+#prerelease = true
 #prerelease_token = "dev" set in ci
