@@ -35,7 +35,4 @@ documentation:
 reuse-lint:
 	$(UV) run  reuse lint
 
-install-for-tests:
-	uv sync --all-extras --dev
-	uv pip install -r DIRECT_REQUIREMENTS.txt
 	
