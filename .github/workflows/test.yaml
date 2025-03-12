@@ -25,7 +25,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
       
       - name: Install dependencies
-        run: UV=$(which uv) PIP=$(which pip) make install
+        run: |
+          uv lock
+          UV=$(which uv) PIP=$(which pip) make install
 
 
       - name: Test with python ${{ matrix.python-version }}
