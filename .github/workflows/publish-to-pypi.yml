@@ -24,8 +24,7 @@ jobs:
     environment:
       name: PyPi
       url: https://pypi.org/p/wurzel
-      
-    if: ${{github.event.workflow_run.conclusion == 'success'}}
+
     steps:
       - uses: actions/checkout@v4
         with:
