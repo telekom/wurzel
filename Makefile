@@ -5,7 +5,7 @@
 SRC_DIR = ./wurzel
 TEST_DIR= ./tests
 VENV = .venv
-UV=$(VENV)/bin/uv
+UV=?$(VENV)/bin/uv
 PY=$(VENV)/bin/python
 build: install
 	$(PY) -m build .
