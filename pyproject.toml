@@ -28,28 +28,28 @@ classifiers = [
     'Topic :: Software Development :: Version Control',
 ]
 dependencies= [
-    "tqdm==4.66.5",
-    "pandas==2.2.2",
-    "numpy < 2.0.0",
-    "dvc==3.53.1",
-    "Markdown==3.6",
-    "pydantic-settings==2.5.2",
+    "tqdm==4.67.1",
+    "pandas==2.2.3",
+    "numpy < 3.0.0",
+    "dvc==3.59.1",
+    "Markdown==3.7",
+    "pydantic-settings==2.8.1",
     "pydantic>=2.6.4, == 2.*",
     "asgi-correlation-id>=4.3.1, == 4.*",
     "langchain-core>=0.2.0",
     "prometheus-client==0.21.1",
     "mistletoe==1.4.0",
-    "pandera==0.20.3",
-    "mdformat==0.7.17",
-    "spacy==3.7.5",
-    "tiktoken==0.7.0",
+    "pandera==0.23.1",
+    "mdformat==0.7.22",
+    "spacy==3.8.4",
+    "tiktoken==0.9.0",
     "joblib>=1.4.0"
 ]
 
 [project.optional-dependencies]
-qdrant = ["qdrant-client==1.10.1"]
+qdrant = ["qdrant-client==1.13.3"]
 milvus = [
-    "pymilvus==2.4.4",
+    "pymilvus==2.5.5",
 ]
 lint = [
     "pylint==3.3.4",
@@ -59,8 +59,8 @@ lint = [
 ]
 test = [
     "pytest==8.*",
-    "pytest-asyncio==0.23.*",
-    "pytest-cov==4.*",
+    "pytest-asyncio==0.25.*",
+    "pytest-cov==6.*",
     "pytest-html==4.*",
     "pytest_env==1.*",
     "pytest-xdist==3.*",
