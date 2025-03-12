@@ -56,6 +56,7 @@ Wurzel uses [semantic-release](https://semantic-release.gitbook.io/semantic-rele
 
 The [`pyproject.toml`](./pyproject.toml) file specifies the allowed commit types under `[tool.semantic_release.commit_parser_options]`.
 
+
 ```toml
 major_types = ["breaking"]
 minor_types = ["feat"]

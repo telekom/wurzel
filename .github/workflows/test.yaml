@@ -32,3 +32,4 @@ jobs:
 
       - name: Test with python ${{ matrix.python-version }}
         run: uv run --frozen pytest ./tests --cov-branch --cov-report term --cov-fail-under=80 --cov=wurzel/
+

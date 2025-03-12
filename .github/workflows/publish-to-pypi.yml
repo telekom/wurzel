@@ -45,7 +45,6 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         if: steps.release.outputs.released == 'true'
         with:
-          repository-url: https://pypi.org/legacy/
           verbose: true
 
       - name: Publish | Upload to GitHub Release Assets
@@ -55,4 +54,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ steps.release.outputs.tag }}
 
-    
+

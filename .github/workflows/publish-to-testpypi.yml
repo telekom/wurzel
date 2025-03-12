@@ -26,9 +26,11 @@ jobs:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
 
+
       - name: Setup | Force release branch to be at workflow sha
         run: |
           git reset --hard ${{ github.sha }}
+
 
       - name: Python Semantic Release
         id: release
@@ -39,6 +41,7 @@ jobs:
           git_committer_name: "github-actions"
           git_committer_email: "actions@users.noreply.github.com"
           prerelease: true
+
 
 
       - name: Publish test 📦 to PyPI
@@ -54,3 +57,4 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           tag: ${{ steps.release.outputs.tag }}
+

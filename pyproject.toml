@@ -56,8 +56,6 @@ lint = [
     "pylint-json2html==0.5.0",
     "pre-commit==4.1.*",
     "reuse==5.0.2",
-    "pre-commit==4.1.*",
-    "reuse==5.0.2",
 ]
 test = [
     "pytest==8.*",
