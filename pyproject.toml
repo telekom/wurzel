@@ -44,7 +44,6 @@ dependencies= [
     "spacy==3.7.5",
     "tiktoken==0.7.0",
     "joblib>=1.4.0"
-    #
 ]
 
 [project.optional-dependencies]
@@ -58,6 +57,7 @@ lint = [
     "pre-commit==4.1.*",
     "reuse==5.0.2",
     "pre-commit==4.1.*",
+    "reuse==5.0.2",
 ]
 test = [
     "pytest==8.*",
