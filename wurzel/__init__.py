@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Type, TypeAlias
 from .step.settings import (
     StepSettings as Settings,
     NoSettings

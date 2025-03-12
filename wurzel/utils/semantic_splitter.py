@@ -94,7 +94,7 @@ def _get_heading_text(token: block_token.Heading):
     """Get heading text from Mistletoe heading block token"""
     if token.content:
         return token.content
-    elif "children" in vars(token) and len(token.children) > 0:
+    if "children" in vars(token) and len(token.children) > 0:
         return " ".join([c.content for c in token.children if hasattr(c, "content")])
     return ''
 
@@ -130,7 +130,9 @@ def _format_markdown_docs(
     ]
 
 
-class AICCMarkdownRenderer(markdown_renderer.MarkdownRenderer):
+class WurzelMarkdownRenderer(markdown_renderer.MarkdownRenderer):
+    """Fix For markdown_renderer.MarkdownRenderer"""
+    #pylint: disable=unused-argument, arguments-differ
     def render_table_cell(self, token: block_token.TableCell, max_line_length:int) -> str:
         return self.render_inner(token)
 
@@ -174,7 +176,7 @@ class SemanticSplitter:
     def _render_doc(self, doc: MisDocument) -> str:
         """Render Mistletoe Markdown Document"""
         try:
-            with AICCMarkdownRenderer() as renderer:
+            with WurzelMarkdownRenderer() as renderer:
                 return renderer.render(doc)  # type: ignore[no-any-return]
         except Exception as e:
             raise MarkdownException(e) from e
@@ -450,7 +452,7 @@ class SemanticSplitter:
         for chunk in chunks:
             assert self._is_within_targetlen_w_buffer(chunk) or self._is_short(chunk)
         return chunks
-
+    #pylint: disable-next=too-many-positional-arguments
     def _handle_parsing_of_children(
         self,
         doc: DocumentNode,
@@ -657,9 +659,8 @@ class SemanticSplitter:
         """Remove irrelevant nodes for LLMs from Mistletoe document"""
         if not hasattr(doc, "children"):
             return doc
-        else:
-            if doc.children is None:
-                return doc
+        if doc.children is None:
+            return doc
         cleaned_children = [
             self._remove_irrelevant_nodes(x)
             for x in doc.children

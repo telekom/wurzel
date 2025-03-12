@@ -18,7 +18,8 @@ SPDX-License-Identifier = "CC0-1.0"
 path = [
     ".github/workflows/*.yaml",
     "VERSION",
-    ".vscode/settings.json"
+    ".vscode/settings.json",
+    "DIRECT_REQUIREMENTS.txt"
     ]
 precedence = "override"
 SPDX-FileCopyrightText = "NONE"

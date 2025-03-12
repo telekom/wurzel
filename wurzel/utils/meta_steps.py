@@ -7,7 +7,7 @@ import importlib
 import pkgutil
 
 from typing import TypeVar, Type
-from wurzel import TypedStep
+from wurzel.step.typed_step import TypedStep
 T = TypeVar("T", bound=object)
 
 def find_sub_classes(parent: T, package: str=__package__) -> dict[str, T]:

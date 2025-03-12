@@ -3,15 +3,31 @@
 # SPDX-License-Identifier: CC0-1.0
 [project]
 name = "wurzel"
-dynamic = ["version"]
+version = "0.1.0-dev.2"
 description = ""
-authors = [{name ="Thomas Weigel", email="thomas.weigel@telekom.de"},
-            {name ="Paul Bauriegel", email="paul.bauriegel@telekom.de"},
-            {name ="Maximilian Erren", email="maximilian.erren@telekom.de"}]
+authors = [
+    {name ="Thomas Weigel", email="thomas.weigel@telekom.de"},
+    {name ="Paul Bauriegel", email="paul.bauriegel@telekom.de"},
+    {name ="Maximilian Erren", email="maximilian.erren@telekom.de"}
+]
 readme = "README.md"
-requires-python = ">= 3.10"
+requires-python = ">= 3.11, < 3.13"
+
+license = {file = "LICENSES/Apache-2.0.txt"}
+classifiers = [
+    'Programming Language :: Python :: 3.11',
+    'Programming Language :: Python :: 3.12',
+    'Intended Audience :: Developers',
+    'Intended Audience :: Information Technology',
+    'License :: OSI Approved :: Apache Software License',
+    'Operating System :: OS Independent',
+    'Topic :: Internet',
+    'Topic :: Scientific/Engineering :: Information Analysis',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+    'Topic :: Software Development :: Pre-processors',
+    'Topic :: Software Development :: Version Control',
+]
 dependencies= [
-    "de_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/de_core_news_sm-3.7.0/de_core_news_sm-3.7.0-py3-none-any.whl",
     "tqdm==4.66.5",
     "pandas==2.2.2",
     "numpy < 2.0.0",
@@ -28,7 +44,6 @@ dependencies= [
     "spacy==3.7.5",
     "tiktoken==0.7.0",
     "joblib>=1.4.0"
-    #
 ]
 
 [project.optional-dependencies]
@@ -40,6 +55,7 @@ lint = [
     "pylint==3.3.4",
     "pylint-json2html==0.5.0",
     "pre-commit==4.1.*",
+    "reuse==5.0.2",
 ]
 test = [
     "pytest==8.*",
@@ -50,11 +66,12 @@ test = [
     "pytest-xdist==3.*",
     "pytest-mock==3.*",
     "requests-mock==1.*",
-    "milvus==2.*", # used for miluvs mock
+    "milvus-lite==2.*", # used for miluvs mock
 ]
 
 
 dev = ["wurzel[lint,test,qdrant,milvus]"]
+
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
@@ -64,10 +81,41 @@ include = ["wurzel*"]
 namespaces = false
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.11 | 3.12"
 disable_error_code = ["import-untyped"]
-
+[tool.pylint.'MESSAGES CONTROL']
+max-line-length = 140
+max-locals = 18
+max-returns = 10
+max-args = 10
+min-public-methods = 0
+disable = "W1203, C0114"
 [tool.setuptools.dynamic]
 version = {file = "VERSION"}
 [project.scripts]
 wurzel = "wurzel.cli._main:main"
+
+[project.urls]
+"Release notes" = "https://github.com/telekom/wurzel/releases/"
+Source = "https://github.com/telekom/wurzel"
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+build_command = "python -m pip install build; python -m build"
+tag_format = "{version}"
+
+[tool.semantic_release.commit_parser_options]
+major_types = ["breaking"]
+minor_types = ["feat"]
+patch_types = ["fix", "perf"]
+allowed_tags = ["feat", "fix", "perf", "build", "chore", "ci", "docs", "style", "refactor", "ref", "test"]
+default_bump_level = 0
+
+[tool.semantic_release.branches.main]
+match = "(main)"
+prerelease = false
+
+[tool.semantic_release.branches.dev]
+match = "^(feature|feat|fix|perf|ci)/.+"
+prerelease = true
+prerelease_token = "dev"

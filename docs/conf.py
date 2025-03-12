@@ -10,8 +10,8 @@
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = 'wurzel'
-copyright = '2024, AICC-DEVELOP'
-author = 'AICC-DEVELOP'
+copyright = '2024 Deutsche Telekom AG'
+author = 'Deutsche Telekom AG'
 release = '0.0.1'
 
 # -- General configuration ---------------------------------------------------
