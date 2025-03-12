@@ -21,7 +21,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: UV=`which uv` && make install
+        run: UV=`which uv` &&  PIP=`which pip` && make install
 
       - name: Run pylint
         run: |

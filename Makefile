@@ -5,8 +5,9 @@
 SRC_DIR = ./wurzel
 TEST_DIR= ./tests
 VENV = .venv
-UV=?$(VENV)/bin/uv
+UV?=$(VENV)/bin/uv
 PY=$(VENV)/bin/python
+PIP?=$(VENV)/bin/pip
 build: install
 	$(PY) -m build .
 
@@ -17,7 +18,7 @@ $(VENV)/touchfile: pyproject.toml $(UV)
 $(PY):
 	python3.11 -m venv $(VENV)
 $(UV): $(PY)
-	$(VENV)/bin/pip install uv
+	$(PIP) install uv
 install: $(VENV)/touchfile
 
 test: install
