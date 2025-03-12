@@ -10,6 +10,10 @@ on:
       - feat/**
       - fix/**
       - perf/**
+  workflow_run:
+    workflows: ["test"]
+    types:
+      - completed
 
 
 jobs:
@@ -42,7 +46,7 @@ jobs:
           git_committer_name: "github-actions"
           git_committer_email: "actions@users.noreply.github.com"
           prerelease: true 
-          build_metadata: dev${{ github.run_id }}   
+          build_metadata: ${{ github.run_id }}   
 
     
       - name: Publish test 📦 to PyPI
