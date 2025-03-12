@@ -9,7 +9,6 @@ import json
 from pydantic_core import PydanticUndefined
 from wurzel import TypedStep, Settings
 from wurzel.utils import WZ
-
 def main(step: Type[TypedStep], gen_env = False):
     """Execute"""
     ins = WZ(step)

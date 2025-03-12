@@ -2,30 +2,27 @@ name: Lint Python Code
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - main
+
 
 jobs:
   lint:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
+      - name: Install the latest version of uv and set the python version
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: '3.x'
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+          python-version: "3.11"
 
       - name: Install dependencies
-        run: |
-          pip install uv
-          uv --no-progress pip install -r pyproject.toml --all-extras
+        run: UV=$(which uv) PIP=$(which pip) make install
 
       - name: Run pylint
         run: |
-          pylint **/*.py
+          pylint wurzel/

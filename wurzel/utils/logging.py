@@ -86,8 +86,8 @@ class JsonFormatter(logging.Formatter):
         super().__init__(None, datefmt, defaults=defaults)
         self.indent = indent
         self.reduced_levels = [logging.getLevelNamesMapping().get(level) for level in reduced or []]
-    def format(self, record: logging.LogRecord) -> str:
-        super().format(record)
+
+    def _get_output_dict(self, record: logging.LogRecord) -> dict[str, Any]:
         data = {k: v for k, v in record.__dict__.items() if k not in self.key_blacklist and v is not None}
         logger_name = f"{data.pop('module')}.{data.pop('name')}"
         func_name = data.pop('funcName')
@@ -116,6 +116,11 @@ class JsonFormatter(logging.Formatter):
             del output['thread']
         if not output['extra']:
             del output['extra']
+        return output
+
+    def format(self, record: logging.LogRecord) -> str:
+        super().format(record)
+        output = self._get_output_dict(record)
         return json.dumps(output, default=repr, indent=self.indent)
 
 
