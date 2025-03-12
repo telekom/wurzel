@@ -20,7 +20,9 @@ jobs:
   test-release:
     name: TestPyPI Release
     runs-on: ubuntu-latest
-    concurrency: release
+    concurrency:
+      group: ${{ github.workflow }}-release-${{ github.ref_name }}
+      cancel-in-progress: false
     permissions: write-all
 
 
