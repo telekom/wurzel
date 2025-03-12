@@ -4,7 +4,7 @@ SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
 SPDX-License-Identifier: Apache-2.0
 -->
 # wurzel
-<img src=https://github.com/telekom/wurzel/blob/feature/pypi-release/docs/icon.png width=20% align=right>
+<img src=https://raw.githubusercontent.com/telekom/wurzel/feature/pypi-release/docs/icon.png width=20% align=right>
 
 wurzel is the german word for [root](https://en.wikipedia.org/wiki/Root). So with this framework we provide a combination of the best out of the whole domain of retrieval and beyond.
 
