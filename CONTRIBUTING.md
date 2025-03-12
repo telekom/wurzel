@@ -54,7 +54,7 @@ Other prefixes like `docs:`, `chore:`, and `refactor:` help structure the commit
 
 Wurzel uses [semantic-release](https://semantic-release.gitbook.io/semantic-release/) to automate versioning and package publishing. To ensure your commits trigger the correct version updates, follow these guidelines:
 
-The [`pyproject.toml`](./pyproject.toml) file specifies the allowed commit types under `[tool.semantic_release.commit_parser_options]`. 
+The [`pyproject.toml`](./pyproject.toml) file specifies the allowed commit types under `[tool.semantic_release.commit_parser_options]`.
 
 ```toml
 major_types = ["breaking"]
@@ -69,4 +69,3 @@ Any commit with one of these prefixes will trigger a version bump upon merging t
 Ensure your commit messages follow the format `type: description`.
 
 Thank you for contributing to Wurzel!
-

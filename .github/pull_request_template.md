@@ -16,5 +16,3 @@ SPDX-License-Identifier: Apache-2.0
 
 <!--
 Thank you for your contribution! Your efforts help improve the project and are greatly appreciated.-->
-
-

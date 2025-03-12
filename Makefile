@@ -36,5 +36,3 @@ documentation:
 
 reuse-lint:
 	$(UV) run  reuse lint
-
-	

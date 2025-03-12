@@ -28,7 +28,7 @@ def milvus_lite(tmp_path: Path, env):
 #     milvus_mock.set_base_dir(MILV_OUT_DIR)
 #     milvus_mock.start()
 #     milvus_mock.wait_started()
-#     yield 
+#     yield
 #     milvus_mock.stop()
 #     shutil.rmtree(f"./reports/logs/{test_name}", ignore_errors=True)
 #     shutil.copytree(MILV_OUT_DIR / "logs", f"./reports/logs/{test_name}")
