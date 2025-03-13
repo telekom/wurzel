@@ -76,4 +76,4 @@ def test_dummy_with_env_execute(dummy_with_env_prep, tmp_path):
     dummy_file.write_bytes(b"{}")
     with BaseStepExecutor() as exc:
         for step in used_steps:
-            exc(step.__class__, set([dummy_file]), dummy_file_out)
+            exc(step.__class__, {dummy_file}, dummy_file_out)

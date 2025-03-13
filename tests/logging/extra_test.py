@@ -45,5 +45,5 @@ def test_make_dict_serializable(in_data, expected):
     res = _make_dict_serializable(in_data)
     if expected is not None:
         if isinstance(in_data, Iterable):
-            return all([d in res for d in expected])
+            return all(d in res for d in expected)
         assert expected == res

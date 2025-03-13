@@ -25,7 +25,7 @@ def find_sub_classes(parent: T, package: str = __package__) -> dict[str, T]:
         )
 
     result = {}
-    visited = set([f"{__package__}.main", f"{__package__}.utils"])
+    visited = set([f"{__package__}.main", f"{__package__}.utils"])  # noqa: C405
     module_iterator = pkgutil.iter_modules(importlib.import_module(package).__path__)
     for _, module_name, is_package in module_iterator:
         full_module_name = f"{package}.{module_name}"
