@@ -5,7 +5,16 @@
 from . import semantic_splitter
 from .meta_settings import WZ, create_model
 from .meta_steps import find_typed_steps_in_package
-__all__=["semantic_splitter", "WZ", "create_model", "try_get_length", "find_typed_steps_in_package"]
+
+__all__ = [
+    "semantic_splitter",
+    "WZ",
+    "create_model",
+    "try_get_length",
+    "find_typed_steps_in_package",
+]
+
+
 def try_get_length(x) -> int:
     """Tries to get length, return 1 if fails
 
@@ -17,6 +26,6 @@ def try_get_length(x) -> int:
     """
     try:
         return len(x)
-    #pylint: disable=bare-except
+    # pylint: disable=bare-except
     except:
         return 1

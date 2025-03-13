@@ -4,22 +4,15 @@
 
 import inspect
 from typing import TypeAlias
-from typing import ( Any,Union,get_origin)
+from typing import Any, Union, get_origin
 
 import json
-from pydantic import (
-    model_validator,
-    create_model
-)
-from pydantic_core import (
-    PydanticUndefined,
-    ValidationError,
-    InitErrorDetails
-)
+from pydantic import model_validator, create_model
+from pydantic_core import PydanticUndefined, ValidationError, InitErrorDetails
 from pydantic_settings import (
     SettingsConfigDict,
     BaseSettings as _PydanticBaseSettings,
-    PydanticBaseSettingsSource
+    PydanticBaseSettingsSource,
 )
 
 
@@ -40,28 +33,33 @@ class SettingsBase(_PydanticBaseSettings):
             DB: _DBSettings
     ```
     """
+
     # Dev Note: to support n layer nesting SettingsBase
     #           needs to support the with_prefix method
     # pydantic-internal
     model_config = SettingsConfigDict(
-        env_nested_delimiter='__',
-        extra='forbid',
+        env_nested_delimiter="__",
+        extra="forbid",
         case_sensitive=True,
         frozen=False,
-        revalidate_instances='always')
+        revalidate_instances="always",
+    )
+
     @classmethod
-    #pylint: disable-next=too-many-positional-arguments
-    def settings_customise_sources(cls,
+    # pylint: disable-next=too-many-positional-arguments
+    def settings_customise_sources(
+        cls,
         settings_cls: type[_PydanticBaseSettings],
         init_settings: PydanticBaseSettingsSource,
         env_settings: PydanticBaseSettingsSource,
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
-        ) -> tuple[PydanticBaseSettingsSource, ...]:
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
         return init_settings, env_settings
-    @model_validator(mode='before')
+
+    @model_validator(mode="before")
     @classmethod
-    def before(cls, data: Any): # pylint: disable=too-many-branches
+    def before(cls, data: Any):  # pylint: disable=too-many-branches
         """Before Validator, handles updating"""
         if isinstance(data, str):
             data = json.loads(data)
@@ -70,14 +68,20 @@ class SettingsBase(_PydanticBaseSettings):
                 if key in data:
                     if get_origin(field.annotation) == dict:
                         continue
-                    if isinstance(data[key], str) and inspect.isclass(field.annotation) and\
-                        issubclass(field.annotation, SettingsBase):
+                    if (
+                        isinstance(data[key], str)
+                        and inspect.isclass(field.annotation)
+                        and issubclass(field.annotation, SettingsBase)
+                    ):
                         data[key] = json.loads(data[key])
-                     # if annotation is optional and not a SettingsBase
-                    elif hasattr(field.annotation,"__origin__") and \
-                          field.annotation.__origin__ == Union and data[key] and \
-                            inspect.isclass(field.annotation.__args__[0])\
-                            and not issubclass(field.annotation.__args__[0],SettingsBase):
+                    # if annotation is optional and not a SettingsBase
+                    elif (
+                        hasattr(field.annotation, "__origin__")
+                        and field.annotation.__origin__ == Union
+                        and data[key]
+                        and inspect.isclass(field.annotation.__args__[0])
+                        and not issubclass(field.annotation.__args__[0], SettingsBase)
+                    ):
                         data[key] = field.annotation.__args__[0](data[key])
                         continue
                     continue
@@ -89,11 +93,15 @@ class SettingsBase(_PydanticBaseSettings):
                         except ValidationError as verr:
                             raise ValidationError.from_exception_data(
                                 verr.title,
-                                [InitErrorDetails(
-                                    type=err['type'],
-                                    loc=(key, *err['loc']),
-                                    input=err['input'],
-                                    ctx={'error': err}) for err in verr.errors()],
+                                [
+                                    InitErrorDetails(
+                                        type=err["type"],
+                                        loc=(key, *err["loc"]),
+                                        input=err["input"],
+                                        ctx={"error": err},
+                                    )
+                                    for err in verr.errors()
+                                ],
                             )
                     elif issubclass(field.annotation, SettingsLeaf):
                         data[key] = field.annotation()
@@ -101,21 +109,26 @@ class SettingsBase(_PydanticBaseSettings):
                     data[key] = field.default
                 elif field.default_factory is not None:
                     data[key] = field.default_factory()
-                elif hasattr(cls,key):
+                elif hasattr(cls, key):
                     data[key] = getattr(cls, key)
         return data
+
+
 class SettingsLeaf(SettingsBase):
     """Base Class for all Setting which are not the main Setting.
     This class is mainly used to fix pydantic_settings incorrect loading of env vars.
     It might be made obsolete by future pydantic_settings releases
     https://github.com/pydantic/pydantic-settings/pull/261
     """
+
     @classmethod
-    def with_prefix(cls, prefix: str) -> 'SettingsLeaf':
+    def with_prefix(cls, prefix: str) -> "SettingsLeaf":
         """Returns a new class with env_prefix set"""
-        cpy = create_model(prefix+"."+cls.__class__.__name__, __base__=cls)
-        cpy.model_config['env_prefix'] = prefix
+        cpy = create_model(prefix + "." + cls.__class__.__name__, __base__=cls)
+        cpy.model_config["env_prefix"] = prefix
         return cpy
+
+
 class StepSettings(SettingsLeaf):
     """Settings for Typed Steps
     In general if a class var is called `YOUR_AD_COULD_BE_HERE` the framework will try to load,
@@ -144,6 +157,8 @@ class StepSettings(SettingsLeaf):
         CONSUMER_TIMEOUT: int = Field(5*1000, description="timeout for kafka consumer in ms")
     ```
     """
-#pylint: disable-next=invalid-name
+
+
+# pylint: disable-next=invalid-name
 NoSettings: TypeAlias = None
-__all__=['StepSettings']
+__all__ = ["StepSettings"]

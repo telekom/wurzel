@@ -4,4 +4,4 @@
 
 from .path import PathToFolderWithBaseModels
 
-__all__=["PathToFolderWithBaseModels"]
+__all__ = ["PathToFolderWithBaseModels"]

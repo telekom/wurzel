@@ -4,4 +4,10 @@
 
 from .datacontract import PanderaDataFrameModel, PydanticModel, DataModel
 from .common import MarkdownDataContract
-__all__=["PanderaDataFrameModel", "PydanticModel", "MarkdownDataContract", "DataModel"]
+
+__all__ = [
+    "PanderaDataFrameModel",
+    "PydanticModel",
+    "MarkdownDataContract",
+    "DataModel",
+]

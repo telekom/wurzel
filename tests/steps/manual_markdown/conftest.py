@@ -4,6 +4,7 @@
 
 import pytest
 
+
 @pytest.fixture(scope="function", autouse=True)
 def mm_env(env):
     env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", "/")

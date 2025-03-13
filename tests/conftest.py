@@ -10,6 +10,8 @@ from pydantic import BaseModel
 from logging import getLogger
 
 log = getLogger(__name__)
+
+
 class SetEnv:
     def __init__(self):
         self.envars = set()
@@ -32,10 +34,12 @@ class SetEnv:
     def update(self, dic: dict):
         for k, v in dic.items():
             self.set(k, v)
+
     def set_from_settings(self, s: BaseModel):
         dump = s.model_dump(mode="json")
-        for k,v in dump.items():
+        for k, v in dump.items():
             self.set(k, v)
+
 
 @pytest.fixture
 def env():
@@ -52,7 +56,7 @@ def milvus(env: SetEnv):
 
 
 @pytest.fixture(scope="function")
-def input_output_folder(tmp_path:Path)-> Tuple[Path,Path]:
+def input_output_folder(tmp_path: Path) -> Tuple[Path, Path]:
     input_path = tmp_path / "input"
     output_path = tmp_path / "output"
     input_path.mkdir()
@@ -64,15 +68,14 @@ def input_output_folder(tmp_path:Path)-> Tuple[Path,Path]:
 def html2md_bin():
     def _get_fallback():
         import platform
-        default_path = {
-            'x86_64': "./html2md",
-            'arm64': "./html2md_arm"
-        }
+
+        default_path = {"x86_64": "./html2md", "arm64": "./html2md_arm"}
         fallback = default_path.get(platform.uname().machine, None)
         if fallback is None:
             log.error(f"Could not create path to binary from {platform.uname()}")
             pytest.fail("No binary path as fallback")
         return fallback
+
     path = os.getenv("HTML2MD_BINARY_PATH", None)
     if path is None:
         log.warning("HTML2MD_BINARY_PATH not set, trying to coerce default")
@@ -81,21 +84,31 @@ def html2md_bin():
     os.environ["HTML2MD_BINARY_PATH"] = path
     yield Path(path)
 
+
 def pytest_addoption(parser):
     parser.addoption(
-        "--repeatability", action="store_true", default=False, help="run repetition tests"
+        "--repeatability",
+        action="store_true",
+        default=False,
+        help="run repetition tests",
     )
 
 
 def pytest_collection_modifyitems(config, items):
     do_rep_tests = config.getoption("--repeatability")
-    #Explicitly run test if only one is selected :)
+    # Explicitly run test if only one is selected :)
     if len(items) == 1:
         return
     for item in items:
-        has_repeatability_marker = pytest.mark.repeatability_test.mark in [i for i in item.own_markers]
+        has_repeatability_marker = pytest.mark.repeatability_test.mark in [
+            i for i in item.own_markers
+        ]
         if do_rep_tests and not has_repeatability_marker:
-            item.add_marker(pytest.mark.skip(reason="need --repeatability option to run"))
+            item.add_marker(
+                pytest.mark.skip(reason="need --repeatability option to run")
+            )
             continue
         if not do_rep_tests and has_repeatability_marker:
-            item.add_marker(pytest.mark.skip(reason="only running --repeatability tests"))
+            item.add_marker(
+                pytest.mark.skip(reason="only running --repeatability tests")
+            )

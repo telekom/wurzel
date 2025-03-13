@@ -4,20 +4,20 @@
 
 import sys
 import os
-from typing import (
-    Optional,
-    Mapping,
-    List,
-    Any
-)
+from typing import Optional, Mapping, List, Any
 import logging
 import logging.config
 import json
 from asgi_correlation_id import correlation_id
+
 log = logging.getLogger(__name__)
-#pylint: disable-next=too-many-positional-arguments
-def warnings_to_logger(message: str, category: str, filename: str, lineno: str, file=None, line=None):
-    #pylint: disable=unused-argument
+
+
+# pylint: disable-next=too-many-positional-arguments
+def warnings_to_logger(
+    message: str, category: str, filename: str, lineno: str, file=None, line=None
+):
+    # pylint: disable=unused-argument
     """replaces warnings.showwarning
 
     Args:
@@ -33,8 +33,12 @@ def warnings_to_logger(message: str, category: str, filename: str, lineno: str, 
     else:
         module_name = os.path.splitext(os.path.split(filename)[1])[0]
     logger = logging.getLogger(module_name)
-    extra = {"warnings.category": category, "warnings.filename": filename, "warnings.lineno": lineno}
-    logger.warning(message,extra=extra)
+    extra = {
+        "warnings.category": category,
+        "warnings.filename": filename,
+        "warnings.lineno": lineno,
+    }
+    logger.warning(message, extra=extra)
 
 
 def _make_dict_serializable(item: Any):
@@ -42,7 +46,7 @@ def _make_dict_serializable(item: Any):
     match item:
         case dict():
             new_dict = {}
-            for k,v in item.items():
+            for k, v in item.items():
                 # If value is None remove item
                 if v is None:
                     continue
@@ -51,7 +55,7 @@ def _make_dict_serializable(item: Any):
                 if any(keyword in key.lower() for keyword in secret_words):
                     new_dict[key] = "****"
                 else:
-                    new_dict[key] =  _make_dict_serializable(v)
+                    new_dict[key] = _make_dict_serializable(v)
             return new_dict
         case str() | int() | float():
             return item
@@ -60,21 +64,30 @@ def _make_dict_serializable(item: Any):
         case _:
             return repr(item)
 
+
 class JsonFormatter(logging.Formatter):
     """Custom formatter for structured logging"""
+
     key_blacklist = [
-        'msg','message',
-        'args',
-        'created', 'msecs', 'relativeCreated',
-        'levelno',
-        'filename',
-        'color_message'
-        ]
-    def __init__(self,
-                 datefmt: Optional[str] = "%Y-%m-%dT%H:%M:%S%z",
-                 reduced: Optional[List[str]] = None,
-                 indent: Optional[str] = None,
-                 *, defaults: Optional[Mapping[str, Any]] = None) -> None:
+        "msg",
+        "message",
+        "args",
+        "created",
+        "msecs",
+        "relativeCreated",
+        "levelno",
+        "filename",
+        "color_message",
+    ]
+
+    def __init__(
+        self,
+        datefmt: Optional[str] = "%Y-%m-%dT%H:%M:%S%z",
+        reduced: Optional[List[str]] = None,
+        indent: Optional[str] = None,
+        *,
+        defaults: Optional[Mapping[str, Any]] = None,
+    ) -> None:
         """Create a new Formatter
 
         Args:
@@ -85,37 +98,50 @@ class JsonFormatter(logging.Formatter):
         """
         super().__init__(None, datefmt, defaults=defaults)
         self.indent = indent
-        self.reduced_levels = [logging.getLevelNamesMapping().get(level) for level in reduced or []]
+        self.reduced_levels = [
+            logging.getLevelNamesMapping().get(level) for level in reduced or []
+        ]
 
     def _get_output_dict(self, record: logging.LogRecord) -> dict[str, Any]:
-        data = {k: v for k, v in record.__dict__.items() if k not in self.key_blacklist and v is not None}
-        logger_name = f"{data.pop('module')}.{data.pop('name')}"
-        func_name = data.pop('funcName')
-        if func_name != '<module>':
-            logger_name = logger_name +"."+func_name
-        output = {
-            'level': data.pop("levelname"),
-            'message': record.getMessage(),
-            'logger_name': logger_name,
-            'file': f"{data.pop('pathname')}:{data.pop('lineno')}",
-            'extra': {},
-            '@timestamp': self.formatTime(record,self.datefmt),
-            'process': f"{data.pop('processName')}({data.pop('process')})",
-            'thread': f"{data.pop('threadName')}({data.pop('thread')})",
+        data = {
+            k: v
+            for k, v in record.__dict__.items()
+            if k not in self.key_blacklist and v is not None
         }
-        if all((key in data for key in  ["warnings.category","warnings.filename","warnings.lineno"])):
-            output['file'] = f"{data.pop('warnings.filename')}:{data.pop('warnings.lineno')}"
+        logger_name = f"{data.pop('module')}.{data.pop('name')}"
+        func_name = data.pop("funcName")
+        if func_name != "<module>":
+            logger_name = logger_name + "." + func_name
+        output = {
+            "level": data.pop("levelname"),
+            "message": record.getMessage(),
+            "logger_name": logger_name,
+            "file": f"{data.pop('pathname')}:{data.pop('lineno')}",
+            "extra": {},
+            "@timestamp": self.formatTime(record, self.datefmt),
+            "process": f"{data.pop('processName')}({data.pop('process')})",
+            "thread": f"{data.pop('threadName')}({data.pop('thread')})",
+        }
+        if all(
+            (
+                key in data
+                for key in ["warnings.category", "warnings.filename", "warnings.lineno"]
+            )
+        ):
+            output["file"] = (
+                f"{data.pop('warnings.filename')}:{data.pop('warnings.lineno')}"
+            )
         if data:
-            output['extra'] = _make_dict_serializable(data)
+            output["extra"] = _make_dict_serializable(data)
         cor_id = correlation_id.get()
         if cor_id is not None:
-            output['correlationId'] = cor_id
+            output["correlationId"] = cor_id
         if self.reduced_levels and record.levelno in self.reduced_levels:
-            del output['process']
-            del output['logger_name']
-            del output['thread']
-        if not output['extra']:
-            del output['extra']
+            del output["process"]
+            del output["logger_name"]
+            del output["thread"]
+        if not output["extra"]:
+            del output["extra"]
         return output
 
     def format(self, record: logging.LogRecord) -> str:
@@ -124,56 +150,44 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(output, default=repr, indent=self.indent)
 
 
-def get_logging_dict_config(level) -> dict[str,str]:
+def get_logging_dict_config(level) -> dict[str, str]:
     """Generate a logging.config.dictConfig compatible dict
 
     Returns:
         dict: logging.config.dictConfig
     """
     default_formatter = {
-        'json_formatter': {
-            '()': "wurzel.utils.logging.JsonFormatter",
-            'reduced': ["INFO"]
+        "json_formatter": {
+            "()": "wurzel.utils.logging.JsonFormatter",
+            "reduced": ["INFO"],
         }
     }
-    default_handler= {
+    default_handler = {
         "default": {
-            "level" : level,
+            "level": level,
             "class": "logging.StreamHandler",
-            'stream': 'ext://sys.stderr',
-            "formatter": "json_formatter"
+            "stream": "ext://sys.stderr",
+            "formatter": "json_formatter",
         },
     }
-    logger_template = {
-        "level": level,
-        "handlers": ['default'],
-        "propagate": False
-    }
+    logger_template = {"level": level, "handlers": ["default"], "propagate": False}
     return {
         "version": 1,
         "root": {},
         "disable_existing_loggers": False,
-        "formatters": {
-            **default_formatter
-        },
-        "handlers": {
-            **default_handler
-        },
+        "formatters": {**default_formatter},
+        "handlers": {**default_handler},
         "loggers": {
             "root": {**logger_template},
             "": {**logger_template},
             "uvicorn.error": {**logger_template},
-            "uvicorn.access":{
+            "uvicorn.access": {
                 "level": "WARNING",
-                "handlers": ['default'],
-                "propagate": False
+                "handlers": ["default"],
+                "propagate": False,
             },
-            'gunicorn.access': {
-                "propagate": True
-            },
-            'gunicorn.error': {
-                "propagate": True
-            },
+            "gunicorn.access": {"propagate": True},
+            "gunicorn.error": {"propagate": True},
             "transaction": {**logger_template},
         },
     }

@@ -5,14 +5,22 @@
 import pytest
 from wurzel import MarkdownDataContract
 
-@pytest.mark.parametrize("md,url,bread", [
-    ('\n---\n\nurl:myurl\n\n---\nText',"myurl", ""),
-    ('\n---\n\n   url:myurl\n\n---\nText',"myurl", ""),
-    ('\n---\n\n\t url:myurl\n\n---\nText',"myurl", ""),
-    ('\n---\n\nurl:myurl\n\ntopics:bread\n\n---\nText',"myurl", "bread"),
-    ('\n---\n\nurl:myurl\n\ntopics:bread,butter\n\n---\nText',"myurl", "bread,butter"),
-    ('\n---\n\n\ntopics:bread,butter\n\n---\nText',"", "bread,butter")
-])
+
+@pytest.mark.parametrize(
+    "md,url,bread",
+    [
+        ("\n---\n\nurl:myurl\n\n---\nText", "myurl", ""),
+        ("\n---\n\n   url:myurl\n\n---\nText", "myurl", ""),
+        ("\n---\n\n\t url:myurl\n\n---\nText", "myurl", ""),
+        ("\n---\n\nurl:myurl\n\ntopics:bread\n\n---\nText", "myurl", "bread"),
+        (
+            "\n---\n\nurl:myurl\n\ntopics:bread,butter\n\n---\nText",
+            "myurl",
+            "bread,butter",
+        ),
+        ("\n---\n\n\ntopics:bread,butter\n\n---\nText", "", "bread,butter"),
+    ],
+)
 def test_manual_step_md_parsing(tmp_path, md, url, bread):
     f = tmp_path / "file.md"
     f.write_text(md)

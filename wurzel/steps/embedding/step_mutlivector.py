@@ -5,6 +5,7 @@
 """
 consists of DVCSteps to embedd files and save them as for example as csv
 """
+
 # Standard library imports
 from logging import getLogger
 from typing import TypedDict
@@ -18,6 +19,7 @@ from wurzel.step import TypedStep
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import SplittException, StepFailed, EmbeddingAPIException
 from wurzel.steps.embedding import EmbeddingStep
+
 # Local application/library specific imports
 from .settings import EmbeddingSettings
 
@@ -27,35 +29,48 @@ from .data import EmbeddingMultiVectorResult
 log = getLogger(__name__)
 
 
-
 class _EmbeddedMultiVector(TypedDict):
     "dict definition of a embedded document"
-    text:str
-    url:str
+
+    text: str
+    url: str
     vectors: np.ndarray
     splits: list[str]
 
 
-
-class EmbeddingMultiVectorStep(EmbeddingStep,
-            TypedStep[EmbeddingSettings,list[MarkdownDataContract], DataFrame[EmbeddingMultiVectorResult]]):
+class EmbeddingMultiVectorStep(
+    EmbeddingStep,
+    TypedStep[
+        EmbeddingSettings,
+        list[MarkdownDataContract],
+        DataFrame[EmbeddingMultiVectorResult],
+    ],
+):
     """
     Step for consuming list[MarkdownDataContract]
     and returning DataFrame[EmbeddingMultiVectorResult]
     """
-    def run(self, inpt: list[MarkdownDataContract]) -> DataFrame[EmbeddingMultiVectorResult]:
-        """ Executes the embedding step by processing input markdown files, generating embeddings,
+
+    def run(
+        self, inpt: list[MarkdownDataContract]
+    ) -> DataFrame[EmbeddingMultiVectorResult]:
+        """Executes the embedding step by processing input markdown files, generating embeddings,
         and saving them to a CSV file.
         """
+
         def process_document(doc):
             try:
                 return self._get_embedding(doc)
             except EmbeddingAPIException as err:
-                log.warning(f"Skipped because EmbeddingAPIException: {err.message}", extra={"markdown": str(doc)})
+                log.warning(
+                    f"Skipped because EmbeddingAPIException: {err.message}",
+                    extra={"markdown": str(doc)},
+                )
                 return None
 
-        results = Parallel(
-            backend="threading",n_jobs=self.settings.N_JOBS)(delayed(process_document)(doc) for doc in inpt)
+        results = Parallel(backend="threading", n_jobs=self.settings.N_JOBS)(
+            delayed(process_document)(doc) for doc in inpt
+        )
 
         rows = [res for res in results if res is not None]
         failed = len(results) - len(rows)
@@ -67,7 +82,7 @@ class EmbeddingMultiVectorStep(EmbeddingStep,
 
         return DataFrame[EmbeddingMultiVectorResult](rows)
 
-    def _get_embedding(self, doc: MarkdownDataContract)->_EmbeddedMultiVector:
+    def _get_embedding(self, doc: MarkdownDataContract) -> _EmbeddedMultiVector:
         """
         Generates an embedding for a given text and context.
 
@@ -81,23 +96,29 @@ class EmbeddingMultiVectorStep(EmbeddingStep,
         dict
             A dictionary containing the original text, its embedding, and the source URL.
         """
-        def prepare_plain(document: MarkdownDataContract)->str:
+
+        def prepare_plain(document: MarkdownDataContract) -> str:
             plain_text = self.markdown.convert(document.md)
             plain_text = self._replace_link(plain_text)
             return plain_text
+
         try:
             splitted_md_rows = self._split_markdown([doc])
         except SplittException as err:
             raise EmbeddingAPIException("splitting failed") from err
-        vectors = [self.embedding.embed_query(prepare_plain(split)) for split in splitted_md_rows ]
+        vectors = [
+            self.embedding.embed_query(prepare_plain(split))
+            for split in splitted_md_rows
+        ]
         if not vectors:
             raise EmbeddingAPIException("Embedding failed for all splits")
 
         context = self.get_simple_context(doc.keywords)
 
-        return {"text": doc.md,
-                "vectors":vectors,
-                "url":doc.url,
-                "keywords": context,
-                "splits":[split.md for split in splitted_md_rows]
+        return {
+            "text": doc.md,
+            "vectors": vectors,
+            "url": doc.url,
+            "keywords": context,
+            "splits": [split.md for split in splitted_md_rows],
         }

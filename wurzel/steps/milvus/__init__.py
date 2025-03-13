@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from .settings import MilvusSettings
+
 __all__ = ["MilvusSettings"]
 try:
     _HAS_MILVUS = True
@@ -11,4 +12,5 @@ except ImportError:
     _HAS_MILVUS = False
 if _HAS_MILVUS:
     from .step import MilvusConnectorStep
+
     __all__ = [*__all__, "MilvusConnectorStep"]

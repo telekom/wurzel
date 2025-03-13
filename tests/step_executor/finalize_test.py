@@ -4,18 +4,26 @@
 
 import pytest
 from wurzel import BaseStepExecutor, TypedStep, NoSettings, PydanticModel
+
+
 class NiecheException(Exception):
     def __str__(self) -> str:
         return "NiecheException"
+
+
 class MyModel(PydanticModel):
     i: int = 1
+
+
 class MyToBeTestedStep(TypedStep[NoSettings, None, MyModel]):
     def run(self, inpt: None) -> MyModel:
         return MyModel()
+
     def finalize(self) -> None:
         raise NiecheException()
-def test_finalize_called(tmp_path):
 
+
+def test_finalize_called(tmp_path):
     with BaseStepExecutor() as ex:
         with pytest.raises(Exception) as e:
             r = ex(MyToBeTestedStep, None, tmp_path)

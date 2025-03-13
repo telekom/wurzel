@@ -5,6 +5,7 @@
 import pytest
 import os
 import pytest
+
 pytest.importorskip("pymilvus")
 
 
@@ -15,6 +16,8 @@ def qdrant_url(env):
         env.set("QDRANTCONNECTORSTEP__URI", ":memory:")
         env.set("QDRANTCONNECTORMULTIVECTORSTEP__URI", ":memory:")
     yield env
+
+
 @pytest.fixture
 def dummy_collection(env, autouse=True):
     env.set("QDRANTCONNECTORSTEP__COLLECTION", "dummy")
