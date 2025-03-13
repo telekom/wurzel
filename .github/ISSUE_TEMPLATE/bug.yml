@@ -1,0 +1,52 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+
+# SPDX-License-Identifier: Apache-2.0
+
+name: 🐛 Wurzel Bug Report
+description: Report a bug or unexpected behavior in Wurzel
+labels: [bug, pending]
+
+body:
+  - type: markdown
+    attributes:
+      value: Thank you for contributing to Wurzel! ✊
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Initial Checks
+      description: |
+        Just a few checks to make sure you need to create a bug report.
+      options:
+        - label: I have searched GitHub for a duplicate issue and I'm sure this is something new
+          required: true
+        - label: I have searched Google & StackOverflow for a solution and couldn't find anything
+          required: true
+        - label: I have read and followed the documentation and still think this is a bug
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: |
+        Please explain what you're seeing and what you would expect to see.
+    validations:
+      required: true
+
+  - type: textarea
+    id: example
+    attributes:
+      label: Example Code
+      description: |
+        If applicable, please add a self-contained, minimal, reproducible example demonstrating the bug.
+      render: Python
+
+  - type: textarea
+    id: version
+    attributes:
+      label: Version & Environment
+      description: |
+        Please provide the Wurzel version, Python version, and OS information.
+    validations:
+      required: true

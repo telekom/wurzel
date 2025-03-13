@@ -1,0 +1,33 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+
+# SPDX-License-Identifier: Apache-2.0
+
+name: 🚀 Wurzel Feature Request
+description: Suggest a new feature for Wurzel
+labels: [feature request]
+
+body:
+  - type: markdown
+    attributes:
+      value: Thank you for contributing to Wurzel! ✊
+
+  - type: checkboxes
+    id: searched
+    attributes:
+      label: Initial Checks
+      description: |
+        Just a few checks to make sure you need to create a feature request.
+      options:
+        - label: I have searched Google & GitHub for similar requests and couldn't find anything
+          required: true
+        - label: I have read and followed the documentation and still think this feature is missing
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: |
+        Please provide as much detail as possible about the feature you would like to suggest.
+    validations:
+      required: true
