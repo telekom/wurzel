@@ -201,7 +201,7 @@ class QdrantConnectorStep(
             return f"{self.settings.COLLECTION}_v1"
         previous_version = max(previous_collections.keys())
         log.info(f"Found version v{previous_version}")
-        return f"{self.settings.COLLECTION}_v{previous_version+1}"
+        return f"{self.settings.COLLECTION}_v{previous_version + 1}"
 
     def _get_collection_versions(self) -> dict[int, str]:
         previous_collections = self.client.get_collections().collections

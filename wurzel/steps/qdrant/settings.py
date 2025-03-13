@@ -11,6 +11,7 @@ from qdrant_client.models import Distance
 from wurzel.step.settings import StepSettings
 
 
+# pylint: disable=duplicate-code
 class QdrantSettings(StepSettings):
     """All Settings related to Qdrant DB"""
 

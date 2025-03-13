@@ -98,7 +98,7 @@ class MilvusConnectorStep(
         if result["insert_count"] != len(data):
             raise StepFailed(
                 f"Failed to insert df into collection '{collection_name}'."
-                f'{result["insert_count"]}/{len(data)} where successful'
+                f"{result['insert_count']}/{len(data)} where successful"
             )
         log.info(
             f"Successfully inserted {len(data)} vectors"
@@ -153,7 +153,7 @@ class MilvusConnectorStep(
             return f"{self.collection_prefix}_v1"
         previous_version = max(previous_collections.keys())
         log.info(f"Found version v{previous_version}")
-        return f"{self.collection_prefix}_v{previous_version+1}"
+        return f"{self.collection_prefix}_v{previous_version + 1}"
 
     def __construct_last_collection_name(self) -> str:
         previous_collections = self._get_collection_versions()

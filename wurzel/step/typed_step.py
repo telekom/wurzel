@@ -146,7 +146,9 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     def __static_type_check_self(cls):
         """Confirms the type annotations of child classes TypedStep"""
         type_annotations = [
-            get_args(parent) for parent in getattr(cls, "__orig_bases__", []) if get_args(parent)
+            get_args(parent)
+            for parent in getattr(cls, "__orig_bases__", [])
+            if get_args(parent)
         ][0]
         if type_annotations == ():
             raise StaticTypeError(

@@ -7,6 +7,7 @@ from pydantic import Field, validator
 from wurzel.step.settings import StepSettings
 
 
+# pylint: disable=duplicate-code
 class MilvusSettings(StepSettings):
     """All Settings related to MivusDB"""
 

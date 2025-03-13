@@ -30,13 +30,12 @@ repos:
     -   id: trailing-whitespace
     -   id: check-toml
 
-  # Future addition when all pylint issues are fixed
-  # - repo: local
-  #   hooks:
-  #     - id: lint
-  #       name: lint
-  #       description: "Run 'make lint'"
-  #       entry: make lint
-  #       language: python
-  #       types_or: [python]
-  #       minimum_pre_commit_version: "2.9.2"
+  - repo: local
+    hooks:
+      - id: lint
+        name: lint
+        description: "Run 'make lint'"
+        entry: make lint
+        language: python
+        types_or: [python]
+        minimum_pre_commit_version: "2.9.2"
