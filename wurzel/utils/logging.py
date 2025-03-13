@@ -7,7 +7,8 @@ import logging
 import logging.config
 import os
 import sys
-from typing import Any, List, Mapping, Optional
+from collections.abc import Mapping
+from typing import Any, List, Optional
 
 from asgi_correlation_id import correlation_id
 
@@ -124,10 +125,8 @@ class JsonFormatter(logging.Formatter):
             "thread": f"{data.pop('threadName')}({data.pop('thread')})",
         }
         if all(
-            (
-                key in data
-                for key in ["warnings.category", "warnings.filename", "warnings.lineno"]
-            )
+            key in data
+            for key in ["warnings.category", "warnings.filename", "warnings.lineno"]
         ):
             output["file"] = (
                 f"{data.pop('warnings.filename')}:{data.pop('warnings.lineno')}"

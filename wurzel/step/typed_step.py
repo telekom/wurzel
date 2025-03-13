@@ -3,12 +3,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import abc
+from collections.abc import Iterable
 from logging import getLogger
 from pathlib import Path
 from types import NoneType
 from typing import (
     Generic,
-    Iterable,
     Optional,
     Self,
     Type,

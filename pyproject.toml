@@ -120,3 +120,19 @@ prerelease = false
 match = "^(feature|feat|fix|perf|ci)/.+"
 prerelease = true
 prerelease_token = "dev"
+
+
+[tool.ruff]
+
+target-version = "py39"
+
+
+[tool.ruff.lint]
+select = [
+    "F",  # pyflakes rules,
+    "I",  # sorting for imports
+    # "E",  # formatting for docs (disabled)
+    # "D",  # formatting for docs (disabled)
+   # "UP", # upgrade to latest syntax if possible (disabled)
+    "C4", # cleaner comprehensions
+]

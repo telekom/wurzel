@@ -72,7 +72,7 @@ def test_chain(tmp_path):
         res: MarkdownDataContract
         assert res.md == "A"
     assert len(b[0][0]) == 2
-    assert all((md.md == "A" for md in b[0][0]))
+    assert all(md.md == "A" for md in b[0][0])
     pass
 
 

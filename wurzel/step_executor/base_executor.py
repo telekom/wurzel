@@ -7,12 +7,13 @@
 import json
 import os
 import time
+from collections.abc import Generator
 from contextlib import contextmanager
 from contextvars import copy_context
 from logging import getLogger
 from pathlib import Path
 from types import NoneType
-from typing import Any, Callable, Generator, Optional, Self, Type, Union
+from typing import Any, Callable, Optional, Self, Type, Union
 
 import pandera.typing as patyp
 import pydantic

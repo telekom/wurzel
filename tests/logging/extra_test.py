@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import dataclasses
-from typing import Iterable
+from collections.abc import Iterable
 
 import pytest
 

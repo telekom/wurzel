@@ -4,9 +4,10 @@
 
 import inspect
 import json
+from collections.abc import Iterable
 from contextvars import ContextVar
 from types import NoneType
-from typing import Iterable, Optional, Union
+from typing import Optional, Union
 
 from .typed_step import TypedStep
 

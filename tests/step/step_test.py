@@ -106,7 +106,7 @@ def test_save_yaml(nested_steps, tmp_path: Path):
     target_path = tmp_path / "dvc.yaml"
     DvcAdapter.generate_yaml(step2, target_path, output_2)
     assert target_path.exists()
-    with open(target_path, "r") as f:
+    with open(target_path) as f:
         yaml.safe_load(f)
     is_valid_dvc_yaml(target_path)
 
