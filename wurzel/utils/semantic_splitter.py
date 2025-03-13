@@ -2,8 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Semantic Markdown Splitter
-"""
+"""Semantic Markdown Splitter"""
 
 from logging import getLogger
 import re
@@ -96,7 +95,7 @@ def _get_heading_text(token: block_token.Heading):
         return token.content
     if "children" in vars(token) and len(token.children) > 0:
         return " ".join([c.content for c in token.children if hasattr(c, "content")])
-    return ''
+    return ""
 
 
 def _is_standalone_a_heading(text):
@@ -132,12 +131,19 @@ def _format_markdown_docs(
 
 class WurzelMarkdownRenderer(markdown_renderer.MarkdownRenderer):
     """Fix For markdown_renderer.MarkdownRenderer"""
-    #pylint: disable=unused-argument, arguments-differ
-    def render_table_cell(self, token: block_token.TableCell, max_line_length:int) -> str:
+
+    # pylint: disable=unused-argument, arguments-differ
+    def render_table_cell(
+        self, token: block_token.TableCell, max_line_length: int
+    ) -> str:
         return self.render_inner(token)
 
-    def render_table_row(self, token: block_token.TableRow, max_line_length:int) -> str:
+    def render_table_row(
+        self, token: block_token.TableRow, max_line_length: int
+    ) -> str:
         return self.render_inner(token)
+
+
 class SemanticSplitter:
     """Splitter implementation"""
 
@@ -151,7 +157,7 @@ class SemanticSplitter:
         token_limit: int = 256,
         token_limit_buffer: int = 32,
         token_limit_min: int = 64,
-        spacy_model:str = "de_core_news_sm"
+        spacy_model: str = "de_core_news_sm",
     ) -> None:
         self.nlp = spacy.load(spacy_model)
         self.token_limit = token_limit
@@ -161,9 +167,8 @@ class SemanticSplitter:
     def _is_short(self, text: str) -> bool:
         return _get_token_len(text) <= self.token_limit - self.token_limit_buffer
 
-    def _is_table(self,doc:DocumentNode)->bool:
+    def _is_table(self, doc: DocumentNode) -> bool:
         return doc["highest_level"] == LEVEL_MAPPING[block_token.Table]
-
 
     def _is_within_targetlen_w_buffer(self, text: str) -> bool:
         length = _get_token_len(text)
@@ -452,7 +457,8 @@ class SemanticSplitter:
         for chunk in chunks:
             assert self._is_within_targetlen_w_buffer(chunk) or self._is_short(chunk)
         return chunks
-    #pylint: disable-next=too-many-positional-arguments
+
+    # pylint: disable-next=too-many-positional-arguments
     def _handle_parsing_of_children(
         self,
         doc: DocumentNode,
@@ -493,9 +499,7 @@ class SemanticSplitter:
                     return_doc.append(
                         MarkdownDataContract(
                             md=remaining_snipped,
-                            keywords=doc["metadata"][
-                                "keywords"
-                            ],
+                            keywords=doc["metadata"]["keywords"],
                             url=doc["metadata"]["url"],
                         )
                     )
@@ -619,8 +623,10 @@ class SemanticSplitter:
             )
             if str(highest_type) == str(block_token.Heading):
                 # Discuss this
-                #highest_header_until_now[highest_level] = _get_heading_text(highest_child)
-                highest_header_until_now[highest_level] = self._render_doc(highest_child).lstrip(" #")
+                # highest_header_until_now[highest_level] = _get_heading_text(highest_child)
+                highest_header_until_now[highest_level] = self._render_doc(
+                    highest_child
+                ).lstrip(" #")
 
             ordered_headers = {
                 level: text for level, text in highest_header_until_now.items() if text
@@ -682,9 +688,7 @@ class SemanticSplitter:
         """Split a Markdown Document into Snippets"""
         # Disabling this for now due to https://github.com/miyuchina/mistletoe/issues/211
         _ = self._remove_irrelevant_nodes_from_str(doc.md)
-        metadata = MetaDataDict(
-            url=doc.url, keywords=doc.keywords
-        )
+        metadata = MetaDataDict(url=doc.url, keywords=doc.keywords)
         doc_hierarchy: DocumentNode = self._markdown_hierarchy_parser(doc.md, metadata)
         doc_snippets: list[MarkdownDataContract] = self._parse_hierarchical(
             doc_hierarchy

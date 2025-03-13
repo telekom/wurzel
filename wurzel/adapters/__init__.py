@@ -4,4 +4,4 @@
 
 from .dvc_adapter import DvcAdapter
 
-__all__=["DvcAdapter"]
+__all__ = ["DvcAdapter"]

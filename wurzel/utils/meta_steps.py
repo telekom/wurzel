@@ -8,18 +8,24 @@ import pkgutil
 
 from typing import TypeVar, Type
 from wurzel.step.typed_step import TypedStep
+
 T = TypeVar("T", bound=object)
 
-def find_sub_classes(parent: T, package: str=__package__) -> dict[str, T]:
+
+def find_sub_classes(parent: T, package: str = __package__) -> dict[str, T]:
     """searches for all DVC step definitions and returns them based on their name."""
+
     def is_non_abs_child(member: object) -> bool:
-        return True and \
-            inspect.isclass(member) and \
-            issubclass(member, parent) and \
-            not inspect.isabstract(member) and \
-            not bool(getattr(member, "__abstractmethods__", False))
+        return (
+            True
+            and inspect.isclass(member)
+            and issubclass(member, parent)
+            and not inspect.isabstract(member)
+            and not bool(getattr(member, "__abstractmethods__", False))
+        )
+
     result = {}
-    visited = set([f'{__package__}.main', f'{__package__}.utils'])
+    visited = set([f"{__package__}.main", f"{__package__}.utils"])
     module_iterator = pkgutil.iter_modules(importlib.import_module(package).__path__)
     for _, module_name, is_package in module_iterator:
         full_module_name = f"{package}.{module_name}"
@@ -28,7 +34,7 @@ def find_sub_classes(parent: T, package: str=__package__) -> dict[str, T]:
         visited.add(full_module_name)
         # Recurse through any sub-packages
         if is_package:
-            classes_in_subpackage = find_sub_classes(parent,package=full_module_name)
+            classes_in_subpackage = find_sub_classes(parent, package=full_module_name)
             result.update(classes_in_subpackage)
         # Load the module for inspection
         module = importlib.import_module(full_module_name)
@@ -38,6 +44,7 @@ def find_sub_classes(parent: T, package: str=__package__) -> dict[str, T]:
         for _name, obj in inspect.getmembers(module, is_non_abs_child):
             result[obj.__name__] = obj
     return result
+
 
 def find_typed_steps_in_package(package: str) -> dict[str, Type[TypedStep]]:
     """Recursively find all subclasses of TypedStep"""

@@ -9,19 +9,21 @@ import json
 from pydantic_core import PydanticUndefined
 from wurzel import TypedStep, Settings
 from wurzel.utils import WZ
-def main(step: Type[TypedStep], gen_env = False):
+
+
+def main(step: Type[TypedStep], gen_env=False):
     """Execute"""
     ins = WZ(step)
     set_cls: Settings = ins.settings_class
     env_prefix = step.__name__.upper()
     data = {
-        'Name': step.__name__,
-        'Input': 'None' if ins.input_model_class == NoneType else ins.input_model_class,
-        'Output': ins.output_model_type,
-        'settings': {
-            'env_prefix': env_prefix,
-            'fields': {k: str(v) for k,v in set_cls.model_fields.items()}
-        }
+        "Name": step.__name__,
+        "Input": "None" if ins.input_model_class == NoneType else ins.input_model_class,
+        "Output": ins.output_model_type,
+        "settings": {
+            "env_prefix": env_prefix,
+            "fields": {k: str(v) for k, v in set_cls.model_fields.items()},
+        },
     }
     if gen_env:
         setts = {True: [], False: []}
@@ -35,7 +37,4 @@ def main(step: Type[TypedStep], gen_env = False):
         print("# Optional")
         print("\n".join(setts[False]))
     else:
-        print(json.dumps(
-            data,
-            indent="  ",
-            default=str))
+        print(json.dumps(data, indent="  ", default=str))

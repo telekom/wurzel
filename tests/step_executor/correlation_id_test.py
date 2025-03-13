@@ -8,12 +8,16 @@ from wurzel import BaseStepExecutor, TypedStep, NoSettings, MarkdownDataContract
 from wurzel.exceptions import StepFailed
 import asgi_correlation_id
 
+
 class OkExc(Exception):
     pass
+
+
 class TestableStep(TypedStep[None, None, list[MarkdownDataContract]]):
     def run(self, inputs):
         assert asgi_correlation_id.correlation_id.get() == self.__class__.__name__
         raise OkExc("Oki")
+
 
 def test_setting_of_cor_id():
     assert asgi_correlation_id.correlation_id.get() is None

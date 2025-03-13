@@ -3,8 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from .step import EmbeddingStep
-from .huggingface import (
-    HuggingFaceInferenceAPIEmbeddings,
-    PrefixedAPIEmbeddings
-)
-__all__=["EmbeddingStep", "HuggingFaceInferenceAPIEmbeddings","PrefixedAPIEmbeddings"]
+from .huggingface import HuggingFaceInferenceAPIEmbeddings, PrefixedAPIEmbeddings
+
+__all__ = [
+    "EmbeddingStep",
+    "HuggingFaceInferenceAPIEmbeddings",
+    "PrefixedAPIEmbeddings",
+]

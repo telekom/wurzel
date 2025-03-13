@@ -15,10 +15,11 @@ from wurzel.exceptions import SplittException, StepFailed
 from wurzel.steps import EmbeddingStep
 import mdformat
 
+
 @pytest.fixture(scope="function")
 def Splitter(env):
-
     yield SemanticSplitter()
+
 
 def test_splitter(Splitter):
     text = """# PurpureusTV Fehlercode F30102
@@ -97,10 +98,13 @@ TV HD Recorder Fehlerbehebung](https://www.magenta.at/faq/entry/%7Emagenta-tv%7E
     assert len(result) > 1
     assert "TV HD Recorder Fehlerbehebun" in result[-1].md
 
+
 def test_sentence_splitter(Splitter):
-    #@Thomas inkonsitenz mit token_limit, buffer
+    # @Thomas inkonsitenz mit token_limit, buffer
     text = "Mein Name ist Manfred. Ich bin am rande der Welt angekommen. Wir sind mit Mr. Bean unterwegs. Dabei haben wir Heute ein Kanninchen adoptiert und sind damit zum Mond geflogen. Auf dessen Rückseite haben wir dann Karotten geerntet und sind damit auf dem Rücken eines Schweins zurück zum Mars gefolgen. "
-    chunks = SemanticSplitter(token_limit=20, token_limit_buffer=3)._split_by_sentence(text)
+    chunks = SemanticSplitter(token_limit=20, token_limit_buffer=3)._split_by_sentence(
+        text
+    )
     assert len(chunks) == 3
     assert "Mein Name ist Manfred." in chunks[0]
     assert all(chunk for chunk in chunks)
@@ -129,11 +133,11 @@ def test_splitter_header_breadcrum(Splitter):
         keywords="Purpureus TV Box/TV HD Recorder auf Werkseinstellungen zurücksetzen",
     )
     chunks = Splitter.split_markdown_document(md)
-    assert len(chunks)==2, 'split into two'
+    assert len(chunks) == 2, "split into two"
     assert "In manchen Fällen kann es sinnvoll" in chunks[0].md
-    #assert "Erste Hilfe" in chunks[0].keywords
+    # assert "Erste Hilfe" in chunks[0].keywords
     assert "Aufnahmen zu behalten oder zu löschen" in chunks[-1].md
-    #assert "Erste Hilfe" in chunks[-1].keywords
+    # assert "Erste Hilfe" in chunks[-1].keywords
 
 
 #### Testcases
@@ -160,7 +164,9 @@ test_case_2 = """
 
 Mit unseren modernen [Mesh-WLAN](/hilfe/geraete-zubehoer/heimnetzwerk-powerline-wlan/speed-home-wlan/wlan-mesh-was-ist-das) Geräten erschaffen Sie ein WLAN, das bis in den letzten Winkel reicht und für optimale Geschwindigkeit sorgt. Unsere [Speed Home WiFi](https://www.example.com/sample-data/geraete/wlan-und-router/speed-home-wifi) Geräte unterstützen Mesh-WLAN und können im Gegensatz zu herkömmlichen Techniken große Wohnflächen und mehrere Etagen versorgen. Für das beste WLAN-Erlebnis empfehlen wir den [Speed Home WiFi](https://www.example.com/sample-data/geraete/wlan-und-router/speed-home-wifi) in Verbindung mit einem [Speedport Smart 3](https://www.example.com/sample-data/geraete/wlan-und-router/speedport-smart-3). Gerne unterstützen wir Sie auch mit einer individuellen Beratung.Zusammen finden wir die Lösung für Ihr ideales Heimnetz. [Beratung Heimnetzwerk](http://www.example.com/zuhause/tarife-und-optionen/zubuchoptionen/beratung-heimnetz)"""
 
-test_case_2_result= ["""### Erhöhen Sie die Reichweite Ihres WLAN.\n\nMit unseren modernen [Mesh-WLAN](/hilfe/geraete-zubehoer/heimnetzwerk-powerline-wlan/speed-home-wlan/wlan-mesh-was-ist-das) Geräten erschaffen Sie ein WLAN, das bis in den letzten Winkel reicht und für optimale Geschwindigkeit sorgt. Unsere [Speed Home WiFi](https://www.example.com/sample-data/geraete/wlan-und-router/speed-home-wifi) Geräte unterstützen Mesh-WLAN und können im Gegensatz zu herkömmlichen Techniken große Wohnflächen und mehrere Etagen versorgen. Für das beste WLAN-Erlebnis empfehlen wir den [Speed Home WiFi](https://www.example.com/sample-data/geraete/wlan-und-router/speed-home-wifi) in Verbindung mit einem [Speedport Smart 3](https://www.example.com/sample-data/geraete/wlan-und-router/speedport-smart-3). Gerne unterstützen wir Sie auch mit einer individuellen Beratung.Zusammen finden wir die Lösung für Ihr ideales Heimnetz. \\[Beratung Heimnetzwerk"""]
+test_case_2_result = [
+    """### Erhöhen Sie die Reichweite Ihres WLAN.\n\nMit unseren modernen [Mesh-WLAN](/hilfe/geraete-zubehoer/heimnetzwerk-powerline-wlan/speed-home-wlan/wlan-mesh-was-ist-das) Geräten erschaffen Sie ein WLAN, das bis in den letzten Winkel reicht und für optimale Geschwindigkeit sorgt. Unsere [Speed Home WiFi](https://www.example.com/sample-data/geraete/wlan-und-router/speed-home-wifi) Geräte unterstützen Mesh-WLAN und können im Gegensatz zu herkömmlichen Techniken große Wohnflächen und mehrere Etagen versorgen. Für das beste WLAN-Erlebnis empfehlen wir den [Speed Home WiFi](https://www.example.com/sample-data/geraete/wlan-und-router/speed-home-wifi) in Verbindung mit einem [Speedport Smart 3](https://www.example.com/sample-data/geraete/wlan-und-router/speedport-smart-3). Gerne unterstützen wir Sie auch mit einer individuellen Beratung.Zusammen finden wir die Lösung für Ihr ideales Heimnetz. \\[Beratung Heimnetzwerk"""
+]
 
 #### TESTCASE 3
 
@@ -203,7 +209,7 @@ test_case_4_result = [
 Sed euismod rutrum lorem, nec rutrum dolor accumsan in. In rhoncus urna id augue accumsan tristique. Quisque dictum tincidunt lacus dignissim facilisis. Suspendisse id magna sit amet risus bibendum maximus vel et nisi. Curabitur imperdiet, est ac tristique consectetur, odio ligula molestie nisi, non hendrerit nisl est quis leo. Nulla sagittis orci vel turpis lacinia, ut volutpat turpis tempor. Proin et nisi eget dui ullamcorper finibus. Aenean augue orci, scelerisque sit amet tortor ac, bibendum tincidunt nibh.
 
 Sed sed eros a enim consequat laoreet vitae et justo. Pellentesque eget nisi nec ante viverra aliquet a vel massa. Ut sit amet est sapien. Suspendisse sit amet nisl dui. Fusce posuere diam et condimentum posuere. Ut mattis tempor lorem eget vestibulum. In hac habitasse platea dictumst. Cras facilisis erat consectetur volutpat laoreet. Aenean vitae mattis enim,""",
-"""# Heading 1
+    """# Heading 1
 
 ## Heading 2
 
@@ -255,7 +261,8 @@ test_case_6 = """# PurpureusZuhause XL Flex
 ## Gutschriften
 * 100 \u20ac Routergutschrift
 * Routergutschrift: Bei Buchung von PurpureusZuhause XL Flex erfolgt eine Routergutschrift i. H. v. 100 \u20ac auf einer der n\u00e4chsten Telekom Rechnungen, bei Miete eines Routers (im Endger\u00e4te-Servicepaket ab mtl. 6,95 \u20ac/Monat, 12 Monate Mindestvertragslaufzeit). Aktion gilt bis 01.07.2024 f\u00fcr Breitband-Neukunden, die in den letzten 3 Monaten keinen Breitbandanschluss bei der Telekom hatten."""
-test_case_6_result = ["""# PurpureusZuhause XL Flex
+test_case_6_result = [
+    """# PurpureusZuhause XL Flex
 **Internet-Flat** - Download mit bis zu 250 MBit/s und Upload mit bis zu 50 MBit/s
 **Telefonie-Flat** - Ins deutsche Fest- und Mobilfunknetz in HD-Voice Qualit\u00e4t telefonieren.
 
@@ -264,14 +271,13 @@ test_case_6_result = ["""# PurpureusZuhause XL Flex
 * Einmaliger Bereitstellungspreis f\u00fcr neuen Telefonanschluss 69,95\u00a0\u20ac.
 * Keine Mindestvertragslaufzeit, K\u00fcndigungsfrist 1 Monat.
 * PurpureusZuhause XL Flex ist in vielen Anschlussbereichen verf\u00fcgbar.""",
-
-"""# PurpureusZuhause XL Flex
+    """# PurpureusZuhause XL Flex
 ## Gutschriften
 * 100 \u20ac Routergutschrift
-* Routergutschrift: Bei Buchung von PurpureusZuhause XL Flex erfolgt eine Routergutschrift i. H. v. 100 \u20ac auf einer der n\u00e4chsten Telekom Rechnungen, bei Miete eines Routers (im Endger\u00e4te-Servicepaket ab mtl. 6,95 \u20ac/Monat, 12 Monate Mindestvertragslaufzeit). Aktion gilt bis 01.07.2024 f\u00fcr Breitband-Neukunden, die in den letzten 3 Monaten keinen Breitbandanschluss bei der Telekom hatten."""]
+* Routergutschrift: Bei Buchung von PurpureusZuhause XL Flex erfolgt eine Routergutschrift i. H. v. 100 \u20ac auf einer der n\u00e4chsten Telekom Rechnungen, bei Miete eines Routers (im Endger\u00e4te-Servicepaket ab mtl. 6,95 \u20ac/Monat, 12 Monate Mindestvertragslaufzeit). Aktion gilt bis 01.07.2024 f\u00fcr Breitband-Neukunden, die in den letzten 3 Monaten keinen Breitbandanschluss bei der Telekom hatten.""",
+]
 
-test_case_7 = \
-    """Wenn Sie Ihre Rufnummer von einem anderen Anbieter zu Purpureus mitgenommen haben, geben Sie bitte die Nummer der Sprachbox des anderen Anbieters ein.
+test_case_7 = """Wenn Sie Ihre Rufnummer von einem anderen Anbieter zu Purpureus mitgenommen haben, geben Sie bitte die Nummer der Sprachbox des anderen Anbieters ein.
 
 *   Vorwahl 0650 ( ehemals tele.ring): +43 650 11 Rufnummer
 *   Vorwahl 0664 (A1): +43 664 77 Rufnummer
@@ -292,7 +298,8 @@ Weitere Sprachboxnummern
 *   Vorwahl 0678: +43 678 11 Rufnummer
 *   Vorwahl 0670 (Spusu): +43 670 90 Rufnummer"""
 
-test_case_7_result = ["""Wenn Sie Ihre Rufnummer von einem anderen Anbieter zu Purpureus mitgenommen haben, geben Sie bitte die Nummer der Sprachbox des anderen Anbieters ein.
+test_case_7_result = [
+    """Wenn Sie Ihre Rufnummer von einem anderen Anbieter zu Purpureus mitgenommen haben, geben Sie bitte die Nummer der Sprachbox des anderen Anbieters ein.
 
 *   Vorwahl 0650 ( ehemals tele.ring): +43 650 11 Rufnummer
 *   Vorwahl 0664 (A1): +43 664 77 Rufnummer
@@ -301,10 +308,9 @@ test_case_7_result = ["""Wenn Sie Ihre Rufnummer von einem anderen Anbieter zu P
 *   Vorwahl 0699 (Drei+Orange): die erste Ziffer der Rufnummer wird durch eine 3 ersetzt. (z.B.: aus +43 699 1 123 4567 wird +43 699 3 123 4567)
 *   Vorwahl 0660 (Drei): +43 660 33 Rufnummer
 *   Vorwahl 0699 (Yess): + 43 699 82 Rufnummer (z.B.: +43 699 82 123 4567)
-  Weitere Sprachboxnummern""", # Weitere Sprachboxnummern should be below but cannot be identified as heading
-# Fix linebreak later in markdown renderer
-
-"""
+  Weitere Sprachboxnummern""",  # Weitere Sprachboxnummern should be below but cannot be identified as heading
+    # Fix linebreak later in markdown renderer
+    """
 *   Vorwahl 0681 (Yess): zweite Ziffer wird durch eine 1 ersetzt. (z.B.: aus +43681 1 0 345678 wird +43681 1 1 345678)
 *   Vorwahl 0699 (Tele2UTA): +43 699 89 Rufnummer (z.B.: +43 699 89 123 4567)
 *   Vorwahl 0688 (Tele2UTA): + 43688 85 Rufnummer (z.B.: +43 688 85 123 4567)
@@ -312,7 +318,8 @@ test_case_7_result = ["""Wenn Sie Ihre Rufnummer von einem anderen Anbieter zu P
 *   Vorwahl 0677 (HoT): +43 677 60 Rufnummer
 *   Vorwahl 0677 (AllianzSIM): +43 677 60 Rufnummer
 *   Vorwahl 0678: +43 678 11 Rufnummer
-*   Vorwahl 0670 (Spusu): +43 670 90 Rufnummer"""]
+*   Vorwahl 0670 (Spusu): +43 670 90 Rufnummer""",
+]
 
 test_case_table = """# Popis satelitskih programa po paketima
 
@@ -422,21 +429,26 @@ Odaberite idealan paket satelitskih programa prema va\u0161im potrebama:
  """
 
 
-@pytest.mark.parametrize("input_text, expected_results",[
-    pytest.param(test_case_1, test_case_1_result, id="Simple Split"),
-    pytest.param(test_case_2, test_case_2_result,id="Tests: Test Sentence splitter"),
-    pytest.param(test_case_3, test_case_3_result, id="Cut to hard token limit due to txoken buffer"),
-    #pytest.param(test_case_4, test_case_4_result, id="Problems: clarify cut off"),
-    pytest.param(test_case_6, test_case_6_result),
-    pytest.param(test_case_7, test_case_7_result),
-])
+@pytest.mark.parametrize(
+    "input_text, expected_results",
+    [
+        pytest.param(test_case_1, test_case_1_result, id="Simple Split"),
+        pytest.param(
+            test_case_2, test_case_2_result, id="Tests: Test Sentence splitter"
+        ),
+        pytest.param(
+            test_case_3,
+            test_case_3_result,
+            id="Cut to hard token limit due to txoken buffer",
+        ),
+        # pytest.param(test_case_4, test_case_4_result, id="Problems: clarify cut off"),
+        pytest.param(test_case_6, test_case_6_result),
+        pytest.param(test_case_7, test_case_7_result),
+    ],
+)
 def test_case(input_text, expected_results, Splitter):
     res = Splitter.split_markdown_document(
-        MarkdownDataContract(
-            md=input_text,
-            url="test",
-            keywords="pytest"
-        )
+        MarkdownDataContract(md=input_text, url="test", keywords="pytest")
     )
     assert len(res) == len(expected_results)
     for x, y in zip(res, expected_results):
@@ -445,21 +457,38 @@ def test_case(input_text, expected_results, Splitter):
 
 def test_table(Splitter):
     res = Splitter.split_markdown_document(
-    MarkdownDataContract(
-            md=test_case_table,
-            url="test",
-            keywords="pytest"
-        )
+        MarkdownDataContract(md=test_case_table, url="test", keywords="pytest")
     )
-    assert len(res) >1
-    assert  all( phrase in res[-1].md for phrase in ["Popis satelitskih programa po paketima","Hustler TV ","Plus paket"])
-    assert all(phrase in res[0].md for phrase in ["Popis satelitskih programa po paketima","Odaberite idealan paket satelitskih programa prema"])
-    assert all(phrase in res[1].md for phrase in ["Popis satelitskih programa po paketima","Osnovni Extra paket","MTV 00s"])
+    assert len(res) > 1
+    assert all(
+        phrase in res[-1].md
+        for phrase in [
+            "Popis satelitskih programa po paketima",
+            "Hustler TV ",
+            "Plus paket",
+        ]
+    )
+    assert all(
+        phrase in res[0].md
+        for phrase in [
+            "Popis satelitskih programa po paketima",
+            "Odaberite idealan paket satelitskih programa prema",
+        ]
+    )
+    assert all(
+        phrase in res[1].md
+        for phrase in [
+            "Popis satelitskih programa po paketima",
+            "Osnovni Extra paket",
+            "MTV 00s",
+        ]
+    )
 
 
 def test_simple_splitter_step(tmp_path):
-    test_data = [MarkdownDataContract(md=
-"""
+    test_data = [
+        MarkdownDataContract(
+            md="""
 # Heading 1
 ## Heading 2
 
@@ -490,10 +519,13 @@ Duis consectetur ex elementum arcu volutpat, vitae rutrum risus vehicula. Donec 
 Sed euismod rutrum lorem, nec rutrum dolor accumsan in. In rhoncus urna id augue accumsan tristique. Quisque dictum tincidunt lacus dignissim facilisis. Suspendisse id magna sit amet risus bibendum maximus vel et nisi. Curabitur imperdiet, est ac tristique consectetur, odio ligula molestie nisi, non hendrerit nisl est quis leo. Nulla sagittis orci vel turpis lacinia, ut volutpat turpis tempor. Proin et nisi eget dui ullamcorper finibus. Aenean augue orci, scelerisque sit amet tortor ac, bibendum tincidunt nibh.
 Sed sed eros a enim consequat laoreet vitae et justo. Pellentesque eget nisi nec ante viverra aliquet a vel massa. Ut sit amet est sapien. Suspendisse sit amet nisl dui. Fusce posuere diam et condimentum posuere. Ut mattis tempor lorem eget vestibulum. In hac habitasse platea dictumst. Cras facilisis erat consectetur volutpat laoreet. Aenean vitae mattis enim, nec fermentum mi. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.
 
-Duis consectetur ex elementum arcu volutpat, vitae rutrum risus vehicula. Donec urna lorem, mattis et justo non, interdum blandit odio. Mauris interdum lectus in mauris porta interdum. Maecenas rutrum, tellus vestibulum mattis ultrices, tellus velit iaculis lacus, a tristique orci mauris in orci. Ut eu mauris vel odio fringilla pretium eu vulputate ipsum. In non velit ac ligula scelerisque pharetra. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Cras porta iaculis auctor."""
-,url="www.dummy.url/404",keywords="preserve me")]
+Duis consectetur ex elementum arcu volutpat, vitae rutrum risus vehicula. Donec urna lorem, mattis et justo non, interdum blandit odio. Mauris interdum lectus in mauris porta interdum. Maecenas rutrum, tellus vestibulum mattis ultrices, tellus velit iaculis lacus, a tristique orci mauris in orci. Ut eu mauris vel odio fringilla pretium eu vulputate ipsum. In non velit ac ligula scelerisque pharetra. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Cras porta iaculis auctor.""",
+            url="www.dummy.url/404",
+            keywords="preserve me",
+        )
+    ]
 
     step = SimpleSplitterStep()
     result = step.run(test_data)
     assert len(result) > 2
-    assert isinstance(result[0],MarkdownDataContract)
+    assert isinstance(result[0], MarkdownDataContract)

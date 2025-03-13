@@ -16,6 +16,7 @@ from wurzel.steps import EmbeddingStep
 from wurzel.step_executor import BaseStepExecutor
 from wurzel.steps.embedding.step_mutlivector import EmbeddingMultiVectorStep
 
+
 @pytest.fixture(scope="module")
 def mock_embedding():
     """
@@ -30,6 +31,7 @@ def mock_embedding():
     MockEmbedding
         An instance of the mock embedding class.
     """
+
     class MockEmbedding:
         def embed_query(self, _: str) -> List[float]:
             """
@@ -46,8 +48,10 @@ def mock_embedding():
                 A random vector of size 768.
             """
             return list(np.random.random(768))
+
     def mock_func(*args, **kwargs):
         return MockEmbedding()
+
     return mock_func
 
 
@@ -67,20 +71,20 @@ def test_embedding_step(mock_embedding, tmp_path, env):
     Asserts that the `embedding.csv` file is created in the output folder.
     """
     env.set("EMBEDDINGSTEP__API", "https://example-embedding.com/embed")
-    EmbeddingStep._select_embedding =mock_embedding
+    EmbeddingStep._select_embedding = mock_embedding
     mock_file = Path("tests/data/markdown.json")
     input_folder = tmp_path / "input"
     input_folder.mkdir()
-    shutil.copy(mock_file, input_folder )
+    shutil.copy(mock_file, input_folder)
     output_folder = tmp_path / "out"
-    BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingStep, [input_folder], output_folder)
+    BaseStepExecutor(dont_encapsulate=False).execute_step(
+        EmbeddingStep, [input_folder], output_folder
+    )
     assert output_folder.is_dir()
     assert len(list(output_folder.glob("*"))) > 0
 
 
-
-
-def test_mutlivector_embedding_step(mock_embedding, tmp_path,env):
+def test_mutlivector_embedding_step(mock_embedding, tmp_path, env):
     """
     Tests the execution of the `EmbeddingMultiVectorStep` with a mock input file.
 
@@ -96,14 +100,16 @@ def test_mutlivector_embedding_step(mock_embedding, tmp_path,env):
     Asserts that the `embedding.csv` file is created in the output folder.
     """
     env.set("EMBEDDINGMULTIVECTORSTEP__API", "https://example-embedding.com/embed")
-    EmbeddingStep._select_embedding =mock_embedding
+    EmbeddingStep._select_embedding = mock_embedding
     EmbeddingMultiVectorStep._select_embedding = mock_embedding
-    EmbeddingStep._select_embedding =mock_embedding
+    EmbeddingStep._select_embedding = mock_embedding
     mock_file = Path("tests/data/markdown.json")
     input_folder = tmp_path / "input"
     input_folder.mkdir()
-    shutil.copy(mock_file, input_folder )
+    shutil.copy(mock_file, input_folder)
     output_folder = tmp_path / "out"
-    BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingMultiVectorStep, [input_folder], output_folder)
+    BaseStepExecutor(dont_encapsulate=False).execute_step(
+        EmbeddingMultiVectorStep, [input_folder], output_folder
+    )
     assert output_folder.is_dir()
     assert len(list(output_folder.glob("*"))) > 0

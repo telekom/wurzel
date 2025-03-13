@@ -8,18 +8,24 @@ import re
 import pytest
 from wurzel import BaseStepExecutor, TypedStep, NoSettings, MarkdownDataContract
 
+
 class MyStep(TypedStep[NoSettings, MarkdownDataContract, list[MarkdownDataContract]]):
     def run(self, inputs: MarkdownDataContract) -> list[MarkdownDataContract]:
         return [inputs, inputs]
+
+
 DEFAULT_OBJ = MarkdownDataContract(md="md", keywords="ib", url="ur")
+
+
 def test_memory_in_file_out(tmp_path):
     out = tmp_path / "out"
     with BaseStepExecutor() as ex:
         ex(MyStep, (DEFAULT_OBJ,), out)
     files = list(out.glob("*"))
-    expected = (out / "[Memory]-My.json")
+    expected = out / "[Memory]-My.json"
     assert len(files) == 1
     assert expected in files
+
 
 def test_file_in_memory_out(tmp_path):
     inpt_folder = tmp_path / "input"
@@ -30,18 +36,31 @@ def test_file_in_memory_out(tmp_path):
     assert res[0][0] == [DEFAULT_OBJ, DEFAULT_OBJ]
     assert res[0][1].time_to_save == 0
 
+
 class TestAStep(TypedStep[NoSettings, None, MarkdownDataContract]):
     def run(self, inputs: None) -> MarkdownDataContract:
         return MarkdownDataContract(md="A", keywords="A", url="A")
+
+
 class TestA2Step(TypedStep[NoSettings, None, MarkdownDataContract]):
     def run(self, inputs: None) -> MarkdownDataContract:
         return MarkdownDataContract(md="A2", keywords="A2", url="A2")
-class TestBStep(TypedStep[NoSettings, MarkdownDataContract, list[MarkdownDataContract]]):
+
+
+class TestBStep(
+    TypedStep[NoSettings, MarkdownDataContract, list[MarkdownDataContract]]
+):
     def run(self, inputs: MarkdownDataContract) -> list[MarkdownDataContract]:
         return [inputs, inputs]
-class TestCStep(TypedStep[NoSettings, list[MarkdownDataContract], MarkdownDataContract]):
+
+
+class TestCStep(
+    TypedStep[NoSettings, list[MarkdownDataContract], MarkdownDataContract]
+):
     def run(self, inputs: list[MarkdownDataContract]) -> MarkdownDataContract:
-            return inputs[0]
+        return inputs[0]
+
+
 def test_chain(tmp_path):
     out_a = tmp_path / "out_a"
     out_b = tmp_path / "out_b"
@@ -50,12 +69,12 @@ def test_chain(tmp_path):
         a = ex.execute_step(TestAStep, None, out_a)
         b = ex.execute_step(TestBStep, (out_a,), out_b)
         c = ex.execute_step(TestCStep, (out_b,), out_c)
-    for i in [a,b,c]:
+    for i in [a, b, c]:
         assert len(i) == 1
-    for (res, _rep) in [a[0],c[0]]:
+    for res, _rep in [a[0], c[0]]:
         res: MarkdownDataContract
         assert res.md == "A"
-    assert len(b[0][0])== 2
+    assert len(b[0][0]) == 2
     assert all((md.md == "A" for md in b[0][0]))
     pass
 
@@ -64,10 +83,7 @@ def test_2_to_1(tmp_path):
     # A   \
     #     > B
     # A2  /
-    out_as = [
-        tmp_path / "out_a1",
-        tmp_path / "out_a2"
-    ]
+    out_as = [tmp_path / "out_a1", tmp_path / "out_a2"]
     out_b = tmp_path / "out_b"
     with BaseStepExecutor() as ex:
         ex.execute_step(TestAStep, None, output_dir=out_as[0])
@@ -75,18 +91,16 @@ def test_2_to_1(tmp_path):
         b = ex.execute_step(TestBStep, out_as, out_b)
     assert len(b) == 2
     assert len(list(out_b.glob("*"))) == 2
-    for p in  out_b.glob("*"):
+    for p in out_b.glob("*"):
         assert p.name in ["TestA-TestB.json", "TestA2-TestB.json"]
+
 
 def test_2_to_2_to_1(tmp_path):
     # A  > B  \
     #          > C
     # A2 > B  /
 
-    out_as = [
-        tmp_path / "out_a1",
-        tmp_path / "out_a2"
-    ]
+    out_as = [tmp_path / "out_a1", tmp_path / "out_a2"]
 
     out_b1 = tmp_path / "out_b1"
     final = tmp_path / "final"
@@ -107,15 +121,13 @@ def test_2_to_2_to_1(tmp_path):
     for p in final.glob("*"):
         assert p.name in ["TestA-TestB-TestC.json", "TestA2-TestB-TestC.json"]
 
+
 def test_2_to_1_to_1(tmp_path):
     # A   \
     #      > B  > C
     # A2  /
 
-    out_as = [
-        tmp_path / "out_a1",
-        tmp_path / "out_a2"
-    ]
+    out_as = [tmp_path / "out_a1", tmp_path / "out_a2"]
 
     out_b1 = tmp_path / "out_b1"
     final = tmp_path / "final"
@@ -126,5 +138,5 @@ def test_2_to_1_to_1(tmp_path):
         c = ex.execute_step(TestCStep, (out_b1,), final)
     assert len(c) == 2
     assert len(list(final.glob("*"))) == 2
-    for p in  final.glob("*"):
+    for p in final.glob("*"):
         assert p.name in ["TestA-TestB-TestC.json", "TestA2-TestB-TestC.json"]

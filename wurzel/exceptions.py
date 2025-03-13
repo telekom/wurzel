@@ -5,6 +5,7 @@
 """contains custom logged exceptions"""
 
 import logging
+
 log = logging.getLogger(__name__)
 
 
@@ -22,12 +23,14 @@ class LoggedCustomException(Exception):
 
     def __str__(self) -> str:
         return self.__repr__()
+
+
 class EnvSettingsError(ValueError):
     """Special Error for env related errors in regards to TypedStep settings"""
 
+
 class BadResponse(LoggedCustomException):
-    """raises if an HTTP api does not return 200
-    """
+    """raises if an HTTP api does not return 200"""
 
 
 class StepFailed(LoggedCustomException):
@@ -38,27 +41,38 @@ class InvalidCountryCodeException(LoggedCustomException):
     """raised when countryCode in url path is not recognized
     or not in accordance to ISO_3166"""
 
+
 class ContractFailedException(LoggedCustomException):
     """raised when a data contract is not fulfilled"""
+
+
 class StaticTypeError(ContractFailedException, TypeError):
     """raised if static type hinting are wrong"""
+
 
 class ConvertFailed(LoggedCustomException):
     """raised when html2md fails"""
 
+
 class CLIException(LoggedCustomException):
     """raised when the given string is not a valid Callable Pipeline"""
+
 
 class NoPreviousCollection(LoggedCustomException):
     """raised when milvus does not contain previous collection"""
 
+
 class MarkdownException(LoggedCustomException):
     """raised when Markdown libary complains"""
+
+
 class CustomQdrantException(LoggedCustomException):
     """raised when qdrant status is not fine"""
 
+
 class SplittException(LoggedCustomException):
-    """ Document had to have children """
+    """Document had to have children"""
+
 
 class EmbeddingException(LoggedCustomException):
     """The EmbeddingService returned data causing errors"""
@@ -66,6 +80,7 @@ class EmbeddingException(LoggedCustomException):
 
 class EmbeddingAPIException(LoggedCustomException):
     """The EmbeddingServiceAPI experienced an Error"""
+
 
 class UnrecoverableFatalException(LoggedCustomException):
     """Raised when the application encountered a problem that cannot be recovered"""

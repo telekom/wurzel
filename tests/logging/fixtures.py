@@ -7,7 +7,10 @@ import logging
 from fastapi import FastAPI
 import asgi_correlation_id
 from wurzel.utils.logging import JsonFormatter
+
 log = logging.getLogger(__name__)
+
+
 @pytest.fixture(scope="function")
 def FastApiLog():
     def configure_logging():
@@ -18,9 +21,8 @@ def FastApiLog():
         logging.root.setLevel("DEBUG")
         logging.root.addHandler(info_handler)
         logging.root.propagate = True
-        logging.basicConfig(
-            handlers=[info_handler],
-            level="DEBUG")
+        logging.basicConfig(handlers=[info_handler], level="DEBUG")
+
     configure_logging()
     app = FastAPI(on_startup=[configure_logging])
     app.add_middleware(asgi_correlation_id.CorrelationIdMiddleware)
@@ -28,4 +30,5 @@ def FastApiLog():
     @app.get("/{level}")
     async def test_get_level(level: int):
         log.log(level, "Test Log")
+
     yield app
