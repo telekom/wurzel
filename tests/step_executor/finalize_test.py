@@ -3,7 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import pytest
-from wurzel import BaseStepExecutor, TypedStep, NoSettings, PydanticModel
+
+from wurzel import BaseStepExecutor, NoSettings, PydanticModel, TypedStep
 
 
 class NiecheException(Exception):

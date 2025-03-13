@@ -2,10 +2,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
-import wurzel.datacontract as dac
-from pandera.typing import Series, DataFrame
 from pathlib import Path
+
+import pytest
+from pandera.typing import DataFrame, Series
+
+import wurzel.datacontract as dac
 
 
 class MyCSV(dac.PanderaDataFrameModel):

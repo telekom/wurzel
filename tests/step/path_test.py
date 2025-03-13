@@ -2,8 +2,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from wurzel import path as kpath
 import pydantic
+
+from wurzel import path as kpath
 
 
 class MyModel(pydantic.BaseModel):

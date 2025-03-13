@@ -5,16 +5,18 @@
 """containing the DVCStep sending embedding data into Qdrant"""
 
 # pylint: disable=duplicate-code
-from logging import getLogger
 import itertools
+from logging import getLogger
+
 from pandera.typing import DataFrame
 from qdrant_client import QdrantClient, models
-from wurzel.exceptions import StepFailed, CustomQdrantException
+
+from wurzel.exceptions import CustomQdrantException, StepFailed
 from wurzel.step import TypedStep, step_history
 from wurzel.steps.embedding.data import EmbeddingResult
+
 from .data import QdrantResult
 from .settings import QdrantSettings
-
 
 log = getLogger(__name__)
 

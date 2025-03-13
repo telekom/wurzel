@@ -6,14 +6,16 @@
 contains Embedding Manager
 """
 
-from typing import List, Union, Literal
+from json.decoder import JSONDecodeError
 from logging import getLogger
 from re import Pattern as RegexPattern
-from json.decoder import JSONDecodeError
+from typing import List, Literal, Union
+
 import requests
-from pydantic_core import Url
-from pydantic import validate_call
 from langchain_core.embeddings import Embeddings
+from pydantic import validate_call
+from pydantic_core import Url
+
 from wurzel.exceptions import (
     EmbeddingAPIException,
     EmbeddingException,

@@ -3,16 +3,17 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from pathlib import Path
 import shutil
+from pathlib import Path
 from typing import Tuple
+
 import pytest
 
-# Milvus-Lite; See: https://milvus.io/docs/milvus_lite.md
-
-from wurzel.steps.milvus import MilvusConnectorStep
 from wurzel.exceptions import StepFailed
 from wurzel.step_executor import BaseStepExecutor
+
+# Milvus-Lite; See: https://milvus.io/docs/milvus_lite.md
+from wurzel.steps.milvus import MilvusConnectorStep
 
 
 # Skip MILVUS tests if 'MILVUS_TESTS' is not set

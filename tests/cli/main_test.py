@@ -3,12 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-import typer
-from wurzel import PrometheusStepExecutor, BaseStepExecutor
 import pytest
+import typer
+
 import wurzel
-from wurzel.cli import _main as main
 import wurzel.steps
+from wurzel import BaseStepExecutor, PrometheusStepExecutor
+from wurzel.cli import _main as main
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 
 

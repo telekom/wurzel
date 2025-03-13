@@ -3,16 +3,17 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import inspect
-from typing import TypeAlias
-from typing import Any, Union, get_origin
-
 import json
-from pydantic import model_validator, create_model
-from pydantic_core import PydanticUndefined, ValidationError, InitErrorDetails
+from typing import Any, TypeAlias, Union, get_origin
+
+from pydantic import create_model, model_validator
+from pydantic_core import InitErrorDetails, PydanticUndefined, ValidationError
 from pydantic_settings import (
-    SettingsConfigDict,
     BaseSettings as _PydanticBaseSettings,
+)
+from pydantic_settings import (
     PydanticBaseSettingsSource,
+    SettingsConfigDict,
 )
 
 

@@ -2,11 +2,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from wurzel.utils.meta_settings import create_model, WZ
-import pytest
 from typing import Callable
-from wurzel import TypedStep, PydanticModel, Settings
+
+import pytest
+
+from wurzel import PydanticModel, Settings, TypedStep
 from wurzel.step_executor import BaseStepExecutor
+from wurzel.utils.meta_settings import WZ, create_model
 
 
 class MySettingsA(Settings):

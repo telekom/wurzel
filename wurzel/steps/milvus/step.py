@@ -5,16 +5,16 @@
 """containing the DVCStep sending embedding data into milvus"""
 
 from logging import getLogger
+
 import pandas as pd
 from pandera.typing import DataFrame
-from pymilvus import FieldSchema, CollectionSchema, DataType
-
+from pymilvus import CollectionSchema, DataType, FieldSchema
 from pymilvus.exceptions import MilvusException
-from pymilvus.milvus_client.index import IndexParams
 from pymilvus.milvus_client import MilvusClient
+from pymilvus.milvus_client.index import IndexParams
 
-from wurzel.step import TypedStep
 from wurzel.exceptions import NoPreviousCollection, StepFailed
+from wurzel.step import TypedStep
 from wurzel.steps.embedding.data import EmbeddingResult
 
 from .data import Result as MilvusResult

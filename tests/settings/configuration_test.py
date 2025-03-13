@@ -2,11 +2,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import logging
 import logging.config
+
 import pytest
 
 from wurzel.utils.logging import get_logging_dict_config
-import logging
 
 
 def test_logging_dict_config():

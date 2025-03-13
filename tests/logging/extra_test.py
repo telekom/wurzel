@@ -2,11 +2,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Iterable
-import pytest
-from wurzel.utils.logging import _make_dict_serializable
-
 import dataclasses
+from typing import Iterable
+
+import pytest
+
+from wurzel.utils.logging import _make_dict_serializable
 
 
 @dataclasses.dataclass

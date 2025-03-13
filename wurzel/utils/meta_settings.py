@@ -2,13 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Type, Union
 from types import NoneType
+from typing import Type, Union
 
-from pydantic import create_model as py_create_model, BaseModel
+from pydantic import BaseModel
+from pydantic import create_model as py_create_model
 
+from wurzel.step.settings import SettingsBase, StepSettings
 from wurzel.step.typed_step import TypedStep
-from wurzel.step.settings import StepSettings, SettingsBase
 
 
 # pylint: disable-next=invalid-name

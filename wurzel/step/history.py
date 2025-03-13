@@ -2,11 +2,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from contextvars import ContextVar
 import inspect
-from typing import Optional, Union, Iterable
-from types import NoneType
 import json
+from contextvars import ContextVar
+from types import NoneType
+from typing import Iterable, Optional, Union
+
 from .typed_step import TypedStep
 
 step_history: ContextVar[Optional["History"]] = ContextVar("step_history", default=None)

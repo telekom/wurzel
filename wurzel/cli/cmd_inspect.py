@@ -2,12 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Type
+import json
 from inspect import getfile
 from types import NoneType
-import json
+from typing import Type
+
 from pydantic_core import PydanticUndefined
-from wurzel import TypedStep, Settings
+
+from wurzel import Settings, TypedStep
 from wurzel.utils import WZ
 
 

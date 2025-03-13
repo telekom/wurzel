@@ -2,11 +2,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from .step.settings import StepSettings as Settings, NoSettings
-from .step import TypedStep
-from .datacontract import PanderaDataFrameModel, PydanticModel, MarkdownDataContract
+from .datacontract import MarkdownDataContract, PanderaDataFrameModel, PydanticModel
 from .path import PathToFolderWithBaseModels
+from .step import TypedStep
+from .step.settings import NoSettings
+from .step.settings import StepSettings as Settings
 from .step_executor import BaseStepExecutor, PrometheusStepExecutor
+
 # pylint: disable-next=invalid-name
 
 __all__ = [

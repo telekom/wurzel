@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from typing import Type
+
 from ...step import TypedStep
 from .data import QdrantResult
 

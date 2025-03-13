@@ -2,14 +2,15 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import mdformat
 import pytest
+
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.steps.splitter import SimpleSplitterStep
 from wurzel.utils.semantic_splitter import (
     SemanticSplitter,
     _get_token_len,
 )
-import mdformat
 
 
 @pytest.fixture(scope="function")

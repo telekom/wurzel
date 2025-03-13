@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import re
-
 from pathlib import Path
 from typing import Annotated
+
 from pydantic import Field, WrapValidator
 from pydantic_core import Url
 

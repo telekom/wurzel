@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from wurzel import TypedStep, PydanticModel
+from wurzel import PydanticModel, TypedStep
 from wurzel.utils import WZ
 
 

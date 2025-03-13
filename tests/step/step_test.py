@@ -2,15 +2,17 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from pathlib import Path
-import pytest
-import yaml
-from typing import Tuple, Set
 import shutil
 import subprocess
+from pathlib import Path
+from typing import Set, Tuple
+
+import pytest
+import yaml
+
+from wurzel.adapters import DvcAdapter
 from wurzel.step import Step
 from wurzel.step_executor import BaseStepExecutor
-from wurzel.adapters import DvcAdapter
 
 
 def is_valid_dvc_yaml(path: Path) -> bool:

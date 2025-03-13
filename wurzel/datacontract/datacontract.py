@@ -3,14 +3,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import abc
+import json
 from ast import literal_eval
 from pathlib import Path
-from typing import Union, Self, get_origin, Type
-import json
-import pydantic
+from typing import Self, Type, Union, get_origin
+
 import pandas as pd
 import pandera as pa
 import pandera.typing as patyp
+import pydantic
 
 
 class DataModel:

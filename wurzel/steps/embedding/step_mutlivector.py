@@ -11,20 +11,18 @@ from logging import getLogger
 from typing import TypedDict
 
 import numpy as np
-from pandera.typing import DataFrame
 from joblib import Parallel, delayed
+from pandera.typing import DataFrame
 
-
-from wurzel.step import TypedStep
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.exceptions import SplittException, StepFailed, EmbeddingAPIException
+from wurzel.exceptions import EmbeddingAPIException, SplittException, StepFailed
+from wurzel.step import TypedStep
 from wurzel.steps.embedding import EmbeddingStep
+
+from .data import EmbeddingMultiVectorResult
 
 # Local application/library specific imports
 from .settings import EmbeddingSettings
-
-
-from .data import EmbeddingMultiVectorResult
 
 log = getLogger(__name__)
 

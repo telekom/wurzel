@@ -2,12 +2,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import sys
-import os
-from typing import Optional, Mapping, List, Any
+import json
 import logging
 import logging.config
-import json
+import os
+import sys
+from typing import Any, List, Mapping, Optional
+
 from asgi_correlation_id import correlation_id
 
 log = logging.getLogger(__name__)

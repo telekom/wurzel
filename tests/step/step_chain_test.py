@@ -3,8 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import pytest
-from wurzel.step import TypedStep
+
 from wurzel.datacontract import PydanticModel
+from wurzel.step import TypedStep
 
 
 class DataType(PydanticModel):

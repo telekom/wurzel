@@ -4,25 +4,25 @@
 
 """CLI Entry"""
 
-import os
 import importlib
 import inspect
-from typing import Annotated
-from pathlib import Path
-import pkgutil
-from datetime import datetime
 import logging
 import logging.config
+import os
+import pkgutil
+from datetime import datetime
+from pathlib import Path
+from typing import Annotated
+
 import typer
 import typer.core
 
-from wurzel.utils.logging import get_logging_dict_config
 from wurzel import TypedStep
-from wurzel.steps import __all__ as all_steps
-from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
-
-from wurzel.cli.cmd_run import main as cmd_run
 from wurzel.cli.cmd_inspect import main as cmd_inspect
+from wurzel.cli.cmd_run import main as cmd_run
+from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
+from wurzel.steps import __all__ as all_steps
+from wurzel.utils.logging import get_logging_dict_config
 
 app = typer.Typer(
     no_args_is_help=True,

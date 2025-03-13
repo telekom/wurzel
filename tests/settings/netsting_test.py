@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import pytest
-
-from pydantic_core import Url
 from pydantic import Field
+from pydantic_core import Url
+
 from wurzel.step.settings import SettingsBase, SettingsLeaf
 
 

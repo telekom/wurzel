@@ -3,11 +3,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
+from logging import getLogger
 from pathlib import Path
 from typing import Tuple
+
 import pytest
 from pydantic import BaseModel
-from logging import getLogger
 
 log = getLogger(__name__)
 

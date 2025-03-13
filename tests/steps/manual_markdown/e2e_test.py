@@ -5,8 +5,8 @@
 
 import json
 
-from wurzel.steps import ManualMarkdownStep
 from wurzel.step_executor import BaseStepExecutor
+from wurzel.steps import ManualMarkdownStep
 
 
 def test_step(tmp_path, env):

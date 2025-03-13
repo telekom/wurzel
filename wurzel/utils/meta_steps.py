@@ -2,11 +2,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import inspect
 import importlib
+import inspect
 import pkgutil
+from typing import Type, TypeVar
 
-from typing import TypeVar, Type
 from wurzel.step.typed_step import TypedStep
 
 T = TypeVar("T", bound=object)

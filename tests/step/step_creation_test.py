@@ -3,13 +3,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from pathlib import Path
-import pytest
-from wurzel.step.settings import StepSettings
-from wurzel.step import TypedStep
-from wurzel.datacontract import PanderaDataFrameModel, PydanticModel
 from typing import Any
+
+import pytest
 from pandera.typing import Series
+
 from wurzel.adapters import DvcAdapter
+from wurzel.datacontract import PanderaDataFrameModel, PydanticModel
+from wurzel.step import TypedStep
+from wurzel.step.settings import StepSettings
 
 
 class MySettings(StepSettings):

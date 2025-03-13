@@ -3,7 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from pandera.typing import Series
-from wurzel.steps.embedding.data import EmbeddingResult, EmbeddingMultiVectorResult
+
+from wurzel.steps.embedding.data import EmbeddingMultiVectorResult, EmbeddingResult
 
 
 class QdrantResult(EmbeddingResult):

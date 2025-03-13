@@ -2,24 +2,25 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
-import requests_mock
 import re
 from typing import Type
+
+import pytest
+import requests_mock
 from pydantic_core import Url
 
-from wurzel.steps.embedding import (
-    HuggingFaceInferenceAPIEmbeddings,
-    PrefixedAPIEmbeddings,
+from tests.steps.embedding.conftest import (
+    GET_RESULT_INFO_DICT,
+    GET_RESULT_INFO_STR,
+    POST_RESULT_EMBEDDING_STR,
+    embedding_service_mock,  # noqa: F401
 )
 from wurzel.exceptions import (
     EmbeddingAPIException,
 )
-from tests.steps.embedding.conftest import (
-    embedding_service_mock,  # noqa: F401
-    GET_RESULT_INFO_DICT,
-    POST_RESULT_EMBEDDING_STR,
-    GET_RESULT_INFO_STR,
+from wurzel.steps.embedding import (
+    HuggingFaceInferenceAPIEmbeddings,
+    PrefixedAPIEmbeddings,
 )
 
 GenericEmbedding = HuggingFaceInferenceAPIEmbeddings

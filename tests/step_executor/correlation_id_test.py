@@ -2,11 +2,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
 from pathlib import Path
-from wurzel import BaseStepExecutor, TypedStep, MarkdownDataContract
-from wurzel.exceptions import StepFailed
+
 import asgi_correlation_id
+import pytest
+
+from wurzel import BaseStepExecutor, MarkdownDataContract, TypedStep
+from wurzel.exceptions import StepFailed
 
 
 class OkExc(Exception):

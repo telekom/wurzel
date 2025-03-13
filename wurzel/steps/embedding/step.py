@@ -7,29 +7,28 @@ consists of DVCSteps to embedd files and save them as for example as csv
 """
 
 # Standard library imports
+import os
+import re
 from io import StringIO
 from logging import getLogger
 from pathlib import Path
-import re
-from typing import TypedDict, Optional
-import os
+from typing import Optional, TypedDict
 
+from markdown import Markdown
 from pandera.typing import DataFrame
 from tqdm.auto import tqdm
-from markdown import Markdown
-from wurzel.steps.embedding.huggingface import HuggingFaceInferenceAPIEmbeddings
-from wurzel.exceptions import EmbeddingAPIException
-from wurzel.step import TypedStep
+
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.exceptions import StepFailed
-from wurzel.utils.semantic_splitter import SemanticSplitter
+from wurzel.exceptions import EmbeddingAPIException, StepFailed
+from wurzel.step import TypedStep
+from wurzel.steps.embedding.huggingface import HuggingFaceInferenceAPIEmbeddings
 from wurzel.steps.splitter import SimpleSplitterStep
+from wurzel.utils.semantic_splitter import SemanticSplitter
+
+from .data import EmbeddingResult
 
 # Local application/library specific imports
 from .settings import EmbeddingSettings
-
-
-from .data import EmbeddingResult
 
 log = getLogger(__name__)
 

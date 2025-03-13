@@ -2,12 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
-from typing import Dict, List, Tuple, Type, Union, Literal
-from pydantic import Field
 import json
-from wurzel.step.settings import SettingsBase, SettingsLeaf
+from typing import Dict, List, Literal, Tuple, Type, Union
+
+import pytest
+from pydantic import Field
 from pydantic_core import Url as pyd_c_Url
+
+from wurzel.step.settings import SettingsBase, SettingsLeaf
 
 
 def test_prefix():

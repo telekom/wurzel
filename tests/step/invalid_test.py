@@ -3,11 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-import pytest
 from typing import Any
+
+import pytest
+
 from wurzel.datacontract import PydanticModel
-from wurzel.step import TypedStep
 from wurzel.exceptions import ContractFailedException
+from wurzel.step import TypedStep
 from wurzel.step_executor import BaseStepExecutor
 
 

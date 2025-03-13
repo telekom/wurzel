@@ -4,11 +4,10 @@
 
 import abc
 import glob
+from logging import getLogger
 from pathlib import Path
 from re import Pattern
 from typing import Set
-from logging import getLogger
-
 
 log = getLogger(__name__)
 

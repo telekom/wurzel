@@ -3,16 +3,16 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
-from typing import Any, Optional, Self
 from logging import getLogger
+from typing import Any, Optional, Self
 
 from prometheus_client import REGISTRY, Counter, Histogram, push_to_gateway
 
 from .base_executor import (
     BaseStepExecutor,
-    TypedStep,
     PathToFolderWithBaseModels,
     StepReport,
+    TypedStep,
 )
 from .settings import PrometheusSettings as Settings
 
