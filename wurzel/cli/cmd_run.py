@@ -2,8 +2,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Type
 from pathlib import Path
+from typing import Type
+
 from wurzel import TypedStep
 
 

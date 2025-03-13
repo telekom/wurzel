@@ -2,21 +2,21 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import os
-from pathlib import Path
+
 import shutil
-from typing import Tuple
-from unittest import mock
 import unittest
 import unittest.mock
+from pathlib import Path
+from typing import Tuple
+
 import pytest
 
 # qdrant-Lite; See: https://qdrant.io/docs/qdrant_lite.md
 from qdrant_client import QdrantClient
-import requests_mock
-from wurzel.steps.qdrant import QdrantConnectorStep, QdrantConnectorMultiVectorStep
+
 from wurzel.exceptions import StepFailed
 from wurzel.step_executor import BaseStepExecutor
+from wurzel.steps.qdrant import QdrantConnectorMultiVectorStep, QdrantConnectorStep
 
 
 def test_qdrant_connector_first(

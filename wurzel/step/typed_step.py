@@ -3,29 +3,29 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import abc
+from collections.abc import Iterable
+from logging import getLogger
 from pathlib import Path
+from types import NoneType
 from typing import (
     Generic,
-    Type,
-    TypeVar,
     Optional,
+    Self,
+    Type,
+    TypeAlias,
+    TypeVar,
     Union,
     get_args,
-    TypeAlias,
-    Iterable,
-    Self,
 )
-from logging import getLogger
-from types import NoneType
-from typing_inspect import get_origin
+
 import pandera.typing as patyp
-from wurzel.step.settings import StepSettings
+from typing_inspect import get_origin
 
-
-from wurzel.exceptions import StaticTypeError, ContractFailedException
+from wurzel.datacontract import PanderaDataFrameModel, PydanticModel
+from wurzel.exceptions import ContractFailedException, StaticTypeError
 from wurzel.path import PathToFolderWithBaseModels
+from wurzel.step.settings import StepSettings
 from wurzel.step.step import Step
-from wurzel.datacontract import PydanticModel, PanderaDataFrameModel
 
 # pylint: disable-next=invalid-name
 MODEL_TYPE: TypeAlias = Type[Union[PydanticModel, PanderaDataFrameModel]]

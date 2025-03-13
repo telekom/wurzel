@@ -2,14 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from pkgutil import ModuleInfo
 
-import typer
-from wurzel import PrometheusStepExecutor, BaseStepExecutor
 import pytest
+import typer
+
 import wurzel
-from wurzel.cli import _main as main
 import wurzel.steps
+from wurzel import BaseStepExecutor, PrometheusStepExecutor
+from wurzel.cli import _main as main
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 
 
@@ -19,7 +19,7 @@ def test_module_discovery():
         if m.name == "wurzel":
             assert m.ispkg
         if m.name == "base_executor":
-            assert m.ispkg == False
+            assert m.ispkg is False
 
 
 def test_packages_discovery():
@@ -101,4 +101,4 @@ def test_inspekt(gen_env):
 
 
 def test_call():
-    from wurzel import __main__
+    from wurzel import __main__  # noqa: F401

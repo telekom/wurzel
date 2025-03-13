@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from wurzel.utils.meta_steps import *
+from wurzel.utils.meta_steps import find_typed_steps_in_package
 
 
 def test_find_ts():

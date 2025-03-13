@@ -3,9 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import pytest
-from pathlib import Path
-from wurzel import BaseStepExecutor, TypedStep, NoSettings, MarkdownDataContract
-from wurzel.exceptions import StepFailed
+
+from wurzel import BaseStepExecutor, MarkdownDataContract, NoSettings, TypedStep
 from wurzel.step.history import History, step_history
 
 

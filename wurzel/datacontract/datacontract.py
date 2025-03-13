@@ -3,14 +3,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import abc
+import json
 from ast import literal_eval
 from pathlib import Path
-from typing import Union, Self, get_origin, Type
-import json
-import pydantic
+from typing import Self, Type, Union, get_origin
+
 import pandas as pd
 import pandera as pa
 import pandera.typing as patyp
+import pydantic
 
 
 class DataModel:
@@ -46,7 +47,7 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
         """switch case to find the matching file ending"""
         read_data = pd.read_csv(path.open(encoding="utf-8"))
         for key, atr in cls.to_schema().columns.items():
-            if atr.dtype.type == list:
+            if atr.dtype.type is list:
                 read_data[key] = read_data[key].apply(literal_eval)
         return patyp.DataFrame[cls](read_data)
 
@@ -96,7 +97,7 @@ class PydanticModel(pydantic.BaseModel, DataModel):
         if get_origin(model_type) is None:
             if issubclass(model_type, pydantic.BaseModel):
                 return cls(**json.load(path.open(encoding="utf-8")))
-        elif get_origin(model_type) == list:
+        elif get_origin(model_type) is list:
             data = json.load(path.open(encoding="utf-8"))
             for i, entry in enumerate(data):
                 data[i] = cls(**entry)

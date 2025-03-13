@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
+
 from wurzel.step_executor import PrometheusStepExecutor
 
 

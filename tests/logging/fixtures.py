@@ -2,10 +2,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
 import logging
-from fastapi import FastAPI
+
 import asgi_correlation_id
+import pytest
+from fastapi import FastAPI
+
 from wurzel.utils.logging import JsonFormatter
 
 log = logging.getLogger(__name__)

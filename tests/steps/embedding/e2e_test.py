@@ -3,17 +3,19 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard library imports
-from pathlib import Path
 import shutil
+from pathlib import Path
 
 # Related third-party imports
 from typing import List
+
 import numpy as np
 import pytest
 
+from wurzel.step_executor import BaseStepExecutor
+
 # Local application/library specific imports
 from wurzel.steps import EmbeddingStep
-from wurzel.step_executor import BaseStepExecutor
 from wurzel.steps.embedding.step_mutlivector import EmbeddingMultiVectorStep
 
 

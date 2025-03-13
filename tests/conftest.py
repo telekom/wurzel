@@ -3,11 +3,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
+from logging import getLogger
 from pathlib import Path
 from typing import Tuple
+
 import pytest
 from pydantic import BaseModel
-from logging import getLogger
 
 log = getLogger(__name__)
 
@@ -100,9 +101,9 @@ def pytest_collection_modifyitems(config, items):
     if len(items) == 1:
         return
     for item in items:
-        has_repeatability_marker = pytest.mark.repeatability_test.mark in [
-            i for i in item.own_markers
-        ]
+        has_repeatability_marker = pytest.mark.repeatability_test.mark in list(
+            item.own_markers
+        )
         if do_rep_tests and not has_repeatability_marker:
             item.add_marker(
                 pytest.mark.skip(reason="need --repeatability option to run")

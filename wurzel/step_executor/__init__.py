@@ -2,5 +2,5 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from .base_executor import BaseStepExecutor
-from .prometheus_executor import PrometheusStepExecutor
+from .base_executor import BaseStepExecutor  # noqa: F401
+from .prometheus_executor import PrometheusStepExecutor  # noqa: F401

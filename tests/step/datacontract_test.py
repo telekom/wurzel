@@ -2,10 +2,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
-import wurzel.datacontract as dac
-from pandera.typing import Series, DataFrame
 from pathlib import Path
+
+import pytest
+from pandera.typing import DataFrame, Series
+
+import wurzel.datacontract as dac
 
 
 class MyCSV(dac.PanderaDataFrameModel):
@@ -16,7 +18,7 @@ def test_dvc_store_load(
     tmp_path,
 ):
     expected = [1, 2, 3, 4, 5, 7]
-    path = tmp_path / f"output"
+    path = tmp_path / "output"
     x = DataFrame[MyCSV]({"col0": expected})
     save_path = MyCSV.save_to_path(path, x)
     assert save_path.suffix == ".csv"

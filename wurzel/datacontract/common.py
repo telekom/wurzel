@@ -2,9 +2,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Any, Callable, Self
 from pathlib import Path
-from re import compile as _re_compile, Pattern as _re_pattern
+from re import Pattern as _re_pattern
+from re import compile as _re_compile
+from typing import Any, Callable, Self
+
 import pydantic
 
 from .datacontract import PydanticModel

@@ -2,11 +2,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from wurzel.utils.meta_settings import create_model, WZ
-import pytest
 from typing import Callable
-from wurzel import TypedStep, PydanticModel, Settings
+
+import pytest
+
+from wurzel import PydanticModel, Settings, TypedStep
 from wurzel.step_executor import BaseStepExecutor
+from wurzel.utils.meta_settings import WZ, create_model
 
 
 class MySettingsA(Settings):
@@ -74,4 +76,4 @@ def test_dummy_with_env_execute(dummy_with_env_prep, tmp_path):
     dummy_file.write_bytes(b"{}")
     with BaseStepExecutor() as exc:
         for step in used_steps:
-            exc(step.__class__, set([dummy_file]), dummy_file_out)
+            exc(step.__class__, {dummy_file}, dummy_file_out)

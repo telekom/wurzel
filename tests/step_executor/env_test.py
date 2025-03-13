@@ -2,12 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
 import json
 from typing import Optional
+
+import pytest
+
+from wurzel.datacontract import PydanticModel
 from wurzel.step.settings import StepSettings
 from wurzel.step.typed_step import TypedStep
-from wurzel.datacontract import PydanticModel
 from wurzel.step_executor import BaseStepExecutor
 
 

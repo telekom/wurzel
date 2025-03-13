@@ -3,16 +3,17 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import pytest
-from wurzel import (
-    PrometheusStepExecutor,
-    TypedStep,
-    Settings,
-    PydanticModel,
-    BaseStepExecutor,
-)
-from wurzel.step_executor.base_executor import step_env_encapsulation
-from wurzel.exceptions import EnvSettingsError
 from pydantic import ValidationError
+
+from wurzel import (
+    BaseStepExecutor,
+    PrometheusStepExecutor,
+    PydanticModel,
+    Settings,
+    TypedStep,
+)
+from wurzel.exceptions import EnvSettingsError
+from wurzel.step_executor.base_executor import step_env_encapsulation
 
 
 class MySettings(Settings):

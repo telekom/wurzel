@@ -4,9 +4,9 @@
 
 from pathlib import Path
 from typing import Set
-from wurzel.step import Step
+
 from wurzel.adapters import DvcAdapter
-import pytest
+from wurzel.step import Step
 
 
 class A(Step):

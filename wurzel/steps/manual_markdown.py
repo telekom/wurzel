@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from pathlib import Path
+
 from wurzel import Settings
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.step import TypedStep

@@ -2,12 +2,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Optional
-
 import json
+from typing import Optional
 
 from pydantic import Field, validator
 from qdrant_client.models import Distance
+
 from wurzel.step.settings import StepSettings
 
 

@@ -2,8 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from .datacontract import PanderaDataFrameModel, PydanticModel, DataModel
 from .common import MarkdownDataContract
+from .datacontract import DataModel, PanderaDataFrameModel, PydanticModel
 
 __all__ = [
     "PanderaDataFrameModel",

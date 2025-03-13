@@ -7,10 +7,10 @@ from pathlib import Path
 from typing import Any, Type, TypedDict
 
 import yaml
-from wurzel import BaseStepExecutor, PrometheusStepExecutor, TypedStep
 
 import wurzel
 import wurzel.cli
+from wurzel import BaseStepExecutor, PrometheusStepExecutor, TypedStep
 
 
 class DvcDict(TypedDict):

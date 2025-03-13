@@ -15,7 +15,7 @@ __all__ = ["generate_cli_call"]
 try:
     __version__ = importlib.metadata.version("wurzel")
 # pylint: disable-next=bare-except
-except:
+except:  # noqa: E722
     __version__ = "dev"
 __version_info__ = __version__.split(".")
 
@@ -39,7 +39,7 @@ def generate_cli_call(
         str: cmd
     """
     if inputs:
-        inputs = "-i " + " -i ".join((i.as_posix() for i in inputs))
+        inputs = "-i " + " -i ".join(i.as_posix() for i in inputs)
     else:
         inputs = ""
     return " ".join(

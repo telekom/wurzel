@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+from typing import Any
+
 from . import semantic_splitter
 from .meta_settings import WZ, create_model
 from .meta_steps import find_typed_steps_in_package
@@ -15,7 +17,7 @@ __all__ = [
 ]
 
 
-def try_get_length(x) -> int:
+def try_get_length(x: Any) -> int:
     """Tries to get length, return 1 if fails
 
     Args:
@@ -27,5 +29,5 @@ def try_get_length(x) -> int:
     try:
         return len(x)
     # pylint: disable=bare-except
-    except:
+    except:  # noqa: E722
         return 1

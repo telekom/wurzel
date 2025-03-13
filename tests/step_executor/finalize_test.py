@@ -3,7 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import pytest
-from wurzel import BaseStepExecutor, TypedStep, NoSettings, PydanticModel
+
+from wurzel import BaseStepExecutor, NoSettings, PydanticModel, TypedStep
 
 
 class NiecheException(Exception):
@@ -26,5 +27,5 @@ class MyToBeTestedStep(TypedStep[NoSettings, None, MyModel]):
 def test_finalize_called(tmp_path):
     with BaseStepExecutor() as ex:
         with pytest.raises(Exception) as e:
-            r = ex(MyToBeTestedStep, None, tmp_path)
+            _ = ex(MyToBeTestedStep, None, tmp_path)
         assert "NiecheException" in str(e.value.message)

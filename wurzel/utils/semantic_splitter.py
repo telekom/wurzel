@@ -4,16 +4,17 @@
 
 """Semantic Markdown Splitter"""
 
-from logging import getLogger
 import re
-from typing import Tuple, Type, TypedDict, Optional
-import tiktoken
+from logging import getLogger
+from typing import Optional, Tuple, Type, TypedDict
+
 import mdformat
 import spacy
-from mistletoe.token import Token
-from mistletoe import block_token, markdown_renderer, span_token
+import tiktoken
 from mistletoe import Document as MisDocument
+from mistletoe import block_token, markdown_renderer, span_token
 from mistletoe.markdown_renderer import MarkdownRenderer
+from mistletoe.token import Token
 
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import MarkdownException

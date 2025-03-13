@@ -3,11 +3,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from pathlib import Path
+from typing import Any, Generic, Type, TypeVar, get_args
 
-from typing import Generic, TypeVar, Type, Any, get_args
-import pydantic
-from pydantic_core import core_schema, PydanticCustomError
 import pandera.typing as patyp
+import pydantic
+from pydantic_core import PydanticCustomError, core_schema
 
 B = TypeVar(
     "B",

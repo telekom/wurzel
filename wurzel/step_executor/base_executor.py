@@ -4,35 +4,37 @@
 
 """Base Executor"""
 
-from contextvars import copy_context
-from pathlib import Path
-from typing import Generator, Optional, Type, Self, Union, Callable, Any
-from types import NoneType
-from contextlib import contextmanager
-import time
 import json
-from logging import getLogger
 import os
-import pydantic
-from pydantic_core import ValidationError
-import pandera.typing as patyp
-from asgi_correlation_id import correlation_id
+import time
+from collections.abc import Generator
+from contextlib import contextmanager
+from contextvars import copy_context
+from logging import getLogger
+from pathlib import Path
+from types import NoneType
+from typing import Any, Callable, Optional, Self, Type, Union
 
+import pandera.typing as patyp
+import pydantic
+from asgi_correlation_id import correlation_id
+from pydantic_core import ValidationError
+
+from wurzel.datacontract import PanderaDataFrameModel, PydanticModel, datacontract
 from wurzel.exceptions import (
     ContractFailedException,
     EnvSettingsError,
     LoggedCustomException,
     StepFailed,
 )
-from wurzel.step.typed_step import (
-    TypedStep,
-)
+from wurzel.path import PathToFolderWithBaseModels
 from wurzel.step.history import (
     History,
     step_history,
 )
-from wurzel.datacontract import PanderaDataFrameModel, PydanticModel, datacontract
-from wurzel.path import PathToFolderWithBaseModels
+from wurzel.step.typed_step import (
+    TypedStep,
+)
 from wurzel.utils import WZ, create_model, try_get_length
 
 log = getLogger(__name__)

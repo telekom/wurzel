@@ -2,26 +2,25 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
-import requests_mock
 import re
 from typing import Type
+
+import pytest
+import requests_mock
 from pydantic_core import Url
 
-from wurzel.steps.embedding import (
-    HuggingFaceInferenceAPIEmbeddings,
-    PrefixedAPIEmbeddings,
+from tests.steps.embedding.conftest import (
+    GET_RESULT_INFO_DICT,
+    GET_RESULT_INFO_STR,
+    POST_RESULT_EMBEDDING_STR,
+    embedding_service_mock,  # noqa: F401
 )
 from wurzel.exceptions import (
     EmbeddingAPIException,
-    UnrecoverableFatalException,
-    EmbeddingException,
 )
-from tests.steps.embedding.conftest import (
-    embedding_service_mock,
-    GET_RESULT_INFO_DICT,
-    POST_RESULT_EMBEDDING_STR,
-    GET_RESULT_INFO_STR,
+from wurzel.steps.embedding import (
+    HuggingFaceInferenceAPIEmbeddings,
+    PrefixedAPIEmbeddings,
 )
 
 GenericEmbedding = HuggingFaceInferenceAPIEmbeddings
@@ -60,7 +59,9 @@ def init_test(EmbeddingClass: Type[HuggingFaceInferenceAPIEmbeddings], ConstKwar
 
 @FOR_EACH_EMBEDDING_CLASS
 def test_documents_for_each(
-    EmbeddingClass: Type[GenericEmbedding], ConstKwargs, embedding_service_mock
+    EmbeddingClass: Type[GenericEmbedding],
+    ConstKwargs,
+    embedding_service_mock,  # noqa: F811
 ):
     e = EmbeddingClass(**ConstKwargs)
     b = e.embed_documents(["aa", "bb"])
@@ -71,7 +72,9 @@ def test_documents_for_each(
 
 @FOR_EACH_EMBEDDING_CLASS
 def test_embedd_query_for_each(
-    EmbeddingClass: Type[GenericEmbedding], ConstKwargs, embedding_service_mock
+    EmbeddingClass: Type[GenericEmbedding],
+    ConstKwargs,
+    embedding_service_mock,  # noqa: F811
 ):
     e = EmbeddingClass(**ConstKwargs)
     a = e.embed_query("aa")

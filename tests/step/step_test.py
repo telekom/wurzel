@@ -2,15 +2,17 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from pathlib import Path
-import pytest
-import yaml
-from typing import Tuple, Set
 import shutil
 import subprocess
+from pathlib import Path
+from typing import Set, Tuple
+
+import pytest
+import yaml
+
+from wurzel.adapters import DvcAdapter
 from wurzel.step import Step
 from wurzel.step_executor import BaseStepExecutor
-from wurzel.adapters import DvcAdapter
 
 
 def is_valid_dvc_yaml(path: Path) -> bool:
@@ -22,7 +24,7 @@ def is_valid_dvc_yaml(path: Path) -> bool:
     )
     assert "Initialized empty Git repository in" in create_stdout, create_stdout
     assert "Initialized DVC repository." in create_stdout, create_stdout
-    assert not "is invalid" in status_stdout
+    assert "is invalid" not in status_stdout
 
 
 class StepImplementedLeaf(Step):
@@ -104,7 +106,7 @@ def test_save_yaml(nested_steps, tmp_path: Path):
     target_path = tmp_path / "dvc.yaml"
     DvcAdapter.generate_yaml(step2, target_path, output_2)
     assert target_path.exists()
-    with open(target_path, "r") as f:
+    with open(target_path) as f:
         yaml.safe_load(f)
     is_valid_dvc_yaml(target_path)
 

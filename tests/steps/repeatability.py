@@ -2,10 +2,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
-from typing import Type, get_args
-from pathlib import Path
 import hashlib
+from pathlib import Path
+from typing import Type
+
+import pytest
+
 from wurzel.step import TypedStep
 from wurzel.steps import ManualMarkdownStep
 

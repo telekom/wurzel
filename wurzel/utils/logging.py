@@ -2,12 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import sys
-import os
-from typing import Optional, Mapping, List, Any
+import json
 import logging
 import logging.config
-import json
+import os
+import sys
+from collections.abc import Mapping
+from typing import Any, List, Optional
+
 from asgi_correlation_id import correlation_id
 
 log = logging.getLogger(__name__)
@@ -123,10 +125,8 @@ class JsonFormatter(logging.Formatter):
             "thread": f"{data.pop('threadName')}({data.pop('thread')})",
         }
         if all(
-            (
-                key in data
-                for key in ["warnings.category", "warnings.filename", "warnings.lineno"]
-            )
+            key in data
+            for key in ["warnings.category", "warnings.filename", "warnings.lineno"]
         ):
             output["file"] = (
                 f"{data.pop('warnings.filename')}:{data.pop('warnings.lineno')}"

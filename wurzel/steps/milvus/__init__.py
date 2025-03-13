@@ -7,7 +7,7 @@ from .settings import MilvusSettings
 __all__ = ["MilvusSettings"]
 try:
     _HAS_MILVUS = True
-    import pymilvus as _
+    import pymilvus as _  # noqa: F401
 except ImportError:
     _HAS_MILVUS = False
 if _HAS_MILVUS:

@@ -2,8 +2,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from pandera.typing import Series
 from pandera import Field
+from pandera.typing import Series
+
 from wurzel.datacontract import PanderaDataFrameModel
 
 

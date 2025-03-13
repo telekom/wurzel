@@ -2,8 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from .step import EmbeddingStep
 from .huggingface import HuggingFaceInferenceAPIEmbeddings, PrefixedAPIEmbeddings
+from .step import EmbeddingStep
 
 __all__ = [
     "EmbeddingStep",

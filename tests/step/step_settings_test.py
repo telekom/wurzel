@@ -2,11 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+from types import NoneType
+
 import pytest
 from pydantic import ValidationError
-from wurzel import NoSettings, TypedStep, PydanticModel, Settings
+
+from wurzel import NoSettings, PydanticModel, Settings, TypedStep
 from wurzel.exceptions import StaticTypeError
-from types import NoneType
+
 # used in pipel
 
 

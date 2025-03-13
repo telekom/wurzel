@@ -3,7 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+
 from pydantic import Field, validator
+
 from wurzel.step.settings import StepSettings
 
 

@@ -2,13 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from pydantic.main import BaseModel
-import pytest
-import pydantic
+
 from typing import Any
+
+import pytest
+
 from wurzel.datacontract import PydanticModel
-from wurzel.step import TypedStep
 from wurzel.exceptions import ContractFailedException
+from wurzel.step import TypedStep
 from wurzel.step_executor import BaseStepExecutor
 
 
@@ -26,7 +27,7 @@ def test_pydantic_invalid_return(result, base, tmp_path):
         def run(self, inpt: None) -> base:
             return result
 
-    with pytest.raises(ContractFailedException) as err:
+    with pytest.raises(ContractFailedException):
         BaseStepExecutor().execute_step(Mystep, (), tmp_path / "res.json")
 
 

@@ -2,14 +2,15 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
 from pathlib import Path
+
+import pytest
+
 from wurzel import (
     BaseStepExecutor,
-    TypedStep,
-    NoSettings,
     MarkdownDataContract,
     Settings,
+    TypedStep,
 )
 from wurzel.exceptions import StepFailed
 

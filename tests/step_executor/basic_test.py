@@ -2,11 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import json
-from pathlib import Path
-import re
-import pytest
-from wurzel import BaseStepExecutor, TypedStep, NoSettings, MarkdownDataContract
+
+from wurzel import BaseStepExecutor, MarkdownDataContract, NoSettings, TypedStep
 
 
 class MyStep(TypedStep[NoSettings, MarkdownDataContract, list[MarkdownDataContract]]):
@@ -75,7 +72,7 @@ def test_chain(tmp_path):
         res: MarkdownDataContract
         assert res.md == "A"
     assert len(b[0][0]) == 2
-    assert all((md.md == "A" for md in b[0][0]))
+    assert all(md.md == "A" for md in b[0][0])
     pass
 
 
@@ -134,7 +131,7 @@ def test_2_to_1_to_1(tmp_path):
     with BaseStepExecutor() as ex:
         ex.execute_step(TestAStep, None, output_dir=out_as[0])
         ex.execute_step(TestA2Step, None, output_dir=out_as[1])
-        b = ex.execute_step(TestBStep, out_as, out_b1)
+        _ = ex.execute_step(TestBStep, out_as, out_b1)
         c = ex.execute_step(TestCStep, (out_b1,), final)
     assert len(c) == 2
     assert len(list(final.glob("*"))) == 2

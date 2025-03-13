@@ -9,15 +9,14 @@ consists of DVCSteps to embedd files and save them as for example as csv
 # Standard library imports
 from logging import getLogger
 
-
 from pydantic import Field
 
 from wurzel import Settings
-
-from wurzel.step import TypedStep
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import MarkdownException, SplittException
+from wurzel.step import TypedStep
 from wurzel.utils.semantic_splitter import SemanticSplitter
+
 # Local application/library specific imports
 
 

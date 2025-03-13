@@ -2,10 +2,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
-import logging
-from wurzel.utils.logging import JsonFormatter
 import json
+import logging
+
+import pytest
+
+from wurzel.utils.logging import JsonFormatter
 
 FOR_EACH_LOG_LEVEL = pytest.mark.parametrize(
     "level",
@@ -53,8 +55,9 @@ def test_logging_extra_data(capsys, level, loggername):
 @FOR_EACH_LOG_LEVEL
 @FOR_EACH_LOGGER
 def test_logging_cor_id(capsys, level, loggername):
-    import asgi_correlation_id
     from uuid import uuid4
+
+    import asgi_correlation_id
 
     uuid = uuid4()
     asgi_correlation_id.correlation_id.set(str(uuid))
