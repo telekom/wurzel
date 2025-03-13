@@ -2,18 +2,15 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import os
+
 from pathlib import Path
 import shutil
 from typing import Tuple
-from pydantic import ValidationError
-import pydantic_core
 import pytest
 
 # Milvus-Lite; See: https://milvus.io/docs/milvus_lite.md
-from milvus_lite.server import Server
-import requests_mock
-from wurzel.steps.milvus import MilvusSettings, MilvusConnectorStep
+
+from wurzel.steps.milvus import MilvusConnectorStep
 from wurzel.exceptions import StepFailed
 from wurzel.step_executor import BaseStepExecutor
 

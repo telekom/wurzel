@@ -2,13 +2,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Type
+
 from . import (
     milvus as __m,
     qdrant as __q,
 )
-from .milvus import *
-from .qdrant import *
 from ..step import TypedStep
 from .manual_markdown import ManualMarkdownStep
 from .embedding import EmbeddingStep

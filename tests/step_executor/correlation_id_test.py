@@ -4,7 +4,7 @@
 
 import pytest
 from pathlib import Path
-from wurzel import BaseStepExecutor, TypedStep, NoSettings, MarkdownDataContract
+from wurzel import BaseStepExecutor, TypedStep, MarkdownDataContract
 from wurzel.exceptions import StepFailed
 import asgi_correlation_id
 

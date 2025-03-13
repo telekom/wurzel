@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import pytest
-from typing import Type, get_args
+from typing import Type
 from pathlib import Path
 import hashlib
 from wurzel.step import TypedStep

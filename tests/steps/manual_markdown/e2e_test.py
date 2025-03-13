@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
 
 import json
 
@@ -13,8 +12,8 @@ from wurzel.step_executor import BaseStepExecutor
 def test_step(tmp_path, env):
     inpt = tmp_path / "inpt"
     inpt.mkdir()
-    file_a = (inpt / "file_a.md").write_text("#My file\nThis is text")
-    file_b = (inpt / "file_b.md").write_text("#My file\nThis is text")
+    (inpt / "file_a.md").write_text("#My file\nThis is text")
+    (inpt / "file_b.md").write_text("#My file\nThis is text")
     outp = tmp_path / "out"
     env.set("FOLDER_PATH", tmp_path.as_posix())
     BaseStepExecutor(dont_encapsulate=True)(ManualMarkdownStep, set(), outp)

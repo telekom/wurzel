@@ -3,10 +3,11 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import pytest
-from typing import Dict, Any, List, Tuple, Type, Union, Literal
-from pydantic import field_validator, Field
+from typing import Dict, List, Tuple, Type, Union, Literal
+from pydantic import Field
 import json
 from wurzel.step.settings import SettingsBase, SettingsLeaf
+from pydantic_core import Url as pyd_c_Url
 
 
 def test_prefix():
@@ -160,7 +161,7 @@ def test_nested_mapping_no_defaults(init_method, mapping_default, env):
         ),
         (
             [("CHILDREN", {"Thomas": {"EYES": {"center": {"HAS": False}}}})],
-            lambda p: p.__dict__["CHILDREN"]["Thomas"].EYES["center"].HAS == False,
+            lambda p: p.__dict__["CHILDREN"]["Thomas"].EYES["center"].HAS is False,
         ),
     ],
 )
@@ -201,9 +202,6 @@ def test_nested_twice_mapping_no_defaults(env_values, validator, mapping_default
     if env_values is None:
         assert p.CHILDREN["Thomas"] == Child()
     assert validator(p)
-
-
-from pydantic_core import Url as pyd_c_Url
 
 
 def url_param(

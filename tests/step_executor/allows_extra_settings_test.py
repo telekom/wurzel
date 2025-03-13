@@ -7,7 +7,6 @@ from pathlib import Path
 from wurzel import (
     BaseStepExecutor,
     TypedStep,
-    NoSettings,
     MarkdownDataContract,
     Settings,
 )

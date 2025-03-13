@@ -14,11 +14,9 @@ from wurzel.steps.embedding import (
 )
 from wurzel.exceptions import (
     EmbeddingAPIException,
-    UnrecoverableFatalException,
-    EmbeddingException,
 )
 from tests.steps.embedding.conftest import (
-    embedding_service_mock,
+    embedding_service_mock,  # noqa: F401
     GET_RESULT_INFO_DICT,
     POST_RESULT_EMBEDDING_STR,
     GET_RESULT_INFO_STR,
@@ -60,7 +58,9 @@ def init_test(EmbeddingClass: Type[HuggingFaceInferenceAPIEmbeddings], ConstKwar
 
 @FOR_EACH_EMBEDDING_CLASS
 def test_documents_for_each(
-    EmbeddingClass: Type[GenericEmbedding], ConstKwargs, embedding_service_mock
+    EmbeddingClass: Type[GenericEmbedding],
+    ConstKwargs,
+    embedding_service_mock,  # noqa: F811
 ):
     e = EmbeddingClass(**ConstKwargs)
     b = e.embed_documents(["aa", "bb"])
@@ -71,7 +71,9 @@ def test_documents_for_each(
 
 @FOR_EACH_EMBEDDING_CLASS
 def test_embedd_query_for_each(
-    EmbeddingClass: Type[GenericEmbedding], ConstKwargs, embedding_service_mock
+    EmbeddingClass: Type[GenericEmbedding],
+    ConstKwargs,
+    embedding_service_mock,  # noqa: F811
 ):
     e = EmbeddingClass(**ConstKwargs)
     a = e.embed_query("aa")

@@ -9,10 +9,6 @@ from wurzel.utils.semantic_splitter import (
     SemanticSplitter,
     _get_token_len,
 )
-import pytest
-from wurzel import BaseStepExecutor, MarkdownDataContract
-from wurzel.exceptions import SplittException, StepFailed
-from wurzel.steps import EmbeddingStep
 import mdformat
 
 

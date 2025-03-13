@@ -22,7 +22,7 @@ def is_valid_dvc_yaml(path: Path) -> bool:
     )
     assert "Initialized empty Git repository in" in create_stdout, create_stdout
     assert "Initialized DVC repository." in create_stdout, create_stdout
-    assert not "is invalid" in status_stdout
+    assert "is invalid" not in status_stdout
 
 
 class StepImplementedLeaf(Step):

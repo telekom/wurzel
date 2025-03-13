@@ -66,7 +66,7 @@ class SettingsBase(_PydanticBaseSettings):
         if isinstance(data, dict):
             for key, field in cls.model_fields.items():
                 if key in data:
-                    if get_origin(field.annotation) == dict:
+                    if get_origin(field.annotation) is dict:
                         continue
                     if (
                         isinstance(data[key], str)

@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Set
 from wurzel.step import Step
 from wurzel.adapters import DvcAdapter
-import pytest
 
 
 class A(Step):

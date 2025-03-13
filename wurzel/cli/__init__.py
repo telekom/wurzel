@@ -15,7 +15,7 @@ __all__ = ["generate_cli_call"]
 try:
     __version__ = importlib.metadata.version("wurzel")
 # pylint: disable-next=bare-except
-except:
+except:  # noqa: E722
     __version__ = "dev"
 __version_info__ = __version__.split(".")
 

@@ -223,6 +223,6 @@ class EmbeddingStep(
         # Extract URL from a string
         url_extract_pattern = "https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\/=]*)"  # pylint: disable=line-too-long
         links = sorted(re.findall(url_extract_pattern, text), key=len, reverse=True)
-        for l in links:
-            text = text.replace(l, "LINK")
+        for link in links:
+            text = text.replace(link, "LINK")
         return text
