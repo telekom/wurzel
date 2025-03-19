@@ -1,0 +1,44 @@
+{{- range $.Values.ENABLED_TENANTS }}
+{{ $tenant := . | lower }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: {{ $.Values.namespace }}
+  name: {{ $.Chart.Name }}-{{ $tenant}}{{ $.Values.variant }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ $.Values.volume.size }}
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: {{ $.Values.namespace }}
+  name: {{ $.Chart.Name }}-{{ $tenant}}-git-pvc{{ $.Values.variant }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 100Mi
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  namespace: {{ $.Values.namespace }}
+  name: {{ $.Chart.Name }}-{{ $tenant}}-dvc-pvc{{ $.Values.variant }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ $.Values.volume.size }}
+
+---
+{{- end }}

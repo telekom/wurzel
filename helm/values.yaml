@@ -1,0 +1,51 @@
+# Default values for recommendation-dps dev environment.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+namespace: wurzel
+
+volume:
+  size: "10Gi"
+variant: ""
+cronschedule: "0 */1 * * *"
+resources:
+   limits:
+     cpu: "2"
+     memory: "5000Mi"
+   requests:
+     cpu: "500m"
+     memory: "3000Mi"
+
+
+
+
+
+LOGGING:
+  LEVEL: INFO
+
+PROMETHEUS: # if you are using the Prometheus executer to collect metrics, specify the host:port here
+  "GATEWAY": "" # "prometheus-pushgateway.monitoring.svc.cluster.local:9091"
+
+
+ENABLED_TENANTS:
+  - WURZELDEMO
+
+TENANTS:
+  WURZELDEMO:
+    LOGNONABSOLUTEURLSTEP:
+      STEM_URL: ["https://www.wikipedia.de"]
+    EMBEDDINGSTEP:
+      API: https://dpr-embeddings.tools.oneai.yo-digital.com
+      NORMALIZE: False
+      EMBEDDING_MAP:
+        "e5-": "query: "
+        "DPR|dpr": ""
+    QDRANTCONNECTORSTEP:
+      URI: ":memory:"
+      COLLECTION: wurzel-demo
+    MANUALMARKDOWNSTEP:
+      FOLDER_PATH: data/
+    secret_name: wurzel-demo
+
+
+ALLOW_EXTRA_SETTINGS: False # setting you may enbale when you want to allow additional environment variables in the same Step Namespace although they are not expected from the Settings (Not recommended for prod or staging)
