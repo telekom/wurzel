@@ -27,7 +27,7 @@ Wenden Sie sich mit dem Stichwort \"St\u00f6rung\" an unser [Service-Team](/kont
     contract = MarkdownDataContract(
         md=text,
         keywords="PurpureusTV Fehlercode F30102",
-        url="https://www.lorem-ipsum.com/aviar/geraete-zubehoer/magenta-tv-geraete/fehlercodes",
+        url="https://www.lorem-ipsum.com/aviar/geraete-zubehoer/lorem-tv-geraete/fehlercodes",
     )
 
     result = Splitter.split_markdown_document(contract)[0].md
@@ -41,7 +41,7 @@ def test_spliitter_only_header(Splitter):
     contract = MarkdownDataContract(
         md=text,
         keywords="PurpureusTV Fehlercode F30102",
-        url="https://www.lorem-ipsum.com/aviar/geraete-zubehoer/magenta-tv-geraete/fehlercodes",
+        url="https://www.lorem-ipsum.com/aviar/geraete-zubehoer/lorem-tv-geraete/fehlercodes",
     )
 
     result = Splitter.split_markdown_document(contract)[0].md
@@ -52,7 +52,7 @@ def test_split_markdown_document(Splitter):
     text = """Grundsätzlich erfordern unterschiedliche Fehler unterschiedliche Lösungsansätze.
 Wie bei allen elektronischen Geräten, hilft oftmals aber schon ein einfacher Neustart indem Sie das Gerät für 10 Sekunden vom Strom trennen.
 Sollte dies nicht helfen, haben wir einige Fehlerbilder und hilfreiche Schritte für Sie zusammengefasst.
-[Fehlermeldungen und Hilfestellung](https://www.lorem-ipsum.com/faq/entry/%7Emagenta-tv%7Eerste-hilfe/%7Etvbox_fehlermeldung%7Emaster)
+[Fehlermeldungen und Hilfestellung](https://www.lorem-ipsum.com/faq/entry/%7Elorem-tv%7Eerste-hilfe/%7Etvbox_fehlermeldung%7Emaster)
 Die Box lässt sich nicht einschalten
 Überprüfen Sie, ob das Netzteil/Stromkabel an der Box und der Steckdose fest angeschlossen ist.
 Stellen Sie sicher, dass der Schalter auf der Rückseite der HD Box (DVR) bzw. des TV HD Recorders auf **ON** gestellt ist.
@@ -76,19 +76,19 @@ Es gibt zudem die Möglichkeit in den Ton & Bild Einstellungen die Dolby Audioau
 [Öffnet in neuem Fenster
 Purpureus Fernbedienung mit TV Gerät koppeln](https://www.lorem-ipsum.com/hilfe-service/services/hardwaresupport/topic/erste-schritte/fernbedienung-mit-tv-koppeln)
 [Öffnet in neuem Fenster
-Hilfestellung bei Fehlermeldung Signalverlust oder Standbildern](https://www.lorem-ipsum.com/faq/entry/%7Emagenta-tv%7Eerste-hilfe/%7EHilfe_Fehler_Signalverlust%7Emaster)
+Hilfestellung bei Fehlermeldung Signalverlust oder Standbildern](https://www.lorem-ipsum.com/faq/entry/%7Elorem-tv%7Eerste-hilfe/%7EHilfe_Fehler_Signalverlust%7Emaster)
 [Öffnet in neuem Fenster
-Sender fehlen oder werden übersprungen](https://www.lorem-ipsum.com/faq/entry/%7Emagenta-tv%7Eerste-hilfe/%7ESender_fehlen%7Emaster)
+Sender fehlen oder werden übersprungen](https://www.lorem-ipsum.com/faq/entry/%7Elorem-tv%7Eerste-hilfe/%7ESender_fehlen%7Emaster)
 ![TV HD Recorder]( "TV HD Recorder - Gerät")
 TV HD Recorder
 [Öffnet in neuem Fenster
-TV HD Recorder Fehlerbehebung](https://www.lorem-ipsum.com/faq/entry/%7Emagenta-tv%7Eerste-hilfe/%7ETVHD_Recorder_Behebung%7Emaster)
+TV HD Recorder Fehlerbehebung](https://www.lorem-ipsum.com/faq/entry/%7Elorem-tv%7Eerste-hilfe/%7ETVHD_Recorder_Behebung%7Emaster)
 """
 
     contract = MarkdownDataContract(
         md=text,
         keywords="TV Fehlerbehebung",
-        url="https://www.lorem-ipsum.com/hilfe-service/faq/_jcr_content/root/container_750332750/faq.entry.%7Emagenta-tv%7Eerste-hilfe.%7ETV_Fehlerbehebung%7Emaster.html",
+        url="https://www.lorem-ipsum.com/hilfe-service/faq/_jcr_content/root/container_750332750/faq.entry.%7Elorem-tv%7Eerste-hilfe.%7ETV_Fehlerbehebung%7Emaster.html",
     )
 
     result = Splitter.split_markdown_document(contract)
@@ -123,10 +123,10 @@ def test_sentence_splitter2(Splitter):
 
 
 def test_splitter_header_breadcrum(Splitter):
-    text = '### Erste Hilfe\n#### Purpureus TV Box/TV HD Recorder auf Werkseinstellungen zurücksetzen\nIn manchen Fällen kann es sinnvoll sein die Box auf die Werkseinstellungen zurück zu setzen.\nWie Sie dies veranlassen können, erklären wir Ihnen hier.\nBitte beachten Sie, dass Sie anschließend die Ersteinrichtung erneut durchlaufen lassen und es erforderlich ist, Funktionen, wie die persönlichen Empfehlungen, wieder einzurichten.\n![Purpureus TV Box]( "Purpureus TV Box - Gerät")\nPurpureus TV Box\n[Öffnet in neuem Fenster\nAnleitung im Hardwaresupport](https://www.lorem-ipsum.com/hilfe-service/services/hardwaresupport/device/magenta-tv/box/topic/einstellungen/magenta-tv-zurucksetzen/1)\nWenn Sie die Werkseinstellungen der Purpureus TV Box wieder herstellen möchten, wechseln Sie über die "**Home**" Taste in das Hauptmenü und öffnen Sie anschließend die Einstellungen.\nWählen Sie nun\xa0**Geräte/Google-Einstellungen – Geräte-Einstellungen – Info – Auf Werkseinstellungen zurücksetzen**.\nUm den Vorgang zu starten wählen Sie erneut "Auf Werkseinstellungen z**urücksetzen**" und anschließend "Alles löschen".\nDie Box startet sich anschließend neu und stellt die werkseitigen Einstellungen wieder her.\n![Purpureus TV Box - Werkseinstellungen]( "TV Box - Werkseinstellungen Android TV 12")\nTV HD Recorder zurücksetzen\n![TV HD Recorder]( "TV HD Recorder - Gerät")\nWenn Sie die Werkseinstellungen des TV HD Recorders wieder herstellen möchten, navigieren Sie über die "**Menü**" Taste Ihrer Fernbedienung zum Einstellungsrad.\nGehen Sie hier über die Pfeiltasten weiter zum Menüpunkt "**System**" und wählen Sie "**Auf Werkseinstellungen zurücksetzen**".\nGeben Sie dann Ihren vierstelligen TV PIN Code ein.\nNun können Sie die Box auf die Werkseinstellungen zurücksetzen.\n**Hinweis**:\xa0Sie im Zuge des Zurücksetzens die Möglichkeit gespeicherte Aufnahmen zu behalten oder zu löschen.\n![TV HD Recorder - Werkseinstellungen]( "TV HD Recorder - Werkseinstellungen")\n'
+    text = '### Erste Hilfe\n#### Purpureus TV Box/TV HD Recorder auf Werkseinstellungen zurücksetzen\nIn manchen Fällen kann es sinnvoll sein die Box auf die Werkseinstellungen zurück zu setzen.\nWie Sie dies veranlassen können, erklären wir Ihnen hier.\nBitte beachten Sie, dass Sie anschließend die Ersteinrichtung erneut durchlaufen lassen und es erforderlich ist, Funktionen, wie die persönlichen Empfehlungen, wieder einzurichten.\n![Purpureus TV Box]( "Purpureus TV Box - Gerät")\nPurpureus TV Box\n[Öffnet in neuem Fenster\nAnleitung im Hardwaresupport](https://www.lorem-ipsum.com/hilfe-service/services/hardwaresupport/device/lorem-tv/box/topic/einstellungen/lorem-tv-zurucksetzen/1)\nWenn Sie die Werkseinstellungen der Purpureus TV Box wieder herstellen möchten, wechseln Sie über die "**Home**" Taste in das Hauptmenü und öffnen Sie anschließend die Einstellungen.\nWählen Sie nun\xa0**Geräte/Google-Einstellungen – Geräte-Einstellungen – Info – Auf Werkseinstellungen zurücksetzen**.\nUm den Vorgang zu starten wählen Sie erneut "Auf Werkseinstellungen z**urücksetzen**" und anschließend "Alles löschen".\nDie Box startet sich anschließend neu und stellt die werkseitigen Einstellungen wieder her.\n![Purpureus TV Box - Werkseinstellungen]( "TV Box - Werkseinstellungen Android TV 12")\nTV HD Recorder zurücksetzen\n![TV HD Recorder]( "TV HD Recorder - Gerät")\nWenn Sie die Werkseinstellungen des TV HD Recorders wieder herstellen möchten, navigieren Sie über die "**Menü**" Taste Ihrer Fernbedienung zum Einstellungsrad.\nGehen Sie hier über die Pfeiltasten weiter zum Menüpunkt "**System**" und wählen Sie "**Auf Werkseinstellungen zurücksetzen**".\nGeben Sie dann Ihren vierstelligen TV PIN Code ein.\nNun können Sie die Box auf die Werkseinstellungen zurücksetzen.\n**Hinweis**:\xa0Sie im Zuge des Zurücksetzens die Möglichkeit gespeicherte Aufnahmen zu behalten oder zu löschen.\n![TV HD Recorder - Werkseinstellungen]( "TV HD Recorder - Werkseinstellungen")\n'
     md = MarkdownDataContract(
         md=text,
-        url="https://www.lorem-ipsum.com/hilfe-service/faq/_jcr_content/root/container_750332750/faq.entry.%7Emagenta-tv%7Eerste-hilfe.%7EPurpureusTV-Werkseinstellungen%7Emaster.html",
+        url="https://www.lorem-ipsum.com/hilfe-service/faq/_jcr_content/root/container_750332750/faq.entry.%7Elorem-tv%7Eerste-hilfe.%7EPurpureusTV-Werkseinstellungen%7Emaster.html",
         keywords="Purpureus TV Box/TV HD Recorder auf Werkseinstellungen zurücksetzen",
     )
     chunks = Splitter.split_markdown_document(md)
