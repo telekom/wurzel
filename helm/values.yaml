@@ -6,7 +6,7 @@ namespace: wurzel
 
 volume:
   size: "10Gi"
-variant: ""
+variant: "demo"
 cronschedule: "0 */1 * * *"
 resources:
    limits:
@@ -45,17 +45,17 @@ TENANTS:
       COLLECTION: wurzel-demo
     MANUALMARKDOWNSTEP:
       FOLDER_PATH: data/
+    WURZEL_PIPELINE: "pipelinedemo:pipeline"
     secret_name: wurzel-demo
 
 
 ALLOW_EXTRA_SETTINGS: False # setting you may enbale when you want to allow additional environment variables in the same Step Namespace although they are not expected from the Settings (Not recommended for prod or staging)
 
 
-image: dockerhub.io/wurzel:latest
+image: dockerhub.io/tweigeldev/wurzel:demo # change that to your image with your steps
 
 
 GLOBAL_ENV:
-  WURZEL_PIPELINE: "pipeline:pipeline"
   DVC_DATA_PATH: /usr/app/dvc-data
   DVC_FILE: /usr/app/dvc.yaml
   DVC_PATH: /usr/app/.dvc

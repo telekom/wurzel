@@ -14,7 +14,7 @@ data:
 {{- range $key, $val := .}}
   {{$key}}: '{{ $val  | toJson}}'
 {{- end }}
-  PIPELINE_FUNCTION: pipeline_{{ $tenant | lower}}
+  WURZEL_PIPELINE: '{{ .WURZEL_PIPELINE }}'
   QDRANTCONNECTORSTEP__COLLECTION: '{{ .QDRANTCONNECTORSTEP.COLLECTION }}{{- if $.Values.variant }}{{ $.Values.variant | replace "-" "_" }}{{- end -}}'
   PROMETHEUS_GATEWAY: '{{ $.Values.PROMETHEUS.GATEWAY }}'
   PROMETHEUS_JOB: '{{ .QDRANTCONNECTORSTEP.COLLECTION }}{{- if $.Values.variant }}{{ $.Values.variant | replace "-" "_" }}{{- end -}}'
