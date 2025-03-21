@@ -30,7 +30,7 @@ class Backend:
         """generate the dict"""
         raise NotImplementedError()
 
-    def generate_yaml(self, file_path: Path, step: TypedStep):
+    def generate_yaml(self, step: TypedStep):
         """generate the dict and saves it"""
         raise NotImplementedError()
 
@@ -89,13 +89,17 @@ class DvcBackend(Backend):
 
     def generate_yaml(
         self,
-        file_path: Path,
         step: TypedStep,
-    ):
+    ) -> str:
         """generates the dvc.yaml"""
-        with open(file_path, "w", encoding="utf-8") as file:
-            data = self.generate_dict(step)
-            for k in data:
-                for key in ["outs", "deps"]:
-                    data[k][key] = [str(p) for p in data[k][key]]
-            yaml.dump({"stages": data}, file)
+        data = self.generate_dict(step)
+        for k in data:
+            for key in ["outs", "deps"]:
+                data[k][key] = [str(p) for p in data[k][key]]
+        return yaml.dump({"stages": data})
+
+    @classmethod
+    def save_yaml(cls, yml: str, file: Path):
+        """saves given yml string int file"""
+        with open(file, "w", encoding="utf-8") as f:
+            yaml.dump(yml, f)

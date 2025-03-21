@@ -104,7 +104,8 @@ def test_save_yaml(nested_steps, tmp_path: Path):
     step1, output_1, step2, output_2 = nested_steps
     step2: Step = step2
     target_path = tmp_path / "dvc.yaml"
-    DvcBackend(tmp_path).generate_yaml(target_path, step2)
+    yml = DvcBackend(tmp_path).generate_yaml(step2)
+    DvcBackend.save_yaml(yml, target_path)
     assert target_path.exists()
     with open(target_path) as f:
         yaml.safe_load(f)
@@ -131,5 +132,6 @@ def test_rshift_override_branched(tmp_path):
     step3 >> step2
     backend = DvcBackend(tmp_path)
     backend.path = target_path
-    backend.generate_yaml(target_path, step2)
+    yml = backend.generate_yaml(step2)
+    backend.save_yaml(yml, target_path)
     assert len(DvcBackend(tmp_path).generate_dict(step2)) == 3

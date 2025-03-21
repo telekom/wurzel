@@ -25,6 +25,7 @@ from wurzel.cli.cmd_run import main as cmd_run
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 from wurzel.steps import __all__ as all_steps
 from wurzel.utils.logging import get_logging_dict_config
+from wurzel.utils.meta_settings import WZ
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -58,7 +59,7 @@ def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: s
     raise typer.BadParameter(f"{value} is not a recognized executor")
 
 
-def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str):
+def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str)-> TypedStep:
     """Converts a cli-str to a TypedStep
 
     Args:
@@ -177,6 +178,12 @@ def inspekt(
     return cmd_inspect(step, gen_env)
 
 
+def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, _backend: str):
+    """validates input and returns fitting backend. Currently always DVCBackend"""
+    logging.warning("only DVCBackend is supported currently")
+    return DvcBackend
+
+
 @app.command(no_args_is_help=True, help="generate a pipeline")
 # pylint: disable-next=dangerous-default-value
 def generate(
@@ -184,7 +191,7 @@ def generate(
         str,
         typer.Argument(
             allow_dash=False,
-            help="module path to step",
+            help="module path to step or pipeline(which is a chained step)",
             autocompletion=complete_step_import,
             callback=step_callback,
         ),
@@ -198,12 +205,10 @@ def generate(
     backend: Annotated[
         str,
         typer.Option(
-            # "",
             "-b",
             "--backend",
-            help="executor to use",
-            callback=executer_callback,
-            autocompletion=lambda: ["DVCBackend"],
+            callback=backend_callback,
+            help="backend to use",
         ),
     ] = DvcBackend,
 ):
@@ -218,7 +223,11 @@ def generate(
             }
         },
     )
-    return cmd_generate(pipeline, data_dir, backend=backend)
+    assert issubclass(pipeline,TypedStep), f"input has to be a KnowledgeStep but it is {pipeline} as type {type(pipeline)}"
+    if not hasattr(pipeline, "required_steps"):
+        pipeline = WZ(pipeline)
+
+    return print(cmd_generate(pipeline, data_dir, backend=backend,))
 
 
 def update_log_level(log_level: str):

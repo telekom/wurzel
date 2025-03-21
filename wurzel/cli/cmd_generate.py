@@ -9,9 +9,10 @@ from wurzel.adapters.dvc_adapter import Backend
 from wurzel.step.typed_step import TypedStep
 
 
-def main(step: Optional[Type[TypedStep]], data_dir: Path, backend: Backend):
+def main(step: TypedStep, data_dir: Path, backend: Backend) -> str:
     """
     Generates the yaml for the given backend
     """
-    adapter: Backend = backend()
-    adapter.generate_yaml(step, data_output_folder=data_dir)
+
+    adapter: Backend = backend(data_dir)
+    return adapter.generate_yaml(step)
