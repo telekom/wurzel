@@ -1,3 +1,11 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: CC0-1.0
+#
+# https://github.com/github/gitignore/blob/main/Python.gitignore
+#
+# Byte-compiled / optimized / DLL files
+# to reduce the CI pipeline drastical
 # to reduce the CI pipeline drastical
 FROM python:3.11-slim@sha256:6459da0f052d819e59b5329bb8f76b2f2bd16427ce6fd4db91e11b3759850380 AS apt
 RUN apt update && apt install -y --no-install-recommends build-essential gcc git curl
@@ -10,7 +18,7 @@ RUN python -m venv ${VENV}
 COPY wurzel .
 RUN . ${VENV}/bin/activate && \
     pip install uv && \
-    uv pip install wurzel
+    pip install .
 
 
 FROM dependencies

@@ -1,3 +1,10 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: CC0-1.0
+#
+# https://github.com/github/gitignore/blob/main/Python.gitignore
+#
+# Byte-compiled / optimized / DLL files
 #!/bin/bash
 
 printf "Starting Pipeline"| jq -MRcs "{message: ., level: \"INFO\",logger:\"$0\", args: {dvc_data_path:\"$DVC_DATA_PATH\", wurzel_pipeline: \"$WURZEL_PIPELINE\"}}"
