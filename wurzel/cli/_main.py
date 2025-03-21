@@ -18,6 +18,8 @@ import typer
 import typer.core
 
 from wurzel import TypedStep
+from wurzel.adapters.dvc_adapter import DvcBackend
+from wurzel.cli.cmd_generate import main as cmd_generate
 from wurzel.cli.cmd_inspect import main as cmd_inspect
 from wurzel.cli.cmd_run import main as cmd_run
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
@@ -173,6 +175,50 @@ def inspekt(
 ):
     """inspect"""
     return cmd_inspect(step, gen_env)
+
+
+@app.command(no_args_is_help=True, help="generate a pipeline")
+# pylint: disable-next=dangerous-default-value
+def generate(
+    pipeline: Annotated[
+        str,
+        typer.Argument(
+            allow_dash=False,
+            help="module path to step",
+            autocompletion=complete_step_import,
+            callback=step_callback,
+        ),
+    ],
+    data_dir: Annotated[
+        Path,
+        typer.Option(
+            "-d", "--data-dir", file_okay=False, help="Target folder for pipeline"
+        ),
+    ] = Path("./data"),
+    backend: Annotated[
+        str,
+        typer.Option(
+            # "",
+            "-b",
+            "--backend",
+            help="executor to use",
+            callback=executer_callback,
+            autocompletion=lambda: ["DVCBackend"],
+        ),
+    ] = DvcBackend,
+):
+    """run"""
+    log.debug(
+        "generate pipeline",
+        extra={
+            "parsed_args": {
+                "pipeline": pipeline,
+                "data_dir": data_dir,
+                "backend": backend,
+            }
+        },
+    )
+    return cmd_generate(pipeline, data_dir, backend=backend)
 
 
 def update_log_level(log_level: str):

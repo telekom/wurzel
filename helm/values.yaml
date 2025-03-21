@@ -49,3 +49,19 @@ TENANTS:
 
 
 ALLOW_EXTRA_SETTINGS: False # setting you may enbale when you want to allow additional environment variables in the same Step Namespace although they are not expected from the Settings (Not recommended for prod or staging)
+
+
+image: dockerhub.io/wurzel:latest
+
+
+GLOBAL_ENV:
+  DVC_DATA_PATH: /usr/app/dvc-data
+  DVC_PATH: /usr/app/.dvc
+  GIT_PATH: /usr/app/.git
+  GIT_USER: wurzel
+  GIT_MAIL: wurzel@example.com
+  TQDM_MININTERVAL: 30
+  DVC_CACHE_HISTORY_NUMBER: 30
+
+
+

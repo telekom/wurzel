@@ -59,6 +59,11 @@ spec:
             {{- with index $.Values.TENANTS $tenant_u }}
                 name: {{ .secret_name }}
             {{- end }}
+            env:
+            {{- range $key, $value :=  $.Values.GLOBAL_ENV }}
+            - name: {{ $key | quote }}
+              value: {{ $value | quote }}
+            {{ end }}
             securityContext:
               allowPrivilegeEscalation: false
               capabilities:
@@ -66,11 +71,11 @@ spec:
                 - "ALL"
             volumeMounts:
             - name: dvc-persistent-volume
-              mountPath: /usr/app/dvc-data
+              mountPath: {{$.Values.GLOBAL_ENV.DVC_DATA_PATH}}
             - name: dvc-persistent-git-volume
-              mountPath: /usr/app/.git
+              mountPath: {{$.Values.GLOBAL_ENV.GIT_PATH}}
             - name: dvc-persistent-dvc-volume
-              mountPath: /usr/app/.dvc
+              mountPath: {{$.Values.GLOBAL_ENV.DVC_PATH}}
             - name: models-data
               mountPath: /usr/app/dt_llm_dpr_models/
             resources:

@@ -1,0 +1,53 @@
+#!/bin/bash
+prnt_help () {
+  echo
+  echo "Usage: $0 "
+  echo "Jq_run a dvc Wurzel"
+  echo "---------------------------------------------------------------"
+  echo "The command-line parameter gives the pipeline function (de, at,"
+  echo " ...) and the dvc data folder."
+  exit 70
+}
+
+if [ "$1" = "-h"  -o "$1" = "--help" -o $# -ne 2 ]     # Request help.
+then
+    prnt_help
+fi
+printf "Starting Pipeline"| jq -MRcs "{message: ., level: \"INFO\",logger:\"$0\", args: {dvc_data_path:\"$DVC_DATA_PATH\", pipeline_function: \"$PIPELINE_FUNCTION\"}}"
+
+jq_run () { # Usage: jq_run "cmd with args" (noexit)
+    cmd_a=($1)
+    args_a=${cmd_a[@]:1}
+    if result=$(eval $1 2>&1); then # Ok
+        if [ -n "$result" ]; then
+            printf "%s" "$result" | jq -MRcs "{message: ., level: \"INFO\",logger:\"$0/${cmd_a[0]}\", args: \"${args_a}\"}"
+        fi
+    else # Bad
+        rc=$?
+        if [[ $# -eq 1 ]]; then
+            echo "$result" | jq -MRcs "{message: ., level: \"ERROR\",logger:\"$0/${cmd_a[0]}\", args: \"${args_a}\"}"
+            exit $rc
+        fi
+        echo "$result" | jq -MRcs "{message: ., level: \"WARNING\",logger:\"$0/${cmd_a[0]}\", args: \"${args_a}\"}"
+    fi
+}
+jq_run "git init"
+jq_run "git config --global --add safe.directory /usr/app"
+jq_run "git config --global user.email '$GIT_MAIL'"
+jq_run "git config --global user.name '$GIT_USER'"
+jq_run "dvc init" noexit
+jq_run "dvc config core.autostage true"
+jq_run "dvc config core.analytics false"
+wurzel generate $WURZEL_PIPELINE --data-dir $DVC_DATA_PATH
+dvc repro -q || exit 1
+
+jq_run "git status" noexit
+jq_run "dvc status" noexit
+jq_run "git commit -m 'savepoint $(date +%F_%T)'" noexit
+jq_run "dvc gc -n ${DVC_CACHE_HISTORY_NUMBER} -f --rev HEAD" noexit
+EXT=$?
+if [ -n "$PROMETHEUS__GATEWAY" ]; then
+   sleep 15
+   jq_run "curl -X DELETE --connect-timeout 5 ${PROMETHEUS__GATEWAY}/metrics/job/${MILVUS__COLLECTION}" noexit
+fi
+exit $EXT
