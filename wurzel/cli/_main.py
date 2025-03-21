@@ -10,9 +10,9 @@ import logging
 import logging.config
 import os
 import pkgutil
+import sys
 from datetime import datetime
 from pathlib import Path
-import sys
 from typing import Annotated
 
 import typer
@@ -60,7 +60,9 @@ def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: s
     raise typer.BadParameter(f"{value} is not a recognized executor")
 
 
-def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str)-> TypedStep:
+def step_callback(
+    _ctx: typer.Context, _param: typer.CallbackParam, import_path: str
+) -> TypedStep:
     """Converts a cli-str to a TypedStep
 
     Args:
@@ -81,7 +83,9 @@ def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path:
             mod, kls = import_path.rsplit(".", 1)
         module = importlib.import_module(mod)
         step = getattr(module, kls)
-        assert (inspect.isclass(step) and issubclass(step, TypedStep)) or isinstance(step,TypedStep)
+        assert (inspect.isclass(step) and issubclass(step, TypedStep)) or isinstance(
+            step, TypedStep
+        )
     except ValueError as ve:
         raise typer.BadParameter(
             "Path is not in correct format, should be module.submodule.Step"
@@ -185,12 +189,16 @@ def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, _backend:
     logging.warning("only DVCBackend is supported currently")
     return DvcBackend
 
-def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str)-> TypedStep:
 
-    step = step_callback(_ctx,_param,import_path)
+def pipeline_callback(
+    _ctx: typer.Context, _param: typer.CallbackParam, import_path: str
+) -> TypedStep:
+    """Based on step_callback transform them to WZ pipeline elements"""
+    step = step_callback(_ctx, _param, import_path)
     if not hasattr(step, "required_steps"):
         step = WZ(step)
     return step
+
 
 @app.command(no_args_is_help=True, help="generate a pipeline")
 # pylint: disable-next=dangerous-default-value
@@ -231,7 +239,13 @@ def generate(
             }
         },
     )
-    return print(cmd_generate(pipeline, data_dir, backend=backend,))
+    return print(
+        cmd_generate(
+            pipeline,
+            data_dir,
+            backend=backend,
+        )
+    )
 
 
 def update_log_level(log_level: str):
@@ -274,5 +288,5 @@ def main_args(
 
 def main():
     """main"""
-    sys.path.append(os.getcwd()) # needed fo find the files relative to cwd
+    sys.path.append(os.getcwd())  # needed fo find the files relative to cwd
     app()
