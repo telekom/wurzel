@@ -30,7 +30,7 @@ class Backend:
         """generate the dict"""
         raise NotImplementedError()
 
-    def generate_yaml(self, file_path:Path, step: TypedStep):
+    def generate_yaml(self, file_path: Path, step: TypedStep):
         """generate the dict and saves it"""
         raise NotImplementedError()
 
@@ -38,15 +38,16 @@ class Backend:
 class DvcBackend(Backend):
     """'Adapter' which creates DVC yamls"""
 
-
     def __init__(
-        self,backend_file:Path=Path("dvc.yml"), data_dir: Path=Path("./data"), executer: BaseStepExecutor=PrometheusStepExecutor, encapsulate_env: bool = True
+        self,
+        data_dir: Path = Path("./data"),
+        executer: BaseStepExecutor = PrometheusStepExecutor,
+        encapsulate_env: bool = True,
     ) -> None:
         if not isinstance(data_dir, Path):
             data_dir = Path(data_dir)
-        self.executor: Type[BaseStepExecutor] = (executer,)
+        self.executor: Type[BaseStepExecutor] = executer
         self.data_dir = data_dir
-        self.backend_file = self.backend_file
         self.encapsulate_env = encapsulate_env
         super().__init__()
 
@@ -88,7 +89,7 @@ class DvcBackend(Backend):
 
     def generate_yaml(
         self,
-        file_path:Path,
+        file_path: Path,
         step: TypedStep,
     ):
         """generates the dvc.yaml"""
