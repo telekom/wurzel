@@ -43,7 +43,8 @@ dependencies= [
     "mdformat==0.7.17",
     "spacy==3.7.5",
     "tiktoken==0.7.0",
-    "joblib>=1.4.0"
+    "joblib>=1.4.0",
+    "docling==2.26.0"
 ]
 
 [project.optional-dependencies]
