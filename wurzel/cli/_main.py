@@ -12,6 +12,7 @@ import os
 import pkgutil
 from datetime import datetime
 from pathlib import Path
+import sys
 from typing import Annotated
 
 import typer
@@ -80,7 +81,7 @@ def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path:
             mod, kls = import_path.rsplit(".", 1)
         module = importlib.import_module(mod)
         step = getattr(module, kls)
-        assert inspect.isclass(step) and issubclass(step, TypedStep)
+        assert (inspect.isclass(step) and issubclass(step, TypedStep)) or isinstance(step,TypedStep)
     except ValueError as ve:
         raise typer.BadParameter(
             "Path is not in correct format, should be module.submodule.Step"
@@ -175,6 +176,7 @@ def inspekt(
     gen_env: Annotated[bool, typer.Option()] = False,
 ):
     """inspect"""
+
     return cmd_inspect(step, gen_env)
 
 
@@ -183,6 +185,12 @@ def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, _backend:
     logging.warning("only DVCBackend is supported currently")
     return DvcBackend
 
+def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str)-> TypedStep:
+
+    step = step_callback(_ctx,_param,import_path)
+    if not hasattr(step, "required_steps"):
+        step = WZ(step)
+    return step
 
 @app.command(no_args_is_help=True, help="generate a pipeline")
 # pylint: disable-next=dangerous-default-value
@@ -193,7 +201,7 @@ def generate(
             allow_dash=False,
             help="module path to step or pipeline(which is a chained step)",
             autocompletion=complete_step_import,
-            callback=step_callback,
+            callback=pipeline_callback,
         ),
     ],
     data_dir: Annotated[
@@ -223,10 +231,6 @@ def generate(
             }
         },
     )
-    assert issubclass(pipeline,TypedStep), f"input has to be a KnowledgeStep but it is {pipeline} as type {type(pipeline)}"
-    if not hasattr(pipeline, "required_steps"):
-        pipeline = WZ(pipeline)
-
     return print(cmd_generate(pipeline, data_dir, backend=backend,))
 
 
@@ -270,4 +274,5 @@ def main_args(
 
 def main():
     """main"""
+    sys.path.append(os.getcwd()) # needed fo find the files relative to cwd
     app()

@@ -7,6 +7,7 @@ FROM apt AS dependencies
 ENV VENV=/usr/app/venv
 COPY pyproject.toml .
 RUN python -m venv ${VENV}
+COPY wurzel .
 RUN . ${VENV}/bin/activate && \
     pip install uv && \
     uv pip install wurzel
@@ -17,8 +18,9 @@ RUN groupadd -g 999 python && \
     useradd -r -u 999 -m -g python python
 ENV GIT_USER=wurzel
 ENV GIT_MAIL=wurzel@example.com
-ENV WURZEL_PIPELINE_PATH=.pipeline:pipeline
+ENV WURZEL_PIPELINE=pipeline:pipeline
 ENV DVC_DATA_PATH=/usr/app/dvc-data
+ENV DVC_FILE=/usr/app/dvc.yml
 RUN chown python:python /usr/app
 WORKDIR /usr/app
 

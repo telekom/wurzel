@@ -55,7 +55,9 @@ image: dockerhub.io/wurzel:latest
 
 
 GLOBAL_ENV:
+  WURZEL_PIPELINE: "pipeline:pipeline"
   DVC_DATA_PATH: /usr/app/dvc-data
+  DVC_FILE: /usr/app/dvc.yaml
   DVC_PATH: /usr/app/.dvc
   GIT_PATH: /usr/app/.git
   GIT_USER: wurzel
