@@ -62,6 +62,3 @@ GLOBAL_ENV:
   GIT_MAIL: wurzel@example.com
   TQDM_MININTERVAL: 30
   DVC_CACHE_HISTORY_NUMBER: 30
-
-
-
