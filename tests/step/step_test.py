@@ -10,7 +10,7 @@ from typing import Set, Tuple
 import pytest
 import yaml
 
-from wurzel.adapters import DvcAdapter
+from wurzel.adapters import DvcBackend
 from wurzel.step import Step
 from wurzel.step_executor import BaseStepExecutor
 
@@ -80,7 +80,7 @@ def test_chain_implemented_DVC_modes(nested_steps: Tuple[Step, Path, Step, Path]
 
 
 def test_generate_dict(tmp_path: Path):
-    dvc_pipe: dict = DvcAdapter.generate_dict(StepImplementedLeaf(), tmp_path)
+    dvc_pipe: dict = DvcBackend.generate_dict(StepImplementedLeaf(), tmp_path)
     assert "StepImplementedLeaf" in dvc_pipe
     assert all(
         key in dvc_pipe["StepImplementedLeaf"] for key in ("deps", "outs", "cmd")
@@ -90,7 +90,7 @@ def test_generate_dict(tmp_path: Path):
 def test_generate_nested_dict(nested_steps):
     step1, output_1, step2, output_2 = nested_steps
     step2: Step = step2
-    dvc_pipe: dict = DvcAdapter.generate_dict(step2, output_2)
+    dvc_pipe: dict = DvcBackend.generate_dict(step2, output_2)
     assert len(dvc_pipe) == 2
     assert all(
         key in dvc_pipe[step2.__class__.__name__] for key in ("deps", "outs", "cmd")
@@ -104,7 +104,7 @@ def test_save_yaml(nested_steps, tmp_path: Path):
     step1, output_1, step2, output_2 = nested_steps
     step2: Step = step2
     target_path = tmp_path / "dvc.yaml"
-    DvcAdapter.generate_yaml(step2, target_path, output_2)
+    DvcBackend.generate_yaml(step2, target_path, output_2)
     assert target_path.exists()
     with open(target_path) as f:
         yaml.safe_load(f)
@@ -115,7 +115,7 @@ def test_rshift_override(tmp_path):
     step1 = StepImplementedLeaf()
     step2 = StepImplementedBranch()
     step1 >> step2
-    assert len(DvcAdapter.generate_dict(step2, tmp_path)) == 2
+    assert len(DvcBackend(tmp_path).generate_dict(step2)) == 2
 
 
 def test_rshift_override_branched(tmp_path):
@@ -129,5 +129,7 @@ def test_rshift_override_branched(tmp_path):
 
     step1 >> step2
     step3 >> step2
-    DvcAdapter.generate_yaml(step2, target_path, tmp_path)
-    assert len(DvcAdapter.generate_dict(step2, tmp_path)) == 3
+    backend = DvcBackend(tmp_path)
+    backend.path = target_path
+    backend.generate_yaml(step2)
+    assert len(DvcBackend.generate_dict(step2, tmp_path)) == 3
