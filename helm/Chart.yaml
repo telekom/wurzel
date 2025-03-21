@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: CC0-1.0
+apiVersion: v2
+name: wurzel
+type: application
+version: 0.0.1
+appVersion: "0.0.0"

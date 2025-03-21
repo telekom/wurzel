@@ -10,6 +10,7 @@ import logging
 import logging.config
 import os
 import pkgutil
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Annotated
@@ -18,11 +19,14 @@ import typer
 import typer.core
 
 from wurzel import TypedStep
+from wurzel.adapters.dvc_adapter import DvcBackend
+from wurzel.cli.cmd_generate import main as cmd_generate
 from wurzel.cli.cmd_inspect import main as cmd_inspect
 from wurzel.cli.cmd_run import main as cmd_run
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 from wurzel.steps import __all__ as all_steps
 from wurzel.utils.logging import get_logging_dict_config
+from wurzel.utils.meta_settings import WZ
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -56,7 +60,9 @@ def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: s
     raise typer.BadParameter(f"{value} is not a recognized executor")
 
 
-def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str):
+def step_callback(
+    _ctx: typer.Context, _param: typer.CallbackParam, import_path: str
+) -> TypedStep:
     """Converts a cli-str to a TypedStep
 
     Args:
@@ -77,7 +83,9 @@ def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path:
             mod, kls = import_path.rsplit(".", 1)
         module = importlib.import_module(mod)
         step = getattr(module, kls)
-        assert inspect.isclass(step) and issubclass(step, TypedStep)
+        assert (inspect.isclass(step) and issubclass(step, TypedStep)) or isinstance(
+            step, TypedStep
+        )
     except ValueError as ve:
         raise typer.BadParameter(
             "Path is not in correct format, should be module.submodule.Step"
@@ -172,7 +180,72 @@ def inspekt(
     gen_env: Annotated[bool, typer.Option()] = False,
 ):
     """inspect"""
+
     return cmd_inspect(step, gen_env)
+
+
+def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, _backend: str):
+    """validates input and returns fitting backend. Currently always DVCBackend"""
+    logging.warning("only DVCBackend is supported currently")
+    return DvcBackend
+
+
+def pipeline_callback(
+    _ctx: typer.Context, _param: typer.CallbackParam, import_path: str
+) -> TypedStep:
+    """Based on step_callback transform them to WZ pipeline elements"""
+    step = step_callback(_ctx, _param, import_path)
+    if not hasattr(step, "required_steps"):
+        step = WZ(step)
+    return step
+
+
+@app.command(no_args_is_help=True, help="generate a pipeline")
+# pylint: disable-next=dangerous-default-value
+def generate(
+    pipeline: Annotated[
+        str,
+        typer.Argument(
+            allow_dash=False,
+            help="module path to step or pipeline(which is a chained step)",
+            autocompletion=complete_step_import,
+            callback=pipeline_callback,
+        ),
+    ],
+    data_dir: Annotated[
+        Path,
+        typer.Option(
+            "-d", "--data-dir", file_okay=False, help="Target folder for pipeline"
+        ),
+    ] = Path("./data"),
+    backend: Annotated[
+        str,
+        typer.Option(
+            "-b",
+            "--backend",
+            callback=backend_callback,
+            help="backend to use",
+        ),
+    ] = DvcBackend,
+):
+    """run"""
+    log.debug(
+        "generate pipeline",
+        extra={
+            "parsed_args": {
+                "pipeline": pipeline,
+                "data_dir": data_dir,
+                "backend": backend,
+            }
+        },
+    )
+    return print(
+        cmd_generate(
+            pipeline,
+            data_dir,
+            backend=backend,
+        )
+    )
 
 
 def update_log_level(log_level: str):
@@ -215,4 +288,5 @@ def main_args(
 
 def main():
     """main"""
+    sys.path.append(os.getcwd())  # needed fo find the files relative to cwd
     app()
