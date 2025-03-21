@@ -104,7 +104,7 @@ def test_save_yaml(nested_steps, tmp_path: Path):
     step1, output_1, step2, output_2 = nested_steps
     step2: Step = step2
     target_path = tmp_path / "dvc.yaml"
-    DvcBackend(tmp_path).generate_yaml(target_path,step2)
+    DvcBackend(tmp_path).generate_yaml(target_path, step2)
     assert target_path.exists()
     with open(target_path) as f:
         yaml.safe_load(f)
