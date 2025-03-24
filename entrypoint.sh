@@ -7,7 +7,7 @@
 # Byte-compiled / optimized / DLL files
 #!/bin/bash
 
-printf "Starting Pipeline"| jq -MRcs "{message: ., level: \"INFO\",logger:\"$0\", args: {dvc_data_path:\"$DVC_DATA_PATH\", wurzel_pipeline: \"$WURZEL_PIPELINE\"}}"
+printf "Starting Pipeline"| jq -MRcs "{message: ., level: \"INFO\",logger:\"$0\", args: {dvc_data_path:\"$DVC_DATA_PATH\", dvc_path:\"$DVC_PATH\",  dvc_file:\"$DVC_FILE\", wurzel_pipeline: \"$WURZEL_PIPELINE\"}}"
 
 jq_run () { # Usage: jq_run "cmd with args" (noexit)
     cmd_a=($1)
