@@ -7,7 +7,7 @@
 # Byte-compiled / optimized / DLL files
 # to reduce the CI pipeline drastical
 # to reduce the CI pipeline drastical
-FROM python:3.11-slim@sha256:6459da0f052d819e59b5329bb8f76b2f2bd16427ce6fd4db91e11b3759850380 AS apt
+FROM python:3.11-slim@sha256:7029b00486ac40bed03e36775b864d3f3d39dcbdf19cd45e6a52d541e6c178f0 AS apt
 RUN apt update && apt install -y --no-install-recommends build-essential gcc git curl
 RUN apt install -y --no-install-recommends curl jq
 
