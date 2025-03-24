@@ -13,7 +13,7 @@ metadata:
     app.kubernetes.io/name: {{ $.Chart.Name }}{{ $.Values.variant }}
     app.kubernetes.io/component: {{ $.Chart.Name }}{{ $.Values.variant }}
     app.kubernetes.io/part-of: {{ $.Chart.Name }}{{ $.Values.variant }}
-    app: knowledge-pipeline-cron
+    app: wurzel-cron
     logger: v.1
 spec:
   {{- with index $.Values.TENANTS $tenant_u }}

@@ -27,7 +27,7 @@ LOGGING:
   LEVEL: INFO
 
 PROMETHEUS: # if you are using the Prometheus executer to collect metrics, specify the host:port here
-  "GATEWAY": "" # "prometheus-pushgateway.monitoring.svc.cluster.local:9091"
+  "GATEWAY": ""
 
 
 ENABLED_TENANTS:
@@ -38,7 +38,7 @@ TENANTS:
     LOGNONABSOLUTEURLSTEP:
       STEM_URL: ["https://www.wikipedia.de"]
     EMBEDDINGSTEP:
-      API: https://dpr-embeddings.tools.oneai.yo-digital.com
+      API: https://api-inference.huggingface.co/pipeline/feature-extraction/dpr"
       NORMALIZE: False
       EMBEDDING_MAP:
         "e5-": "query: "
