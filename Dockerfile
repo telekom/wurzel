@@ -6,7 +6,6 @@
 #
 # Byte-compiled / optimized / DLL files
 # to reduce the CI pipeline drastical
-# to reduce the CI pipeline drastical
 FROM python:3.11-slim@sha256:7029b00486ac40bed03e36775b864d3f3d39dcbdf19cd45e6a52d541e6c178f0 AS apt
 RUN apt update && apt install -y --no-install-recommends build-essential gcc git curl
 RUN apt install -y --no-install-recommends curl jq
@@ -22,8 +21,21 @@ RUN . ${VENV}/bin/activate && \
 
 
 FROM dependencies
+
+# Prevents Python from writing pyc files.
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Keeps Python from buffering stdout and stderr to avoid situations where
+# the application crashes without emitting any logs due to buffering.
+ENV PYTHONUNBUFFERED=1
+
+
 RUN groupadd -g 999 python && \
-    useradd -r -u 999 -m -g python python
+    useradd -r -u 999 -m -g --disabled-password \
+    --gecos "" \
+    --home "/nonexistent" \
+    --shell "/sbin/nologin" \
+    --no-create-home \python python
 ENV GIT_USER=wurzel
 ENV GIT_MAIL=wurzel@example.com
 ENV WURZEL_PIPELINE=pipeline:pipeline

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 # Default values for recommendation-dps dev environment.
-# This is a YAML-formatted file.
+
 # Declare variables to be passed into your templates.
 
 namespace: wurzel
