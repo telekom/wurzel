@@ -210,6 +210,6 @@ class QdrantConnectorStep(
         versioned_collections = {
             int(previous.name.split("_v")[-1]): previous.name
             for previous in previous_collections
-            if self.settings.COLLECTION in previous.name
+            if f"{self.settings.COLLECTION}_v" in previous.name
         }
         return dict(sorted(versioned_collections.items()))
