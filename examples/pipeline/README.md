@@ -1,7 +1,3 @@
-<!--
-SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
-SPDX-License-Identifier: CC0-1.0
--->
 # I am your tutorial to deploy Wurzel!
 
 Let's go through the process of how to get a Wurzel pipeline deployed locally.
