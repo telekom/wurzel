@@ -17,6 +17,10 @@ cd wurzel
 # Creates a new virtual environment and installs all dependencies
 make install
 ```
+This repository has pre-commit hooks. Please make sure to use them:
+```bash
+.venv/bin/pre-commit install -f --hook-type pre-commit
+```
 
 ## Running Tests
 Before submitting your changes, ensure all tests pass by running:
