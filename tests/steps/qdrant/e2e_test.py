@@ -12,7 +12,7 @@ from typing import Tuple
 import pytest
 
 # qdrant-Lite; See: https://qdrant.io/docs/qdrant_lite.md
-from qdrant_client import QdrantClient
+from qdrant_client import QdrantClient, models
 
 from wurzel.exceptions import StepFailed
 from wurzel.step_executor import BaseStepExecutor
@@ -93,6 +93,46 @@ def test_qdrant_collection_retirement(
             )
             <= HIST_LEN
         )
+
+
+def test_qdrant_get_collections_with_ethmerials(
+    input_output_folder: Tuple[Path, Path], env, dummy_collection
+):
+    input_path, output_path = input_output_folder
+    HIST_LEN = 3
+    env.set("COLLECTION_HISTORY_LEN", str(HIST_LEN))
+    env.set("COLLECTION", "tenant1-dev")
+    input_file = input_path / "qdrant_at.csv"
+    shutil.copy("./tests/data/embedded.csv", input_file)
+    client = QdrantClient(location=":memory:")
+    {
+        client.create_collection(
+            coll,
+            vectors_config=models.VectorParams(
+                size=100, distance=models.Distance.COSINE
+            ),
+        )
+        for coll in [
+            "tenant1-dev_v1",
+            "tenant1-dev_v2",
+            "tenant1-dev_v3",
+            "tenant1-dev-feature-abc_v1",
+        ]
+    }
+
+    client.close = print
+    with unittest.mock.patch("wurzel.steps.qdrant.step.QdrantClient") as mock:
+        mock.return_value = client
+        step = QdrantConnectorStep()
+        result = step._get_collection_versions()
+        assert len(result) == 3
+        assert set(result.keys()) == {1, 2, 3}
+
+        env.set("COLLECTION", "tenant1-dev-feature-abc")
+        step = QdrantConnectorStep()
+        result = step._get_collection_versions()
+        assert len(result) == 1
+        assert set(result.keys()) == {1}
 
 
 def test_qdrant_connector_csv_partially_not_same_shape(
