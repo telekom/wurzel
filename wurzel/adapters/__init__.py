@@ -2,6 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from .dvc_adapter import DvcAdapter
+from .dvc_adapter import DvcBackend
 
-__all__ = ["DvcAdapter"]
+__all__ = ["DvcBackend"]

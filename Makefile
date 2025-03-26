@@ -20,7 +20,6 @@ $(PY):
 $(UV): $(PY)
 	$(PIP) install uv
 install: $(VENV)/touchfile
-	$(VENV)/bin/pre-commit install -f --hook-type pre-commit
 
 test: install
 	$(UV) run pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov-fail-under=90  --cov=$(SRC_DIR)

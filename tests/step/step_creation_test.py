@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 from pandera.typing import Series
 
-from wurzel.adapters import DvcAdapter
+from wurzel.adapters import DvcBackend
 from wurzel.datacontract import PanderaDataFrameModel, PydanticModel
 from wurzel.step import TypedStep
 from wurzel.step.settings import StepSettings
@@ -110,15 +110,15 @@ def test_generate():
     c = Step2()
     a >> b >> c
     steps = [a, b, c]
-    res = DvcAdapter.generate_dict(c, "/")
+    res = DvcBackend("./data").generate_dict(c)
     assert res != {}
     for step in steps:
         data: dict = res.get(step.__class__.__name__, None)
         assert data is not None
         assert data["cmd"].startswith("python3 -m wurzel run")
-    assert res[a.__class__.__name__]["outs"][0] == Path("/Step0")
+    assert res[a.__class__.__name__]["outs"][0] == Path("data/Step0")
     assert res[a.__class__.__name__]["outs"][0] in res[b.__class__.__name__]["deps"]
-    assert res[b.__class__.__name__]["outs"][0] == Path("/Step1")
+    assert res[b.__class__.__name__]["outs"][0] == Path("data/Step1")
 
 
 def test_circular():
@@ -130,5 +130,5 @@ def test_circular():
     a >> a
     # TODO: Maybe this should be caught before Python.Recursion Error
     with pytest.raises(RecursionError) as err:
-        DvcAdapter.generate_dict(a, ".")
+        DvcBackend(".").generate_dict(a)
         assert not isinstance(err, RecursionError)

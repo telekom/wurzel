@@ -5,7 +5,7 @@
 from pathlib import Path
 from typing import Set
 
-from wurzel.adapters import DvcAdapter
+from wurzel.adapters import DvcBackend
 from wurzel.step import Step
 
 
@@ -23,5 +23,5 @@ def test_asd():
     a = A()
     b = B()
     a >> b
-    dic = DvcAdapter.generate_dict(b, ".")
+    dic = DvcBackend().generate_dict(b)
     assert dic
