@@ -95,7 +95,7 @@ def test_qdrant_collection_retirement(
         )
 
 
-def test_qdrant_get_collections_with_ethmerials(
+def test_qdrant_get_collections_with_ephemerals(
     input_output_folder: Tuple[Path, Path], env, dummy_collection
 ):
     input_path, output_path = input_output_folder
