@@ -82,6 +82,11 @@ build-backend = "setuptools.build_meta"
 include = ["wurzel*"]
 namespaces = false
 
+[tool.setuptools.package-data]
+wurzel = ["data/*", "utils/to_markdown/*"]
+
+
+
 [tool.mypy]
 python_version = "3.11 | 3.12"
 disable_error_code = ["import-untyped"]

@@ -18,6 +18,8 @@ from mistletoe.span_token import Image
 
 from wurzel.exceptions import InvalidPlatform, MarkdownConvertFailed
 
+# pylint: disable=c-extension-no-member
+
 
 def __get_html2md() -> Path:
     default_path = {
