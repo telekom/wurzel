@@ -108,8 +108,8 @@ tag_format = "{version}"
 [tool.semantic_release.commit_parser_options]
 major_types = ["breaking"]
 minor_types = ["feat"]
-patch_types = ["fix", "perf"]
-allowed_tags = ["feat", "fix", "perf", "build", "chore", "ci", "docs", "style", "refactor", "ref", "test"]
+patch_types = ["fix", "perf", "hotfix", "patch"]
+allowed_tags = ["feat", "fix","hotfix", "perf","patch", "build", "chore", "ci", "docs", "style", "refactor", "ref", "test"]
 default_bump_level = 0
 
 [tool.semantic_release.branches.main]
