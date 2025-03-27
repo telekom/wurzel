@@ -7,6 +7,7 @@ from typing import Any
 from . import semantic_splitter
 from .meta_settings import WZ, create_model
 from .meta_steps import find_typed_steps_in_package
+from .to_markdown.html2md import to_markdown
 
 __all__ = [
     "semantic_splitter",
@@ -14,6 +15,7 @@ __all__ = [
     "create_model",
     "try_get_length",
     "find_typed_steps_in_package",
+    "to_markdown",
 ]
 
 
