@@ -84,3 +84,11 @@ class EmbeddingAPIException(LoggedCustomException):
 
 class UnrecoverableFatalException(LoggedCustomException):
     """Raised when the application encountered a problem that cannot be recovered"""
+
+
+class MarkdownConvertFailed(LoggedCustomException):
+    """raised when html2md fails"""
+
+
+class InvalidPlatform(LoggedCustomException):
+    """raised when Platform is not supported"""

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: CC0-1.0
 [project]
 name = "wurzel"
-version = "0.2.0"
+version = "0.3.0"
 description = ""
 authors = [
     {name ="Thomas Weigel", email="thomas.weigel@telekom.de"},
@@ -43,7 +43,8 @@ dependencies= [
     "mdformat==0.7.17",
     "spacy==3.7.5",
     "tiktoken==0.7.0",
-    "joblib>=1.4.0"
+    "joblib>=1.4.0",
+    "lxml==5.2.*",
 ]
 
 [project.optional-dependencies]
@@ -80,6 +81,11 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 include = ["wurzel*"]
 namespaces = false
+
+[tool.setuptools.package-data]
+wurzel = ["data/*", "utils/to_markdown/*"]
+
+
 
 [tool.mypy]
 python_version = "3.11 | 3.12"
