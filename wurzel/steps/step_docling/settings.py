@@ -4,10 +4,29 @@
 
 """Specific docling settings"""
 
+from docling.datamodel.base_models import InputFormat
+
 from wurzel import Settings
 
 
 class DoclingSettings(Settings):
-    "Docling settings"
+    """settings"""
 
-    FILE_PATHS: str = "data"
+    FORMATE: list[InputFormat] = [
+        "docx",
+        "asciidoc",
+        "pptx",
+        "html",
+        "image",
+        "pdf",
+        "md",
+        "csv",
+        "xlsx",
+        "xml_uspto",
+        "xml_jats",
+        "json_docling",
+    ]
+    FILE_LINK: list[str] = [
+        "https://www.telekom.de/pdf/bedienungsanleitung-bosch-rauchwarnmelder",
+        "https://www.telekom.de/pdf/family-card-basic-infos",
+    ]

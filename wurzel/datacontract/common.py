@@ -8,7 +8,6 @@ from re import compile as _re_compile
 from typing import Any, Callable, Self
 
 import pydantic
-from docling.document_converter import DocumentConverter
 
 from .datacontract import PydanticModel
 
@@ -54,24 +53,4 @@ class MarkdownDataContract(PydanticModel):
             md=str(find_first(_RE_BODY, md, md)),
             url=str(find_first(_RE_URL, md, url_prefix + path.as_posix())),
             keywords=str(find_first(_RE_TOPIC, md, path.name.split(".")[0])),
-        )
-
-    @classmethod
-    def from_docling_file(
-        cls, contract: DocumentConverter, paths: Path, url_prefix: str = ""
-    ) -> Self:
-        """
-        Creates a `MarkdownDataContract` instance from a file.
-        """
-
-        md = "\n\n".join(res.document.export_to_markdown() for res in contract)
-
-        def find_first(pattern: _re_pattern, text: str, fallback: str):
-            x = pattern.findall(text)
-            return x[0] if len(x) >= 1 else fallback
-
-        return MarkdownDataContract(
-            md=str(find_first(_RE_BODY, md, md)),
-            url=str(find_first(_RE_URL, md, url_prefix + paths.as_posix())),
-            keywords=str(find_first(_RE_TOPIC, md, paths.name.split(".")[0])),
         )
