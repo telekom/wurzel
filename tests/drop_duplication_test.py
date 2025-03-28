@@ -55,7 +55,7 @@ def test_subset_duplications():
 
 
 def test_subset_md_equal_but_url_diff_duplications():
-    "10 exact equal documents"
+    "10 documents with different url
     os.environ["DROP_BY_FIELDS"] = '["*"]'
     test_data = [
         MarkdownDataContract(
