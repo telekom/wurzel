@@ -24,7 +24,7 @@ def test_full_duplications():
 
 
 def test_no_duplications():
-    "10 exact equal documents"
+    "10 documents with different md"
     test_data = [
         MarkdownDataContract(
             md=f"##Hello World {i}", keywords="dummy", url="https:example.com/hello"
