@@ -8,6 +8,7 @@
 import itertools
 from logging import getLogger
 
+import tlsh
 from pandera.typing import DataFrame
 from qdrant_client import QdrantClient, models
 
@@ -103,6 +104,7 @@ class QdrantConnectorStep(
                 payload={
                     "url": row["url"],
                     "text": row["text"],
+                    "text_tlsh_hash": tlsh.hash(row["text"].encode("utf-8")),
                     "keywords": row["keywords"],
                     "history": str(step_history.get()),
                 },
@@ -124,6 +126,7 @@ class QdrantConnectorStep(
         data = [
             {
                 "text": entry.payload["text"],
+                "text_tlsh_hash": tlsh.hash(entry.payload["text"].encode("utf-8")),
                 "url": entry.payload["url"],
                 "vector": entry.vector,
                 "history": entry.payload["history"],
