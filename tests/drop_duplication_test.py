@@ -39,7 +39,7 @@ def test_no_duplications():
 
 
 def test_subset_duplications():
-    "10 exact equal documents"
+    "10 documents with different md"
     os.environ["DROP_BY_FIELDS"] = '["url"]'  # TODO env fixutire
     test_data = [
         MarkdownDataContract(
