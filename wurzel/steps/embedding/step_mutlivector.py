@@ -78,7 +78,9 @@ class EmbeddingMultiVectorStep(
         if failed == len(inpt):
             raise StepFailed(f"All {len(inpt)} embeddings got skipped")
 
-        return DataFrame[EmbeddingMultiVectorResult](rows)
+        return DataFrame[EmbeddingMultiVectorResult](
+            DataFrame[EmbeddingMultiVectorResult](rows)
+        )
 
     def _get_embedding(self, doc: MarkdownDataContract) -> _EmbeddedMultiVector:
         """

@@ -97,7 +97,7 @@ class EmbeddingStep(
         """
         if len(inpt) == 0:
             log.info("Got empty result in Embedding - Skipping")
-            DataFrame[EmbeddingResult]([])
+            return DataFrame[EmbeddingResult]([])
         splitted_md_rows = self._split_markdown(inpt)
         rows = []
         failed = 0
@@ -114,9 +114,7 @@ class EmbeddingStep(
             log.warning(f"{failed}/{len(splitted_md_rows)} got skipped")
         if failed == len(splitted_md_rows):
             raise StepFailed(f"all {len(splitted_md_rows)} embeddings got skipped")
-        return DataFrame[EmbeddingResult](
-            DataFrame[EmbeddingResult](rows).drop_duplicates(subset=["text"])
-        )
+        return DataFrame[EmbeddingResult](DataFrame[EmbeddingResult](rows))
 
     def get_embedding_input_from_document(self, doc: MarkdownDataContract) -> str:
         """Clean the document such that it can be used as input to the embedding model.
