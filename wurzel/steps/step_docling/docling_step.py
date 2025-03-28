@@ -53,10 +53,13 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
             List[str]: List of valid URLs.
         """
         valid_urls = []
-        for url in set(urls):  # Remove duplicates
-            response = requests.head(url, timeout=5)
-            if response.status_code == 200:
-                valid_urls.append(url)
+        for url in set(urls):
+            try:
+                response = requests.head(url, timeout=5)
+                if response.status_code == 200:
+                    valid_urls.append(url)
+            except requests.RequestException as e:
+                log.error(f"Failed to verify URL: {url}. Error: {e}")
         return valid_urls
 
     def run(self, inpt: None) -> list[MarkdownDataContract]:
