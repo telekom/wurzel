@@ -77,6 +77,7 @@ class QdrantConnectorMultiVectorStep(
                 payload={
                     "url": row["url"],
                     "text": row["text"],
+                    "text_tlsh_hash": self.get_tlsh_hash(row["text"]),
                     "splits": row["splits"],
                     "keywords": row["keywords"],
                 },
@@ -100,6 +101,7 @@ class QdrantConnectorMultiVectorStep(
         data = [
             {
                 "text": entry.payload["text"],
+                "text_tlsh_hash": self.get_tlsh_hash(entry.payload["text"]),
                 "url": entry.payload["url"],
                 "splits": entry.payload["splits"],
                 "vectors": entry.vector,
