@@ -10,6 +10,7 @@ version = 1
 path = [
     "tests/data/**.csv",
     "tests/data/**.json",
+    "tests/steps/docling/output_data/**.json",
     ]
 precedence = "override"
 SPDX-FileCopyrightText = "2024 Deutsche Telekom AG"
