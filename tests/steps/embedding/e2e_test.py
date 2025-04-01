@@ -16,7 +16,7 @@ from wurzel.step_executor import BaseStepExecutor
 
 # Local application/library specific imports
 from wurzel.steps import EmbeddingStep
-from wurzel.steps.embedding.step_mutlivector import EmbeddingMultiVectorStep
+from wurzel.steps.embedding.step_multivector import EmbeddingMultiVectorStep
 
 
 @pytest.fixture(scope="module")
