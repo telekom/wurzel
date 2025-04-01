@@ -17,7 +17,7 @@ __all__ = ["QdrantResult", "STEPS"]
 STEPS: list[Type[TypedStep]] = []
 if _HAS_QDRANT:
     from .step import QdrantConnectorStep  # noqa: F401
-    from .step_mutli_vector import QdrantConnectorMultiVectorStep  # noqa: F401
+    from .step_multi_vector import QdrantConnectorMultiVectorStep  # noqa: F401
 
     __all__.extend(["QdrantConnectorStep", "QdrantConnectorMultiVectorStep"])
 else:
