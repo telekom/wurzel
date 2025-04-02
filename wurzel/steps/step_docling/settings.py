@@ -12,7 +12,7 @@ from wurzel import Settings
 class DoclingSettings(Settings):
     """settings"""
 
-    FORMATE: list[InputFormat] = [
+    FORMATS: list[InputFormat] = [
         "docx",
         "asciidoc",
         "pptx",
@@ -26,7 +26,8 @@ class DoclingSettings(Settings):
         "xml_jats",
         "json_docling",
     ]
-    FILE_LINK: list[str] = [
+    PDF_URLS: list[str] = [
         "https://www.telekom.de/pdf/bedienungsanleitung-bosch-rauchwarnmelder",
         "https://www.telekom.de/pdf/family-card-basic-infos",
+        "https://www.telekom.de/pdf/wow-nutzungsbedingungen",
     ]
