@@ -104,3 +104,16 @@ class PydanticModel(pydantic.BaseModel, DataModel):
             return data
 
         raise NotImplementedError(f"Can not load {model_type}")
+
+    def __hash__(self) -> int:
+        return hash("".join([getattr(self, name) for name in self.model_fields_set]))
+
+    def __eq__(self, other: object) -> bool:
+        # pylint: disable-next=not-an-iterable
+        for field in self.model_fields:
+            other_value = getattr(other, field, None)
+            if isinstance(other, dict):
+                other_value = other.get(field, None)
+            if getattr(self, field) != other_value:
+                return False
+        return True

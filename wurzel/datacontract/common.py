@@ -54,16 +54,3 @@ class MarkdownDataContract(PydanticModel):
             url=str(find_first(_RE_URL, md, url_prefix + path.as_posix())),
             keywords=str(find_first(_RE_TOPIC, md, path.name.split(".")[0])),
         )
-
-    def __hash__(self) -> int:
-        return hash(f"{self.url}::{self.keywords}::{self.md}")
-
-    def __eq__(self, other: object) -> bool:
-        #pylint: disable-next=not-an-iterable
-        for field in self.model_fields:
-            other_value = getattr(other, field, None)
-            if isinstance(other, dict):
-                other_value = other.get(field, None)
-            if getattr(self, field) != other_value:
-                return False
-        return True
