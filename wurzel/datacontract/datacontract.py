@@ -118,3 +118,5 @@ class PydanticModel(pydantic.BaseModel, DataModel):
             if getattr(self, field) != other_value:
                 return False
         return True
+    def __lt__(self, other: object) -> bool:
+        return hash(self) < hash(other)
