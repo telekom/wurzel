@@ -35,11 +35,11 @@ from wurzel.steps.embedding.data import EmbeddingResult
     ],
 )
 def test_sorted(inpt):
-    sorted = _try_sort(inpt)
+    sorted_inpt = _try_sort(inpt)
     if isinstance(inpt, pandas.DataFrame):
-        assert sorted.equals(inpt)
+        assert sorted_inpt.equals(inpt)
     else:
-        assert sorted == inpt
+        assert sorted_inpt == inpt
 
 
 def test_unsorted_mdcs():
@@ -58,13 +58,13 @@ def test_unsorted_df():
             {"text": "a", "url": "url", "vector": [0.1], "keywords": "kw"},
         ]
     )
-    sorted = DataFrame[EmbeddingResult](
+    sort = DataFrame[EmbeddingResult](
         [
             {"text": "a", "url": "url", "vector": [0.1], "keywords": "kw"},
             {"text": "b", "url": "url", "vector": [0.1], "keywords": "kw"},
         ]
     )
-    assert not sorted.equals(unsorted), "sanity check"
-    assert sorted.reset_index(drop=True).equals(
+    assert not sort.equals(unsorted), "sanity check"
+    assert sort.reset_index(drop=True).equals(
         _try_sort(unsorted).reset_index(drop=True)
     )
