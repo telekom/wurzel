@@ -57,11 +57,15 @@ class StepReport(pydantic.BaseModel):
 
 
 def _try_sort(x: StepReturnType) -> StepReturnType:
+    """Tries to sort given x
+    
+    Returns either a sorted x or x itself
+    """
     _log_extra = {"extra": {"type": type(x)}}
     if isinstance(x, PydanticModel):
         return x
     try:
-        if isinstance(x, list):
+        if isinstance(x, (list, set)):
             return sorted(x)
         if isinstance(x, pandas.DataFrame):
             return x.sort_values(x.columns[1])
