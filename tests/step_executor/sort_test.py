@@ -40,3 +40,31 @@ def test_sorted(inpt):
         assert sorted.equals(inpt)
     else:
         assert sorted == inpt
+
+
+def test_unsorted_mdcs():
+    expected = [
+        MarkdownDataContract(md="b", keywords="kw", url="ur"),
+        MarkdownDataContract(md="a", keywords="kw", url="ur"),
+    ]
+    inpt = reversed(expected)
+    assert _try_sort(list(inpt)) == expected
+
+
+def test_unsorted_df():
+    unsorted = DataFrame[EmbeddingResult](
+        [
+            {"text": "b", "url": "url", "vector": [0.1], "keywords": "kw"},
+            {"text": "a", "url": "url", "vector": [0.1], "keywords": "kw"},
+        ]
+    )
+    sorted = DataFrame[EmbeddingResult](
+        [
+            {"text": "a", "url": "url", "vector": [0.1], "keywords": "kw"},
+            {"text": "b", "url": "url", "vector": [0.1], "keywords": "kw"},
+        ]
+    )
+    assert not sorted.equals(unsorted), "sanity check"
+    assert sorted.reset_index(drop=True).equals(
+        _try_sort(unsorted).reset_index(drop=True)
+    )
