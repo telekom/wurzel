@@ -4,6 +4,7 @@
 
 import pytest
 
+import wurzel
 from wurzel import MarkdownDataContract
 
 
@@ -35,6 +36,16 @@ def test_manual_step_md_parsing(tmp_path, md, url, bread):
     assert s.md == "Text"
 
 
+class MDCChild(MarkdownDataContract):
+    pass
+
+
+class SameDefPyd(wurzel.datacontract.PydanticModel):
+    md: str
+    keywords: str
+    url: str
+
+
 @pytest.mark.parametrize(
     ["a", "b", "outcome"],
     [
@@ -51,6 +62,18 @@ def test_manual_step_md_parsing(tmp_path, md, url, bread):
             id="mdc==mdc",
         ),
         pytest.param(
+            MarkdownDataContract(md="md", keywords="key words", url="u r l"),
+            MDCChild(md="md", keywords="key words", url="u r l"),
+            True,
+            id="mdc==mdcChild",
+        ),
+        pytest.param(
+            MarkdownDataContract(md="md", keywords="key words", url="u r l"),
+            SameDefPyd(md="md", keywords="key words", url="u r l"),
+            True,
+            id="mdc==Compatible",
+        ),
+        pytest.param(
             MarkdownDataContract(md="mds", keywords="key words", url="u r l"),
             {"md": "md", "keywords": "key words", "url": "u r l"},
             False,
@@ -61,6 +84,18 @@ def test_manual_step_md_parsing(tmp_path, md, url, bread):
             MarkdownDataContract(md="mds", keywords="key words", url="u r l"),
             False,
             id="mdc!=mdc",
+        ),
+        pytest.param(
+            MarkdownDataContract(md="mds", keywords="key words", url="u r l"),
+            MDCChild(md="md", keywords="key words", url="u r l"),
+            False,
+            id="mdc!=mdcChild",
+        ),
+        pytest.param(
+            MarkdownDataContract(md="md", keywords="key words", url="u r l"),
+            SameDefPyd(md="mds", keywords="key words", url="u r l"),
+            False,
+            id="mdc!=Compatible",
         ),
     ],
 )
