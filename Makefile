@@ -16,7 +16,7 @@ $(VENV)/touchfile: pyproject.toml $(UV)
 	$(UV) --no-progress pip install -r DIRECT_REQUIREMENTS.txt
 	@touch $(VENV)/touchfile
 $(PY):
-	python3.11 -m venv $(VENV)
+	python3 -m venv $(VENV)
 $(UV): $(PY)
 	$(PIP) install uv
 install: $(VENV)/touchfile
