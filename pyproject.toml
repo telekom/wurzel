@@ -45,11 +45,13 @@ dependencies= [
     "tiktoken==0.7.0",
     "joblib>=1.4.0",
     "lxml==5.2.*",
-    "python-tlsh==4.5.0",
+
 ]
 
 [project.optional-dependencies]
-qdrant = ["qdrant-client==1.10.1"]
+qdrant = [
+    "qdrant-client==1.10.1",
+    "python-tlsh==4.5.0",]
 milvus = [
     "pymilvus==2.4.4",
 ]
