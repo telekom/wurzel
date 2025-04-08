@@ -179,7 +179,7 @@ def test_qdrant_connector_true_csv(
     output_file = output_path / step.__name__
     shutil.copy(inpt_file, input_file)
     res = BaseStepExecutor().execute_step(step, {input_path}, output_file)
-    expected_cols = (k for k in result_type.to_schema().columns)
+    expected_cols = list(result_type.to_schema().columns)
     if tlsh and not HAS_TLSH:
         pytest.skip("TLSH dep is not installed")
     if not tlsh:
