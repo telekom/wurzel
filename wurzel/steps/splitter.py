@@ -24,9 +24,9 @@ from wurzel.utils.semantic_splitter import SemanticSplitter
 class SplitterSettings(Settings):
     """Anything Embedding-related"""
 
-    BATCH_SIZE: int = Field(10, gt=0)
+    BATCH_SIZE: int = Field(100, gt=0)
     TOKEN_COUNT_MIN: int = Field(64, gt=0)
-    TOKEN_COUNT_MAX: int = Field(512, gt=1)
+    TOKEN_COUNT_MAX: int = Field(1024, gt=1)
     TOKEN_COUNT_BUFFER: int = Field(32, gt=0)
 
 
