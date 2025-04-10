@@ -50,8 +50,9 @@ class SimpleSplitterStep(
         """Executes the split step by processing input markdown files, generating smaller splitted markdown files,
         by preserving the headline.
         """
+
         def _batchify(data: list, size: int) -> list[list]:
-            return [data[i:i + size] for i in range(0, len(data), size)]
+            return [data[i : i + size] for i in range(0, len(data), size)]
 
         batches = _batchify(inpt, self.settings.BATCH_SIZE)
 
