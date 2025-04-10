@@ -104,7 +104,7 @@ class QdrantConnectorStep(
                 payload={
                     "url": row["url"],
                     "text": row["text"],
-                    **self.get_hashes(row["text"]),
+                    **self.get_available_hashes(row["text"]),
                     "keywords": row["keywords"],
                     "history": str(step_history.get()),
                 },
@@ -214,9 +214,13 @@ class QdrantConnectorStep(
         return dict(sorted(versioned_collections.items()))
 
     @staticmethod
-    def get_hashes(text: str, encoding: str = "utf-8") -> dict:
-        """Compute a hash for a given input text based on TLSH (Trend Micro Locality Sensitive Hash).
+    def get_available_hashes(text: str, encoding: str = "utf-8") -> dict:
+        """Compute `n` hashes for a given input text based.
+         
+        The number `n` depends on the optionally installed python libs.
+        For now only TLSH (Trend Micro Locality Sensitive Hash) is supported
 
+        ## TLSH
         Given a byte stream with a minimum length of 50 bytes TLSH generates a hash value which can be used for similarity comparisons.
 
         Args:
@@ -224,7 +228,7 @@ class QdrantConnectorStep(
             encoding (str, optional): Input text will encoded to bytes using this encoding. Defaults to "utf-8".
 
         Returns:
-            str: TLSH hash as string
+            dict[str, str]: keys: `text_<algo>_hash` hash as string ! Dict might be empty!
         """
         hashes = {}
         if HAS_TLSH:

@@ -77,7 +77,7 @@ class QdrantConnectorMultiVectorStep(
                 payload={
                     "url": row["url"],
                     "text": row["text"],
-                    **self.get_hashes(row["text"]),
+                    **self.get_available_hashes(row["text"]),
                     "splits": row["splits"],
                     "keywords": row["keywords"],
                 },
