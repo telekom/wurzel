@@ -216,7 +216,7 @@ class QdrantConnectorStep(
     @staticmethod
     def get_available_hashes(text: str, encoding: str = "utf-8") -> dict:
         """Compute `n` hashes for a given input text based.
-         
+
         The number `n` depends on the optionally installed python libs.
         For now only TLSH (Trend Micro Locality Sensitive Hash) is supported
 
