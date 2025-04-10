@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+from typing import Optional
+
 from pandera.typing import Series
 
 from wurzel.steps.embedding.data import EmbeddingMultiVectorResult, EmbeddingResult
@@ -10,6 +12,7 @@ from wurzel.steps.embedding.data import EmbeddingMultiVectorResult, EmbeddingRes
 class QdrantResult(EmbeddingResult):
     """Data Contract Proxy adding collection name to the PanderaDataframe"""
 
+    text_tlsh_hash: Optional[Series[str]]
     collection: Series[str]
     id: Series[int]
 
@@ -17,5 +20,6 @@ class QdrantResult(EmbeddingResult):
 class QdranttMultiVectorResult(EmbeddingMultiVectorResult):
     """Data Contract Proxy adding collection name to the PanderaDataframe"""
 
+    text_tlsh_hash: Optional[Series[str]]
     collection: Series[str]
     id: Series[int]

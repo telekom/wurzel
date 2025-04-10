@@ -4,15 +4,11 @@
 
 from typing import Type
 
+from wurzel.utils import HAS_QDRANT as _HAS_QDRANT
+
 from ...step import TypedStep
 from .data import QdrantResult
 
-__all__ = []
-try:
-    _HAS_QDRANT = True
-    import qdrant_client as _  # noqa: F401
-except ImportError:
-    _HAS_QDRANT = False
 __all__ = ["QdrantResult", "STEPS"]
 STEPS: list[Type[TypedStep]] = []
 if _HAS_QDRANT:

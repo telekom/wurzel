@@ -7,7 +7,7 @@ import shutil
 import unittest
 import unittest.mock
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Union
 
 import pytest
 
@@ -17,6 +17,8 @@ from qdrant_client import QdrantClient, models
 from wurzel.exceptions import StepFailed
 from wurzel.step_executor import BaseStepExecutor
 from wurzel.steps.qdrant import QdrantConnectorMultiVectorStep, QdrantConnectorStep
+from wurzel.steps.qdrant.data import QdrantResult, QdranttMultiVectorResult
+from wurzel.utils import HAS_TLSH
 
 
 def test_qdrant_connector_first(
@@ -146,23 +148,43 @@ def test_qdrant_connector_csv_partially_not_same_shape(
         BaseStepExecutor().execute_step(QdrantConnectorStep, {input_path}, output_file)
 
 
+@pytest.mark.parametrize(
+    ["step", "result_type", "inpt_file"],
+    [
+        pytest.param(
+            QdrantConnectorMultiVectorStep,
+            QdranttMultiVectorResult,
+            "./tests/data/embedding_multi.csv",
+            id="MultiVector",
+        ),
+        pytest.param(
+            QdrantConnectorStep,
+            QdrantResult,
+            "./tests/data/embedded.csv",
+            id="SingleVector",
+        ),
+    ],
+)
+@pytest.mark.parametrize("tlsh", [True, False])
 def test_qdrant_connector_true_csv(
-    input_output_folder: Tuple[Path, Path], dummy_collection
+    input_output_folder: Tuple[Path, Path],
+    dummy_collection,
+    step: type[Union[QdrantConnectorStep, QdrantConnectorMultiVectorStep]],
+    result_type: Union[QdrantResult, QdranttMultiVectorResult],
+    inpt_file: str,
+    tlsh: bool,
 ):
     input_path, output_path = input_output_folder
     input_file = input_path / "qdrant_at.csv"
-    output_file = output_path / QdrantConnectorStep.__name__
-    shutil.copy("./tests/data/embedded.csv", input_file)
-    BaseStepExecutor().execute_step(QdrantConnectorStep, {input_path}, output_file)
-
-
-def test_qdrant_connector_true_csv_multi(
-    input_output_folder: Tuple[Path, Path], dummy_collection
-):
-    input_path, output_path = input_output_folder
-    input_file = input_path / "qdrant_at.csv"
-    output_file = output_path / QdrantConnectorMultiVectorStep.__name__
-    shutil.copy("./tests/data/embedding_multi.csv", input_file)
-    BaseStepExecutor().execute_step(
-        QdrantConnectorMultiVectorStep, {input_path}, output_file
-    )
+    output_file = output_path / step.__name__
+    shutil.copy(inpt_file, input_file)
+    res = BaseStepExecutor().execute_step(step, {input_path}, output_file)
+    expected_cols = list(result_type.to_schema().columns)
+    if tlsh and not HAS_TLSH:
+        pytest.skip("TLSH dep is not installed")
+    if not tlsh:
+        expected_cols.remove("text_tlsh_hash")
+    data, rep = res[0]
+    assert res
+    for col in expected_cols:
+        assert col in data
