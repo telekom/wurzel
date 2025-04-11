@@ -7,7 +7,7 @@ import json
 from ast import literal_eval
 from pathlib import Path
 from typing import Self, Type, Union, get_origin
-
+import pandas as pd
 import pandera as pa
 import pandera.typing as patyp
 import pydantic
@@ -31,11 +31,11 @@ class DataModel:
 class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
     """Data Model contract specified with pandera
     Using Panda Dataframe. Mainly for CSV shaped data"""
-    import pandas as pd
+
     @classmethod
     def save_to_path(cls, path: Path, obj: Union[Self, list[Self]]) -> Path:
         path = path.with_suffix(".csv")
-        if not isinstance(obj, PanderaDataFrameModel.pd.DataFrame):
+        if not isinstance(obj, pd.DataFrame):
             raise NotImplementedError(f"Cannot store {type(obj)}")
         obj.to_csv(path, index=False)
         return path
@@ -43,7 +43,7 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
     @classmethod
     def load_from_path(cls, path: Path, *args) -> Self:
         """switch case to find the matching file ending"""
-        read_data = PanderaDataFrameModel.pd.read_csv(path.open(encoding="utf-8"))
+        read_data = pd.read_csv(path.open(encoding="utf-8"))
         for key, atr in cls.to_schema().columns.items():
             if atr.dtype.type is list:
                 read_data[key] = read_data[key].apply(literal_eval)
