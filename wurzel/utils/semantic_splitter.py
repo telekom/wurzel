@@ -9,6 +9,7 @@ from logging import getLogger
 from typing import Optional, Tuple, Type, TypedDict
 
 import mdformat
+import spacy
 import tiktoken
 from mistletoe import Document as MisDocument
 from mistletoe import block_token, markdown_renderer, span_token
@@ -146,8 +147,8 @@ class WurzelMarkdownRenderer(markdown_renderer.MarkdownRenderer):
 
 class SemanticSplitter:
     """Splitter implementation"""
-    import spacy
-    nlp: "spacy.language.Language"
+
+    nlp: spacy.language.Language
     token_limit: int
     token_limit_buffer: int
     token_limit_min: int
@@ -159,7 +160,7 @@ class SemanticSplitter:
         token_limit_min: int = 64,
         spacy_model: str = "de_core_news_sm",
     ) -> None:
-        self.nlp = SemanticSplitter.spacy.load(spacy_model)
+        self.nlp = spacy.load(spacy_model)
         self.token_limit = token_limit
         self.token_limit_buffer = token_limit_buffer
         self.token_limit_min = token_limit_min

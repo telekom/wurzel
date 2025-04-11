@@ -4,11 +4,9 @@
 
 
 from ..step import TypedStep
-from . import (
-    qdrant as __q,
-)
+from .qdrant import QdrantConnectorMultiVectorStep, QdrantConnectorStep
 from .embedding import EmbeddingStep
 from .manual_markdown import ManualMarkdownStep
 
-__all__ = ["TypedStep", "ManualMarkdownStep", "EmbeddingStep"]
-__all__.extend([*__q.__all__])
+__all__ = [TypedStep, ManualMarkdownStep, EmbeddingStep, QdrantConnectorMultiVectorStep, QdrantConnectorStep]
+

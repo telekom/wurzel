@@ -103,10 +103,15 @@ def step_callback(
 def complete_step_import(incomplete: str):
     """AutoComplete for steps
     Currently only supports library steps"""
-    hints =[(str(cls)
-             for cls in find_sub_classes(pkg).values() if str(cls).startswith(incomplete))
-             for pkg in packages]
-    logging.info("found possible steps:", extra={"steps":all_steps, "hints":hints})
+    hints = [
+        (
+            str(cls)
+            for cls in find_sub_classes(pkg).values()
+            if str(cls).startswith(incomplete)
+        )
+        for pkg in packages
+    ]
+    logging.info("found possible steps:", extra={"steps": all_steps, "hints": hints})
     return hints
 
 

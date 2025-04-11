@@ -7,6 +7,7 @@ import json
 from ast import literal_eval
 from pathlib import Path
 from typing import Self, Type, Union, get_origin
+
 import pandas as pd
 import pandera as pa
 import pandera.typing as patyp
@@ -17,6 +18,7 @@ class DataModel:
     """interface definition of a Contract model
     Contains method to store and load to a path
     """
+
     @classmethod
     @abc.abstractmethod
     def save_to_path(cls, path: Path, obj: Union[Self, list[Self]]) -> Path:

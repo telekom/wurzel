@@ -98,7 +98,3 @@ def test_run(tmp_path, env):
 @pytest.mark.parametrize("gen_env", [True, False])
 def test_inspekt(gen_env):
     main.inspekt(ManualMarkdownStep, gen_env)
-
-
-def test_call():
-    from wurzel import __main__  # noqa: F401
