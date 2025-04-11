@@ -103,9 +103,9 @@ def complete_step_import(_incomplete: str):
     """AutoComplete for steps
     Currently only supports library steps"""
     hints = [
-        f"wurzel.steps.{step}"
-        for step in all_steps
-        if step.endswith("Step") and step != "TypedStep"
+        f"wurzel.steps.{step.__name__}"
+        for step  in all_steps
+        if step.__name__.endswith("Step") and step != "TypedStep"
     ]
     return hints
 
