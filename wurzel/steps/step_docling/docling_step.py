@@ -4,15 +4,14 @@
 
 from logging import getLogger
 
-from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
+from bs4 import BeautifulSoup
 from docling.datamodel.base_models import InputFormat
+from docling.datamodel.pipeline_options import EasyOcrOptions, PdfPipelineOptions
 from docling.document_converter import (
     DocumentConverter,
     PdfFormatOption,
-    WordFormatOption,
 )
-from docling.pipeline.simple_pipeline import SimplePipeline
-from docling.pipeline.standard_pdf_pipeline import StandardPdfPipeline
+from mistletoe import Document, HTMLRenderer
 
 from wurzel.datacontract.common import MarkdownDataContract
 from wurzel.step.typed_step import TypedStep
@@ -22,27 +21,71 @@ from .settings import DoclingSettings
 log = getLogger(__name__)
 
 
+class CleanMarkdownRenderer(HTMLRenderer):
+    """
+    Custom Markdown renderer extending mistletoe's HTMLRenderer to clean up
+    unwanted elements from Markdown input.
+    """
+
+    @staticmethod
+    def render_html_block(token):
+        # Remove comments like <!-- image -->
+        if "<!--" in token.content and "image" in token.content:
+            return ""
+        return token.content
+
+
 class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
-    """Step to return local Markdown files."""
+    """Step to return local Markdown files with enhanced PDF extraction for German."""
 
     def create_converter(self) -> DocumentConverter:
-        """Create and configure the document converter.
+        """Create and configure the document converter for PDF and DOCX.
 
         Returns:
             DocumentConverter: Configured document converter.
         """
+        pipeline_options = PdfPipelineOptions()
+        ocr_options = EasyOcrOptions(
+            force_full_page_ocr=self.settings.FORCE_FULL_PAGE_OCR
+        )
+        pipeline_options.ocr_options = ocr_options
+
         return DocumentConverter(
             allowed_formats=self.settings.FORMATS,
             format_options={
                 InputFormat.PDF: PdfFormatOption(
-                    pipeline_cls=StandardPdfPipeline, backend=PyPdfiumDocumentBackend
-                ),
-                InputFormat.DOCX: WordFormatOption(pipeline_cls=SimplePipeline),
+                    pipeline_options=pipeline_options,
+                )
             },
         )
 
+    @staticmethod
+    def clean_markdown_with_mistletoe(md_text: str) -> str:
+        """
+        Cleans a Markdown string using mistletoe and extracts useful content.
+
+        - Parses and renders the Markdown content into HTML using a custom HTML renderer
+        - Removes unwanted HTML comments and escaped underscores
+        - Extracts the first heading from the content (e.g., <h1> to <h6>)
+        - Converts the cleaned HTML into plain text
+
+        Args:
+            md_text (str): The raw Markdown input string.
+        """
+
+        with CleanMarkdownRenderer() as renderer:
+            ast = Document(md_text)
+            cleaned = renderer.render(ast).replace("\n", "")
+            soup = BeautifulSoup(cleaned, "html.parser")
+            first_heading_tag = soup.find(["h1", "h2", "h3", "h4", "h5", "h6"])
+            heading = (
+                first_heading_tag.get_text(strip=True) if first_heading_tag else ""
+            )
+            plain_text = soup.get_text(separator=" ").strip()
+            return heading, plain_text
+
     def run(self, inpt: None) -> list[MarkdownDataContract]:
-        """Run the document extraction and conversion process.
+        """Run the document extraction and conversion process for German PDFs.
 
         Args:
             inpt (None): Input parameter (not used).
@@ -53,11 +96,13 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
         urls = self.settings.PDF_URLS
         doc_converter = self.create_converter()
         contracts = []
+
         for url in urls:
             try:
                 converted_contract = doc_converter.convert(url)
                 md = converted_contract.document.export_to_markdown()
-                contract_instance = {"md": md, "keywords": "", "url": url}
+                keyword, cleaned_md = self.clean_markdown_with_mistletoe(md)
+                contract_instance = {"md": cleaned_md, "keywords": keyword, "url": url}
                 contracts.append(contract_instance)
 
             except (FileNotFoundError, OSError) as e:

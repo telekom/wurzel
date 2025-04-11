@@ -12,6 +12,7 @@ from wurzel import Settings
 class DoclingSettings(Settings):
     """settings"""
 
+    FORCE_FULL_PAGE_OCR: bool = True
     FORMATS: list[InputFormat] = [
         "docx",
         "asciidoc",
@@ -30,4 +31,5 @@ class DoclingSettings(Settings):
         "https://www.telekom.de/pdf/bedienungsanleitung-bosch-rauchwarnmelder",
         "https://www.telekom.de/pdf/family-card-basic-infos",
         "https://www.telekom.de/pdf/wow-nutzungsbedingungen",
+        "https://www.telekom.de/pdf/bedienungsanleitung-aeg-protect-home-600",
     ]
