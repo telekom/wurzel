@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: CC0-1.0
+{{- range $.Values.ENABLED_TENANTS }}
+{{ $tenant := .}}
+{{- if not (hasKey $.Values.TENANTS $tenant) }}
+  {{-  $error := printf "settings of tenant %s are not defined" $tenant -}}
+  {{- fail $error }}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $.Chart.Name }}-{{ $tenant | lower}}{{ $.Values.variant }}
+  namespace: {{ $.Values.namespace }}
+data:
+{{- with index $.Values.TENANTS $tenant }}
+{{- range $key, $val := .}}
+  {{$key}}: '{{ $val  | toJson}}'
+{{- end }}
+  WURZEL_PIPELINE: '{{ .WURZEL_PIPELINE }}'
+  QDRANTCONNECTORSTEP__COLLECTION: '{{ .QDRANTCONNECTORSTEP.COLLECTION }}{{- if $.Values.variant }}{{ $.Values.variant | replace "-" "_" }}{{- end -}}'
+  PROMETHEUS_GATEWAY: '{{ $.Values.PROMETHEUS.GATEWAY }}'
+  PROMETHEUS_JOB: '{{ .QDRANTCONNECTORSTEP.COLLECTION }}{{- if $.Values.variant }}{{ $.Values.variant | replace "-" "_" }}{{- end -}}'
+  ALLOW_EXTRA_SETTINGS: '{{ $.Values.ALLOW_EXTRA_SETTINGS }}'
+{{- end }}
+
+---
+
+{{- end }}

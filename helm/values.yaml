@@ -1,0 +1,69 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: CC0-1.0
+# Default values for recommendation-dps dev environment.
+
+# Declare variables to be passed into your templates.
+
+namespace: wurzel
+
+volume:
+  size: "10Gi"
+variant: "demo"
+cronschedule: "0 */1 * * *"
+resources:
+   limits:
+     cpu: "2"
+     memory: "5000Mi"
+   requests:
+     cpu: "500m"
+     memory: "3000Mi"
+
+
+
+
+
+LOGGING:
+  LEVEL: INFO
+
+PROMETHEUS: # if you are using the Prometheus executer to collect metrics, specify the host:port here
+  "GATEWAY": ""
+
+
+ENABLED_TENANTS:
+  - WURZELDEMO
+
+TENANTS:
+  WURZELDEMO:
+    LOGNONABSOLUTEURLSTEP:
+      STEM_URL: ["https://www.wikipedia.de"]
+    EMBEDDINGSTEP:
+      API: https://api-inference.huggingface.co/pipeline/feature-extraction/dpr"
+      NORMALIZE: False
+      EMBEDDING_MAP:
+        "e5-": "query: "
+        "DPR|dpr": ""
+    QDRANTCONNECTORSTEP:
+      URI: ":memory:"
+      COLLECTION: wurzel-demo
+    MANUALMARKDOWNSTEP:
+      FOLDER_PATH: data/
+    WURZEL_PIPELINE: "pipelinedemo:pipeline"
+    secret_name: wurzel-demo
+
+
+ALLOW_EXTRA_SETTINGS: False # setting you may enbale when you want to allow additional environment variables in the same Step Namespace although they are not expected from the Settings (Not recommended for prod or staging)
+
+
+image: dockerhub.io/tweigeldev/wurzel:demo # change that to your image with your steps
+
+
+GLOBAL_ENV:
+  DVC_DATA_PATH: /usr/app/dvc-data
+  DVC_FILE: /usr/app/dvc.yaml
+  DVC_PATH: /usr/app/.dvc
+  GIT_PATH: /usr/app/.git
+  GIT_USER: wurzel
+  GIT_MAIL: wurzel@example.com
+  TQDM_MININTERVAL: 30
+  DVC_CACHE_HISTORY_NUMBER: 30

@@ -1,0 +1,95 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: CC0-1.0
+{{- range $.Values.ENABLED_TENANTS }}
+{{ $tenant := . | lower }}
+{{ $tenant_u := . | upper }}
+apiVersion: batch/v1 ## The version of the Kubernetes API
+kind: CronJob ## The type of object for Cron jobs
+metadata:
+  name: {{ $.Chart.Name }}-{{ $tenant}}{{ $.Values.variant }}-cron
+  namespace: {{ $.Values.namespace }}
+  labels:
+    app.kubernetes.io/name: {{ $.Chart.Name }}{{ $.Values.variant }}
+    app.kubernetes.io/component: {{ $.Chart.Name }}{{ $.Values.variant }}
+    app.kubernetes.io/part-of: {{ $.Chart.Name }}{{ $.Values.variant }}
+    app: wurzel-cron
+    logger: v.1
+spec:
+  {{- with index $.Values.TENANTS $tenant_u }}
+  schedule: {{ .cronschedule | default $.Values.cronschedule  | quote}}
+  {{- end }}
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        metadata:
+          labels:
+            name: {{ $.Chart.Name }}
+            namespace: {{ $.Values.namespace }}
+            app: {{ $.Chart.Name }}
+        spec:
+          securityContext:
+            runAsGroup: 999
+            runAsUser: 999
+            fsGroup: 999
+          volumes:
+          - name: dvc-persistent-volume
+            persistentVolumeClaim:
+              claimName: {{ $.Chart.Name }}-{{ $tenant}}{{ $.Values.variant }}
+          - name: dvc-persistent-git-volume
+            persistentVolumeClaim:
+              claimName: {{ $.Chart.Name }}-{{ $tenant}}-git-pvc{{ $.Values.variant }}
+          - name: dvc-persistent-dvc-volume
+            persistentVolumeClaim:
+              claimName: {{ $.Chart.Name }}-{{ $tenant}}-dvc-pvc{{ $.Values.variant }}
+          - name: models-data
+          restartPolicy: Never
+          securityContext:
+            runAsUser: 999
+            runAsGroup: 999
+            fsGroup: 999
+          containers:
+          - image: mtr.devops.telekom.de/oneai/{{ $.Chart.Name }}:{{ $.Chart.AppVersion }}
+            name: {{ $.Chart.Name }}-{{ $tenant}}{{ $.Values.variant }}
+            envFrom:
+            - configMapRef:
+                name: {{ $.Chart.Name }}-{{ $tenant}}{{ $.Values.variant }}
+            - secretRef:
+            {{- with index $.Values.TENANTS $tenant_u }}
+                name: {{ .secret_name }}
+            {{- end }}
+            env:
+            {{- range $key, $value :=  $.Values.GLOBAL_ENV }}
+            - name: {{ $key | quote }}
+              value: {{ $value | quote }}
+            {{ end }}
+            securityContext:
+              allowPrivilegeEscalation: false
+              capabilities:
+                drop:
+                - "ALL"
+            volumeMounts:
+            - name: dvc-persistent-volume
+              mountPath: {{$.Values.GLOBAL_ENV.DVC_DATA_PATH}}
+            - name: dvc-persistent-git-volume
+              mountPath: {{$.Values.GLOBAL_ENV.GIT_PATH}}
+            - name: dvc-persistent-dvc-volume
+              mountPath: {{$.Values.GLOBAL_ENV.DVC_PATH}}
+            - name: models-data
+              mountPath: /usr/app/dt_llm_dpr_models/
+            resources:
+              limits:
+                cpu: {{ $.Values.resources.limits.cpu }}
+                memory: {{ $.Values.resources.limits.memory }}
+              requests:
+                cpu: {{ $.Values.resources.requests.cpu }}
+                memory: {{ $.Values.resources.requests.memory }}
+          imagePullSecrets:
+          - name: docker-config
+
+---
+{{- end }}

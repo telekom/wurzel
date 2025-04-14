@@ -16,10 +16,12 @@ SPDX-FileCopyrightText = "2024 Deutsche Telekom AG"
 SPDX-License-Identifier = "CC0-1.0"
 [[annotations]]
 path = [
+    "**/*/README.md",
     ".github/workflows/*.yaml",
+    ".github/**/*.md",
     "VERSION",
     ".vscode/settings.json",
-    "DIRECT_REQUIREMENTS.txt"
+    "DIRECT_REQUIREMENTS.txt",
     ]
 precedence = "override"
 SPDX-FileCopyrightText = "NONE"
@@ -31,3 +33,12 @@ path = [
 precedence = "override"
 SPDX-FileCopyrightText = "2024 Deutsche Telekom AG"
 SPDX-License-Identifier = "Apache-2.0"
+
+
+[[annotations]]
+path = [
+    "wurzel/utils/to_markdown/*"
+    ]
+precedence = "override"
+SPDX-FileCopyrightText = "2020 suntong"
+SPDX-License-Identifier = "MIT"

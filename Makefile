@@ -16,15 +16,16 @@ $(VENV)/touchfile: pyproject.toml $(UV)
 	$(UV) --no-progress pip install -r DIRECT_REQUIREMENTS.txt
 	@touch $(VENV)/touchfile
 $(PY):
-	python3.11 -m venv $(VENV)
+	python3 -m venv $(VENV)
 $(UV): $(PY)
 	$(PIP) install uv
 install: $(VENV)/touchfile
-	$(VENV)/bin/pre-commit install -f --hook-type pre-commit
 
 test: install
 	$(UV) run pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov-fail-under=90  --cov=$(SRC_DIR)
-lint: install reuse-lint
+
+lint: install
+	-make reuse-lint
 	$(UV) run ruff format .
 	$(UV) run ruff check . --fix
 	$(UV) run pylint $(SRC_DIR)
@@ -36,5 +37,6 @@ clean:
 documentation:
 	sphinx-apidoc  -o ./docs . -f && cd docs && make html && cd .. && firefox ./docs/build/html/index.html
 
+.PHONY: reuse-lint
 reuse-lint:
 	$(UV) run  reuse lint

@@ -14,6 +14,7 @@ from qdrant_client import QdrantClient, models
 from wurzel.exceptions import CustomQdrantException, StepFailed
 from wurzel.step import TypedStep, step_history
 from wurzel.steps.embedding.data import EmbeddingResult
+from wurzel.utils import HAS_TLSH
 
 from .data import QdrantResult
 from .settings import QdrantSettings
@@ -103,6 +104,7 @@ class QdrantConnectorStep(
                 payload={
                     "url": row["url"],
                     "text": row["text"],
+                    **self.get_available_hashes(row["text"]),
                     "keywords": row["keywords"],
                     "history": str(step_history.get()),
                 },
@@ -123,11 +125,8 @@ class QdrantConnectorStep(
             )
         data = [
             {
-                "text": entry.payload["text"],
-                "url": entry.payload["url"],
+                **entry.payload,
                 "vector": entry.vector,
-                "history": entry.payload["history"],
-                "keywords": entry.payload["keywords"],
                 "collection": self.collection_name,
                 "id": entry.id,
             }
@@ -210,6 +209,31 @@ class QdrantConnectorStep(
         versioned_collections = {
             int(previous.name.split("_v")[-1]): previous.name
             for previous in previous_collections
-            if self.settings.COLLECTION in previous.name
+            if f"{self.settings.COLLECTION}_v" in previous.name
         }
         return dict(sorted(versioned_collections.items()))
+
+    @staticmethod
+    def get_available_hashes(text: str, encoding: str = "utf-8") -> dict:
+        """Compute `n` hashes for a given input text based.
+
+        The number `n` depends on the optionally installed python libs.
+        For now only TLSH (Trend Micro Locality Sensitive Hash) is supported
+
+        ## TLSH
+        Given a byte stream with a minimum length of 50 bytes TLSH generates a hash value which can be used for similarity comparisons.
+
+        Args:
+            text (str): Input text
+            encoding (str, optional): Input text will encoded to bytes using this encoding. Defaults to "utf-8".
+
+        Returns:
+            dict[str, str]: keys: `text_<algo>_hash` hash as string ! Dict might be empty!
+        """
+        hashes = {}
+        if HAS_TLSH:
+            # pylint: disable=no-name-in-module, import-outside-toplevel
+            from tlsh import hash as tlsh_hash
+
+            hashes["text_tlsh_hash"] = tlsh_hash(text.encode(encoding))
+        return hashes

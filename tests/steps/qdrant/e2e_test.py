@@ -7,16 +7,18 @@ import shutil
 import unittest
 import unittest.mock
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Union
 
 import pytest
 
 # qdrant-Lite; See: https://qdrant.io/docs/qdrant_lite.md
-from qdrant_client import QdrantClient
+from qdrant_client import QdrantClient, models
 
 from wurzel.exceptions import StepFailed
 from wurzel.step_executor import BaseStepExecutor
 from wurzel.steps.qdrant import QdrantConnectorMultiVectorStep, QdrantConnectorStep
+from wurzel.steps.qdrant.data import QdrantResult, QdranttMultiVectorResult
+from wurzel.utils import HAS_TLSH
 
 
 def test_qdrant_connector_first(
@@ -95,6 +97,46 @@ def test_qdrant_collection_retirement(
         )
 
 
+def test_qdrant_get_collections_with_ephemerals(
+    input_output_folder: Tuple[Path, Path], env, dummy_collection
+):
+    input_path, output_path = input_output_folder
+    HIST_LEN = 3
+    env.set("COLLECTION_HISTORY_LEN", str(HIST_LEN))
+    env.set("COLLECTION", "tenant1-dev")
+    input_file = input_path / "qdrant_at.csv"
+    shutil.copy("./tests/data/embedded.csv", input_file)
+    client = QdrantClient(location=":memory:")
+    {
+        client.create_collection(
+            coll,
+            vectors_config=models.VectorParams(
+                size=100, distance=models.Distance.COSINE
+            ),
+        )
+        for coll in [
+            "tenant1-dev_v1",
+            "tenant1-dev_v2",
+            "tenant1-dev_v3",
+            "tenant1-dev-feature-abc_v1",
+        ]
+    }
+
+    client.close = print
+    with unittest.mock.patch("wurzel.steps.qdrant.step.QdrantClient") as mock:
+        mock.return_value = client
+        step = QdrantConnectorStep()
+        result = step._get_collection_versions()
+        assert len(result) == 3
+        assert set(result.keys()) == {1, 2, 3}
+
+        env.set("COLLECTION", "tenant1-dev-feature-abc")
+        step = QdrantConnectorStep()
+        result = step._get_collection_versions()
+        assert len(result) == 1
+        assert set(result.keys()) == {1}
+
+
 def test_qdrant_connector_csv_partially_not_same_shape(
     input_output_folder: Tuple[Path, Path],
 ):
@@ -106,23 +148,43 @@ def test_qdrant_connector_csv_partially_not_same_shape(
         BaseStepExecutor().execute_step(QdrantConnectorStep, {input_path}, output_file)
 
 
+@pytest.mark.parametrize(
+    ["step", "result_type", "inpt_file"],
+    [
+        pytest.param(
+            QdrantConnectorMultiVectorStep,
+            QdranttMultiVectorResult,
+            "./tests/data/embedding_multi.csv",
+            id="MultiVector",
+        ),
+        pytest.param(
+            QdrantConnectorStep,
+            QdrantResult,
+            "./tests/data/embedded.csv",
+            id="SingleVector",
+        ),
+    ],
+)
+@pytest.mark.parametrize("tlsh", [True, False])
 def test_qdrant_connector_true_csv(
-    input_output_folder: Tuple[Path, Path], dummy_collection
+    input_output_folder: Tuple[Path, Path],
+    dummy_collection,
+    step: type[Union[QdrantConnectorStep, QdrantConnectorMultiVectorStep]],
+    result_type: Union[QdrantResult, QdranttMultiVectorResult],
+    inpt_file: str,
+    tlsh: bool,
 ):
     input_path, output_path = input_output_folder
     input_file = input_path / "qdrant_at.csv"
-    output_file = output_path / QdrantConnectorStep.__name__
-    shutil.copy("./tests/data/embedded.csv", input_file)
-    BaseStepExecutor().execute_step(QdrantConnectorStep, {input_path}, output_file)
-
-
-def test_qdrant_connector_true_csv_multi(
-    input_output_folder: Tuple[Path, Path], dummy_collection
-):
-    input_path, output_path = input_output_folder
-    input_file = input_path / "qdrant_at.csv"
-    output_file = output_path / QdrantConnectorMultiVectorStep.__name__
-    shutil.copy("./tests/data/embedding_multi.csv", input_file)
-    BaseStepExecutor().execute_step(
-        QdrantConnectorMultiVectorStep, {input_path}, output_file
-    )
+    output_file = output_path / step.__name__
+    shutil.copy(inpt_file, input_file)
+    res = BaseStepExecutor().execute_step(step, {input_path}, output_file)
+    expected_cols = list(result_type.to_schema().columns)
+    if tlsh and not HAS_TLSH:
+        pytest.skip("TLSH dep is not installed")
+    if not tlsh:
+        expected_cols.remove("text_tlsh_hash")
+    data, rep = res[0]
+    assert res
+    for col in expected_cols:
+        assert col in data

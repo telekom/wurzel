@@ -10,7 +10,8 @@ import yaml
 
 import wurzel
 import wurzel.cli
-from wurzel import BaseStepExecutor, PrometheusStepExecutor, TypedStep
+from wurzel import BaseStepExecutor, TypedStep
+from wurzel.step_executor.prometheus_executor import PrometheusStepExecutor
 
 
 class DvcDict(TypedDict):
@@ -22,16 +23,37 @@ class DvcDict(TypedDict):
     always_changed: bool
 
 
-class DvcAdapter:
+class Backend:
+    """Abstract class to specify the Backend"""
+
+    def generate_dict(self, step: TypedStep):
+        """generate the dict"""
+        raise NotImplementedError()
+
+    def generate_yaml(self, step: TypedStep):
+        """generate the dict and saves it"""
+        raise NotImplementedError()
+
+
+class DvcBackend(Backend):
     """'Adapter' which creates DVC yamls"""
 
-    @classmethod
-    def generate_dict(
-        cls,
-        step: TypedStep,
-        data_output_folder: Path,
-        executor: Type[BaseStepExecutor] = PrometheusStepExecutor,
+    def __init__(
+        self,
+        data_dir: Path = Path("./data"),
+        executer: BaseStepExecutor = PrometheusStepExecutor,
         encapsulate_env: bool = True,
+    ) -> None:
+        if not isinstance(data_dir, Path):
+            data_dir = Path(data_dir)
+        self.executor: Type[BaseStepExecutor] = executer
+        self.data_dir = data_dir
+        self.encapsulate_env = encapsulate_env
+        super().__init__()
+
+    def generate_dict(
+        self,
+        step: TypedStep,
     ) -> dict[str, DvcDict]:
         """generates the resulting dvc.yaml as dict by calling all
         its required steps as well, in recursive manner.
@@ -41,21 +63,20 @@ class DvcAdapter:
         dict
             _description_
         """
-        if not isinstance(data_output_folder, Path):
-            data_output_folder = Path(data_output_folder)
+
         result: dict[str, Any] = {}
         outputs_of_deps: list[Path] = []
         for o_step in step.required_steps:
-            dep_result = cls.generate_dict(o_step, data_output_folder)
+            dep_result = self.generate_dict(o_step)
             result |= dep_result
             outputs_of_deps += dep_result[o_step.__class__.__name__]["outs"]
-        output_path = data_output_folder / step.__class__.__name__
+        output_path = self.data_dir / step.__class__.__name__
         cmd = wurzel.cli.generate_cli_call(
             step.__class__,
             inputs=outputs_of_deps,
             output=output_path,
-            executor=executor,
-            encapsulate_env=encapsulate_env,
+            executor=self.executor,
+            encapsulate_env=self.encapsulate_env,
         )
         return result | {
             step.__class__.__name__: {
@@ -66,12 +87,19 @@ class DvcAdapter:
             }
         }
 
-    @classmethod
-    def generate_yaml(cls, step, path: Path, data_output_folder: Path):
+    def generate_yaml(
+        self,
+        step: TypedStep,
+    ) -> str:
         """generates the dvc.yaml"""
-        with open(path, "w", encoding="utf-8") as file:
-            data = cls.generate_dict(step, data_output_folder)
-            for k in data:
-                for key in ["outs", "deps"]:
-                    data[k][key] = [str(p) for p in data[k][key]]
-            yaml.dump({"stages": data}, file)
+        data = self.generate_dict(step)
+        for k in data:
+            for key in ["outs", "deps"]:
+                data[k][key] = [str(p) for p in data[k][key]]
+        return yaml.dump({"stages": data})
+
+    @classmethod
+    def save_yaml(cls, yml: str, file: Path):
+        """saves given yml string int file"""
+        with open(file, "w", encoding="utf-8") as f:
+            yaml.dump(yml, f)

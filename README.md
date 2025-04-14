@@ -1,8 +1,3 @@
-<!--
-SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
-
-SPDX-License-Identifier: Apache-2.0
--->
 # wurzel
 <img src=https://raw.githubusercontent.com/telekom/wurzel/main/docs/icon.png width=20% align=right>
 
@@ -81,7 +76,7 @@ class MyEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract], D
 ```
 The *run* function may be executed multiple times. Each time per previous Step. So if you want to do some preparation only once, like creating tables/collection or connections we recommend to do so in the *__init__*
 ```python
-class MyEmbeddingStep(TypedStep[DatabaseSettings, DataFrame[EmbeddingResult], DataFrame[EmbeddingResult]]):
+class MyDatabaseStep(TypedStep[DatabaseSettings, DataFrame[EmbeddingResult], DataFrame[EmbeddingResult]]):
     def __init__(self):
         ## create table and establish connection here
     def run():
@@ -90,7 +85,7 @@ class MyEmbeddingStep(TypedStep[DatabaseSettings, DataFrame[EmbeddingResult], Da
 
 
 
-### Execute existing wurzel
+### define a pipeline with wurzel
 ```python
 
 from wurzel.steps import (
@@ -122,16 +117,6 @@ Wurzel is a collaborative project aiming to combine the best ideas in the field 
 3. Make your changes and commit them: `git commit -m "Add awesome feature"`.
 4. Push to your branch: `git push origin feature/feature-name`.
 5. Submit a pull request for review.
-
-## Implementation Hints
-
-### Milvus Mock
-
-Milvus provides Milvus lite or Milvus standalone for docker. Unfortunately both does not work in the ci runners.
-We decided to skip all Milvus related tests in the pipeline but takeing care of them local and ensure that they can interact with Milvus by running a standalone version of it local.
-
-### qdrant mock
-We mainly replaced Milvus with qdrant. Thus we use qdrant in-memory for unittests. Unless makefile is used
 
 
 ## Code of Conduct
