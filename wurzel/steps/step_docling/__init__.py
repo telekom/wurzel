@@ -2,12 +2,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+from wurzel.utils import HAS_DOCLING as _HAS_DOCLING
+
 __all__ = []
-try:
-    _HAS_DOCLING = True
-    import docling as _  # noqa: F401
-except ImportError:
-    _HAS_DOCLING = False
 if _HAS_DOCLING:
     from .docling_step import DoclingStep  # noqa: F401
 
