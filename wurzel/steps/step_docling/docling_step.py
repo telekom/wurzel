@@ -93,7 +93,7 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
         Returns:
             List[MarkdownDataContract]: List of converted Markdown contracts.
         """
-        urls = self.settings.PDF_URLS
+        urls = self.settings.URLS
         doc_converter = self.create_converter()
         contracts = []
 

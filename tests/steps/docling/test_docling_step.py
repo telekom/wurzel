@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: CC0-1.0
 
 import unittest
-from pathlib import Path
 
 from wurzel.steps.step_docling.docling_step import DoclingStep
 
@@ -12,30 +11,15 @@ class TestDoclingStepWithRealPath(unittest.TestCase):
     def setUp(self):
         """Set up the test with a real path and expected output file."""
         self.real_data_path = ["https://www.telekom.de/pdf/family-card-basic-infos"]
-        self.expected_output_file = Path("tests/data/docling/expected_output.json")
-
         # Instantiate DoclingStep with real settings
         self.docling_step = DoclingStep()
         self.docling_step.settings = type(
             "Settings",
             (object,),
             {
-                "PDF_URLS": self.real_data_path,
-                "FORCE_FULL_PAGE_OCR": True,
-                "FORMATS": [
-                    "docx",
-                    "asciidoc",
-                    "pptx",
-                    "html",
-                    "image",
-                    "pdf",
-                    "md",
-                    "csv",
-                    "xlsx",
-                    "xml_uspto",
-                    "xml_jats",
-                    "json_docling",
-                ],
+                "URLS": self.real_data_path,
+                "FORCE_FULL_PAGE_OCR": self.docling_step.settings.FORCE_FULL_PAGE_OCR,
+                "FORMATS": self.docling_step.settings.FORMATS,
             },
         )
 

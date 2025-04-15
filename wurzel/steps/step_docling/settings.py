@@ -27,7 +27,7 @@ class DoclingSettings(Settings):
         "xml_jats",
         "json_docling",
     ]
-    PDF_URLS: list[str] = [
+    URLS: list[str] = [
         "https://www.telekom.de/pdf/bedienungsanleitung-bosch-rauchwarnmelder",
         "https://www.telekom.de/pdf/family-card-basic-infos",
         "https://www.telekom.de/pdf/wow-nutzungsbedingungen",
