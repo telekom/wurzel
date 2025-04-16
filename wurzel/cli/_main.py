@@ -24,7 +24,7 @@ from wurzel.cli.cmd_generate import main as cmd_generate
 from wurzel.cli.cmd_inspect import main as cmd_inspect
 from wurzel.cli.cmd_run import main as cmd_run
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
-from wurzel.steps import __all__ as all_steps
+
 from wurzel.utils.logging import get_logging_dict_config
 from wurzel.utils.meta_settings import WZ
 
@@ -102,6 +102,11 @@ def step_callback(
 def complete_step_import(_incomplete: str):
     """AutoComplete for steps
     Currently only supports library steps"""
+    from wurzel.steps import QdrantConnectorMultiVectorStep,QdrantConnectorStep,ManualMarkdownStep, EmbeddingStep
+    from wurzel.steps.embedding.step_multivector import EmbeddingMultiVectorStep
+    from wurzel.steps.splitter import SimpleSplitterStep
+
+    all_steps = [QdrantConnectorMultiVectorStep, QdrantConnectorStep,ManualMarkdownStep,EmbeddingStep,EmbeddingMultiVectorStep,SimpleSplitterStep]
     hints = [
         f"wurzel.steps.{step.__name__}"
         for step  in all_steps
