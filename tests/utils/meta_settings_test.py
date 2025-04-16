@@ -6,7 +6,9 @@ from typing import Callable
 
 import pytest
 
-from wurzel import PydanticModel, Settings, TypedStep
+from wurzel.datacontract.datacontract import PydanticModel
+from wurzel.step.settings import Settings
+from wurzel.step.typed_step import TypedStep
 from wurzel.step_executor import BaseStepExecutor
 from wurzel.utils.meta_settings import WZ, create_model
 

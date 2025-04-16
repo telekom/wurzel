@@ -10,7 +10,7 @@ import yaml
 
 import wurzel
 import wurzel.cli
-from wurzel import BaseStepExecutor, TypedStep
+from wurzel.step import BaseStepExecutor, TypedStep
 from wurzel.step_executor.prometheus_executor import PrometheusStepExecutor
 
 

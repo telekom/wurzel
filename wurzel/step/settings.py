@@ -130,7 +130,7 @@ class SettingsLeaf(SettingsBase):
         return cpy
 
 
-class StepSettings(SettingsLeaf):
+class Settings(SettingsLeaf):
     """Settings for Typed Steps
     In general if a class var is called `YOUR_AD_COULD_BE_HERE` the framework will try to load,
     from os.environ, a variable called `YOUR_AD_COULD_BE_HERE`.
@@ -162,4 +162,4 @@ class StepSettings(SettingsLeaf):
 
 # pylint: disable-next=invalid-name
 NoSettings: TypeAlias = None
-__all__ = ["StepSettings"]
+__all__ = ["Settings"]

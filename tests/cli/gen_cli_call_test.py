@@ -4,8 +4,8 @@
 
 import pytest
 
-from wurzel import BaseStepExecutor, PrometheusStepExecutor
 from wurzel.cli import generate_cli_call
+from wurzel.step import BaseStepExecutor, PrometheusStepExecutor
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 
 

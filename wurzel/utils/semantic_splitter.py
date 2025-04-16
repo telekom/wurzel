@@ -6,10 +6,9 @@
 
 import re
 from logging import getLogger
-from typing import Optional, Tuple, Type, TypedDict
+from typing import TYPE_CHECKING, Optional, Tuple, Type, TypedDict
 
 import mdformat
-
 import tiktoken
 from mistletoe import Document as MisDocument
 from mistletoe import block_token, markdown_renderer, span_token
@@ -19,6 +18,8 @@ from mistletoe.token import Token
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import MarkdownException
 
+if TYPE_CHECKING:
+    import spacy
 LEVEL_MAPPING = {
     block_token.Heading: 0,  # actually 1-6
     block_token.List: 7,
@@ -161,6 +162,7 @@ class SemanticSplitter:
         spacy_model: str = "de_core_news_sm",
     ) -> None:
         import spacy
+
         self.nlp = spacy.load(spacy_model)
         self.token_limit = token_limit
         self.token_limit_buffer = token_limit_buffer

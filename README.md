@@ -94,7 +94,7 @@ from wurzel.steps import (
     )
 from wurzel.utils import WZ
 from wurzel.steps.manual_markdown import ManualMarkdownStep
-from wurzel import TypedStep
+from wurzel.step import TypedStep
 
 def pipeline() -> TypedStep:
     """Pipeline definition"""

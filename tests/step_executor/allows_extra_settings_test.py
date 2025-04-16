@@ -6,13 +6,13 @@ from pathlib import Path
 
 import pytest
 
-from wurzel import (
+from wurzel.exceptions import StepFailed
+from wurzel.step import (
     BaseStepExecutor,
     MarkdownDataContract,
     Settings,
     TypedStep,
 )
-from wurzel.exceptions import StepFailed
 
 
 class MySettings(Settings):
