@@ -4,7 +4,6 @@
 
 from ..datacontract import MarkdownDataContract, PanderaDataFrameModel, PydanticModel
 from ..path import PathToFolderWithBaseModels
-from ..step_executor import BaseStepExecutor, PrometheusStepExecutor
 from .history import step_history  # noqa: F401
 from .settings import NoSettings, Settings
 from .step import Step
@@ -22,6 +21,4 @@ __all__ = [
     "PathToFolderWithBaseModels",
     "NoSettings",
     "Settings",
-    "BaseStepExecutor",
-    "PrometheusStepExecutor",
 ]

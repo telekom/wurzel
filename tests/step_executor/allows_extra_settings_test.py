@@ -8,11 +8,11 @@ import pytest
 
 from wurzel.exceptions import StepFailed
 from wurzel.step import (
-    BaseStepExecutor,
     MarkdownDataContract,
     Settings,
     TypedStep,
 )
+from wurzel.step_executor import BaseStepExecutor
 
 
 class MySettings(Settings):
