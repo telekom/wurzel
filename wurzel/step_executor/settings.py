@@ -4,10 +4,10 @@
 
 from pydantic import Field
 
-from wurzel.step.settings import StepSettings
+from wurzel.step.settings import Settings
 
 
-class PrometheusSettings(StepSettings):
+class PrometheusSettings(Settings):
     """Used in PrometheusExecutor"""
 
     PROMETHEUS_GATEWAY: str = Field(

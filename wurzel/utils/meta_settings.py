@@ -8,7 +8,7 @@ from typing import Type, Union
 from pydantic import BaseModel
 from pydantic import create_model as py_create_model
 
-from wurzel.step.settings import SettingsBase, StepSettings
+from wurzel.step.settings import Settings, SettingsBase
 from wurzel.step.typed_step import TypedStep
 
 
@@ -60,10 +60,10 @@ def create_model(
         return cleaned
 
     clean_fields = clean(fields)
-    base_class = py_create_model("SettingsLeaf_allow_extra", __base__=StepSettings)
+    base_class = py_create_model("SettingsLeaf_allow_extra", __base__=Settings)
     if allow_extra_fields:
         base_class.model_config["extra"] = "allow"
-    inner_models: dict[str, StepSettings] = {
+    inner_models: dict[str, Settings] = {
         step.__class__.__name__.upper(): py_create_model(
             "MetaSettings_" + step.__class__.__name__,
             **{

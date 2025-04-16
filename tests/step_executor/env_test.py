@@ -8,12 +8,12 @@ from typing import Optional
 import pytest
 
 from wurzel.datacontract import PydanticModel
-from wurzel.step.settings import StepSettings
+from wurzel.step.settings import Settings
 from wurzel.step.typed_step import TypedStep
 from wurzel.step_executor import BaseStepExecutor
 
 
-class MySettings(StepSettings):
+class MySettings(Settings):
     a: int
     b: str
     c: list[int]

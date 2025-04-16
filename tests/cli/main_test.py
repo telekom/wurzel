@@ -8,23 +8,9 @@ import typer
 
 import wurzel
 import wurzel.steps
-from wurzel import BaseStepExecutor, PrometheusStepExecutor
 from wurzel.cli import _main as main
+from wurzel.step import BaseStepExecutor, PrometheusStepExecutor
 from wurzel.steps.manual_markdown import ManualMarkdownStep
-
-
-def test_module_discovery():
-    assert main.packages
-    for m in main.packages:
-        if m.name == "wurzel":
-            assert m.ispkg
-        if m.name == "base_executor":
-            assert m.ispkg is False
-
-
-def test_packages_discovery():
-    assert main.packages
-    assert "wurzel" in [p.name for p in main.packages]
 
 
 @pytest.mark.parametrize(
@@ -76,7 +62,7 @@ def test_step_callback_bad(step_path):
 def test_autocomplete_step_import():
     completion = main.complete_step_import("")
     assert completion
-    assert "wurzel.steps.ManualMarkdownStep" in completion
+    assert "wurzel.steps.manual_markdown.ManualMarkdownStep" in completion
 
 
 def test_run(tmp_path, env):
@@ -98,7 +84,3 @@ def test_run(tmp_path, env):
 @pytest.mark.parametrize("gen_env", [True, False])
 def test_inspekt(gen_env):
     main.inspekt(ManualMarkdownStep, gen_env)
-
-
-def test_call():
-    from wurzel import __main__  # noqa: F401

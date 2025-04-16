@@ -6,11 +6,11 @@ import json
 
 from pydantic import Field, validator
 
-from wurzel.step.settings import StepSettings
+from wurzel.step.settings import Settings
 
 
 # pylint: disable=duplicate-code
-class MilvusSettings(StepSettings):
+class MilvusSettings(Settings):
     """All Settings related to MivusDB"""
 
     HOST: str = "localhost"

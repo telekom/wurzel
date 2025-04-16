@@ -11,10 +11,10 @@ from pandera.typing import Series
 from wurzel.adapters import DvcBackend
 from wurzel.datacontract import PanderaDataFrameModel, PydanticModel
 from wurzel.step import TypedStep
-from wurzel.step.settings import StepSettings
+from wurzel.step.settings import Settings
 
 
-class MySettings(StepSettings):
+class MySettings(Settings):
     sett: str
 
 

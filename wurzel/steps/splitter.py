@@ -12,10 +12,9 @@ from logging import getLogger
 from joblib import Parallel, delayed
 from pydantic import Field
 
-from wurzel import Settings
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import MarkdownException, SplittException
-from wurzel.step import TypedStep
+from wurzel.step import Settings, TypedStep
 from wurzel.utils.semantic_splitter import SemanticSplitter
 
 # Local application/library specific imports

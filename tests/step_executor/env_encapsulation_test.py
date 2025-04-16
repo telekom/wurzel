@@ -5,14 +5,14 @@
 import pytest
 from pydantic import ValidationError
 
-from wurzel import (
+from wurzel.exceptions import EnvSettingsError
+from wurzel.step import (
     BaseStepExecutor,
     PrometheusStepExecutor,
     PydanticModel,
     Settings,
     TypedStep,
 )
-from wurzel.exceptions import EnvSettingsError
 from wurzel.step_executor.base_executor import step_env_encapsulation
 
 

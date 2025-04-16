@@ -8,11 +8,11 @@ from typing import Optional
 from pydantic import Field, validator
 from qdrant_client.models import Distance
 
-from wurzel.step.settings import StepSettings
+from wurzel.step.settings import Settings
 
 
 # pylint: disable=duplicate-code
-class QdrantSettings(StepSettings):
+class QdrantSettings(Settings):
     """All Settings related to Qdrant DB"""
 
     DISTANCE: Distance = Distance.DOT

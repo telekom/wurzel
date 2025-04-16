@@ -24,7 +24,7 @@ from typing_inspect import get_origin
 from wurzel.datacontract import PanderaDataFrameModel, PydanticModel
 from wurzel.exceptions import ContractFailedException, StaticTypeError
 from wurzel.path import PathToFolderWithBaseModels
-from wurzel.step.settings import StepSettings
+from wurzel.step.settings import Settings
 from wurzel.step.step import Step
 
 # pylint: disable-next=invalid-name
@@ -35,7 +35,7 @@ INCONTRACT = TypeVar("INCONTRACT")
 OUTCONTRACT = TypeVar("OUTCONTRACT")
 
 
-SETTS = TypeVar("SETTS", bound=StepSettings)
+SETTS = TypeVar("SETTS", bound=Settings)
 
 
 class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
@@ -68,7 +68,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     ### Input
     ## Example:
     ```python
-    from wurzel import (
+    from wurzel.step import (
         PanderaDataFrameModel,
         TypedStep,
         PydanticModel,
@@ -158,7 +158,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         cls.settings_class, cls.input_model_type, cls.output_model_type = (
             type_annotations
         )
-        if not issubclass(cls.settings_class, (StepSettings, NoneType)):
+        if not issubclass(cls.settings_class, (Settings, NoneType)):
             raise StaticTypeError(
                 "Settings provided in TypedStep[<>, ...]"
                 + " is not a subclass of settings_class"
