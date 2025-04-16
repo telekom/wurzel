@@ -8,7 +8,8 @@ import asgi_correlation_id
 import pytest
 
 from wurzel.exceptions import StepFailed
-from wurzel.step import BaseStepExecutor, MarkdownDataContract, TypedStep
+from wurzel.step import MarkdownDataContract, TypedStep
+from wurzel.step_executor import BaseStepExecutor
 
 
 class OkExc(Exception):

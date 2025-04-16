@@ -7,11 +7,13 @@ from pydantic import ValidationError
 
 from wurzel.exceptions import EnvSettingsError
 from wurzel.step import (
-    BaseStepExecutor,
-    PrometheusStepExecutor,
     PydanticModel,
     Settings,
     TypedStep,
+)
+from wurzel.step_executor import (
+    BaseStepExecutor,
+    PrometheusStepExecutor,
 )
 from wurzel.step_executor.base_executor import step_env_encapsulation
 

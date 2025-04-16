@@ -9,7 +9,7 @@ import typer
 import wurzel
 import wurzel.steps
 from wurzel.cli import _main as main
-from wurzel.step import BaseStepExecutor, PrometheusStepExecutor
+from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 
 
