@@ -95,8 +95,7 @@ def step_callback(
 
 
 def complete_step_import(incomplete: str):
-    """AutoComplete for steps
-    Currently only supports library steps"""
+    """AutoComplete for steps"""
 
     packages = [
         p
