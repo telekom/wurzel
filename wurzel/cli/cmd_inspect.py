@@ -9,7 +9,7 @@ from typing import Type
 
 from pydantic_core import PydanticUndefined
 
-from wurzel import Settings, TypedStep
+from wurzel.step import Settings, TypedStep
 from wurzel.utils import WZ
 
 
