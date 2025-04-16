@@ -97,10 +97,11 @@ def step_callback(
 def complete_step_import(incomplete: str):
     """AutoComplete for steps
     Currently only supports library steps"""
+
     packages = [
         p
         for p in pkgutil.iter_modules()
-        if p.ispkg and p.name.startswith(("steps", "wurzel"))
+        if p.ispkg and p.name.startswith(incomplete if incomplete else "wurzel")
     ]
     hints = []
     for pkg in packages:
