@@ -11,7 +11,7 @@ import yaml
 import wurzel
 import wurzel.cli
 from wurzel.step import TypedStep
-from wurzel.step_executor import PrometheusStepExecutor, BaseStepExecutor
+from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 
 
 class DvcDict(TypedDict):
