@@ -11,6 +11,7 @@ import pydantic
 
 from .datacontract import PydanticModel
 
+_RE_HEADER = _re_compile(r"---\s*([\s\S]*?)\s*---")
 _RE_TOPIC = _re_compile(r"topics:\s*(.*)")
 _RE_URL = _re_compile(r"url:\s*(.*)")
 _RE_BODY = _re_compile(r"---[\s\S]*?---\s*([\s\S]*)")
@@ -48,9 +49,15 @@ class MarkdownDataContract(PydanticModel):
             x = pattern.findall(text)
             return x[0] if len(x) >= 1 else fallback
 
+        def find_header(text: str):
+            match = _RE_HEADER.search(text)
+            return match.group() if match else ""
+
         md = path.read_text()
         return MarkdownDataContract(
             md=str(find_first(_RE_BODY, md, md)),
-            url=str(find_first(_RE_URL, md, url_prefix + path.as_posix())),
-            keywords=str(find_first(_RE_TOPIC, md, path.name.split(".")[0])),
+            url=str(find_first(_RE_URL, find_header(md), url_prefix + path.as_posix())),
+            keywords=str(
+                find_first(_RE_TOPIC, find_header(md), path.name.split(".")[0])
+            ),
         )
