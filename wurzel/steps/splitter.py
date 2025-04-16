@@ -25,6 +25,7 @@ class SplitterSettings(Settings):
     """Anything Embedding-related"""
 
     BATCH_SIZE: int = Field(100, gt=0)
+    NUM_THREADS: int = Field(4, gt=1)
     TOKEN_COUNT_MIN: int = Field(64, gt=0)
     TOKEN_COUNT_MAX: int = Field(1024, gt=1)
     TOKEN_COUNT_BUFFER: int = Field(32, gt=0)
@@ -57,7 +58,7 @@ class SimpleSplitterStep(
         batches = _batchify(inpt, self.settings.BATCH_SIZE)
 
         # Run each batch in parallel using threading
-        results = Parallel(n_jobs=len(batches), prefer="threads")(
+        results = Parallel(n_jobs=self.settings.NUM_THREADS, prefer="threads")(
             delayed(self._split_markdown)(batch) for batch in batches
         )
 
