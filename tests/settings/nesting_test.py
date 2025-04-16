@@ -140,7 +140,6 @@ class _Nested(SettingsBase):
     PREFIX: _EmbeddingSettings = _EmbeddingSettings()
 
 
-@pytest.mark.mytest
 @pytest.mark.parametrize(
     "env_dict,get_embedding_settings",
     [

@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: CC0-1.0
 [project]
 name = "wurzel"
-version = "0.6.0"
+version = "0.7.0"
 description = ""
 authors = [
     {name ="Thomas Weigel", email="thomas.weigel@telekom.de"},
@@ -45,13 +45,18 @@ dependencies= [
     "tiktoken==0.7.0",
     "joblib>=1.4.0",
     "lxml==5.2.*",
-    "python-tlsh==4.5.0",
+
 ]
 
 [project.optional-dependencies]
-qdrant = ["qdrant-client==1.10.1"]
+qdrant = [
+    "qdrant-client==1.10.1"
+]
 milvus = [
     "pymilvus==2.4.4",
+]
+tlsh = [
+    "python-tlsh==4.5.0"
 ]
 lint = [
     "pylint==3.3.4",
@@ -73,7 +78,7 @@ test = [
 ]
 
 
-dev = ["wurzel[lint,test,qdrant,milvus]"]
+dev = ["wurzel[lint,test,qdrant,milvus,tlsh]"]
 
 [build-system]
 requires = ["setuptools", "wheel"]
