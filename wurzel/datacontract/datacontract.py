@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import abc
+import hashlib
 import json
 from ast import literal_eval
 from pathlib import Path
@@ -110,7 +111,18 @@ class PydanticModel(pydantic.BaseModel, DataModel):
 
     def __hash__(self) -> int:
         # pylint: disable-next=not-an-iterable
-        return hash("".join([getattr(self, name) for name in self.model_fields]))
+        return int(
+            hashlib.sha256(
+                bytes(
+                    "".join(
+                        [getattr(self, name) for name in sorted(self.model_fields)]
+                    ),
+                    encoding="utf-8",
+                ),
+                usedforsecurity=False,
+            ).hexdigest(),
+            16,
+        )
 
     def __eq__(self, other: object) -> bool:
         # pylint: disable-next=not-an-iterable
@@ -121,3 +133,6 @@ class PydanticModel(pydantic.BaseModel, DataModel):
             if getattr(self, field) != other_value:
                 return False
         return True
+
+    def __lt__(self, other: object) -> bool:
+        return hash(self) < hash(other)

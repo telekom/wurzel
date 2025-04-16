@@ -9,6 +9,7 @@ consists of DVCSteps to embedd files and save them as for example as csv
 # Standard library imports
 from logging import getLogger
 
+from joblib import Parallel, delayed
 from pydantic import Field
 
 from wurzel.datacontract import MarkdownDataContract
@@ -23,6 +24,7 @@ class SplitterSettings(Settings):
     """Anything Embedding-related"""
 
     BATCH_SIZE: int = Field(100, gt=0)
+    NUM_THREADS: int = Field(4, gt=1)
     TOKEN_COUNT_MIN: int = Field(64, gt=0)
     TOKEN_COUNT_MAX: int = Field(1024, gt=1)
     TOKEN_COUNT_BUFFER: int = Field(32, gt=0)
@@ -48,7 +50,19 @@ class SimpleSplitterStep(
         """Executes the split step by processing input markdown files, generating smaller splitted markdown files,
         by preserving the headline.
         """
-        return self._split_markdown(inpt)
+
+        def _batchify(data: list, size: int) -> list[list]:
+            return [data[i : i + size] for i in range(0, len(data), size)]
+
+        batches = _batchify(inpt, self.settings.BATCH_SIZE)
+
+        # Run each batch in parallel using threading
+        results = Parallel(n_jobs=self.settings.NUM_THREADS, prefer="threads")(
+            delayed(self._split_markdown)(batch) for batch in batches
+        )
+
+        # Flatten the list of lists
+        return [item for sublist in results for item in sublist]
 
     def _split_markdown(
         self, markdowns: list[MarkdownDataContract]
