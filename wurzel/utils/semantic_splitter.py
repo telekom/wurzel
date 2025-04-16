@@ -161,7 +161,7 @@ class SemanticSplitter:
         token_limit_min: int = 64,
         spacy_model: str = "de_core_news_sm",
     ) -> None:
-        import spacy
+        import spacy  # pylint: disable=import-outside-toplevel
 
         self.nlp = spacy.load(spacy_model)
         self.token_limit = token_limit

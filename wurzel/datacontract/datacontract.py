@@ -35,7 +35,7 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
 
     @classmethod
     def save_to_path(cls, path: Path, obj: Union[Self, list[Self]]) -> Path:
-        import pandas as pd
+        import pandas as pd  # pylint: disable=import-outside-toplevel
 
         path = path.with_suffix(".csv")
         if not isinstance(obj, pd.DataFrame):
@@ -46,7 +46,7 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
     @classmethod
     def load_from_path(cls, path: Path, *args) -> Self:
         """switch case to find the matching file ending"""
-        import pandas as pd
+        import pandas as pd  # pylint: disable=import-outside-toplevel
 
         read_data = pd.read_csv(path.open(encoding="utf-8"))
         for key, atr in cls.to_schema().columns.items():
