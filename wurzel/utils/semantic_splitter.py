@@ -665,8 +665,6 @@ class SemanticSplitter:
         self, doc: MarkdownDataContract
     ) -> list[MarkdownDataContract]:
         """Split a Markdown Document into Snippets"""
-        # Disabling this for now due to https://github.com/miyuchina/mistletoe/issues/211
-
         metadata = MetaDataDict(url=doc.url, keywords=doc.keywords)
         doc_hierarchy: DocumentNode = self._markdown_hierarchy_parser(doc.md, metadata)
         doc_snippets: list[MarkdownDataContract] = self._parse_hierarchical(
