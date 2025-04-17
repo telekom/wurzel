@@ -19,7 +19,7 @@ RUN . ${VENV}/bin/activate
 RUN . ${VENV}/bin/activate && pip install setuptools==78.1.0
 
 RUN . ${VENV}/bin/activate &&  pip install uv && \
-                               uv pip install wurzel[qdrant,milvus,tlsh]
+                               uv pip install wurzel[all]
 # Prevents Python from writing pyc files.
 ENV PYTHONDONTWRITEBYTECODE=1
 

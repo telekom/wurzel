@@ -78,8 +78,8 @@ test = [
     "milvus-lite==2.*", # used for miluvs mock
 ]
 
-
-dev = ["wurzel[lint,test,qdrant,milvus,tlsh]"]
+all = ["wurzel[qdrant,milvus,tlsh]"]
+dev = ["wurzel[lint,test,all]"]
 
 [build-system]
 requires = ["setuptools>=78.1.0", "wheel"]
