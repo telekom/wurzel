@@ -5,12 +5,12 @@
 
 
 def test_import_utils():
-    import wurzel.utils # noqa: F401 I001
+    import wurzel.utils  # noqa: F401 I001
 
 
 def test_import_steps():
-    import wurzel.steps # noqa: F401 I001
+    import wurzel.steps  # noqa: F401 I001
 
 
 def test_import_utils_meta_settings():
-    import wurzel.utils.meta_settings # noqa: F401 I001
+    import wurzel.utils.meta_settings  # noqa: F401 I001

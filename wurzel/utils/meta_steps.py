@@ -33,12 +33,17 @@ def find_sub_classes(parent: T, package: str = __package__) -> dict[str, T]:
             continue
         visited.add(full_module_name)
         # Recurse through any sub-packages
-        if is_package:
-            classes_in_subpackage = find_sub_classes(parent, package=full_module_name)
-            result.update(classes_in_subpackage)
-        # Load the module for inspection
-        module = importlib.import_module(full_module_name)
+        try:
+            if is_package:
+                classes_in_subpackage = find_sub_classes(
+                    parent, package=full_module_name
+                )
+                result.update(classes_in_subpackage)
+            # Load the module for inspection
 
+            module = importlib.import_module(full_module_name)
+        except:  # pylint: disable=bare-except
+            continue
         # Iterate through all the objects in the module and
         # using the lambda, filter for class objects and only objects that exist within the module
         for _name, obj in inspect.getmembers(module, is_non_abs_child):
