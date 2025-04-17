@@ -33,6 +33,7 @@ jq_run "dvc init" noexit
 jq_run "dvc config core.autostage true"
 jq_run "dvc config core.analytics false"
  . ${VENV}/bin/activate && wurzel generate $WURZEL_PIPELINE --data-dir $DVC_DATA_PATH > $DVC_FILE;
+mkdir -p $DVC_DATA_PATH
 dvc repro -q || exit 1
 
 jq_run "git status" noexit

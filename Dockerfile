@@ -20,7 +20,7 @@ RUN . ${VENV}/bin/activate && pip install setuptools==78.1.0
 
 RUN . ${VENV}/bin/activate &&  pip install uv && \
                                uv pip install wurzel[qdrant,milvus,tlsh]
-
+RUN . ${VENV}/bin/activate && pip install -i https://test.pypi.org/simple/ wurzel[qdrant,milvus,tlsh]==0.8.3.dev1
 # Prevents Python from writing pyc files.
 ENV PYTHONDONTWRITEBYTECODE=1
 
@@ -40,4 +40,4 @@ COPY entrypoint.sh .
 COPY examples/pipeline/pipelinedemo.py .
 ENV WURZEL_PIPELINE=pipelinedemo:pipeline
 ENV PATH="/usr/app/venv/bin:$PATH"
-CMD . ${VENV}/bin/activate && ./entrypoint.sh
+CMD . ${VENV}/bin/activate && /bin/bash ./entrypoint.sh
