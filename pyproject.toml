@@ -81,7 +81,7 @@ test = [
 dev = ["wurzel[lint,test,qdrant,milvus,tlsh]"]
 
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=78.1.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
