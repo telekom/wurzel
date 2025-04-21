@@ -53,6 +53,9 @@ dependencies= [
 qdrant = [
     "qdrant-client==1.10.1"
 ]
+docling = [
+    "docling==2.30.0"
+]
 milvus = [
     "pymilvus==2.4.4",
 ]
