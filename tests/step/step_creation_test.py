@@ -11,10 +11,10 @@ from pandera.typing import Series
 from wurzel.adapters import DvcBackend
 from wurzel.datacontract import PanderaDataFrameModel, PydanticModel
 from wurzel.step import TypedStep
-from wurzel.step.settings import StepSettings
+from wurzel.step.settings import Settings
 
 
-class MySettings(StepSettings):
+class MySettings(Settings):
     sett: str
 
 
@@ -115,7 +115,7 @@ def test_generate():
     for step in steps:
         data: dict = res.get(step.__class__.__name__, None)
         assert data is not None
-        assert data["cmd"].startswith("python3 -m wurzel run")
+        assert data["cmd"].startswith("wurzel run")
     assert res[a.__class__.__name__]["outs"][0] == Path("data/Step0")
     assert res[a.__class__.__name__]["outs"][0] in res[b.__class__.__name__]["deps"]
     assert res[b.__class__.__name__]["outs"][0] == Path("data/Step1")

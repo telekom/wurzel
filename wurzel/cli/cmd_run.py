@@ -5,7 +5,7 @@
 from pathlib import Path
 from typing import Type
 
-from wurzel import TypedStep
+from wurzel.step import TypedStep
 
 
 def main(

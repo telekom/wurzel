@@ -18,25 +18,20 @@ from typing import Annotated
 import typer
 import typer.core
 
-from wurzel import TypedStep
 from wurzel.adapters.dvc_adapter import DvcBackend
 from wurzel.cli.cmd_generate import main as cmd_generate
 from wurzel.cli.cmd_inspect import main as cmd_inspect
 from wurzel.cli.cmd_run import main as cmd_run
+from wurzel.step import TypedStep
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
-from wurzel.steps import __all__ as all_steps
 from wurzel.utils.logging import get_logging_dict_config
 from wurzel.utils.meta_settings import WZ
+from wurzel.utils.meta_steps import find_sub_classes
 
 app = typer.Typer(
     no_args_is_help=True,
 )
 log = logging.getLogger(__name__)
-packages = [
-    p
-    for p in pkgutil.iter_modules()
-    if p.ispkg and p.name.startswith(("steps", "wurzel"))
-]
 
 
 def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: str):
@@ -99,14 +94,23 @@ def step_callback(
     return step
 
 
-def complete_step_import(_incomplete: str):
-    """AutoComplete for steps
-    Currently only supports library steps"""
-    hints = [
-        f"wurzel.steps.{step}"
-        for step in all_steps
-        if step.endswith("Step") and step != "TypedStep"
+def complete_step_import(incomplete: str):
+    """AutoComplete for steps"""
+
+    packages = [
+        p
+        for p in pkgutil.iter_modules()
+        if p.ispkg and p.name.startswith(incomplete if incomplete else "wurzel")
     ]
+    hints = []
+    for pkg in packages:
+        hints.extend(
+            ".".join([cls.__module__, cls.__qualname__])
+            for cls in find_sub_classes(TypedStep, pkg.name).values()
+            if str(".".join([cls.__module__, cls.__qualname__])).startswith(incomplete)
+        )
+
+    logging.info("found possible steps:", extra={"packages": packages, "hints": hints})
     return hints
 
 

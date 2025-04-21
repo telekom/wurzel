@@ -32,7 +32,8 @@ jq_run "git config --global user.name '$GIT_USER'"
 jq_run "dvc init" noexit
 jq_run "dvc config core.autostage true"
 jq_run "dvc config core.analytics false"
-wurzel generate $WURZEL_PIPELINE --data-dir $DVC_DATA_PATH >> $DVC_FILE || exit 1
+ . ${VENV}/bin/activate && wurzel generate $WURZEL_PIPELINE --data-dir $DVC_DATA_PATH > $DVC_FILE || exit 1
+mkdir -p $DVC_DATA_PATH
 dvc repro -q || exit 1
 
 jq_run "git status" noexit

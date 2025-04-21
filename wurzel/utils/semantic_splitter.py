@@ -6,19 +6,19 @@
 
 import re
 from logging import getLogger
-from typing import Optional, Tuple, Type, TypedDict
+from typing import TYPE_CHECKING, Optional, Tuple, Type, TypedDict
 
 import mdformat
-import spacy
 import tiktoken
 from mistletoe import Document as MisDocument
 from mistletoe import block_token, markdown_renderer, span_token
-from mistletoe.markdown_renderer import MarkdownRenderer
 from mistletoe.token import Token
 
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import MarkdownException
 
+if TYPE_CHECKING:
+    import spacy
 LEVEL_MAPPING = {
     block_token.Heading: 0,  # actually 1-6
     block_token.List: 7,
@@ -148,7 +148,7 @@ class WurzelMarkdownRenderer(markdown_renderer.MarkdownRenderer):
 class SemanticSplitter:
     """Splitter implementation"""
 
-    nlp: spacy.language.Language
+    nlp: "spacy.language.Language"
     token_limit: int
     token_limit_buffer: int
     token_limit_min: int
@@ -160,6 +160,8 @@ class SemanticSplitter:
         token_limit_min: int = 64,
         spacy_model: str = "de_core_news_sm",
     ) -> None:
+        import spacy  # pylint: disable=import-outside-toplevel
+
         self.nlp = spacy.load(spacy_model)
         self.token_limit = token_limit
         self.token_limit_buffer = token_limit_buffer
@@ -662,33 +664,10 @@ class SemanticSplitter:
 
         return docs
 
-    def _remove_irrelevant_nodes(self, doc: MisDocument) -> MisDocument:
-        """Remove irrelevant nodes for LLMs from Mistletoe document"""
-        if not hasattr(doc, "children"):
-            return doc
-        if doc.children is None:
-            return doc
-        cleaned_children = [
-            self._remove_irrelevant_nodes(x)
-            for x in doc.children
-            if not isinstance(x, (span_token.Image, block_token.ThematicBreak))
-        ]
-        doc.children = cleaned_children
-        return doc
-
-    def _remove_irrelevant_nodes_from_str(self, text: str) -> str:
-        """Remove irrelevant nodes for LLMs from string"""
-        mistle_doc = MisDocument(text.strip())
-        new_doc = self._remove_irrelevant_nodes(mistle_doc)
-        with MarkdownRenderer() as renderer:
-            return renderer.render(new_doc).strip().strip(" -\n")  # type: ignore[no-any-return]
-
     def split_markdown_document(
         self, doc: MarkdownDataContract
     ) -> list[MarkdownDataContract]:
         """Split a Markdown Document into Snippets"""
-        # Disabling this for now due to https://github.com/miyuchina/mistletoe/issues/211
-        _ = self._remove_irrelevant_nodes_from_str(doc.md)
         metadata = MetaDataDict(url=doc.url, keywords=doc.keywords)
         doc_hierarchy: DocumentNode = self._markdown_hierarchy_parser(doc.md, metadata)
         doc_snippets: list[MarkdownDataContract] = self._parse_hierarchical(

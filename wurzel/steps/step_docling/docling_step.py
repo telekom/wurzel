@@ -2,6 +2,24 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 
+"""
+Note: Known Limitations with EasyOCR (`EasyOcrOptions`)
+
+1. Table structure is often lost or misaligned in the OCR output.
+2. Spelling inaccuracies are occasionally observed (e.g., "Verlängern" → "Verlängenng").
+3. URLs are not parsed correctly (e.g., "www.telekom.de/agb" → "www telekom delagb").
+
+While investigating EasyOCR issues and testing alternative OCR engines,
+we observed that some documents produced distorted text with irregular whitespace.
+This disrupts the natural sentence flow and significantly reduces readability.
+
+Example:
+"pra kti sche  i nform ati o nen zu  i h rer  fam i l y  card  basi c Li eber
+  Tel ekom   Kunde, schön,   dass  Si e  si ch  f ür..."
+
+Despite these limitations, we have decided to proceed with EasyOCR.
+"""
+
 from logging import getLogger
 
 from bs4 import BeautifulSoup

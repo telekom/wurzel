@@ -11,9 +11,8 @@ from logging import getLogger
 
 import pandas as pd
 
-from wurzel import Settings
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.step import TypedStep
+from wurzel.step import Settings, TypedStep
 
 # Local application/library specific imports
 

@@ -4,8 +4,9 @@
 
 import pytest
 
-from wurzel import BaseStepExecutor, MarkdownDataContract, NoSettings, TypedStep
+from wurzel.step import MarkdownDataContract, NoSettings, TypedStep
 from wurzel.step.history import History, step_history
+from wurzel.step_executor import BaseStepExecutor
 
 
 class OkExc(Exception):

@@ -44,7 +44,7 @@ def generate_cli_call(
         inputs = ""
     return " ".join(
         [
-            "python3 -m wurzel run",
+            "wurzel run",
             f"{step_cls.__module__}:{step_cls.__qualname__}",
             "-o",
             output.as_posix(),

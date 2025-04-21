@@ -2,13 +2,17 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+from wurzel.utils import HAS_QDRANT as _HAS_QDRANT
 
 from ..step import TypedStep
-from . import (
-    qdrant as __q,
-)
 from .embedding import EmbeddingStep
 from .manual_markdown import ManualMarkdownStep
 
 __all__ = ["TypedStep", "ManualMarkdownStep", "EmbeddingStep"]
-__all__.extend([*__q.__all__])
+if _HAS_QDRANT:
+    from .qdrant import QdrantConnectorMultiVectorStep, QdrantConnectorStep
+
+    __all__ += [
+        "QdrantConnectorMultiVectorStep",
+        "QdrantConnectorStep",
+    ]

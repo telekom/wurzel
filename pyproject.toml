@@ -3,17 +3,17 @@
 # SPDX-License-Identifier: CC0-1.0
 [project]
 name = "wurzel"
-version = "0.6.0"
-description = ""
+version = "0.8.3"
+description = "Pick, choose and chain your RAG tools in a pythonic way"
 authors = [
-    { name = "Thomas Weigel", email = "thomas.weigel@telekom.de" },
-    { name = "Paul Bauriegel", email = "paul.bauriegel@telekom.de" },
-    { name = "Maximilian Erren", email = "maximilian.erren@telekom.de" }
+    {name ="Thomas Weigel", email="thomas.weigel@telekom.de"},
+    {name ="Paul Bauriegel", email="paul.bauriegel@telekom.de"},
+    {name ="Maximilian Erren", email="maximilian.erren@telekom.de"}
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.13"
 
-license = { file = "LICENSES/Apache-2.0.txt" }
+license = {file = "LICENSES/Apache-2.0.txt"}
 classifiers = [
     'Programming Language :: Python :: 3.11',
     'Programming Language :: Python :: 3.12',
@@ -27,7 +27,7 @@ classifiers = [
     'Topic :: Software Development :: Pre-processors',
     'Topic :: Software Development :: Version Control',
 ]
-dependencies = [
+dependencies= [
     "tqdm==4.66.5",
     "pandas==2.2.2",
     "numpy < 2.0.0",
@@ -45,11 +45,14 @@ dependencies = [
     "tiktoken==0.7.0",
     "joblib>=1.4.0",
     "lxml==5.2.*",
+    "marshmallow<4.0.0",
+
 ]
 
 [project.optional-dependencies]
-qdrant = ["qdrant-client==1.10.1"]
-docling = ["docling==2.26.0"]
+qdrant = [
+    "qdrant-client==1.10.1"
+]
 milvus = [
     "pymilvus==2.4.4",
 ]
@@ -75,11 +78,11 @@ test = [
     "milvus-lite==2.*", # used for miluvs mock
 ]
 
-
-dev = ["wurzel[lint,test,qdrant,milvus,tlsh,docling]"]
+all = ["wurzel[qdrant,milvus,tlsh,docling]"]
+dev = ["wurzel[lint,test,all]"]
 
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=78.1.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
@@ -102,7 +105,7 @@ max-args = 10
 min-public-methods = 0
 disable = "W1203, C0114"
 [tool.setuptools.dynamic]
-version = { file = "VERSION" }
+version = {file = "VERSION"}
 [project.scripts]
 wurzel = "wurzel.cli._main:main"
 
@@ -117,9 +120,9 @@ tag_format = "{version}"
 
 [tool.semantic_release.commit_parser_options]
 major_types = ["breaking"]
-minor_types = ["feat"]
+minor_types = ["feat", "feature"]
 patch_types = ["fix", "perf", "hotfix", "patch"]
-allowed_tags = ["feat", "fix", "hotfix", "perf", "patch", "build", "chore", "ci", "docs", "style", "refactor", "ref", "test"]
+allowed_tags = ["feat","feature", "fix", "hotfix", "perf", "patch", "build", "chore", "ci", "docs", "style", "refactor", "ref", "test"]
 default_bump_level = 0
 
 [tool.semantic_release.branches.main]
@@ -139,10 +142,10 @@ target-version = "py39"
 
 [tool.ruff.lint]
 select = [
-    "F", # pyflakes rules,
-    "I", # sorting for imports
+    "F",  # pyflakes rules,
+    "I",  # sorting for imports
     # "E",  # formatting for docs (disabled)
     # "D",  # formatting for docs (disabled)
-    # "UP", # upgrade to latest syntax if possible (disabled)
+   # "UP", # upgrade to latest syntax if possible (disabled)
     "C4", # cleaner comprehensions
 ]

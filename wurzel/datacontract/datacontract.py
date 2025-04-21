@@ -3,12 +3,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import abc
+import hashlib
 import json
 from ast import literal_eval
 from pathlib import Path
 from typing import Self, Type, Union, get_origin
 
-import pandas as pd
 import pandera as pa
 import pandera.typing as patyp
 import pydantic
@@ -36,6 +36,8 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
 
     @classmethod
     def save_to_path(cls, path: Path, obj: Union[Self, list[Self]]) -> Path:
+        import pandas as pd  # pylint: disable=import-outside-toplevel
+
         path = path.with_suffix(".csv")
         if not isinstance(obj, pd.DataFrame):
             raise NotImplementedError(f"Cannot store {type(obj)}")
@@ -45,6 +47,8 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
     @classmethod
     def load_from_path(cls, path: Path, *args) -> Self:
         """switch case to find the matching file ending"""
+        import pandas as pd  # pylint: disable=import-outside-toplevel
+
         read_data = pd.read_csv(path.open(encoding="utf-8"))
         for key, atr in cls.to_schema().columns.items():
             if atr.dtype.type is list:
@@ -107,7 +111,18 @@ class PydanticModel(pydantic.BaseModel, DataModel):
 
     def __hash__(self) -> int:
         # pylint: disable-next=not-an-iterable
-        return hash("".join([getattr(self, name) for name in self.model_fields]))
+        return int(
+            hashlib.sha256(
+                bytes(
+                    "".join(
+                        [getattr(self, name) for name in sorted(self.model_fields)]
+                    ),
+                    encoding="utf-8",
+                ),
+                usedforsecurity=False,
+            ).hexdigest(),
+            16,
+        )
 
     def __eq__(self, other: object) -> bool:
         # pylint: disable-next=not-an-iterable
@@ -118,3 +133,6 @@ class PydanticModel(pydantic.BaseModel, DataModel):
             if getattr(self, field) != other_value:
                 return False
         return True
+
+    def __lt__(self, other: object) -> bool:
+        return hash(self) < hash(other)

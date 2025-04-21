@@ -4,9 +4,8 @@
 
 from pathlib import Path
 
-from wurzel import Settings
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.step import TypedStep
+from wurzel.step import Settings, TypedStep
 
 
 class ManualMarkdownSettings(Settings):

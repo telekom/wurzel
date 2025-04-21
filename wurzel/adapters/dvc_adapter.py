@@ -10,8 +10,8 @@ import yaml
 
 import wurzel
 import wurzel.cli
-from wurzel import BaseStepExecutor, TypedStep
-from wurzel.step_executor.prometheus_executor import PrometheusStepExecutor
+from wurzel.step import TypedStep
+from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 
 
 class DvcDict(TypedDict):

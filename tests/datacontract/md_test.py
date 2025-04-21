@@ -5,7 +5,7 @@
 import pytest
 
 import wurzel
-from wurzel import MarkdownDataContract
+from wurzel.step import MarkdownDataContract
 
 
 @pytest.mark.parametrize(
@@ -21,6 +21,16 @@ from wurzel import MarkdownDataContract
             "bread,butter",
         ),
         ("\n---\n\n\ntopics:bread,butter\n\n---\nText", "", "bread,butter"),
+        (
+            "\n---\n\n\ntopics:bread,butter\n\n---\nText\nurl:url_body",
+            "",
+            "bread,butter",
+        ),
+        (
+            "\n---\n\n\ntopics:bread,butter\nurl:url_header\n\n---\nText",
+            "url_header",
+            "bread,butter",
+        ),
     ],
 )
 def test_manual_step_md_parsing(tmp_path, md, url, bread):
@@ -33,7 +43,11 @@ def test_manual_step_md_parsing(tmp_path, md, url, bread):
         assert s.url.startswith("SPACE/")
         assert s.url.endswith("file.md")
     assert s.keywords == (bread or "file")
-    assert s.md == "Text"
+
+    if "url:url_body" in md:
+        assert s.md == "Text\nurl:url_body"
+    else:
+        assert s.md == "Text"
 
 
 class MDCChild(MarkdownDataContract):
