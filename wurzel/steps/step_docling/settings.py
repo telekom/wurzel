@@ -5,8 +5,7 @@
 """Specific docling settings"""
 
 from docling.datamodel.base_models import InputFormat
-
-from wurzel import Settings
+from wurzel.step import Settings
 
 
 class DoclingSettings(Settings):
