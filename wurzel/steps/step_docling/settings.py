@@ -5,6 +5,7 @@
 """Specific docling settings"""
 
 from docling.datamodel.base_models import InputFormat
+
 from wurzel.step import Settings
 
 

@@ -2,35 +2,42 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 
-import unittest
+import pytest
 
 from wurzel.steps.step_docling.docling_step import DoclingStep
 
 
-class TestDoclingStepWithRealPath(unittest.TestCase):
-    def setUp(self):
-        """Set up the test with a real path and expected output file."""
-        self.real_data_path = ["https://www.telekom.de/pdf/family-card-basic-infos"]
-        # Instantiate DoclingStep with real settings
-        self.docling_step = DoclingStep()
-        self.docling_step.settings = type(
-            "Settings",
-            (object,),
-            {
-                "URLS": self.real_data_path,
-                "FORCE_FULL_PAGE_OCR": self.docling_step.settings.FORCE_FULL_PAGE_OCR,
-                "FORMATS": self.docling_step.settings.FORMATS,
-            },
-        )
+@pytest.mark.parametrize(
+    "real_data_path, expected_md_start, expected_contract_count",
+    [
+        (
+            ["https://www.telekom.de/pdf/family-card-basic-infos"],
+            "PRAKTISCHE INFORMATIONEN ZU IHRER FAMILY CARD BASIC Lieber Telekom Kunde; schön, dass Sie sich für Family Card Basic entschieden haben. Ihre Ei",
+            1,
+        ),
+        (["mockurl.com/pdf"], "", 0),
+    ],
+)
+def test_docling_step_with_real_path(
+    real_data_path, expected_md_start, expected_contract_count
+):
+    docling_step = DoclingStep()
+    docling_step.settings = type(
+        "Settings",
+        (object,),
+        {
+            "URLS": real_data_path,
+            "FORCE_FULL_PAGE_OCR": docling_step.settings.FORCE_FULL_PAGE_OCR,
+            "FORMATS": docling_step.settings.FORMATS,
+        },
+    )
 
-    def test_run_docling(self):
-        """Test run() with real data and compare with expected output."""
-
-        contracts = self.docling_step.run({})
-        self.assertGreater(len(contracts), 0, "No contracts were generated.")
+    contracts = docling_step.run({})
+    assert len(contracts) == expected_contract_count, (
+        f"Expected {expected_contract_count} contracts, got {len(contracts)}"
+    )
+    if contracts:
         actual_md = contracts[0]["md"].strip()
-        self.assertTrue(
-            actual_md.startswith(
-                "PRAKTISCHE INFORMATIONEN ZU IHRER FAMILY CARD BASIC Lieber Telekom Kunde; schön, dass Sie sich für Family Card Basic entschieden haben. Ihre Ei"
-            )
+        assert actual_md.startswith(expected_md_start), (
+            "Markdown content does not match expected start."
         )
