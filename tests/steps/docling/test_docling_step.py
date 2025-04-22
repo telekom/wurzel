@@ -11,14 +11,14 @@ from wurzel.steps.step_docling.docling_step import DoclingStep
     "real_data_path, expected_md_start, expected_contract_count",
     [
         (
-            ["https://www.telekom.de/pdf/family-card-basic-infos"],
-            "PRAKTISCHE INFORMATIONEN ZU IHRER FAMILY CARD BASIC Lieber Telekom Kunde; schön, dass Sie sich für Family Card Basic entschieden haben. Ihre Ei",
+            ["https://pdfobject.com/pdf/sample.pdf"],
+            "Samole PDF This is a simple PDF file. Fun fun fun: Lorem ipsum dolor sit amet;",
             1,
         ),
-        (["mockurl.com/pdf"], "", 0),
+        (["example.com/pdf"], "", 0),
     ],
 )
-def test_docling_step_with_real_path(
+def test_docling_step(
     real_data_path, expected_md_start, expected_contract_count
 ):
     docling_step = DoclingStep()
