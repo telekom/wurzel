@@ -8,8 +8,9 @@
 # to reduce the CI pipeline drastical
 FROM python:3.11-slim@sha256:974cb5b34070dd2f5358ca1de1257887bec76ba87f6e727091669035e5f3484d AS dependencies
 RUN apt update && apt install -y --no-install-recommends build-essential gcc git curl g++
-RUN apt install -y --no-install-recommends curl jq
 
+RUN curl -L -o /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64 \
+    && chmod +x /usr/bin/jq
 ENV VENV=/usr/app/venv
 COPY pyproject.toml .
 RUN python -m venv ${VENV}
