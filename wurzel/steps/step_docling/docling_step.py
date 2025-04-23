@@ -20,6 +20,7 @@ Example:
 Despite these limitations, we have decided to proceed with EasyOCR.
 """
 
+import re
 from logging import getLogger
 
 from bs4 import BeautifulSoup
@@ -48,13 +49,16 @@ class CleanMarkdownRenderer(HTMLRenderer):
     @staticmethod
     def render_html_block(token):
         # Remove comments like <!-- image -->
-        if "<!--" in token.content and "image" in token.content:
-            return ""
-        return token.content
+        cleaned = re.sub(r"<!--.*?-->", "", token.content)
+        return cleaned.strip()
 
 
 class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
     """Step to return local Markdown files with enhanced PDF extraction for German."""
+
+    def __init__(self):
+        super().__init__()
+        self.converter = self.create_converter()
 
     def create_converter(self) -> DocumentConverter:
         """Create and configure the document converter for PDF and DOCX.
@@ -112,12 +116,11 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
             List[MarkdownDataContract]: List of converted Markdown contracts.
         """
         urls = self.settings.URLS
-        doc_converter = self.create_converter()
         contracts = []
 
         for url in urls:
             try:
-                converted_contract = doc_converter.convert(url)
+                converted_contract = self.converter.convert(url)
                 md = converted_contract.document.export_to_markdown()
                 keyword, cleaned_md = self.clean_markdown_with_mistletoe(md)
                 contract_instance = {"md": cleaned_md, "keywords": keyword, "url": url}

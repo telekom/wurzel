@@ -4,7 +4,7 @@
 
 import pytest
 
-from wurzel.steps.step_docling.docling_step import DoclingStep
+from wurzel.steps.step_docling.docling_step import CleanMarkdownRenderer, DoclingStep
 
 
 @pytest.mark.parametrize(
@@ -18,9 +18,7 @@ from wurzel.steps.step_docling.docling_step import DoclingStep
         (["example.com/pdf"], "", 0),
     ],
 )
-def test_docling_step(
-    real_data_path, expected_md_start, expected_contract_count
-):
+def test_docling_step(real_data_path, expected_md_start, expected_contract_count):
     docling_step = DoclingStep()
     docling_step.settings = type(
         "Settings",
@@ -41,3 +39,21 @@ def test_docling_step(
         assert actual_md.startswith(expected_md_start), (
             "Markdown content does not match expected start."
         )
+
+
+def test_render_html_block_removes_image_tag():
+    class DummyToken:
+        def __init__(self, content):
+            self.content = content
+
+    token_with_image = DummyToken("<!-- image --> text for this contract")
+    token_without_image = DummyToken("<div>Real content</div>")
+
+    assert (
+        CleanMarkdownRenderer.render_html_block(token_with_image)
+        == "text for this contract"
+    )
+    assert (
+        CleanMarkdownRenderer.render_html_block(token_without_image)
+        == "<div>Real content</div>"
+    )
