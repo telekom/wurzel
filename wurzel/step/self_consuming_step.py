@@ -35,14 +35,19 @@ class SelfConsumingStep(
         # pylint: disable-next=no-member
         instance._static_type_check_self()
 
+        cls._prepare_instance_datamodels(instance)
+
+        instance._static_type_check_run()
+        class InCls(PathToFolderWithBaseModels[instance.input_model_type]):
+            """Used internally"""
+        class OutCls(PathToFolderWithBaseModels[instance.output_model_type]):
+            """Used internally"""
+        instance._internal_input_class = InCls
+        instance._internal_output_class = OutCls
+        return instance
+    
+    @classmethod
+    def _prepare_instance_datamodels(cls, instance):
         instance.input_model_class = instance.output_model_class = (
             get_args(instance.output_model_type) or [instance.output_model_type]
         )[-1]
-
-        instance._static_type_check_run()
-
-        class OutCls(PathToFolderWithBaseModels[instance.output_model_type]):
-            """Used internally"""
-
-        instance._internal_input_class = instance._internal_output_class = OutCls
-        return instance

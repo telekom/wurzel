@@ -259,12 +259,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         # pylint: disable-next=no-member
         instance._static_type_check_self()
 
-        instance.input_model_class = (
-            get_args(instance.input_model_type) or [instance.input_model_type]
-        )[-1]
-        instance.output_model_class = (
-            get_args(instance.output_model_type) or [instance.output_model_type]
-        )[-1]
+        cls._prepare_instance_datamodels(instance)
 
         instance._static_type_check_run()
 
@@ -278,6 +273,14 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         instance._internal_input_class = InCls
         instance._internal_output_class = OutCls
         return instance
+    @classmethod
+    def _prepare_instance_datamodels(cls, instance):
+        instance.input_model_class = (
+            get_args(instance.input_model_type) or [instance.input_model_type]
+        )[-1]
+        instance.output_model_class = (
+            get_args(instance.output_model_type) or [instance.output_model_type]
+        )[-1]
 
     # super was called in __new__
     # pylint: disable-next=super-init-not-called
