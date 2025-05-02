@@ -100,9 +100,8 @@ class PydanticModel(pydantic.BaseModel, DataModel):
         Returns:
             Union[Self, list[Self]]: dependent on expected type
         """
-        if (
-            type(model_type) == types.UnionType
-        ):  # isinstace does not work for union pylint: disbale=unidiomatic-typecheck
+        # isinstace does not work for union pylint: disable=unidiomatic-typecheck
+        if type(model_type) == types.UnionType:
             model_type = [ty for ty in typing.get_args(model_type) if ty][0]
         if get_origin(model_type) is None:
             if issubclass(model_type, pydantic.BaseModel):

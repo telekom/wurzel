@@ -3,13 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from types import NoneType
-from typing import Generic, Optional, Self, get_args
+from typing import Generic, Optional, get_args
 
-from wurzel.exceptions import StaticTypeError
-from wurzel.path.path import PathToFolderWithBaseModels
 from wurzel.step import TypedStep
-from wurzel.step.settings import Settings
 from wurzel.step.typed_step import OUTCONTRACT, SETTS
 
 
@@ -20,7 +16,6 @@ class SelfConsumingStep(
 
     def run(self, inpt: Optional[OUTCONTRACT]) -> OUTCONTRACT:
         return super().run(inpt)
-
 
     @classmethod
     def _prepare_datamodels(cls, type_annotations):

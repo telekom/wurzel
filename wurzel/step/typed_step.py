@@ -173,8 +173,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
             )
 
     @classmethod
-    def _prepare_datamodels(cls,type_annotations):
-
+    def _prepare_datamodels(cls, type_annotations):
         cls.settings_class, cls.input_model_type, cls.output_model_type = (
             type_annotations
         )
@@ -273,6 +272,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         instance._internal_input_class = InCls
         instance._internal_output_class = OutCls
         return instance
+
     @classmethod
     def _prepare_instance_datamodels(cls, instance):
         instance.input_model_class = (
