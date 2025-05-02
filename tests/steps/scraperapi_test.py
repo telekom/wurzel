@@ -1,0 +1,49 @@
+import os
+import shutil
+from pathlib import Path
+
+import pytest
+import requests_mock
+
+from wurzel.step_executor.base_executor import BaseStepExecutor
+from wurzel.steps.scraperapi import ScraperAPIStep, UrlItem
+
+
+@pytest.fixture(scope="function")
+def mock_scraper_api(requests_mock: requests_mock.Mocker, url_items):
+    requests_mock.get(
+        "https://api.scraperapi.com/",
+        response_list=[{"text": open(path).read()} for _url, path in url_items],
+    )
+
+
+@pytest.fixture(scope="module")
+def url_items() -> list[tuple[UrlItem, str]]:
+    return [
+        (
+            UrlItem(
+                url="https://de.wikipedia.org/wiki/Wurzel_(Pflanze)", title="Wurzel"
+            ),
+            Path("tests/data/wikipedia_wurzel.html"),
+        ),
+        (
+            UrlItem(url="https://en.wikipedia.org/wiki/Root", title="Wurzel"),
+            Path("tests/data/wikipedia_root.html"),
+        ),
+        (
+            UrlItem(url="https://www.duden.de/rechtschreibung/Wurzel", title="Wurzel"),
+            Path("tests/data/duden_wurzel.html"),
+        ),
+    ]
+
+
+def test_self_consuming_no_input(tmp_path: Path, mock_scraper_api, url_items):
+    output = tmp_path / f"{ScraperAPIStep.__name__}"
+    os.mkdir(tmp_path / "input")
+    shutil.copy("tests/data/markdown.json", tmp_path / "input/")
+    output.mkdir(parents=True, exist_ok=True)
+    with BaseStepExecutor() as ex:
+        result = ex(ScraperAPIStep, [[url for url, _path in url_items]], output)
+
+    assert list(output.iterdir())
+    assert len(result[0][0]) == 3

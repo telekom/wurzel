@@ -222,6 +222,13 @@ def normalize_urls(html_content: str, base_url: str = "https://www.magenta.at"):
     return html2str(tree)
 
 
-def html2str(html: lxml) -> str:
+def html2str(html: lxml.html) -> str:
     """converts lxml html to str"""
     return lxml.html.tostring(html, pretty_print=False, method="html").decode("utf-8")
+
+
+def filter_html_by_main(html: str) -> str:
+    """consders the input as html str filters it by main tag and returns it"""
+    tree: lxml.html = lxml.html.fromstring(html)
+    tree = tree.xpath("//main")[0]
+    return lxml.html.tostring(tree)
