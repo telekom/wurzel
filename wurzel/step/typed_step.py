@@ -155,9 +155,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
                 f"No type-annotation provided when creating subclass of {cls.__name__}"
                 + f"Use: MyStep({cls.__name__}[INPUT_T, OUTPUT_T])"
             )
-        cls.settings_class, cls.input_model_type, cls.output_model_type = (
-            type_annotations
-        )
+        cls._prepare_datamodels(type_annotations)
         if not issubclass(cls.settings_class, (Settings, NoneType)):
             raise StaticTypeError(
                 "Settings provided in TypedStep[<>, ...]"
@@ -173,6 +171,13 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
             raise StaticTypeError(
                 f"Type-annotation for output of {cls.__name__}[..., None] can't be None"
             )
+
+    @classmethod
+    def _prepare_datamodels(cls,type_annotations):
+
+        cls.settings_class, cls.input_model_type, cls.output_model_type = (
+            type_annotations
+        )
 
     @classmethod  # pylint: disable-next=unused-private-member # used in __new__
     def _static_type_check_run(cls):

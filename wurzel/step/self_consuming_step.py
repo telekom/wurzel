@@ -21,36 +21,11 @@ class SelfConsumingStep(
     def run(self, inpt: Optional[OUTCONTRACT]) -> OUTCONTRACT:
         return super().run(inpt)
 
+
     @classmethod
-    def _static_type_check_self(cls):
-        """Confirms the type annotations of child classes TypedStep"""
-        type_annotations = [
-            get_args(parent)
-            for parent in getattr(cls, "__orig_bases__", [])
-            if get_args(parent)
-        ][0]
-        if type_annotations == ():
-            raise StaticTypeError(
-                f"No type-annotation provided when creating subclass of {cls.__name__}"
-                + f"Use: MyStep({cls.__name__}[INPUT_T, OUTPUT_T])"
-            )
+    def _prepare_datamodels(cls, type_annotations):
         cls.settings_class, cls.output_model_type = type_annotations
         cls.input_model_type = cls.output_model_type | None
-
-        if not issubclass(cls.settings_class, (Settings, NoneType)):
-            raise StaticTypeError(
-                "Settings provided in TypedStep[<>, ...]"
-                + " is not a subclass of settings_class"
-            )
-        out_t = cls._unpack_list_containers(cls.output_model_type)
-
-        def has_no_annotation(c: list, t: type):
-            return c == [] and t == NoneType
-
-        if has_no_annotation(*out_t):
-            raise StaticTypeError(
-                f"Type-annotation for output of {cls.__name__}[..., None] can't be None"
-            )
 
     def __new__(cls) -> Self:
         instance = super(TypedStep, cls).__new__(cls)
