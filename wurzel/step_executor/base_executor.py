@@ -33,6 +33,7 @@ from wurzel.step.history import (
     History,
     step_history,
 )
+from wurzel.step.self_consuming_step import SelfConsumingStep
 from wurzel.step.typed_step import (
     TypedStep,
 )
@@ -199,7 +200,7 @@ class BaseStepExecutor:
                 time.time() - start,
             )
 
-    def __load_data(
+    def _load_data(
         self,
         step: TypedStep,
         inputs: set[
@@ -209,6 +210,7 @@ class BaseStepExecutor:
                 PathToFolderWithBaseModels,
             ]
         ],
+        output_path: Path,
     ) -> Generator[
         tuple[
             tuple[
@@ -235,9 +237,18 @@ class BaseStepExecutor:
             Loaded input: With history already extended
         """
         no_inputs_supplied = inputs in [[], set()]
+        if no_inputs_supplied and isinstance(
+            step, SelfConsumingStep
+        ):  # and (output_path/f"{step.__name__}").exists():
+            is_run_already = False
+            for (inpt, hist), took in self.load(step, output_path):
+                is_run_already = True
+                yield (inpt, hist), took
+            if is_run_already:
+                return
+
         if no_inputs_supplied:
             # Only yield once
-            no_inputs_supplied = False
             yield (None, History(step)), 0
         for inpt in inputs:
             if isinstance(
@@ -252,7 +263,7 @@ class BaseStepExecutor:
                     f"Cannot load/convert {inpt} as input for a step"
                 )
 
-    def __execute_step(
+    def _execute_step(
         self,
         step_cls: Type[TypedStep],
         inputs: set[PathToFolderWithBaseModels],
@@ -268,7 +279,9 @@ class BaseStepExecutor:
         )
         was_called_once = False
         try:
-            for (inpt, history), load_time in self.__load_data(step, inputs):
+            for (inpt, history), load_time in self._load_data(
+                step, inputs, output_path
+            ):
                 was_called_once = True
                 log.info(
                     f"Start: {step_cls.__name__}.run({history[:-1]}) -> {output_path}",
@@ -338,9 +351,9 @@ class BaseStepExecutor:
             correlation_id.set(step_cls.__name__)
             log.info(f"{self.__class__.__name__} - start: {step_cls.__name__}")
             if self.__dont_encapsulate:
-                return list(self.__execute_step(step_cls, inputs, output_dir))
+                return list(self._execute_step(step_cls, inputs, output_dir))
             with step_env_encapsulation(step_cls):
-                return list(self.__execute_step(step_cls, inputs, output_dir))
+                return list(self._execute_step(step_cls, inputs, output_dir))
         except LoggedCustomException:
             raise
         except Exception as e:
