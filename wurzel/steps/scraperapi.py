@@ -10,6 +10,7 @@ interacts with the scraperAPI service and converts the retrieved Documents to Ma
 import logging
 from typing import Optional
 
+import lxml
 import requests
 from tqdm import tqdm
 
@@ -17,7 +18,7 @@ from wurzel.datacontract import MarkdownDataContract
 from wurzel.datacontract.datacontract import PydanticModel
 from wurzel.step.settings import Settings
 from wurzel.step.typed_step import TypedStep
-from wurzel.utils.to_markdown.html2md import filter_html_by_main, to_markdown
+from wurzel.utils.to_markdown.html2md import to_markdown
 
 # Local application/library specific imports
 
@@ -26,8 +27,9 @@ class _ScraperAPISettings(Settings):
     """Settings"""
 
     API: str = "https://api.scraperapi.com/"
-    TOKEN: str = "e950c11abec9eff468d8b6840c9800a6"
+    TOKEN: str = ""
     TIMEOUT: int = 30.0
+    XPATH: str = "//main"
 
 
 class UrlItem(PydanticModel):
@@ -74,11 +76,16 @@ class ScraperAPIStep(
                     },
                 )
                 continue
-            html = filter_html_by_main(r.text)
-            md = to_markdown(html)
+
+            md = to_markdown(self._filter_body(r.text))
             keywords = url_item.title
             result.append(
                 MarkdownDataContract(md=md, url=url_item.url, keywords=keywords)
             )
         assert result
         return result
+
+    def _filter_body(self, html: str) -> str:
+        tree: lxml.html = lxml.html.fromstring(html)
+        tree = tree.xpath(self.settings.XPATH)[0]
+        return lxml.html.tostring(tree)
