@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: CC0-1.0
 [project]
 name = "wurzel"
-version = "0.8.2"
+version = "0.8.3"
 description = "Pick, choose and chain your RAG tools in a pythonic way"
 authors = [
     {name ="Thomas Weigel", email="thomas.weigel@telekom.de"},
@@ -120,9 +120,9 @@ tag_format = "{version}"
 
 [tool.semantic_release.commit_parser_options]
 major_types = ["breaking"]
-minor_types = ["feat"]
+minor_types = ["feat", "feature"]
 patch_types = ["fix", "perf", "hotfix", "patch"]
-allowed_tags = ["feat", "fix","hotfix", "perf","patch", "build", "chore", "ci", "docs", "style", "refactor", "ref", "test"]
+allowed_tags = ["feat","feature", "fix", "hotfix", "perf", "patch", "build", "chore", "ci", "docs", "style", "refactor", "ref", "test"]
 default_bump_level = 0
 
 [tool.semantic_release.branches.main]
