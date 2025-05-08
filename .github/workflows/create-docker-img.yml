@@ -6,6 +6,8 @@ name: Create and publish a Docker image
 
 on:
   push:
+    tags:
+      - '*.*.*'
 
 
 env:
@@ -38,6 +40,11 @@ jobs:
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
 
 
       - name: Build and push Docker image
