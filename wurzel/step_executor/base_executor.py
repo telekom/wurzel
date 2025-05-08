@@ -239,7 +239,7 @@ class BaseStepExecutor:
         no_inputs_supplied = inputs in [[], set()]
         if no_inputs_supplied and isinstance(
             step, SelfConsumingLeafStep
-        ):  # and (output_path/f"{step.__name__}").exists():
+        ):
             is_run_already = False
             for (inpt, hist), took in self.load(step, output_path):
                 is_run_already = True
