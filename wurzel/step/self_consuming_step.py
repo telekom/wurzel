@@ -9,7 +9,7 @@ from wurzel.step import TypedStep
 from wurzel.step.typed_step import OUTCONTRACT, SETTS
 
 
-class SelfConsumingStep(
+class SelfConsumingLeafStep(
     TypedStep[SETTS, OUTCONTRACT, OUTCONTRACT], Generic[SETTS, OUTCONTRACT]
 ):
     """Some use cases require self awareness about their last results to reduce double work."""

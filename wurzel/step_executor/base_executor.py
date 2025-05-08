@@ -33,7 +33,7 @@ from wurzel.step.history import (
     History,
     step_history,
 )
-from wurzel.step.self_consuming_step import SelfConsumingStep
+from wurzel.step.self_consuming_step import SelfConsumingLeafStep
 from wurzel.step.typed_step import (
     TypedStep,
 )
@@ -238,7 +238,7 @@ class BaseStepExecutor:
         """
         no_inputs_supplied = inputs in [[], set()]
         if no_inputs_supplied and isinstance(
-            step, SelfConsumingStep
+            step, SelfConsumingLeafStep
         ):  # and (output_path/f"{step.__name__}").exists():
             is_run_already = False
             for (inpt, hist), took in self.load(step, output_path):
