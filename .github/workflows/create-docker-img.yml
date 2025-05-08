@@ -6,8 +6,8 @@ name: Create and publish a Docker image
 
 on:
   push:
-   # tags:
-   #   - '*.*.*'
+    tags:
+      - '*.*.*'
 
 
 env:
@@ -42,9 +42,10 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=tag
+            type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=sha
+
 
 
       - name: Build and push Docker image
