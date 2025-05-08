@@ -82,7 +82,7 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
         )
 
     @staticmethod
-    def clean_markdown_with_mistletoe(md_text: str) -> str:
+    def clean_markdown_with_mistletoe(md_text: str) -> tuple[str, str]:
         """
         Cleans a Markdown string using mistletoe and extracts useful content.
 
