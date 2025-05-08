@@ -44,4 +44,4 @@ COPY entrypoint.sh .
 COPY examples/pipeline/pipelinedemo.py .
 ENV WURZEL_PIPELINE=pipelinedemo:pipeline
 ENV PATH="/usr/app/venv/bin:$PATH"
-CMD [".", "${VENV}/bin/activate", "&&", "/bin/bash", "./entrypoint.sh"]
+CMD ["sh", "-c", ". ${VENV}/bin/activate && /bin/bash ./entrypoint.sh"]
