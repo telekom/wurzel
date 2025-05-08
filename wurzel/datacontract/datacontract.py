@@ -5,6 +5,8 @@
 import abc
 import hashlib
 import json
+import types
+import typing
 from ast import literal_eval
 from pathlib import Path
 from typing import Self, Type, Union, get_origin
@@ -98,6 +100,9 @@ class PydanticModel(pydantic.BaseModel, DataModel):
         Returns:
             Union[Self, list[Self]]: dependent on expected type
         """
+        # isinstace does not work for union pylint: disable=unidiomatic-typecheck
+        if type(model_type) == types.UnionType:
+            model_type = [ty for ty in typing.get_args(model_type) if ty][0]
         if get_origin(model_type) is None:
             if issubclass(model_type, pydantic.BaseModel):
                 return cls(**json.load(path.open(encoding="utf-8")))

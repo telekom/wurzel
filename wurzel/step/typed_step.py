@@ -108,7 +108,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         return pth.with_suffix(self.output_model_class.kt_file_extension())
 
     @classmethod  #
-    def __unpack_list_containers(
+    def _unpack_list_containers(
         cls,
         list_or_type: Union[list, Type, None],
         containers: Optional[list[Type[Iterable]]] = None,
@@ -139,11 +139,11 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
             raise StaticTypeError(f"{origin_t} is not a supported container")
         if len(get_args(list_or_type)) == 1:
             # Unpack list_type
-            return cls.__unpack_list_containers(get_args(list_or_type)[0], containers)
+            return cls._unpack_list_containers(get_args(list_or_type)[0], containers)
         raise StaticTypeError(f"Cant handle type with {len(get_args(origin_t))} args")
 
     @classmethod  # pylint: disable-next=unused-private-member # used in __new__
-    def __static_type_check_self(cls):
+    def _static_type_check_self(cls):
         """Confirms the type annotations of child classes TypedStep"""
         type_annotations = [
             get_args(parent)
@@ -155,16 +155,14 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
                 f"No type-annotation provided when creating subclass of {cls.__name__}"
                 + f"Use: MyStep({cls.__name__}[INPUT_T, OUTPUT_T])"
             )
-        cls.settings_class, cls.input_model_type, cls.output_model_type = (
-            type_annotations
-        )
+        cls._prepare_datamodels(type_annotations)
         if not issubclass(cls.settings_class, (Settings, NoneType)):
             raise StaticTypeError(
                 "Settings provided in TypedStep[<>, ...]"
                 + " is not a subclass of settings_class"
             )
-        _ = cls.__unpack_list_containers(cls.input_model_type)
-        out_t = cls.__unpack_list_containers(cls.output_model_type)
+        _ = cls._unpack_list_containers(cls.input_model_type)
+        out_t = cls._unpack_list_containers(cls.output_model_type)
 
         def has_no_annotation(c: list, t: type):
             return c == [] and t == NoneType
@@ -174,8 +172,14 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
                 f"Type-annotation for output of {cls.__name__}[..., None] can't be None"
             )
 
+    @classmethod
+    def _prepare_datamodels(cls, type_annotations):
+        cls.settings_class, cls.input_model_type, cls.output_model_type = (
+            type_annotations
+        )
+
     @classmethod  # pylint: disable-next=unused-private-member # used in __new__
-    def __static_type_check_run(cls):
+    def _static_type_check_run(cls):
         """Confirms the type annotations of child classes run method.
         Currently allows missing type annotations with a warning
         """
@@ -209,8 +213,8 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
                     + f"Expected one input, got {annotations}"
                 )
             _, run_input = annotations.popitem()
-            run_input_cons, run_input_orig = cls.__unpack_list_containers(run_input)
-            run_retur_cons, run_retur_orig = cls.__unpack_list_containers(run_retur)
+            run_input_cons, run_input_orig = cls._unpack_list_containers(run_input)
+            run_retur_cons, run_retur_orig = cls._unpack_list_containers(run_retur)
             # construct type using only list instead of List
             return_annotation = run_retur_orig
             for container in run_retur_cons:
@@ -252,16 +256,11 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         # Get Input and output type from annotations
         # Get Type annotations, fallback to None if they don't exist
         # pylint: disable-next=no-member
-        instance.__static_type_check_self()
+        instance._static_type_check_self()
 
-        instance.input_model_class = (
-            get_args(instance.input_model_type) or [instance.input_model_type]
-        )[-1]
-        instance.output_model_class = (
-            get_args(instance.output_model_type) or [instance.output_model_type]
-        )[-1]
+        cls._prepare_instance_datamodels(instance)
 
-        instance.__static_type_check_run()
+        instance._static_type_check_run()
 
         # Sadly we cant use type() or types.new_class for this.
         class InCls(PathToFolderWithBaseModels[instance.input_model_type]):
@@ -273,6 +272,15 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         instance._internal_input_class = InCls
         instance._internal_output_class = OutCls
         return instance
+
+    @classmethod
+    def _prepare_instance_datamodels(cls, instance):
+        instance.input_model_class = (
+            get_args(instance.input_model_type) or [instance.input_model_type]
+        )[-1]
+        instance.output_model_class = (
+            get_args(instance.output_model_type) or [instance.output_model_type]
+        )[-1]
 
     # super was called in __new__
     # pylint: disable-next=super-init-not-called
