@@ -11,7 +11,9 @@ from wurzel.step.self_consuming_step import SelfConsumingLeafStep
 from wurzel.step_executor.base_executor import BaseStepExecutor
 
 
-class MySelfConsumingStep(SelfConsumingLeafStep[NoSettings, list[MarkdownDataContract]]):
+class MySelfConsumingStep(
+    SelfConsumingLeafStep[NoSettings, list[MarkdownDataContract]]
+):
     def run(
         self, inpt: list[MarkdownDataContract] | None
     ) -> list[MarkdownDataContract]:
