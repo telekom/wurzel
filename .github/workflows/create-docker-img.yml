@@ -30,9 +30,10 @@ jobs:
       - name: Get the version
         id: get_version
         run: |
-          echo "version=$(grep -Po '(?<=^version = ")[^"]*' pyproject.toml)" >> $GITHUB_ENV
-          echo "major=$(echo ${{ env.version }} | cut -d '.' -f 1)" >> $GITHUB_ENV
-          echo "minor=$(echo ${{ env.version }} | cut -d '.' -f 2)" >> $GITHUB_ENV
+          version=$(grep -Po '(?<=^version = ")[^"]*' pyproject.toml)
+          echo "version=$version" >> $GITHUB_ENV
+          echo "major=$(echo $version | cut -d '.' -f 1)" >> $GITHUB_ENV
+          echo "minor=$(echo $version | cut -d '.' -f 2)" >> $GITHUB_ENV
 
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
@@ -48,8 +49,8 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
-            ${{ env.version }}
-            ${{ env.major }}.${{ env.minor }}
+            type=raw,value=${{ env.version }}
+            type=raw,value=${{ env.major }}.${{ env.minor }}
 
 
 
