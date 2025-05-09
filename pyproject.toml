@@ -53,6 +53,9 @@ dependencies= [
 qdrant = [
     "qdrant-client==1.10.1"
 ]
+docling = [
+    "docling==2.30.0"
+]
 milvus = [
     "pymilvus==2.4.4",
 ]
@@ -78,7 +81,7 @@ test = [
     "milvus-lite==2.*", # used for miluvs mock
 ]
 
-all = ["wurzel[qdrant,milvus,tlsh]"]
+all = ["wurzel[qdrant,milvus,tlsh,docling]"]
 dev = ["wurzel[lint,test,all]"]
 
 [build-system]

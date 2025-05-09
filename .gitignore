@@ -225,4 +225,7 @@ Temporary Items
 
 # UV
 uv.lock
+.gitconfig-personal
+/output_md
 .idea
+test_file.py
