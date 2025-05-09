@@ -6,8 +6,7 @@ name: Create and publish a Docker image
 
 on:
   push:
-    tags:
-      - '*'
+
 
 
 env:
@@ -28,6 +27,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Get the version
+        id: get_version
+        run: |
+          echo "version=$(grep -Po '(?<=^version = ")[^"]*' pyproject.toml)" >> $GITHUB_ENV
+          echo "major=$(echo ${{ env.version }} | cut -d '.' -f 1)" >> $GITHUB_ENV
+          echo "minor=$(echo ${{ env.version }} | cut -d '.' -f 2)" >> $GITHUB_ENV
+
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
@@ -41,10 +47,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=tag
             type=raw,value=latest,enable={{is_default_branch}}
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            ${{ env.version }}
+            ${{ env.major }}.${{ env.minor }}
 
 
 
