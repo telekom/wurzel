@@ -13,14 +13,19 @@ RUN curl -L -o /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7
     && chmod +x /usr/bin/jq
 ENV VENV=/usr/app/venv
 COPY pyproject.toml .
+COPY wurzel wurzel
 RUN python -m venv ${VENV}
 
 RUN . ${VENV}/bin/activate
 # against CVE-2024-6345 of baseimage
 RUN . ${VENV}/bin/activate && pip install setuptools==78.1.0
 
-RUN . ${VENV}/bin/activate &&  pip install uv && \
-                               uv pip install wurzel[all]
+
+
+RUN . ${VENV}/bin/activate &&  pip install uv
+
+RUN . ${VENV}/bin/activate && uv pip install --upgrade pip && \
+                               uv pip install ".[all]"
 # Prevents Python from writing pyc files.
 ENV PYTHONDONTWRITEBYTECODE=1
 
@@ -40,4 +45,4 @@ COPY entrypoint.sh .
 COPY examples/pipeline/pipelinedemo.py .
 ENV WURZEL_PIPELINE=pipelinedemo:pipeline
 ENV PATH="/usr/app/venv/bin:$PATH"
-CMD . ${VENV}/bin/activate && /bin/bash ./entrypoint.sh
+CMD ["sh", "-c", ". ${VENV}/bin/activate && /bin/bash ./entrypoint.sh"]

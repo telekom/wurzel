@@ -237,9 +237,7 @@ class BaseStepExecutor:
             Loaded input: With history already extended
         """
         no_inputs_supplied = inputs in [[], set()]
-        if no_inputs_supplied and isinstance(
-            step, SelfConsumingLeafStep
-        ):
+        if no_inputs_supplied and isinstance(step, SelfConsumingLeafStep):
             is_run_already = False
             for (inpt, hist), took in self.load(step, output_path):
                 is_run_already = True
