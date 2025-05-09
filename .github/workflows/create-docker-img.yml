@@ -6,7 +6,7 @@ name: Create and publish a Docker image
 
 on:
     workflow_run:
-      workflows: ["pypi.org Release"]
+      workflows: [pypi.org Release]
       types:
         - completed
         - requested
