@@ -9,6 +9,7 @@ on:
       workflows: ["pypi.org Release"]
       types:
         - completed
+        - requested
 
 
 
