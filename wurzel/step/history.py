@@ -49,10 +49,11 @@ class History:
         return History(initial=self.get())
 
     def get(self) -> list[str]:
-        """get History
+        """Get History
 
         Returns:
             list[str]: history (copy)
+
         """
         return self._history.copy()
 
@@ -80,33 +81,36 @@ class History:
         return self._history == value._history
 
     def to_json(self):
-        """converts to json string
+        """Converts to json string
 
         Returns:
             str: json list of str
+
         """
         return json.dumps(self._history)
 
     @classmethod
     def from_json(cls, s: str) -> "History":
-        """converts from json string
+        """Converts from json string
 
         Args:
             s (str): json string list of str
 
         Returns:
             History: new Instance
+
         """
         return History(initial=json.loads(s))
 
     @classmethod
     def from_str(cls, s: str) -> "History":
-        """converts from str(History)
+        """Converts from str(History)
 
         Args:
             s (str)
 
         Returns:
             History: new Instance
+
         """
         return History(initial=json.loads(s))

@@ -47,6 +47,7 @@ def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: s
 
     Returns:
         Type[BaseStepExecutor]: {BaseStepExecutor, PrometheusStepExecutor}
+
     """
     if "BASESTEPEXECUTOR".startswith(value.upper()):
         return BaseStepExecutor
@@ -68,6 +69,7 @@ def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path:
 
     Returns:
         Type[TypedStep]: <<step>>
+
     """
     try:
         if ":" in import_path:
@@ -90,7 +92,6 @@ def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path:
 
 def complete_step_import(incomplete: str):
     """AutoComplete for steps"""
-
     packages = [p for p in pkgutil.iter_modules() if p.ispkg and p.name.startswith(incomplete if incomplete else "wurzel")]
     hints = []
     for pkg in packages:
@@ -143,7 +144,7 @@ def run(
     ] = "BaseStepExecutor",
     encapsulate_env: Annotated[bool, typer.Option()] = True,
 ):
-    """run"""
+    """Run"""
     output_path = Path(output_path.as_posix().replace("<step-name>", step.__name__))
     log.debug(
         "executing run",
@@ -173,13 +174,12 @@ def inspekt(
     ],
     gen_env: Annotated[bool, typer.Option()] = False,
 ):
-    """inspect"""
-
+    """Inspect"""
     return cmd_inspect(step, gen_env)
 
 
 def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, _backend: str):
-    """validates input and returns fitting backend. Currently always DVCBackend"""
+    """Validates input and returns fitting backend. Currently always DVCBackend"""
     logging.warning("only DVCBackend is supported currently")
     return DvcBackend
 
@@ -218,7 +218,7 @@ def generate(
         ),
     ] = DvcBackend,
 ):
-    """run"""
+    """Run"""
     log.debug(
         "generate pipeline",
         extra={
@@ -263,7 +263,7 @@ def main_args(
         ),
     ] = "INFO",
 ):
-    """global settings, main"""
+    """Global settings, main"""
     if not os.isatty(1):
         typer.core.rich = None
         logging.config.dictConfig(get_logging_dict_config(log_level))
@@ -277,6 +277,6 @@ def main_args(
 
 
 def main():
-    """main"""
+    """Main"""
     sys.path.append(os.getcwd())  # needed fo find the files relative to cwd
     app()

@@ -24,17 +24,18 @@ class DataModel:
     @classmethod
     @abc.abstractmethod
     def save_to_path(cls, path: Path, obj: Union[Self, list[Self]]) -> Path:
-        """abstract function to save the obj at the given path"""
+        """Abstract function to save the obj at the given path"""
 
     @classmethod
     @abc.abstractmethod
     def load_from_path(cls, path: Path, *args) -> Self:
-        """abstract function to load the data from the given Path"""
+        """Abstract function to load the data from the given Path"""
 
 
 class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
     """Data Model contract specified with pandera
-    Using Panda Dataframe. Mainly for CSV shaped data"""
+    Using Panda Dataframe. Mainly for CSV shaped data
+    """
 
     @classmethod
     def save_to_path(cls, path: Path, obj: Union[Self, list[Self]]) -> Path:
@@ -48,7 +49,7 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
 
     @classmethod
     def load_from_path(cls, path: Path, *args) -> Self:
-        """switch case to find the matching file ending"""
+        """Switch case to find the matching file ending"""
         import pandas as pd  # pylint: disable=import-outside-toplevel
 
         read_data = pd.read_csv(path.open(encoding="utf-8"))
@@ -71,6 +72,7 @@ class PydanticModel(pydantic.BaseModel, DataModel):
 
         Raises:
             NotImplementedError
+
         """
         path = path.with_suffix(".json")
         if isinstance(obj, list):
@@ -97,9 +99,10 @@ class PydanticModel(pydantic.BaseModel, DataModel):
 
         Returns:
             Union[Self, list[Self]]: dependent on expected type
+
         """
         # isinstace does not work for union pylint: disable=unidiomatic-typecheck
-        if type(model_type) == types.UnionType:
+        if type(model_type) is types.UnionType:
             model_type = [ty for ty in typing.get_args(model_type) if ty][0]
         if get_origin(model_type) is None:
             if issubclass(model_type, pydantic.BaseModel):

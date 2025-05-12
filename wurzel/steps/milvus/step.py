@@ -24,9 +24,7 @@ log = getLogger(__name__)
 
 
 class MilvusConnectorStep(TypedStep[MilvusSettings, DataFrame[EmbeddingResult], MilvusResult]):  # pragma: no cover
-    """
-    Milvus connector step. It consumes embedding csv files, creates a new schema and inserts the embeddings
-    """
+    """Milvus connector step. It consumes embedding csv files, creates a new schema and inserts the embeddings"""
 
     milvus_timeout: float = 20.0
 

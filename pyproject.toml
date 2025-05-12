@@ -151,8 +151,8 @@ line-length = 140
 select = [
     "F",  # pyflakes rules,
     "I",  # sorting for imports
-    # "E",  # formatting for docs (disabled)
-    # "D",  # formatting for docs (disabled)
+    "E",  # formatting for docs (disabled)
+  #  "D",  # formatting for docs (disabled)
    # "UP", # upgrade to latest syntax if possible (disabled)
     "C4", # cleaner comprehensions
 ]

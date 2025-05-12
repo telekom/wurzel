@@ -71,7 +71,7 @@ def _try_sort(x: StepReturnType) -> StepReturnType:
         if isinstance(x, pandas.DataFrame):
             return x.sort_values(x.columns[0])
     # pylint: disable-next=bare-except
-    except:
+    except:  # noqa: E722
         log.warning("Could not sort output", **_log_extra)
         return x
     log.warning("Can't sort objects of this type", **_log_extra)
@@ -146,6 +146,7 @@ class BaseStepExecutor:
 
         Returns:
             bool: ALLOW_EXTRA_SETTINGS
+
         """
         return os.environ.get("ALLOW_EXTRA_SETTINGS", "False").upper() == "TRUE"
 
@@ -165,6 +166,7 @@ class BaseStepExecutor:
             step (TypedStep): Step Object
             obj (Union[PanderaDataFrameModel, PydanticModel]): Result of step
             path (PathToBaseModel): Where to save
+
         """
         if not path.is_dir():
             path.mkdir()
@@ -182,6 +184,7 @@ class BaseStepExecutor:
 
         Returns:
             Union[Type[None], Union[PanderaDataFrameModel, PydanticModel]]: _description_
+
         """
         input_model_class: Type[datacontract.DataModel] = step.input_model_class
         for p in path.glob("*"):
@@ -227,6 +230,7 @@ class BaseStepExecutor:
 
         Yields:
             Loaded input: With history already extended
+
         """
         no_inputs_supplied = inputs in [[], set()]
         if no_inputs_supplied and isinstance(step, SelfConsumingLeafStep):
@@ -324,6 +328,7 @@ class BaseStepExecutor:
 
         Returns:
             list[tuple[Any, StepReport]]: Result of step and repots in list
+
         """
         if not inputs:
             inputs = set()

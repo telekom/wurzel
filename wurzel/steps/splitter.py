@@ -2,9 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""
-consists of DVCSteps to embedd files and save them as for example as csv
-"""
+"""consists of DVCSteps to embedd files and save them as for example as csv"""
 
 # Standard library imports
 from logging import getLogger
@@ -61,9 +59,7 @@ class SimpleSplitterStep(TypedStep[SplitterSettings, list[MarkdownDataContract],
         return [item for sublist in results for item in sublist]
 
     def _split_markdown(self, markdowns: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
-        """
-        Creates data rows from a batch of markdown texts by splitting them and counting tokens.
-        """
+        """Creates data rows from a batch of markdown texts by splitting them and counting tokens."""
         rows = []
         skipped = 0
         for s in markdowns:

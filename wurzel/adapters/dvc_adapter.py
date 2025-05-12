@@ -27,11 +27,11 @@ class Backend:
     """Abstract class to specify the Backend"""
 
     def generate_dict(self, step: TypedStep):
-        """generate the dict"""
+        """Generate the dict"""
         raise NotImplementedError()
 
     def generate_yaml(self, step: TypedStep):
-        """generate the dict and saves it"""
+        """Generate the dict and saves it"""
         raise NotImplementedError()
 
 
@@ -55,15 +55,15 @@ class DvcBackend(Backend):
         self,
         step: TypedStep,
     ) -> dict[str, DvcDict]:
-        """generates the resulting dvc.yaml as dict by calling all
+        """Generates the resulting dvc.yaml as dict by calling all
         its required steps as well, in recursive manner.
 
         Returns
         -------
         dict
             _description_
-        """
 
+        """
         result: dict[str, Any] = {}
         outputs_of_deps: list[Path] = []
         for o_step in step.required_steps:
@@ -91,7 +91,7 @@ class DvcBackend(Backend):
         self,
         step: TypedStep,
     ) -> str:
-        """generates the dvc.yaml"""
+        """Generates the dvc.yaml"""
         data = self.generate_dict(step)
         for k in data:
             for key in ["outs", "deps"]:
@@ -100,6 +100,6 @@ class DvcBackend(Backend):
 
     @classmethod
     def save_yaml(cls, yml: str, file: Path):
-        """saves given yml string int file"""
+        """Saves given yml string int file"""
         with open(file, "w", encoding="utf-8") as f:
             yaml.dump(yml, f)

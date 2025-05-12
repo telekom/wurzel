@@ -33,12 +33,13 @@ class Step(abc.ABC):
         return set(map(Path, matched_files))
 
     def is_leaf(self) -> bool:
-        """returns if the node is a leaf in the pipeline tree
+        """Returns if the node is a leaf in the pipeline tree
 
         Returns
         -------
         bool
             _description_
+
         """
         return not self.required_steps
 
@@ -47,10 +48,11 @@ class Step(abc.ABC):
         return (folder / self.__class__.__name__).with_suffix(".file")
 
     def add_required_step(self, step: "Step"):
-        """adds a required step
+        """Adds a required step
 
         Args:
             step (Step): will be added to required_steps
+
         """
         self.required_steps |= {step}
 

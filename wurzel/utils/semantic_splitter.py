@@ -61,6 +61,7 @@ def _get_token_len(text: str) -> int:
 
     Returns:
         int: count of tokens
+
     """
     return len(OPENAI_ENCODING.encode(text))
 
@@ -108,7 +109,6 @@ def _is_standalone_a_heading(text):
 
 def _cut_to_tokenlen(text: str, token_len: int) -> str:
     """Cut Text to token length using OpenAI"""
-
     tokens_old = OPENAI_ENCODING.encode(text)
     if len(tokens_old) > token_len:
         tokens = tokens_old[:token_len]
@@ -183,7 +183,6 @@ class SemanticSplitter:
 
     def _get_custom_level(self, block: block_token.BlockToken) -> int:
         """Get the hierarchical level for a mistletoe node"""
-
         if isinstance(block, block_token.Heading):
             return int(block.level)
         return LEVEL_MAPPING.get(type(block), LEVEL_UNDEFINED)
@@ -202,8 +201,7 @@ class SemanticSplitter:
         return new_doc
 
     def _find_highest_level(self, children: list[DocumentNode], min_level: int = 0) -> Tuple[int, Optional[Token], Optional[DocumentNode]]:
-        """
-        Among a list of children nodes find the one with the highest level.
+        """Among a list of children nodes find the one with the highest level.
         Return a tuple of that level, level node type and that child
         """
 
@@ -249,8 +247,7 @@ class SemanticSplitter:
         return highest_level, highest_type, highest_element
 
     def _split_children(self, children: list[MisDocument], min_level: int = 0) -> list[MisDocument]:
-        """
-        Split a list of children in the most semantic way
+        """Split a list of children in the most semantic way
         and return a list of Documents with them merged
         """
         if len(children) == 1:
@@ -295,12 +292,12 @@ class SemanticSplitter:
         """Split a text into sentences using a NLP model.
 
         This does not use a Regex based approach on purpose as they break with
-        punctuation very easily see: https://stackoverflow.com/a/61254146"""
+        punctuation very easily see: https://stackoverflow.com/a/61254146
+        """
         return [sentence_span.text for sentence_span in self.nlp(text).sents]
 
     def _markdown_hierarchy_parser(self, text: str, metadata: MetaDataDict, max_depth: int = 30) -> DocumentNode:
-        """
-        Splits a Markdown string into a semantic Markdown based hierarchy
+        """Splits a Markdown string into a semantic Markdown based hierarchy
 
         Given a Markdown string it hierarchically splits that text using
         the semantic information from the Markdown document until
@@ -376,8 +373,9 @@ class SemanticSplitter:
 
     # unused
     def _split_by_sentence(self, text: str) -> list[str]:
-        """sometimes _split_children does not find children leafs with are smaller then TOKEN_LIMIT.
-        Thus we need to split by sentence"""
+        """Sometimes _split_children does not find children leafs with are smaller then TOKEN_LIMIT.
+        Thus we need to split by sentence
+        """
         token_limit = self.token_limit
         token_buffer = self.token_limit_buffer
         lenth = _get_token_len(text)
@@ -430,18 +428,23 @@ class SemanticSplitter:
         remaining_snipped: str,
         recursive_depth: int,
     ) -> tuple[str, list[MarkdownDataContract]]:
-        """Handle parsing of children in parse in _parse_hierarchical
-        Outsourcing logic for the sole purpose of R0912: Too many branches (15/12) (too-many-branches)
+        """Handle the parsing of child nodes during hierarchical parsing.
 
-        Args:
-            doc (DocumentNode)
-            child (DocumentNode)
-            text_w_prev_child (str)
-            remaining_snipped (str)
-            recursive_depth (int): internal recursion-depth tracker
+        This method is used to process child nodes of a document node and determine
+        how their text content should be handled based on specific conditions. It
+        helps manage recursion depth and ensures the text is split into manageable
+        Markdown data contracts.
 
-        Returns:
-            tuple[str, list[DocumentNode]]: remaining_snipped, MdContracts
+            doc (DocumentNode): The parent document node containing metadata and text.
+            child (DocumentNode): The child document node to be processed.
+            text_w_prev_child (str): The text content combined with the previous child node.
+            remaining_snipped (str): The remaining text snippet to be processed.
+            recursive_depth (int): Tracks the current recursion depth during hierarchical parsing.
+
+            tuple[str, list[MarkdownDataContract]]:
+                - A string representing the remaining unprocessed text snippet.
+                - A list of MarkdownDataContract objects containing processed Markdown data.
+
         """
         return_doc = []
         if self._is_short(text_w_prev_child):
@@ -569,8 +572,7 @@ class SemanticSplitter:
         self,
         docs: list[MarkdownDataContract],
     ) -> list[MarkdownDataContract]:
-        """
-        Function to improve the semantic meaning of the Markdown document by reattaching a parent heading
+        """Function to improve the semantic meaning of the Markdown document by reattaching a parent heading
 
         Does not yet respect the token limit, however headings usually have little impact
         """

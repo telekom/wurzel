@@ -13,7 +13,7 @@ class LoggedCustomException(Exception):
     """custom logged exception class"""
 
     def __init__(self, message):
-        """constructor"""
+        """Constructor"""
         self.message = message
         super().__init__(message)
         log.exception(self)
@@ -39,7 +39,8 @@ class StepFailed(LoggedCustomException):
 
 class InvalidCountryCodeException(LoggedCustomException):
     """raised when countryCode in url path is not recognized
-    or not in accordance to ISO_3166"""
+    or not in accordance to ISO_3166
+    """
 
 
 class ContractFailedException(LoggedCustomException):

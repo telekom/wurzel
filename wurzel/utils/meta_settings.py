@@ -49,6 +49,7 @@ def create_model(
 
     Returns:
         SettingsBase: MetaModel with set fields
+
     """
 
     def clean(

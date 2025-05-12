@@ -36,9 +36,7 @@ class QdrantConnectorMultiVectorStep(
         DataFrame[QdranttMultiVectorResult],
     ],
 ):
-    """
-    Qdrant connector step. It consumes embedding csv files, creates a new schema and inserts the embeddings
-    """
+    """Qdrant connector step. It consumes embedding csv files, creates a new schema and inserts the embeddings"""
 
     def _create_collection(self, size: int):
         self.client.create_collection(

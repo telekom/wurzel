@@ -13,8 +13,7 @@ from wurzel.steps.splitter import SplitterSettings
 
 
 class EmbeddingSettings(SplitterSettings):
-    """
-    EmbeddingSettings is a configuration class for embedding-related settings.
+    """EmbeddingSettings is a configuration class for embedding-related settings.
 
     Attributes:
         API (Url): The API endpoint for embedding operations.
@@ -32,6 +31,7 @@ class EmbeddingSettings(SplitterSettings):
         _wrap_validator_model_mapping(input_dict: dict[str, str], handler):
             A static method to wrap and validate the model mapping. It converts string regex keys
             in the input dictionary to compiled regex patterns and applies a handler function to the result.
+
     """
 
     @staticmethod

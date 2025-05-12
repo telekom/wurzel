@@ -58,6 +58,7 @@ class PathToFolderWithBaseModels(type(Path()), Generic[B]):  # type: ignore[misc
 
         Returns:
             Type: PathToBaseModel
+
         """
         typ = getattr(cls, "__orig_bases__", [None])[0]
         if typ is None:
@@ -72,6 +73,7 @@ class PathToFolderWithBaseModels(type(Path()), Generic[B]):  # type: ignore[misc
             RuntimeError: if type can't be found
         Returns:
             Type[pydantic.BaseModel]: Type of Generic
+
         """
         try:
             return get_args(cls._type())[0]

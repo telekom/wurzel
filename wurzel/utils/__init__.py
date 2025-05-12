@@ -40,6 +40,7 @@ def try_get_length(x: Any) -> int:
 
     Returns:
         int: length or 1
+
     """
     try:
         return len(x)

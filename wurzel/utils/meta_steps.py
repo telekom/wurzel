@@ -13,7 +13,7 @@ T = TypeVar("T", bound=object)
 
 
 def find_sub_classes(parent: T, package: str = __package__) -> dict[str, T]:
-    """searches for all DVC step definitions and returns them based on their name."""
+    """Searches for all DVC step definitions and returns them based on their name."""
 
     def is_non_abs_child(member: object) -> bool:
         return (
@@ -40,7 +40,7 @@ def find_sub_classes(parent: T, package: str = __package__) -> dict[str, T]:
             # Load the module for inspection
 
             module = importlib.import_module(full_module_name)
-        except:  # pylint: disable=bare-except
+        except:  # pylint: disable=bare-except  # noqa: E722
             continue
         # Iterate through all the objects in the module and
         # using the lambda, filter for class objects and only objects that exist within the module

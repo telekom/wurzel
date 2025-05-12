@@ -2,9 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""
-contains Embedding Manager
-"""
+"""contains Embedding Manager"""
 
 from json.decoder import JSONDecodeError
 from logging import getLogger
@@ -68,6 +66,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
 
         Returns:
             bool: has the model changed
+
         """
         model_name = model.strip("/").split("/")[-1]
         log.info(f"Model history: name={model_name}")
@@ -95,6 +94,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
 
         Returns:
             dict: parsed response
+
         """
         try:
             response = requests.request(method, url, json=json_body, timeout=self._timeout)
@@ -121,11 +121,13 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
     @validate_call
     def embed_query(self, text: str) -> List[float]:
         """Compute query embeddings using a HuggingFace transformer model.
+
         Args:
             text: The text to embed.
 
         Returns:
             Embeddings for the text.
+
         """
         response = self._request_embed_query(text)
         try:
@@ -137,8 +139,9 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
         return value
 
     def get_info(self):
-        """returns the infos of the model, described here:
-        https://huggingface.github.io/text-embeddings-inference/#/"""
+        """Returns the infos of the model, described here:
+        https://huggingface.github.io/text-embeddings-inference/#/
+        """
         response_model_key = "model_id"
         resp_dict = self.__make_request(self.info_url, None, method="get")
         if response_model_key not in resp_dict:

@@ -124,6 +124,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
 
         Returns:
             tuple[Optional[Iterable[Type[Iterable]]], Type]: (container types, type)
+
         """
         if containers is None:
             containers = []
@@ -268,6 +269,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
 
         Raises:
             TypeError: On incompatible types
+
         """
         if self.input_model_type != step.output_model_type:
             raise TypeError(f"Cannot chain {self} to {step} ({step.output_model_type} -> {self.input_model_type})")
@@ -281,13 +283,14 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
 
     def traverse(self) -> set["TypedStep"]:
         """Retrieve a set of all required steps
-        including self"""
+        including self
+        """
         return self._traverse(set())
 
     # pylint: disable=method-hidden
     @abc.abstractmethod
     def run(self, inpt: INCONTRACT) -> OUTCONTRACT:
-        """abstract function which is called with the parsed data in the shape of INCONTRACT.
+        """Abstract function which is called with the parsed data in the shape of INCONTRACT.
         It's implementation should return the OUTCONTRACT
         ### It will be called mutliple times.
 

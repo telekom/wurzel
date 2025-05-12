@@ -87,6 +87,7 @@ class PrometheusStepExecutor(BaseStepExecutor):
             step_cls (Type[TypedDVCStep]): Step to run
             inputs (set[PathToBaseModel]): Step inputs
             output (PathToBaseModel): Step output
+
         """
         lbl = step_cls.__name__
         self.counter_started.labels(lbl).inc()

@@ -10,8 +10,7 @@ from wurzel.step import Settings
 
 
 class DoclingSettings(Settings):
-    """
-    DoclingSettings is a configuration class that inherits from the base `Settings` class.
+    """DoclingSettings is a configuration class that inherits from the base `Settings` class.
     It provides customizable settings for document processing.
 
     Attributes:
@@ -31,6 +30,7 @@ class DoclingSettings(Settings):
             - "xml_jats"
             - "json_docling"
         URLS (list[str]): A list of URLs for additional configuration or resources. Defaults to an empty list.
+
     """
 
     FORCE_FULL_PAGE_OCR: bool = True

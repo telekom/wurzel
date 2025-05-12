@@ -11,8 +11,7 @@ from wurzel.step.settings import Settings
 
 # pylint: disable=duplicate-code
 class MilvusSettings(Settings):
-    """
-    MilvusSettings is a configuration class for managing settings related to MilvusDB.
+    """MilvusSettings is a configuration class for managing settings related to MilvusDB.
 
     Attributes:
         HOST (str): The hostname or IP address of the Milvus server. Defaults to "localhost".
@@ -28,10 +27,13 @@ class MilvusSettings(Settings):
 
     Methods:
         parse_json(cls, v): Validates and parses JSON strings into Python objects for SEARCH_PARAMS and INDEX_PARAMS.
-            Args:
+
+    Args:
                 v (str or dict): The value to validate and parse.
-            Returns:
+
+    Returns:
                 dict: The parsed dictionary if the input is a JSON string, or the original value if it is already a dictionary.
+
     """
 
     HOST: str = "localhost"
@@ -53,7 +55,7 @@ class MilvusSettings(Settings):
     @classmethod
     # pylint: disable-next=R0801
     def parse_json(cls, v):
-        """validation for json"""
+        """Validation for json"""
         if isinstance(v, str):
             return json.loads(v)
         return v

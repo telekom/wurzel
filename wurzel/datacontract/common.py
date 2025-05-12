@@ -43,6 +43,7 @@ class MarkdownDataContract(PydanticModel):
 
         Returns:
             MarkdownDataContract: The file that was loaded
+
         """
 
         def find_first(pattern: _re_pattern, text: str, fallback: str):

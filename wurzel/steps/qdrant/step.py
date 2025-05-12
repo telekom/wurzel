@@ -29,9 +29,7 @@ def _batch(iterable, size):
 
 
 class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], DataFrame[QdrantResult]]):
-    """
-    Qdrant connector step. It consumes embedding csv files, creates a new schema and inserts the embeddings
-    """
+    """Qdrant connector step. It consumes embedding csv files, creates a new schema and inserts the embeddings"""
 
     _timeout: int = 20
     s: QdrantSettings
@@ -214,6 +212,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
 
         Returns:
             dict[str, str]: keys: `text_<algo>_hash` hash as string ! Dict might be empty!
+
         """
         hashes = {}
         if HAS_TLSH:

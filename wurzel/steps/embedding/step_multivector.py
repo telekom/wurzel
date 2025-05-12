@@ -2,9 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""
-consists of DVCSteps to embedd files and save them as for example as csv
-"""
+"""consists of DVCSteps to embedd files and save them as for example as csv"""
 
 # Standard library imports
 from logging import getLogger
@@ -28,7 +26,7 @@ log = getLogger(__name__)
 
 
 class _EmbeddedMultiVector(TypedDict):
-    "dict definition of a embedded document"
+    """dict definition of a embedded document"""
 
     text: str
     url: str
@@ -44,8 +42,7 @@ class EmbeddingMultiVectorStep(
         DataFrame[EmbeddingMultiVectorResult],
     ],
 ):
-    """
-    Step for consuming list[MarkdownDataContract]
+    """Step for consuming list[MarkdownDataContract]
     and returning DataFrame[EmbeddingMultiVectorResult]
     """
 
@@ -77,8 +74,7 @@ class EmbeddingMultiVectorStep(
         return DataFrame[EmbeddingMultiVectorResult](DataFrame[EmbeddingMultiVectorResult](rows))
 
     def _get_embedding(self, doc: MarkdownDataContract) -> _EmbeddedMultiVector:
-        """
-        Generates an embedding for a given text and context.
+        """Generates an embedding for a given text and context.
 
         Parameters
         ----------
@@ -89,6 +85,7 @@ class EmbeddingMultiVectorStep(
         -------
         dict
             A dictionary containing the original text, its embedding, and the source URL.
+
         """
 
         def prepare_plain(document: MarkdownDataContract) -> str:

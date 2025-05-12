@@ -13,8 +13,7 @@ from wurzel.step.settings import Settings
 
 # pylint: disable=duplicate-code
 class QdrantSettings(Settings):
-    """
-    QdrantSettings is a configuration class for managing settings related to the Qdrant database.
+    """QdrantSettings is a configuration class for managing settings related to the Qdrant database.
 
     Attributes:
         DISTANCE (Distance): The distance metric to be used, default is Distance.DOT.
@@ -30,10 +29,13 @@ class QdrantSettings(Settings):
     Methods:
         parse_json(v):
             Validates and parses JSON strings into Python objects for SEARCH_PARAMS and INDEX_PARAMS.
-            Args:
+
+    Args:
                 v (Union[str, dict]): The input value, either a JSON string or a dictionary.
-            Returns:
+
+    Returns:
                 dict: The parsed dictionary if the input is a JSON string, otherwise the input value.
+
     """
 
     DISTANCE: Distance = Distance.DOT
@@ -54,7 +56,7 @@ class QdrantSettings(Settings):
     @validator("SEARCH_PARAMS", "INDEX_PARAMS", pre=True)
     @classmethod
     def parse_json(cls, v):
-        """validation for json"""
+        """Validation for json"""
         if isinstance(v, str):
             return json.loads(v)
         return v

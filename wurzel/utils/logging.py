@@ -18,13 +18,14 @@ log = logging.getLogger(__name__)
 # pylint: disable-next=too-many-positional-arguments
 def warnings_to_logger(message: str, category: str, filename: str, lineno: str, file=None, line=None):
     # pylint: disable=unused-argument
-    """replaces warnings.showwarning
+    """Replaces warnings.showwarning
 
     Args:
         message (str):
         category (str): Warnings class
         filename (str):
         lineno (str):
+
     """
     for module_name, module in sys.modules.items():
         module_path = getattr(module, "__file__", None)
@@ -95,6 +96,7 @@ class JsonFormatter(logging.Formatter):
             reduced (Optional[List[str]], optional): List of loglevels to reduce output by. Defaults to None.
                 Reduced output removes filename, thread and process information
             indent (Optional[str], optional): indent for json dumps. Defaults to None.
+
         """
         super().__init__(None, datefmt, defaults=defaults)
         self.indent = indent
@@ -142,6 +144,7 @@ def get_logging_dict_config(level) -> dict[str, str]:
 
     Returns:
         dict: logging.config.dictConfig
+
     """
     default_formatter = {
         "json_formatter": {
