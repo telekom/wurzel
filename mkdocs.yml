@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 site_name: "Wurzel"
-site_url: https://github.com/telekom/wurzel
+site_url: https://telekom.github.io/wurzel
 
 theme:
   name: readthedocs
