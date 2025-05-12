@@ -7,6 +7,6 @@ from .settings import MilvusSettings
 
 __all__ = ["MilvusSettings"]
 if _HAS_MILVUS:
-    from .step import MilvusConnectorStep
+    from .step import MilvusConnectorStep  # noqa: F401
 
-    __all__ = [*__all__, "MilvusConnectorStep"]
+    __all__.append(["MilvusConnectorStep"])
