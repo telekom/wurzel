@@ -24,90 +24,24 @@ To get started with wurzel, install the library using pip:
 pip install wurzel
 ```
 
-## Usage
 
-Below is a simple example of how wurzel can be used:
-### Execute single Step
-#### With CLI
+## With CLI
+
 ManualMarkdownStep requires a source-folder to be passed by environment-variable:
+
 ```sh
 MANUALMARKDOWNSTEP__FOLDER_PATH="." wurzel run wurzel.steps.manual_markdown.ManualMarkdownStep
 ```
-Other Steps require other environment-variables. find it out via the Class Definition of the step or by calling :
+
+Other Steps require other environment-variables. find it out via the Class Definition of the step or by calling:
+
 ```sh
 wurzel inspect wurzel.steps.manual_markdown.ManualMarkdownStep
 ```
 
 ### Building your one step
-#### Building a new WurzelTip(new data source)
-A WurzelStep requires Settings[Optional] InputDatacontract[Optional], OutoutDataContract[Mandatory]. Datasources do not have a prerequisite Step, thus the InputDatacontract is *None*.
-We are using MarkdownDataContract as the first common contract in document retrieval. Of cause you may define your own.
 
-```python
-class MySettings(Settings):
-    """Settings fro MyDatasourceStep"""
-    YOUR_REQUIRED_ENVIRONMENT: Any
-
-class MyDatasourceStep(TypedStep[MySettings, None,list[MarkdownDataContract]]):
-    """Data Source for md files from a configurable path
-    """
-    def run(self, inpt: None) -> list[MarkdownDataContract]:
-        ### your code here
-        return result
-```
-#### Building a new WurzelStep
-Of Cause a wurzel is not ony defined by its Tips but also some steps which use the prerequisite output. Like Filters, Validators or Splitter Steps.
-```python
-class MyFilterStep(TypedStep[MySettings, list[MarkdownDataContract],list[MarkdownDataContract]]):
-        def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
-            ### your code here
-            return result
-```
-and some Steps which even change the shape of a contract completely. For example from list to DataFrame. The DataFrame shape is enforced by pandera DataframeSchemas.
-
-```python
-class MyEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract], DataFrame[EmbeddingResult]]):
-    def run(self, inpt: list[MarkdownDataContract]) -> DataFrame[EmbeddingResult]:
-        """ Executes the embedding step by processing input markdown files, generating embeddings,
-        and saving them to a CSV file.
-        """
-        ### your code here
-        return df
-```
-The *run* function may be executed multiple times. Each time per previous Step. So if you want to do some preparation only once, like creating tables/collection or connections we recommend to do so in the *__init__*
-```python
-class MyDatabaseStep(TypedStep[DatabaseSettings, DataFrame[EmbeddingResult], DataFrame[EmbeddingResult]]):
-    def __init__(self):
-        ## create table and establish connection here
-    def run():
-        ## insert data here
-```
-
-
-
-### define a pipeline with wurzel
-```python
-
-from wurzel.steps import (
-    EmbeddingStep,
-    QdrantConnectorStep
-    )
-from wurzel.utils import WZ
-from wurzel.steps.manual_markdown import ManualMarkdownStep
-from wurzel.step import TypedStep
-
-def pipeline() -> TypedStep:
-    """Pipeline definition"""
-    md = WZ(ManualMarkdownStep)
-    embed = WZ(EmbeddingStep)
-    db = WZ(QdrantConnectorStep)
-
-    md >> embed >> db
-    return db
-
-```
-
-
+For detailed instructions and examples on how to use wurzel, please refer to our [official documentation](https://telekom.github.com/wurzel/).
 
 ## Code of Conduct
 

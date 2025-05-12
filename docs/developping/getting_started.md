@@ -1,41 +1,55 @@
-# Developer Guide
+# 👩‍💻 Developer Guide
 
-Welcome to the Wurzel Developer Guide! This document provides essential information to help you get started with contributing to the project.
+Welcome to the Wurzel Developer Guide! This document provides the essential steps and best practices to help you contribute effectively to the Wurzel project.
 
+## 🚀 Getting Started
 
-To get started with Wurzel, install the library using pip:
+To install Wurzel with all necessary dependencies, run:
 
 ```bash
-pip install "wurzel[all]"
+make install
 ```
 
-## Linting
+This will install the core library along with all optional extras used for development, testing, and documentation.
 
-This project utilizes pre-commit hooks to ensure code quality. You can activate them to be run by default with the following command:
+## 🧼 Code Quality: Linting
+
+Wurzel uses pre-commit hooks to enforce consistent code quality and formatting.
+
+### ✅ Set Up Pre-commit Hooks
+
+To activate the hooks:
 
 ```bash
 pre-commit install
 ```
 
-You can run the linting process with the following command:
+## 🧪 Run Linting Manually
+
+You can also trigger the linting process manually using:
 
 ```bash
 make lint
 ```
 
-## Running Tests
+This runs all configured linters and formatters across the codebase.
 
-Before submitting your changes, ensure all tests pass by running:
+## 🧪 Running Tests
+
+Before submitting your changes, make sure all tests pass:
 
 ```bash
 make test
 ```
 
-## Commit Strategy
+This runs the full test suite and ensures your changes don’t break existing functionality.
 
-This section describes the commit strategy used in the project. All commits are squashed when merging into the `main` branch to maintain a clean and concise history.
+## 📝 Commit Strategy
 
-### Commit Types
+We maintain a clean and readable Git history by squashing all commits when merging into the main branch.
+
+### 🔖 Commit Types
+
 - **Breaking Changes**: For changes that are not backward-compatible.
     - Use the tag: `breaking`
 - **Features**: For new features or enhancements that are backward-compatible.

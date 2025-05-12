@@ -1,11 +1,11 @@
 
-# Documentation
+# 📖 Documentation
 
-We are using MkDocs to manage our documentation.
+Wurzel uses MkDocs to manage and build its project documentation. MkDocs is a fast, simple, and elegant static site generator that's perfect for documentation projects.
 
-## Serving Documentation Locally
+## 🧪 Serving Documentation Locally
 
-To serve the documentation locally, run the following command:
+To preview the documentation on your local machine (for development or testing), use the following command:
 
 ```bash
 mkdocs serve
