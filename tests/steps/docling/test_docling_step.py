@@ -31,14 +31,10 @@ def test_docling_step(real_data_path, expected_md_start, expected_contract_count
     )
 
     contracts = docling_step.run({})
-    assert len(contracts) == expected_contract_count, (
-        f"Expected {expected_contract_count} contracts, got {len(contracts)}"
-    )
+    assert len(contracts) == expected_contract_count, f"Expected {expected_contract_count} contracts, got {len(contracts)}"
     if contracts:
         actual_md = contracts[0]["md"].strip()
-        assert actual_md.startswith(expected_md_start), (
-            "Markdown content does not match expected start."
-        )
+        assert actual_md.startswith(expected_md_start), "Markdown content does not match expected start."
 
 
 def test_render_html_block_removes_image_tag():
@@ -49,11 +45,5 @@ def test_render_html_block_removes_image_tag():
     token_with_image = DummyToken("<!-- image --> text for this contract")
     token_without_image = DummyToken("<div>Real content</div>")
 
-    assert (
-        CleanMarkdownRenderer.render_html_block(token_with_image)
-        == "text for this contract"
-    )
-    assert (
-        CleanMarkdownRenderer.render_html_block(token_without_image)
-        == "<div>Real content</div>"
-    )
+    assert CleanMarkdownRenderer.render_html_block(token_with_image) == "text for this contract"
+    assert CleanMarkdownRenderer.render_html_block(token_without_image) == "<div>Real content</div>"

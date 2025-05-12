@@ -25,10 +25,4 @@ class WithExtraFormatter(JsonFormatter):
         json_part.pop("@timestamp", None)
         json_part.pop("file", None)
         exc_text = json_part.pop("exc_text", "")
-        return " ".join(
-            [
-                f"'{msg}'"
-                + (f" : {json.dumps(json_part)}" if json_part else "")
-                + exc_text
-            ]
-        )
+        return " ".join([f"'{msg}'" + (f" : {json.dumps(json_part)}" if json_part else "") + exc_text])

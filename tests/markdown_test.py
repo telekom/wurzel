@@ -55,9 +55,7 @@ HTML = """
 def test_to_markdown_long():
     markdown: str = to_markdown(HTML)
 
-    assert "Lorem ipsum dolor sit amet, consectetur adipiscing elit" in markdown, (
-        markdown
-    )
+    assert "Lorem ipsum dolor sit amet, consectetur adipiscing elit" in markdown, markdown
     assert "# Welcome to My Webpage" in markdown, markdown
 
 
@@ -97,9 +95,7 @@ def test_file_not_found_error(mock_is_file):
     """Test handling of FileNotFoundError."""
 
     # Simulate the html2md binary file not being found
-    mock_is_file.return_value = Namespace(
-        machine="invalid_platform_mock", system="invalid_platform_mock_system"
-    )
+    mock_is_file.return_value = Namespace(machine="invalid_platform_mock", system="invalid_platform_mock_system")
     with pytest.raises(InvalidPlatform):
         __get_html2md()
 

@@ -35,9 +35,7 @@ def test_good_cli_call_with_input(tmp_path):
 
 def test_good_cli_call_with_inputs(tmp_path):
     out_path = tmp_path / "out"
-    res = generate_cli_call(
-        ManualMarkdownStep, [tmp_path, tmp_path], out_path, executor=BaseStepExecutor
-    )
+    res = generate_cli_call(ManualMarkdownStep, [tmp_path, tmp_path], out_path, executor=BaseStepExecutor)
     assert (
         res
         == f"wurzel run wurzel.steps.manual_markdown:ManualMarkdownStep -o {out_path.as_posix()} -e BaseStepExecutor -i {tmp_path.as_posix()} -i {tmp_path.as_posix()} --encapsulate-env"

@@ -20,18 +20,14 @@ class Step(abc.ABC):
     def __init__(self) -> None:  # pylint: disable=dangerous-default-value
         self.required_steps = set()
 
-    def _search_needed_files(
-        self, inputs: Set[Path], file_name_pattern: Pattern
-    ) -> Set[Path]:
+    def _search_needed_files(self, inputs: Set[Path], file_name_pattern: Pattern) -> Set[Path]:
         matched_files = set()
         for folder in inputs:
-            match = set(
-                glob.glob(f"{str(folder)}/**/*{str(file_name_pattern)}*")
-            ) | set(glob.glob(f"{str(folder)}/*{str(file_name_pattern)}*"))
+            match = set(glob.glob(f"{str(folder)}/**/*{str(file_name_pattern)}*")) | set(
+                glob.glob(f"{str(folder)}/*{str(file_name_pattern)}*")
+            )
             if not match:
-                log.warning(
-                    f"passed path {folder} but did not find a matching file {file_name_pattern}"
-                )
+                log.warning(f"passed path {folder} but did not find a matching file {file_name_pattern}")
             matched_files |= match
 
         return set(map(Path, matched_files))

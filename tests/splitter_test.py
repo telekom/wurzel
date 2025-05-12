@@ -99,16 +99,12 @@ TV HD Recorder Fehlerbehebung](https://www.lorem-ipsum.com/faq/entry/%7Elorem-tv
 def test_sentence_splitter(Splitter):
     # @Thomas inkonsitenz mit token_limit, buffer
     text = "Mein Name ist Manfred. Ich bin am rande der Welt angekommen. Wir sind mit Mr. Bean unterwegs. Dabei haben wir Heute ein Kanninchen adoptiert und sind damit zum Mond geflogen. Auf dessen Rückseite haben wir dann Karotten geerntet und sind damit auf dem Rücken eines Schweins zurück zum Mars gefolgen. "
-    chunks = SemanticSplitter(token_limit=20, token_limit_buffer=3)._split_by_sentence(
-        text
-    )
+    chunks = SemanticSplitter(token_limit=20, token_limit_buffer=3)._split_by_sentence(text)
     assert len(chunks) == 3
     assert "Mein Name ist Manfred." in chunks[0]
     assert all(chunk for chunk in chunks)
     assert "auf dem Rück" in chunks[-1]
-    assert (
-        abs(_get_token_len(text) - sum(_get_token_len(chunk) for chunk in chunks)) < 19
-    )
+    assert abs(_get_token_len(text) - sum(_get_token_len(chunk) for chunk in chunks)) < 19
 
 
 def test_sentence_splitter2(Splitter):
@@ -117,9 +113,7 @@ def test_sentence_splitter2(Splitter):
     assert "Überlagerte WLAN Kanäle" in chunks[0]
     assert all(chunk for chunk in chunks)
     assert "HiFi Lautsprecher" in chunks[-1]
-    assert (
-        abs(_get_token_len(text) - sum(_get_token_len(chunk) for chunk in chunks)) > 3
-    )
+    assert abs(_get_token_len(text) - sum(_get_token_len(chunk) for chunk in chunks)) > 3
 
 
 def test_splitter_header_breadcrum(Splitter):
@@ -430,9 +424,7 @@ Odaberite idealan paket satelitskih programa prema va\u0161im potrebama:
     "input_text, expected_results",
     [
         pytest.param(test_case_1, test_case_1_result, id="Simple Split"),
-        pytest.param(
-            test_case_2, test_case_2_result, id="Tests: Test Sentence splitter"
-        ),
+        pytest.param(test_case_2, test_case_2_result, id="Tests: Test Sentence splitter"),
         pytest.param(
             test_case_3,
             test_case_3_result,
@@ -444,18 +436,14 @@ Odaberite idealan paket satelitskih programa prema va\u0161im potrebama:
     ],
 )
 def test_case(input_text, expected_results, Splitter):
-    res = Splitter.split_markdown_document(
-        MarkdownDataContract(md=input_text, url="test", keywords="pytest")
-    )
+    res = Splitter.split_markdown_document(MarkdownDataContract(md=input_text, url="test", keywords="pytest"))
     assert len(res) == len(expected_results)
     for x, y in zip(res, expected_results):
         assert x.md == mdformat.text(y).strip(), "got == expected"
 
 
 def test_table(Splitter):
-    res = Splitter.split_markdown_document(
-        MarkdownDataContract(md=test_case_table, url="test", keywords="pytest")
-    )
+    res = Splitter.split_markdown_document(MarkdownDataContract(md=test_case_table, url="test", keywords="pytest"))
     assert len(res) > 1
     assert all(
         phrase in res[-1].md

@@ -21,9 +21,7 @@ class History:
     __SEP_STR = "-"
     _history: list[str]
 
-    def __init__(
-        self, *args: Union[TypedStep, str, list[str]], initial: list[str] = None
-    ) -> NoneType:
+    def __init__(self, *args: Union[TypedStep, str, list[str]], initial: list[str] = None) -> NoneType:
         if initial is None:
             initial = []
         self._history = initial

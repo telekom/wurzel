@@ -14,13 +14,10 @@ class ManualMarkdownSettings(Settings):
     FOLDER_PATH: Path
 
 
-class ManualMarkdownStep(
-    TypedStep[ManualMarkdownSettings, None, list[MarkdownDataContract]]
-):
+class ManualMarkdownStep(TypedStep[ManualMarkdownSettings, None, list[MarkdownDataContract]]):
     """Data Source for md files from a configurable path"""
 
     def run(self, inpt: None) -> list[MarkdownDataContract]:
         return [
-            MarkdownDataContract.from_file(fp, url_prefix=self.__class__.__name__ + "/")
-            for fp in self.settings.FOLDER_PATH.rglob("*.md")
+            MarkdownDataContract.from_file(fp, url_prefix=self.__class__.__name__ + "/") for fp in self.settings.FOLDER_PATH.rglob("*.md")
         ]

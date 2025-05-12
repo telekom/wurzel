@@ -63,7 +63,7 @@ tlsh = [
     "python-tlsh==4.5.0"
 ]
 lint = [
-    "pylint==3.3.4",
+    "pylint[spelling]==3.3.7",
     "pylint-json2html==0.5.0",
     "pre-commit==4.1.*",
     "reuse==5.0.2",
@@ -156,3 +156,12 @@ select = [
    # "UP", # upgrade to latest syntax if possible (disabled)
     "C4", # cleaner comprehensions
 ]
+
+[tool.ruff.format]
+quote-style = "double"
+
+indent-style = "space"
+
+skip-magic-trailing-comma = false
+
+line-ending = "auto"

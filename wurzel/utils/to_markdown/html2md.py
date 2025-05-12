@@ -27,13 +27,9 @@ def __get_html2md() -> Path:
         "Darwin_arm64": Path(__file__).parent / "html2md_darwin_arm",
         "Darwin_x86_64": Path(__file__).parent / "html2md_darwin_amd64",
     }
-    fallback = default_path.get(
-        f"{platform.uname().system}_{platform.uname().machine}", None
-    )
+    fallback = default_path.get(f"{platform.uname().system}_{platform.uname().machine}", None)
     if fallback is None:
-        raise InvalidPlatform(
-            f"Could not create path to binary from {platform.uname()} we only support {default_path.keys()}"
-        )
+        raise InvalidPlatform(f"Could not create path to binary from {platform.uname()} we only support {default_path.keys()}")
     return Path(fallback)
 
 
@@ -88,9 +84,7 @@ def to_markdown(html: str, binary_path: Path = __HTML2MD) -> str:
         status_code, markdown = subprocess.getstatusoutput(convert_cmd)
         Path(file.name).unlink()
     if status_code != 0:
-        raise MarkdownConvertFailed(
-            f"{binary_path} returned {status_code} ({markdown} based on {html})"
-        )
+        raise MarkdownConvertFailed(f"{binary_path} returned {status_code} ({markdown} based on {html})")
     if not markdown.replace(" ", "").replace("\n", ""):
         raise MarkdownConvertFailed(f"Failed to convert {html} to md {markdown}")
     return markdown
@@ -120,11 +114,7 @@ def remove_images(markdown: str) -> str:
     def _remove_image_from_document(doc: Document) -> Document:
         if not hasattr(doc, "children") or not doc.children:
             return doc
-        doc.children = [
-            _remove_image_from_document(x)
-            for x in doc.children
-            if not isinstance(x, (Image, ThematicBreak))
-        ]
+        doc.children = [_remove_image_from_document(x) for x in doc.children if not isinstance(x, (Image, ThematicBreak))]
         return doc
 
     doc = Document(markdown)
@@ -162,9 +152,7 @@ def clean_html(html: str) -> str:
     return cleaned_html
 
 
-def normalize_urls_in_tree(
-    tree: lxml.html.HtmlElement, base_url: str = "https://www.magenta.at"
-):
+def normalize_urls_in_tree(tree: lxml.html.HtmlElement, base_url: str = "https://www.magenta.at"):
     """
     Normalizes all relative URLs within an lxml HTML tree by converting them to absolute URLs.
 

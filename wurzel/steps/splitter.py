@@ -33,9 +33,7 @@ class SplitterSettings(Settings):
 log = getLogger(__name__)
 
 
-class SimpleSplitterStep(
-    TypedStep[SplitterSettings, list[MarkdownDataContract], list[MarkdownDataContract]]
-):
+class SimpleSplitterStep(TypedStep[SplitterSettings, list[MarkdownDataContract], list[MarkdownDataContract]]):
     """SimpleSplitterStep to split Markdown Documents rundimentory in medium size chunks"""
 
     def __init__(self) -> None:
@@ -57,16 +55,12 @@ class SimpleSplitterStep(
         batches = _batchify(inpt, self.settings.BATCH_SIZE)
 
         # Run each batch in parallel using threading
-        results = Parallel(n_jobs=self.settings.NUM_THREADS, prefer="threads")(
-            delayed(self._split_markdown)(batch) for batch in batches
-        )
+        results = Parallel(n_jobs=self.settings.NUM_THREADS, prefer="threads")(delayed(self._split_markdown)(batch) for batch in batches)
 
         # Flatten the list of lists
         return [item for sublist in results for item in sublist]
 
-    def _split_markdown(
-        self, markdowns: list[MarkdownDataContract]
-    ) -> list[MarkdownDataContract]:
+    def _split_markdown(self, markdowns: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
         """
         Creates data rows from a batch of markdown texts by splitting them and counting tokens.
         """

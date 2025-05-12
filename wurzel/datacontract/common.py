@@ -57,7 +57,5 @@ class MarkdownDataContract(PydanticModel):
         return MarkdownDataContract(
             md=str(find_first(_RE_BODY, md, md)),
             url=str(find_first(_RE_URL, find_header(md), url_prefix + path.as_posix())),
-            keywords=str(
-                find_first(_RE_TOPIC, find_header(md), path.name.split(".")[0])
-            ),
+            keywords=str(find_first(_RE_TOPIC, find_header(md), path.name.split(".")[0])),
         )

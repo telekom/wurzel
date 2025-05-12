@@ -55,9 +55,7 @@ def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: s
     raise typer.BadParameter(f"{value} is not a recognized executor")
 
 
-def step_callback(
-    _ctx: typer.Context, _param: typer.CallbackParam, import_path: str
-) -> TypedStep:
+def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str) -> TypedStep:
     """Converts a cli-str to a TypedStep
 
     Args:
@@ -78,13 +76,9 @@ def step_callback(
             mod, kls = import_path.rsplit(".", 1)
         module = importlib.import_module(mod)
         step = getattr(module, kls)
-        assert (inspect.isclass(step) and issubclass(step, TypedStep)) or isinstance(
-            step, TypedStep
-        )
+        assert (inspect.isclass(step) and issubclass(step, TypedStep)) or isinstance(step, TypedStep)
     except ValueError as ve:
-        raise typer.BadParameter(
-            "Path is not in correct format, should be module.submodule.Step"
-        ) from ve
+        raise typer.BadParameter("Path is not in correct format, should be module.submodule.Step") from ve
     except ModuleNotFoundError as me:
         raise typer.BadParameter(f"Module '{mod}' could not be imported") from me
     except AttributeError as ae:
@@ -97,11 +91,7 @@ def step_callback(
 def complete_step_import(incomplete: str):
     """AutoComplete for steps"""
 
-    packages = [
-        p
-        for p in pkgutil.iter_modules()
-        if p.ispkg and p.name.startswith(incomplete if incomplete else "wurzel")
-    ]
+    packages = [p for p in pkgutil.iter_modules() if p.ispkg and p.name.startswith(incomplete if incomplete else "wurzel")]
     hints = []
     for pkg in packages:
         hints.extend(
@@ -194,9 +184,7 @@ def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, _backend:
     return DvcBackend
 
 
-def pipeline_callback(
-    _ctx: typer.Context, _param: typer.CallbackParam, import_path: str
-) -> TypedStep:
+def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str) -> TypedStep:
     """Based on step_callback transform them to WZ pipeline elements"""
     step = step_callback(_ctx, _param, import_path)
     if not hasattr(step, "required_steps"):
@@ -218,9 +206,7 @@ def generate(
     ],
     data_dir: Annotated[
         Path,
-        typer.Option(
-            "-d", "--data-dir", file_okay=False, help="Target folder for pipeline"
-        ),
+        typer.Option("-d", "--data-dir", file_okay=False, help="Target folder for pipeline"),
     ] = Path("./data"),
     backend: Annotated[
         str,

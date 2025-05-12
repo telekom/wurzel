@@ -79,9 +79,7 @@ def test_embedding_step(mock_embedding, tmp_path, env):
     input_folder.mkdir()
     shutil.copy(mock_file, input_folder)
     output_folder = tmp_path / "out"
-    BaseStepExecutor(dont_encapsulate=False).execute_step(
-        EmbeddingStep, [input_folder], output_folder
-    )
+    BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingStep, [input_folder], output_folder)
     assert output_folder.is_dir()
     assert len(list(output_folder.glob("*"))) > 0
 
@@ -110,8 +108,6 @@ def test_mutlivector_embedding_step(mock_embedding, tmp_path, env):
     input_folder.mkdir()
     shutil.copy(mock_file, input_folder)
     output_folder = tmp_path / "out"
-    BaseStepExecutor(dont_encapsulate=False).execute_step(
-        EmbeddingMultiVectorStep, [input_folder], output_folder
-    )
+    BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingMultiVectorStep, [input_folder], output_folder)
     assert output_folder.is_dir()
     assert len(list(output_folder.glob("*"))) > 0

@@ -19,9 +19,7 @@ def is_valid_dvc_yaml(path: Path) -> bool:
     create_stdout = subprocess.getoutput(
         f"/bin/bash -c 'cd {path.parent} && git init && dvc init'",
     )
-    status_stdout = subprocess.getoutput(
-        f"/bin/bash -c 'cd {path.parent} && dvc stage list'"
-    )
+    status_stdout = subprocess.getoutput(f"/bin/bash -c 'cd {path.parent} && dvc stage list'")
     assert "Initialized empty Git repository in" in create_stdout, create_stdout
     assert "Initialized DVC repository." in create_stdout, create_stdout
     assert "is invalid" not in status_stdout
@@ -82,9 +80,7 @@ def test_chain_implemented_DVC_modes(nested_steps: Tuple[Step, Path, Step, Path]
 def test_generate_dict(tmp_path: Path):
     dvc_pipe: dict = DvcBackend(tmp_path).generate_dict(StepImplementedLeaf())
     assert "StepImplementedLeaf" in dvc_pipe
-    assert all(
-        key in dvc_pipe["StepImplementedLeaf"] for key in ("deps", "outs", "cmd")
-    )
+    assert all(key in dvc_pipe["StepImplementedLeaf"] for key in ("deps", "outs", "cmd"))
 
 
 def test_generate_nested_dict(nested_steps):
@@ -92,12 +88,8 @@ def test_generate_nested_dict(nested_steps):
     step2: Step = step2
     dvc_pipe: dict = DvcBackend(output_2).generate_dict(step2)
     assert len(dvc_pipe) == 2
-    assert all(
-        key in dvc_pipe[step2.__class__.__name__] for key in ("deps", "outs", "cmd")
-    )
-    assert all(
-        key in dvc_pipe[step1.__class__.__name__] for key in ("deps", "outs", "cmd")
-    )
+    assert all(key in dvc_pipe[step2.__class__.__name__] for key in ("deps", "outs", "cmd"))
+    assert all(key in dvc_pipe[step1.__class__.__name__] for key in ("deps", "outs", "cmd"))
 
 
 def test_save_yaml(nested_steps, tmp_path: Path):

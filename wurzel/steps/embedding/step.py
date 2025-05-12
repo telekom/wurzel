@@ -43,9 +43,7 @@ class Embedded(TypedDict):
 
 class EmbeddingStep(
     SimpleSplitterStep,
-    TypedStep[
-        EmbeddingSettings, list[MarkdownDataContract], DataFrame[EmbeddingResult]
-    ],
+    TypedStep[EmbeddingSettings, list[MarkdownDataContract], DataFrame[EmbeddingResult]],
 ):
     """
     Step for consuming list[MarkdownDataContract]
@@ -218,7 +216,9 @@ class EmbeddingStep(
             The text with URLs replaced by 'LINK'.
         """
         # Extract URL from a string
-        url_extract_pattern = "https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\/=]*)"  # pylint: disable=line-too-long
+        url_extract_pattern = (
+            "https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\/=]*)"  # pylint: disable=line-too-long
+        )
         links = sorted(re.findall(url_extract_pattern, text), key=len, reverse=True)
         for link in links:
             text = text.replace(link, "LINK")

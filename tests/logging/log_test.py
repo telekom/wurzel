@@ -11,11 +11,7 @@ from wurzel.utils.logging import JsonFormatter
 
 FOR_EACH_LOG_LEVEL = pytest.mark.parametrize(
     "level",
-    [
-        pytest.param(v, id=k)
-        for k, v in logging.getLevelNamesMapping().items()
-        if k != "NOTSET"
-    ],
+    [pytest.param(v, id=k) for k, v in logging.getLevelNamesMapping().items() if k != "NOTSET"],
 )
 FOR_EACH_LOGGER = pytest.mark.parametrize("loggername", ["root", "new_one", ""])
 

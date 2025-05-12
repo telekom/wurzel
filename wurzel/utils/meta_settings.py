@@ -66,10 +66,7 @@ def create_model(
     inner_models: dict[str, Settings] = {
         step.__class__.__name__.upper(): py_create_model(
             "MetaSettings_" + step.__class__.__name__,
-            **{
-                name: (v.annotation, v)
-                for name, v in step.settings_class.model_fields.items()
-            },
+            **{name: (v.annotation, v) for name, v in step.settings_class.model_fields.items()},
             __base__=base_class,
         )
         for step in clean_fields

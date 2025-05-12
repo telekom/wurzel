@@ -101,15 +101,9 @@ def pytest_collection_modifyitems(config, items):
     if len(items) == 1:
         return
     for item in items:
-        has_repeatability_marker = pytest.mark.repeatability_test.mark in list(
-            item.own_markers
-        )
+        has_repeatability_marker = pytest.mark.repeatability_test.mark in list(item.own_markers)
         if do_rep_tests and not has_repeatability_marker:
-            item.add_marker(
-                pytest.mark.skip(reason="need --repeatability option to run")
-            )
+            item.add_marker(pytest.mark.skip(reason="need --repeatability option to run"))
             continue
         if not do_rep_tests and has_repeatability_marker:
-            item.add_marker(
-                pytest.mark.skip(reason="only running --repeatability tests")
-            )
+            item.add_marker(pytest.mark.skip(reason="only running --repeatability tests"))

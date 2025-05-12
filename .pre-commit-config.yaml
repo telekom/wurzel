@@ -39,15 +39,15 @@ repos:
       - id: ruff-format
 
 
-  - repo: local
+  - repo: https://github.com/PyCQA/pylint
+    rev: v3.3.7
     hooks:
       - id: pylint
-        name: pylint
-        entry: .venv/bin/uv run pylint ./wurzel
+        entry: .venv/bin/pylint
+        files: ^wurzel/
         language: system
-        types: [python]
-        require_serial: true
-        args: []
+        args: ["--enable","spelling"]
+
 
   #- repo: local
   #  hooks:

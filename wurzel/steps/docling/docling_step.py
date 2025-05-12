@@ -67,9 +67,7 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
             DocumentConverter: Configured document converter.
         """
         pipeline_options = PdfPipelineOptions()
-        ocr_options = EasyOcrOptions(
-            force_full_page_ocr=self.settings.FORCE_FULL_PAGE_OCR
-        )
+        ocr_options = EasyOcrOptions(force_full_page_ocr=self.settings.FORCE_FULL_PAGE_OCR)
         pipeline_options.ocr_options = ocr_options
 
         return DocumentConverter(
@@ -100,9 +98,7 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
             cleaned = renderer.render(ast).replace("\n", "")
             soup = BeautifulSoup(cleaned, "html.parser")
             first_heading_tag = soup.find(["h1", "h2", "h3", "h4", "h5", "h6"])
-            heading = (
-                first_heading_tag.get_text(strip=True) if first_heading_tag else ""
-            )
+            heading = first_heading_tag.get_text(strip=True) if first_heading_tag else ""
             plain_text = soup.get_text(separator=" ").strip()
             return heading, plain_text
 

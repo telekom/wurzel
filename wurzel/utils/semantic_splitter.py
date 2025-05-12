@@ -134,14 +134,10 @@ class WurzelMarkdownRenderer(markdown_renderer.MarkdownRenderer):
     """Fix For markdown_renderer.MarkdownRenderer"""
 
     # pylint: disable=unused-argument, arguments-differ
-    def render_table_cell(
-        self, token: block_token.TableCell, max_line_length: int
-    ) -> str:
+    def render_table_cell(self, token: block_token.TableCell, max_line_length: int) -> str:
         return self.render_inner(token)
 
-    def render_table_row(
-        self, token: block_token.TableRow, max_line_length: int
-    ) -> str:
+    def render_table_row(self, token: block_token.TableRow, max_line_length: int) -> str:
         return self.render_inner(token)
 
 
@@ -175,11 +171,7 @@ class SemanticSplitter:
 
     def _is_within_targetlen_w_buffer(self, text: str) -> bool:
         length = _get_token_len(text)
-        return (
-            self.token_limit + self.token_limit_buffer
-            >= length
-            >= self.token_limit - self.token_limit_buffer
-        )
+        return self.token_limit + self.token_limit_buffer >= length >= self.token_limit - self.token_limit_buffer
 
     def _render_doc(self, doc: MisDocument) -> str:
         """Render Mistletoe Markdown Document"""
@@ -209,17 +201,13 @@ class SemanticSplitter:
             new_doc.children += children
         return new_doc
 
-    def _find_highest_level(
-        self, children: list[DocumentNode], min_level: int = 0
-    ) -> Tuple[int, Optional[Token], Optional[DocumentNode]]:
+    def _find_highest_level(self, children: list[DocumentNode], min_level: int = 0) -> Tuple[int, Optional[Token], Optional[DocumentNode]]:
         """
         Among a list of children nodes find the one with the highest level.
         Return a tuple of that level, level node type and that child
         """
 
-        def is_any_children(
-            children: list[DocumentNode], block_type: Type[block_token.BlockToken]
-        ):
+        def is_any_children(children: list[DocumentNode], block_type: Type[block_token.BlockToken]):
             """Check if any Mistletoe Node (child) is of specific type"""
             for child in children:
                 if isinstance(child, block_type):
@@ -252,23 +240,15 @@ class SemanticSplitter:
             span_token.LineBreak,  # Add table
             block_token.ThematicBreak,
         ]:
-            if (
-                (highest_level == LEVEL_UNDEFINED)
-                and is_any_children(children, block_type)
-                and (LEVEL_MAPPING[block_type] > min_level)
-            ):
+            if (highest_level == LEVEL_UNDEFINED) and is_any_children(children, block_type) and (LEVEL_MAPPING[block_type] > min_level):
                 highest_level = LEVEL_MAPPING[block_type]
                 highest_type = block_type
-                highest_element = [
-                    child for child in children if isinstance(child, block_type)
-                ][0]
+                highest_element = [child for child in children if isinstance(child, block_type)][0]
                 break
 
         return highest_level, highest_type, highest_element
 
-    def _split_children(
-        self, children: list[MisDocument], min_level: int = 0
-    ) -> list[MisDocument]:
+    def _split_children(self, children: list[MisDocument], min_level: int = 0) -> list[MisDocument]:
         """
         Split a list of children in the most semantic way
         and return a list of Documents with them merged
@@ -318,9 +298,7 @@ class SemanticSplitter:
         punctuation very easily see: https://stackoverflow.com/a/61254146"""
         return [sentence_span.text for sentence_span in self.nlp(text).sents]
 
-    def _markdown_hierarchy_parser(
-        self, text: str, metadata: MetaDataDict, max_depth: int = 30
-    ) -> DocumentNode:
+    def _markdown_hierarchy_parser(self, text: str, metadata: MetaDataDict, max_depth: int = 30) -> DocumentNode:
         """
         Splits a Markdown string into a semantic Markdown based hierarchy
 
@@ -350,10 +328,7 @@ class SemanticSplitter:
         splits: MisDocument = self._split_children(md_doc.children)
 
         def has_node_a_known_level(x):
-            return any(
-                isinstance(x.children[0] if isinstance(x, MisDocument) else x, cl)
-                for cl in LEVEL_MAPPING
-            )
+            return any(isinstance(x.children[0] if isinstance(x, MisDocument) else x, cl) for cl in LEVEL_MAPPING)
 
         no_child_has_a_known_level = not any(has_node_a_known_level(x) for x in splits)
         # No child has a known level this means we only have sentences and no more semantic information
@@ -387,11 +362,7 @@ class SemanticSplitter:
                     highest_level=highest_level_child,
                     text=md_child,
                     token_len=_get_token_len(md_child),
-                    children=[
-                        self._markdown_hierarchy_parser(
-                            md_child, metadata, max_depth - 1
-                        )
-                    ],
+                    children=[self._markdown_hierarchy_parser(md_child, metadata, max_depth - 1)],
                     metadata=metadata,
                 )
             )
@@ -413,11 +384,7 @@ class SemanticSplitter:
         needed_splits = lenth // token_limit
         if not needed_splits:
             return [text]
-        sentences = [
-            (_get_token_len(sent), f"{sent}. ")
-            for sent in re.split(r"\.(?=\s|\\n)", text)
-            if sent.strip()
-        ]
+        sentences = [(_get_token_len(sent), f"{sent}. ") for sent in re.split(r"\.(?=\s|\\n)", text) if sent.strip()]
         chunks: list[str] = []
         chunk = ""
         chunk_len = 0
@@ -436,9 +403,7 @@ class SemanticSplitter:
                 chunk_len = 0
             chunk += sent
             chunk_len += size
-            if (
-                token_limit + token_buffer >= chunk_len >= token_limit - token_buffer
-            ):  # together they fit
+            if token_limit + token_buffer >= chunk_len >= token_limit - token_buffer:  # together they fit
                 chunks.append(chunk)
 
                 chunk = ""
@@ -449,12 +414,7 @@ class SemanticSplitter:
         #    (chunk.replace("\n").strip() if not "#" else chunk.strip()) for chunk in chunks
         # ] This was broken
         chunks = [
-            (
-                _cut_to_tokenlen(chunk, token_limit)
-                if not self._is_within_targetlen_w_buffer(chunk)
-                or self._is_short(chunk)
-                else chunk
-            )
+            (_cut_to_tokenlen(chunk, token_limit) if not self._is_within_targetlen_w_buffer(chunk) or self._is_short(chunk) else chunk)
             for chunk in chunks
         ]
         for chunk in chunks:
@@ -572,9 +532,7 @@ class SemanticSplitter:
             highest_child_is_heading = _get_highest_level_of_children(children) <= 6
             first_child_is_highest = idx_highest == 0
             if not first_child_is_highest and highest_child_is_heading:
-                text_until_highest_child = "\n".join(
-                    [c["text"] for c in children[:idx_highest]]
-                )
+                text_until_highest_child = "\n".join([c["text"] for c in children[:idx_highest]])
                 token_len = _get_token_len(text_until_highest_child)
                 max_level = max(c["highest_level"] for c in children[:idx_highest])
                 new_doc = DocumentNode(
@@ -621,62 +579,34 @@ class SemanticSplitter:
             text = doc.md.strip()
             md_doc = MisDocument(text)
             # Create Header
-            highest_level, highest_type, highest_child = self._find_highest_level(
-                md_doc.children
-            )
+            highest_level, highest_type, highest_child = self._find_highest_level(md_doc.children)
             if str(highest_type) == str(block_token.Heading):
                 # Discuss this
                 # highest_header_until_now[highest_level] = _get_heading_text(highest_child)
-                highest_header_until_now[highest_level] = self._render_doc(
-                    highest_child
-                ).lstrip(" #")
+                highest_header_until_now[highest_level] = self._render_doc(highest_child).lstrip(" #")
 
-            ordered_headers = {
-                level: text for level, text in highest_header_until_now.items() if text
-            }
-            docwide_highest_level = (
-                min(ordered_headers.keys()) if ordered_headers else 10
-            )
-            new_header = " - ".join(
-                [
-                    text
-                    for level, text in ordered_headers.items()
-                    if level < highest_level
-                ]
-            )
+            ordered_headers = {level: text for level, text in highest_header_until_now.items() if text}
+            docwide_highest_level = min(ordered_headers.keys()) if ordered_headers else 10
+            new_header = " - ".join([text for level, text in ordered_headers.items() if level < highest_level])
             if new_header:
                 new_header = "# " + new_header
             # Filter Doc
-            document_is_just_single_header = (
-                text.strip().startswith("#") and "\n" not in text.strip()
-            )
+            document_is_just_single_header = text.strip().startswith("#") and "\n" not in text.strip()
             if document_is_just_single_header:
                 continue
             # TODOo check token limit or limit header lenght
             # The higher heading the lower its level
             doc_has_lower_heading = docwide_highest_level < highest_level
-            new_doc = (
-                text.strip()
-                if not doc_has_lower_heading
-                else (new_header + "\n\n" + doc.md).strip()
-            )
+            new_doc = text.strip() if not doc_has_lower_heading else (new_header + "\n\n" + doc.md).strip()
             doc.md = new_doc
 
         return docs
 
-    def split_markdown_document(
-        self, doc: MarkdownDataContract
-    ) -> list[MarkdownDataContract]:
+    def split_markdown_document(self, doc: MarkdownDataContract) -> list[MarkdownDataContract]:
         """Split a Markdown Document into Snippets"""
         metadata = MetaDataDict(url=doc.url, keywords=doc.keywords)
         doc_hierarchy: DocumentNode = self._markdown_hierarchy_parser(doc.md, metadata)
-        doc_snippets: list[MarkdownDataContract] = self._parse_hierarchical(
-            doc_hierarchy
-        )
-        improved_snippets: list[MarkdownDataContract] = (
-            self._adopt_splitted_list_to_use_highest_prev_header(doc_snippets)
-        )
-        formatted_snippets: list[MarkdownDataContract] = _format_markdown_docs(
-            improved_snippets
-        )
+        doc_snippets: list[MarkdownDataContract] = self._parse_hierarchical(doc_hierarchy)
+        improved_snippets: list[MarkdownDataContract] = self._adopt_splitted_list_to_use_highest_prev_header(doc_snippets)
+        formatted_snippets: list[MarkdownDataContract] = _format_markdown_docs(improved_snippets)
         return formatted_snippets

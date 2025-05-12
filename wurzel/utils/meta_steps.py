@@ -35,9 +35,7 @@ def find_sub_classes(parent: T, package: str = __package__) -> dict[str, T]:
         # Recurse through any sub-packages
         try:
             if is_package:
-                classes_in_subpackage = find_sub_classes(
-                    parent, package=full_module_name
-                )
+                classes_in_subpackage = find_sub_classes(parent, package=full_module_name)
                 result.update(classes_in_subpackage)
             # Load the module for inspection
 

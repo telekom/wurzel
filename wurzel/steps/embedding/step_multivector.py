@@ -49,9 +49,7 @@ class EmbeddingMultiVectorStep(
     and returning DataFrame[EmbeddingMultiVectorResult]
     """
 
-    def run(
-        self, inpt: list[MarkdownDataContract]
-    ) -> DataFrame[EmbeddingMultiVectorResult]:
+    def run(self, inpt: list[MarkdownDataContract]) -> DataFrame[EmbeddingMultiVectorResult]:
         """Executes the embedding step by processing input markdown files, generating embeddings,
         and saving them to a CSV file.
         """
@@ -66,9 +64,7 @@ class EmbeddingMultiVectorStep(
                 )
                 return None
 
-        results = Parallel(backend="threading", n_jobs=self.settings.N_JOBS)(
-            delayed(process_document)(doc) for doc in inpt
-        )
+        results = Parallel(backend="threading", n_jobs=self.settings.N_JOBS)(delayed(process_document)(doc) for doc in inpt)
 
         rows = [res for res in results if res is not None]
         failed = len(results) - len(rows)
@@ -78,9 +74,7 @@ class EmbeddingMultiVectorStep(
         if failed == len(inpt):
             raise StepFailed(f"All {len(inpt)} embeddings got skipped")
 
-        return DataFrame[EmbeddingMultiVectorResult](
-            DataFrame[EmbeddingMultiVectorResult](rows)
-        )
+        return DataFrame[EmbeddingMultiVectorResult](DataFrame[EmbeddingMultiVectorResult](rows))
 
     def _get_embedding(self, doc: MarkdownDataContract) -> _EmbeddedMultiVector:
         """
@@ -106,10 +100,7 @@ class EmbeddingMultiVectorStep(
             splitted_md_rows = self._split_markdown([doc])
         except SplittException as err:
             raise EmbeddingAPIException("splitting failed") from err
-        vectors = [
-            self.embedding.embed_query(prepare_plain(split))
-            for split in splitted_md_rows
-        ]
+        vectors = [self.embedding.embed_query(prepare_plain(split)) for split in splitted_md_rows]
         if not vectors:
             raise EmbeddingAPIException("Embedding failed for all splits")
 

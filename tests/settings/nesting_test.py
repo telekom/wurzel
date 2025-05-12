@@ -27,14 +27,12 @@ class _NNestedBaseBaseLeaf(SettingsBase):
     [
         pytest.param(
             {"NEST__PREFIX__VALUE": "magic00", "NEST__PREFIX__SECONDARY": "200"},
-            lambda: _NNestedBaseBaseLeaf().NEST.PREFIX.model_dump()
-            == {"VALUE": "magic00", "SECONDARY": 200},
+            lambda: _NNestedBaseBaseLeaf().NEST.PREFIX.model_dump() == {"VALUE": "magic00", "SECONDARY": 200},
             id="Nested^2",
         ),
         pytest.param(
             {"PREFIX__VALUE": "magic01", "PREFIX__SECONDARY": "201"},
-            lambda: _NestedBaseLeaf().PREFIX.model_dump()
-            == {"VALUE": "magic01", "SECONDARY": 201},
+            lambda: _NestedBaseLeaf().PREFIX.model_dump() == {"VALUE": "magic01", "SECONDARY": 201},
             id="Nested",
         ),
         pytest.param(
@@ -44,8 +42,7 @@ class _NNestedBaseBaseLeaf(SettingsBase):
         ),
         pytest.param(
             {"NEST__PREFIX": '{"VALUE":"magic02","SECONDARY": "202"}'},
-            lambda: _NNestedBaseBaseLeaf().NEST.PREFIX.model_dump()
-            == {"VALUE": "magic02", "SECONDARY": 202},
+            lambda: _NNestedBaseBaseLeaf().NEST.PREFIX.model_dump() == {"VALUE": "magic02", "SECONDARY": 202},
             id="Nested^2-json1",
         ),
         pytest.param(
@@ -53,14 +50,12 @@ class _NNestedBaseBaseLeaf(SettingsBase):
                 "NEST__PREFIX": '{"VALUE":"magic02","SECONDARY": "202"}',
                 "NEST__PREFIX__VALUE": "magic72",
             },
-            lambda: _NNestedBaseBaseLeaf().NEST.PREFIX.model_dump()
-            == {"VALUE": "magic72", "SECONDARY": 202},
+            lambda: _NNestedBaseBaseLeaf().NEST.PREFIX.model_dump() == {"VALUE": "magic72", "SECONDARY": 202},
             id="Nested^2-json1_and_override",
         ),
         pytest.param(
             {"NEST": '{"PREFIX":{"VALUE":"magic03","SECONDARY": "203"}}'},
-            lambda: _NNestedBaseBaseLeaf().NEST.PREFIX.model_dump()
-            == {"VALUE": "magic03", "SECONDARY": 203},
+            lambda: _NNestedBaseBaseLeaf().NEST.PREFIX.model_dump() == {"VALUE": "magic03", "SECONDARY": 203},
             id="Nested^2-json2",
         ),
         pytest.param(
@@ -68,14 +63,12 @@ class _NNestedBaseBaseLeaf(SettingsBase):
                 "NEST": '{"PREFIX":{"VALUE":"magic03","SECONDARY": "203"}}',
                 "NEST__PREFIX__VALUE": "magic73",
             },
-            lambda: _NNestedBaseBaseLeaf().NEST.PREFIX.model_dump()
-            == {"VALUE": "magic73", "SECONDARY": 203},
+            lambda: _NNestedBaseBaseLeaf().NEST.PREFIX.model_dump() == {"VALUE": "magic73", "SECONDARY": 203},
             id="Nested^2-json2_and_override",
         ),
         pytest.param(
             {"PREFIX": '{"VALUE":"magic09","SECONDARY": "209"}'},
-            lambda: _NestedBaseLeaf().PREFIX.model_dump()
-            == {"VALUE": "magic09", "SECONDARY": 209},
+            lambda: _NestedBaseLeaf().PREFIX.model_dump() == {"VALUE": "magic09", "SECONDARY": 209},
             id="Nested-json",
         ),
         pytest.param(
@@ -83,14 +76,12 @@ class _NNestedBaseBaseLeaf(SettingsBase):
                 "PREFIX": '{"VALUE":"magic09","SECONDARY": "209"}',
                 "PREFIX__VALUE": "magic79",
             },
-            lambda: _NestedBaseLeaf().PREFIX.model_dump()
-            == {"VALUE": "magic79", "SECONDARY": 209},
+            lambda: _NestedBaseLeaf().PREFIX.model_dump() == {"VALUE": "magic79", "SECONDARY": 209},
             id="Nested-json_and_override",
         ),
         pytest.param(
             {"NEST__PREFIX": '{"VALUE":"magic04"}', "NEST__PREFIX__SECONDARY": "204"},
-            lambda: _NNestedBaseBaseLeaf().NEST.PREFIX.model_dump()
-            == {"VALUE": "magic04", "SECONDARY": 204},
+            lambda: _NNestedBaseBaseLeaf().NEST.PREFIX.model_dump() == {"VALUE": "magic04", "SECONDARY": 204},
             id="Nested^2-json1-correction",
         ),
         pytest.param(
@@ -98,14 +89,12 @@ class _NNestedBaseBaseLeaf(SettingsBase):
                 "NEST": '{"PREFIX":{"VALUE":"magic05"}}',
                 "NEST__PREFIX__SECONDARY": "205",
             },
-            lambda: _NNestedBaseBaseLeaf().NEST.PREFIX.model_dump()
-            == {"VALUE": "magic05", "SECONDARY": 205},
+            lambda: _NNestedBaseBaseLeaf().NEST.PREFIX.model_dump() == {"VALUE": "magic05", "SECONDARY": 205},
             id="Nested^2-json2-correction",
         ),
         pytest.param(
             {"PREFIX": '{"VALUE":"magic06"}', "PREFIX__SECONDARY": "206"},
-            lambda: _NestedBaseLeaf().PREFIX.model_dump()
-            == {"VALUE": "magic06", "SECONDARY": 206},
+            lambda: _NestedBaseLeaf().PREFIX.model_dump() == {"VALUE": "magic06", "SECONDARY": 206},
             id="Nested^2-json-correction",
         ),
     ],

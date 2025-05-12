@@ -13,9 +13,7 @@ from .to_markdown.html2md import to_markdown
 
 log = getLogger(__name__)
 
-_opt_deps = {
-    k: bool(_find_spec(k)) for k in ["tlsh", "pymilvus", "qdrant_client", "docling"]
-}
+_opt_deps = {k: bool(_find_spec(k)) for k in ["tlsh", "pymilvus", "qdrant_client", "docling"]}
 HAS_TLSH = _opt_deps["tlsh"]
 HAS_MILVUS = _opt_deps["pymilvus"]
 HAS_QDRANT = _opt_deps["qdrant_client"]

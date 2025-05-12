@@ -87,22 +87,14 @@ def step_env_encapsulation(step_cls: Type[TypedStep]):
     if BaseStepExecutor.is_allow_extra_settings():
         log.info("Allowing extra settings fields")
     if step.settings_class != NoneType:
-        settings = create_model(
-            [step], allow_extra_fields=BaseStepExecutor.is_allow_extra_settings()
-        )
+        settings = create_model([step], allow_extra_fields=BaseStepExecutor.is_allow_extra_settings())
         try:
             inner_settings: pydantic.BaseModel = getattr(settings(), name)
         except ValidationError as err:
-            e = EnvSettingsError(
-                f"could not create {step.settings_class.__name__} from env for {step_cls.__name__}"
-            )
-            e.add_note(
-                "To fix these issues setup env vars in the format <step_name>__<var>"
-            )
+            e = EnvSettingsError(f"could not create {step.settings_class.__name__} from env for {step_cls.__name__}")
+            e.add_note("To fix these issues setup env vars in the format <step_name>__<var>")
             raise e from err
-        settings_dict = pydantic.BaseModel.model_dump(
-            inner_settings, mode="json", exclude_none=True, exclude_unset=True
-        )
+        settings_dict = pydantic.BaseModel.model_dump(inner_settings, mode="json", exclude_none=True, exclude_unset=True)
         for field_name, value in settings_dict.items():
             if isinstance(value, (list, dict, set, tuple)):
                 value = json.dumps(value)
@@ -249,17 +241,13 @@ class BaseStepExecutor:
             # Only yield once
             yield (None, History(step)), 0
         for inpt in inputs:
-            if isinstance(
-                inpt, (datacontract.DataModel, PydanticModel, patyp.DataFrame)
-            ):
+            if isinstance(inpt, (datacontract.DataModel, PydanticModel, patyp.DataFrame)):
                 yield (inpt, History("[Memory]", step)), 0
             elif isinstance(inpt, (Path, PathToFolderWithBaseModels)):
                 for (inpt, hist), took in self.load(step, inpt):
                     yield (inpt, hist), took
             else:
-                raise NotImplementedError(
-                    f"Cannot load/convert {inpt} as input for a step"
-                )
+                raise NotImplementedError(f"Cannot load/convert {inpt} as input for a step")
 
     def _execute_step(
         self,
@@ -272,14 +260,10 @@ class BaseStepExecutor:
         # pylint: disable=protected-access
         if output_path:
             output_path = step._internal_output_class(output_path)
-        run: Callable[[list], Any] = pydantic.validate_call(
-            step.run, validate_return=True
-        )
+        run: Callable[[list], Any] = pydantic.validate_call(step.run, validate_return=True)
         was_called_once = False
         try:
-            for (inpt, history), load_time in self._load_data(
-                step, inputs, output_path
-            ):
+            for (inpt, history), load_time in self._load_data(step, inputs, output_path):
                 was_called_once = True
                 log.info(
                     f"Start: {step_cls.__name__}.run({history[:-1]}) -> {output_path}",
@@ -323,9 +307,7 @@ class BaseStepExecutor:
                 )
             step.finalize()
         except ValidationError as err:
-            raise ContractFailedException(
-                f"{inputs} does not conform the data contract of {step.input_model_class.__name__}"
-            ) from err
+            raise ContractFailedException(f"{inputs} does not conform the data contract of {step.input_model_class.__name__}") from err
 
     def execute_step(
         self,
@@ -355,9 +337,7 @@ class BaseStepExecutor:
         except LoggedCustomException:
             raise
         except Exception as e:
-            raise StepFailed(
-                f"{self.__class__.__name__} error during {step_cls.__name__}: {str(e)}"
-            ) from e
+            raise StepFailed(f"{self.__class__.__name__} error during {step_cls.__name__}: {str(e)}") from e
         finally:
             log.info(f"{self.__class__.__name__} - done: {step_cls.__name__}")
             correlation_id.set(None)

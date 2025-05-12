@@ -85,9 +85,7 @@ class PydanticModel(pydantic.BaseModel, DataModel):
 
     # pylint: disable=arguments-differ
     @classmethod
-    def load_from_path(
-        cls, path: Path, model_type: Type[Union[Self, list[Self]]]
-    ) -> Union[Self, list[Self]]:
+    def load_from_path(cls, path: Path, model_type: Type[Union[Self, list[Self]]]) -> Union[Self, list[Self]]:
         """Wurzel load model
 
         Args:
@@ -119,9 +117,7 @@ class PydanticModel(pydantic.BaseModel, DataModel):
         return int(
             hashlib.sha256(
                 bytes(
-                    "".join(
-                        [getattr(self, name) for name in sorted(self.model_fields)]
-                    ),
+                    "".join([getattr(self, name) for name in sorted(self.model_fields)]),
                     encoding="utf-8",
                 ),
                 usedforsecurity=False,

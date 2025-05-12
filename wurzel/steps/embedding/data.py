@@ -12,26 +12,18 @@ class EmbeddingResult(PanderaDataFrameModel):
     """data contract of embedding output"""
 
     text: Series[str]
-    url: Series[str] = Field(
-        nullable=True, default=" ", coerce=True, description="url used for search "
-    )
+    url: Series[str] = Field(nullable=True, default=" ", coerce=True, description="url used for search ")
     vector: Series[list[float]]
-    keywords: Series[str] = Field(
-        nullable=True, default=" ", coerce=True, description="Keywords used for search "
-    )
+    keywords: Series[str] = Field(nullable=True, default=" ", coerce=True, description="Keywords used for search ")
 
 
 class EmbeddingMultiVectorResult(PanderaDataFrameModel):
     """data contract of embedding output"""
 
     text: Series[str]
-    url: Series[str] = Field(
-        nullable=True, default=" ", coerce=True, description="url used for search "
-    )
+    url: Series[str] = Field(nullable=True, default=" ", coerce=True, description="url used for search ")
     vectors: Series[list[list[float]]]
-    keywords: Series[str] = Field(
-        nullable=True, default=" ", coerce=True, description="Keywords used for search "
-    )
+    keywords: Series[str] = Field(nullable=True, default=" ", coerce=True, description="Keywords used for search ")
     splits: Series[list[str]] = Field(
         nullable=True,
         default=None,

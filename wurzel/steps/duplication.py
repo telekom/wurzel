@@ -26,9 +26,7 @@ class DropStettings(Settings):
     DROP_BY_FIELDS: list[str] = ["md"]
 
 
-class DropDuplicationStep(
-    TypedStep[DropStettings, list[MarkdownDataContract], list[MarkdownDataContract]]
-):
+class DropDuplicationStep(TypedStep[DropStettings, list[MarkdownDataContract], list[MarkdownDataContract]]):
     """SimpleSplitterStep to split Markdown Documents rundimentory in medium size chunks"""
 
     def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:

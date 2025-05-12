@@ -16,9 +16,7 @@ log = logging.getLogger(__name__)
 
 
 # pylint: disable-next=too-many-positional-arguments
-def warnings_to_logger(
-    message: str, category: str, filename: str, lineno: str, file=None, line=None
-):
+def warnings_to_logger(message: str, category: str, filename: str, lineno: str, file=None, line=None):
     # pylint: disable=unused-argument
     """replaces warnings.showwarning
 
@@ -100,16 +98,10 @@ class JsonFormatter(logging.Formatter):
         """
         super().__init__(None, datefmt, defaults=defaults)
         self.indent = indent
-        self.reduced_levels = [
-            logging.getLevelNamesMapping().get(level) for level in reduced or []
-        ]
+        self.reduced_levels = [logging.getLevelNamesMapping().get(level) for level in reduced or []]
 
     def _get_output_dict(self, record: logging.LogRecord) -> dict[str, Any]:
-        data = {
-            k: v
-            for k, v in record.__dict__.items()
-            if k not in self.key_blacklist and v is not None
-        }
+        data = {k: v for k, v in record.__dict__.items() if k not in self.key_blacklist and v is not None}
         logger_name = f"{data.pop('module')}.{data.pop('name')}"
         func_name = data.pop("funcName")
         if func_name != "<module>":
@@ -124,13 +116,8 @@ class JsonFormatter(logging.Formatter):
             "process": f"{data.pop('processName')}({data.pop('process')})",
             "thread": f"{data.pop('threadName')}({data.pop('thread')})",
         }
-        if all(
-            key in data
-            for key in ["warnings.category", "warnings.filename", "warnings.lineno"]
-        ):
-            output["file"] = (
-                f"{data.pop('warnings.filename')}:{data.pop('warnings.lineno')}"
-            )
+        if all(key in data for key in ["warnings.category", "warnings.filename", "warnings.lineno"]):
+            output["file"] = f"{data.pop('warnings.filename')}:{data.pop('warnings.lineno')}"
         if data:
             output["extra"] = _make_dict_serializable(data)
         cor_id = correlation_id.get()

@@ -81,9 +81,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
         """Get the embeddings for a list of texts."""
         return [self.embed_query(text) for text in texts]
 
-    def __make_request(
-        self, url: Url, json_body: dict, method: Union[Literal["post"], Literal["get"]]
-    ) -> dict:
+    def __make_request(self, url: Url, json_body: dict, method: Union[Literal["post"], Literal["get"]]) -> dict:
         """Creates a request, tries to parse json
 
         Args:
@@ -99,23 +97,17 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
             dict: parsed response
         """
         try:
-            response = requests.request(
-                method, url, json=json_body, timeout=self._timeout
-            )
+            response = requests.request(method, url, json=json_body, timeout=self._timeout)
         except (requests.exceptions.ConnectTimeout, requests.exceptions.Timeout) as err:
             raise EmbeddingAPIException(f"timed out after {self._timeout}") from err
         except requests.ConnectionError as err:
             raise EmbeddingAPIException("Connection Error") from err
         if response.status_code != 200:
-            raise EmbeddingAPIException(
-                f"failed, invalid status_code {response.status_code}"
-            )
+            raise EmbeddingAPIException(f"failed, invalid status_code {response.status_code}")
         try:
             resp_dict = response.json()
         except JSONDecodeError as err:
-            raise EmbeddingAPIException(
-                f"failed due to invalid json {response.content}"
-            ) from err
+            raise EmbeddingAPIException(f"failed due to invalid json {response.content}") from err
 
         return resp_dict
 
@@ -140,10 +132,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
             value = response[0]
         except (KeyError, IndexError) as err:
             raise EmbeddingException(
-                "Response invalid "
-                "Structure of received dict is incorrect: "
-                f"{response}"
-                "should contain a list with one entry"
+                f"Response invalid Structure of received dict is incorrect: {response}should contain a list with one entry"
             ) from err
         return value
 
@@ -153,10 +142,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
         response_model_key = "model_id"
         resp_dict = self.__make_request(self.info_url, None, method="get")
         if response_model_key not in resp_dict:
-            raise EmbeddingException(
-                f"Response invalid format {self.info_url} {resp_dict}"
-                f"requires {response_model_key}"
-            )
+            raise EmbeddingException(f"Response invalid format {self.info_url} {resp_dict}requires {response_model_key}")
         return resp_dict
 
 
@@ -195,6 +181,5 @@ class PrefixedAPIEmbeddings(HuggingFaceInferenceAPIEmbeddings):
                 log.info(f"Using prefix={prefix}")
                 return
         raise UnrecoverableFatalException(
-            f"Tried to get prefix for {self._last_model}:"
-            + f"No match found in {self.prefix_mapping.keys()}"
+            f"Tried to get prefix for {self._last_model}:" + f"No match found in {self.prefix_mapping.keys()}"
         )

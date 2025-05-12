@@ -82,9 +82,7 @@ def test_embedd_query_for_each(
 
 
 @FOR_EACH_EMBEDDING_CLASS
-def test_not_existent_embedding_service(
-    EmbeddingClass: Type[GenericEmbedding], ConstKwargs
-):
+def test_not_existent_embedding_service(EmbeddingClass: Type[GenericEmbedding], ConstKwargs):
     class PrefixedAPIEmbeddingsMocked(EmbeddingClass):
         _timeout = 0.2
 
@@ -97,9 +95,7 @@ def test_not_existent_embedding_service(
 
 
 @FOR_EACH_EMBEDDING_CLASS
-def test_invalid_embedding_contructor(
-    EmbeddingClass: Type[GenericEmbedding], ConstKwargs
-):
+def test_invalid_embedding_contructor(EmbeddingClass: Type[GenericEmbedding], ConstKwargs):
     with requests_mock.Mocker() as m:
         m.get("/info", text="invalid")
         m.post("/embed", text="invalid")
@@ -120,9 +116,7 @@ def test_invalid_embedding_request(EmbeddingClass: Type[GenericEmbedding], Const
 
 
 @FOR_EACH_EMBEDDING_CLASS
-def test_service_status_code_failure(
-    EmbeddingClass: Type[GenericEmbedding], ConstKwargs
-):
+def test_service_status_code_failure(EmbeddingClass: Type[GenericEmbedding], ConstKwargs):
     with requests_mock.Mocker() as m:
         m.get("/info", text=GET_RESULT_INFO_STR % "e5")
         m.post("/embed", text=POST_RESULT_EMBEDDING_STR, status_code=500)

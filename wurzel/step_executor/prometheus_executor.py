@@ -52,27 +52,17 @@ class PrometheusStepExecutor(BaseStepExecutor):
     def __setup_metrics(self):
         if self.s.PROMETHEUS_DISABLE_CREATED_METRIC:
             os.environ["PROMETHEUS_DISABLE_CREATED_SERIES"] = "True"
-        self.counter_started = Counter(
-            "steps_started", "Total number of TypedSteps started", ("step_name",)
-        )
-        self.counter_failed = Counter(
-            "steps_failed", "Total number of TypedSteps failed", ("step_name",)
-        )
+        self.counter_started = Counter("steps_started", "Total number of TypedSteps started", ("step_name",))
+        self.counter_failed = Counter("steps_failed", "Total number of TypedSteps failed", ("step_name",))
         self.counter_results = Counter(
             "step_results",
             "count of result, if its an array, otherwise -1",
             ("step_name",),
         )
         self.counter_inputs = Counter("step_inputs", "count of inputs", ("step_name",))
-        self.histogram_save = Histogram(
-            "step_hist_save", "Time to save results", ("step_name",)
-        )
-        self.histogram_load = Histogram(
-            "step_hist_load", "Time to load inputs", ("step_name",)
-        )
-        self.histogram_execute = Histogram(
-            "step_hist_execute", "Time to execute results", ("step_name",)
-        )
+        self.histogram_save = Histogram("step_hist_save", "Time to save results", ("step_name",))
+        self.histogram_load = Histogram("step_hist_load", "Time to load inputs", ("step_name",))
+        self.histogram_execute = Histogram("step_hist_execute", "Time to execute results", ("step_name",))
 
     def __enter__(self) -> Self:
         return self
