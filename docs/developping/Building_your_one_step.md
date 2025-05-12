@@ -1,3 +1,5 @@
 # Building your one step
 
-Wurzels base componet is a Step. Steps can be chaind to
+Wurzel's base component is the Step. Steps can be chained together to create complex workflows.
+
+Detailed documentation and examples will be provided soon.
