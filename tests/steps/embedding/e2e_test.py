@@ -6,9 +6,6 @@
 import shutil
 from pathlib import Path
 
-# Related third-party imports
-from typing import List
-
 import numpy as np
 import pytest
 
@@ -35,7 +32,7 @@ def mock_embedding():
     """
 
     class MockEmbedding:
-        def embed_query(self, _: str) -> List[float]:
+        def embed_query(self, _: str) -> list[float]:
             """Simulates embedding of a query string into a fixed-size random vector.
 
             Parameters

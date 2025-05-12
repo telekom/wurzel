@@ -6,7 +6,6 @@
 
 import importlib.metadata
 from pathlib import Path
-from typing import Type
 
 from wurzel.step import TypedStep
 from wurzel.step_executor import BaseStepExecutor
@@ -21,17 +20,17 @@ __version_info__ = __version__.split(".")
 
 
 def generate_cli_call(
-    step_cls: Type[TypedStep],
+    step_cls: type[TypedStep],
     inputs: list[Path],
     output: Path,
-    executor: Type[BaseStepExecutor] = None,
+    executor: type[BaseStepExecutor] = None,
     encapsulate_env: bool = True,
 ) -> str:
     """Generate the cli call to execute a given step with its
     inputs and output.
 
     Args:
-        step_cls (Type[TypedStep]): Step to execute
+        step_cls (type[TypedStep]): Step to execute
         inputs (list[Path]): list of Directories
         output (Path): Output Directory
 

@@ -3,13 +3,12 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from pathlib import Path
-from typing import Type
 
 from wurzel.step import TypedStep
 
 
 def main(
-    step: Type[TypedStep],
+    step: type[TypedStep],
     output_path: Path,
     input_folders: set[Path],
     executor_str_value: str,

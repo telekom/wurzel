@@ -5,7 +5,7 @@
 import importlib
 import inspect
 import pkgutil
-from typing import Type, TypeVar
+from typing import TypeVar
 
 from wurzel.step.typed_step import TypedStep
 
@@ -49,6 +49,6 @@ def find_sub_classes(parent: T, package: str = __package__) -> dict[str, T]:
     return result
 
 
-def find_typed_steps_in_package(package: str) -> dict[str, Type[TypedStep]]:
+def find_typed_steps_in_package(package: str) -> dict[str, type[TypedStep]]:
     """Recursively find all subclasses of TypedStep."""
     return find_sub_classes(TypedStep, package)

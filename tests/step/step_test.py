@@ -5,7 +5,6 @@
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Set, Tuple
 
 import pytest
 import yaml
@@ -26,14 +25,14 @@ def is_valid_dvc_yaml(path: Path) -> bool:
 
 
 class StepImplementedLeaf(Step):
-    def execute(self, inputs: Set[Path], output: Path):
+    def execute(self, inputs: set[Path], output: Path):
         assert not inputs
         with open(output / "dummy_output.md", "a") as file:
             file.write("#Lorem Ipsum")
 
 
 class StepImplementedBranch(Step):
-    def execute(self, inputs: Set[Path], output: Path):
+    def execute(self, inputs: set[Path], output: Path):
         shutil.copytree(inputs, output, dirs_exist_ok=True)
         for f in output.iterdir():
             shutil.move(output / f, output / (f.name + "_modified"))
@@ -41,7 +40,7 @@ class StepImplementedBranch(Step):
 
 
 @pytest.fixture(scope="function")
-def nested_steps(tmp_path) -> Tuple[Step, Step]:
+def nested_steps(tmp_path) -> tuple[Step, Step]:
     output_1 = tmp_path / f"{StepImplementedLeaf.__name__}_1"
     output_1.mkdir()
     output_2 = tmp_path / f"{StepImplementedLeaf.__name__}_2"
@@ -69,7 +68,7 @@ def test_implement_DVC_node(tmp_path: Path):
     assert list(output.iterdir())
 
 
-def test_chain_implemented_DVC_modes(nested_steps: Tuple[Step, Path, Step, Path]):
+def test_chain_implemented_DVC_modes(nested_steps: tuple[Step, Path, Step, Path]):
     step1, output_1, step2, output_2 = nested_steps
     step1.execute({}, output_1)
     assert output_1.iterdir()

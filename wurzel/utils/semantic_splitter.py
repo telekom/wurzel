@@ -6,7 +6,7 @@
 
 import re
 from logging import getLogger
-from typing import TYPE_CHECKING, Optional, Tuple, Type, TypedDict
+from typing import TYPE_CHECKING, Optional, TypedDict
 
 import mdformat
 import tiktoken
@@ -200,12 +200,12 @@ class SemanticSplitter:
             new_doc.children += children
         return new_doc
 
-    def _find_highest_level(self, children: list[DocumentNode], min_level: int = 0) -> Tuple[int, Optional[Token], Optional[DocumentNode]]:
+    def _find_highest_level(self, children: list[DocumentNode], min_level: int = 0) -> tuple[int, Optional[Token], Optional[DocumentNode]]:
         """Among a list of children nodes find the one with the highest level.
         Return a tuple of that level, level node type and that child.
         """
 
-        def is_any_children(children: list[DocumentNode], block_type: Type[block_token.BlockToken]):
+        def is_any_children(children: list[DocumentNode], block_type: type[block_token.BlockToken]):
             """Check if any Mistletoe Node (child) is of specific type."""
             for child in children:
                 if isinstance(child, block_type):
@@ -213,7 +213,7 @@ class SemanticSplitter:
             return False
 
         highest_level: int = LEVEL_UNDEFINED
-        highest_type: Optional[Type[Token]] = None
+        highest_type: Optional[type[Token]] = None
         highest_element: Optional[DocumentNode] = None
 
         if children is None:

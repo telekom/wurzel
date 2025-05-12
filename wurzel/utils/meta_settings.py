@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from types import NoneType
-from typing import Type, Union
+from typing import Union
 
 from pydantic import BaseModel
 from pydantic import create_model as py_create_model
@@ -13,13 +13,13 @@ from wurzel.step.typed_step import TypedStep
 
 
 # pylint: disable-next=invalid-name
-def WZ(typ: Type[TypedStep]):
+def WZ(typ: type[TypedStep]):
     """Creates a Pipeline Element."""
     return TypedStep.__new__(typ)
 
 
 def create_model(
-    fields: Union[list[Union[TypedStep, Type[TypedStep]]], TypedStep],
+    fields: Union[list[Union[TypedStep, type[TypedStep]]], TypedStep],
     allow_extra_fields=False,
 ) -> SettingsBase:
     """Takes all fields.setting_class and creates a pydantic_settings Model.
@@ -53,7 +53,7 @@ def create_model(
     """
 
     def clean(
-        flds: Union[list[Union[TypedStep, Type[TypedStep]]], TypedStep],
+        flds: Union[list[Union[TypedStep, type[TypedStep]]], TypedStep],
     ) -> list[TypedStep]:
         if isinstance(flds, TypedStep):
             return list(flds.traverse())
@@ -74,7 +74,7 @@ def create_model(
         if step.settings_class != NoneType
     }
 
-    new_model_class: Type[BaseModel] = py_create_model(
+    new_model_class: type[BaseModel] = py_create_model(
         "MetaSettings_Parent",
         **{name: (typ, ...) for name, typ in inner_models.items()},
         __base__=SettingsBase,

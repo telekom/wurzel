@@ -7,7 +7,7 @@ import shutil
 import unittest
 import unittest.mock
 from pathlib import Path
-from typing import Tuple, Union
+from typing import Union
 
 import pytest
 
@@ -21,7 +21,7 @@ from wurzel.steps.qdrant.data import QdrantResult, QdranttMultiVectorResult
 from wurzel.utils import HAS_TLSH
 
 
-def test_qdrant_connector_first(input_output_folder: Tuple[Path, Path], dummy_collection):
+def test_qdrant_connector_first(input_output_folder: tuple[Path, Path], dummy_collection):
     input_path, output_path = input_output_folder
     input_file = input_path / "qdrant_at.csv"
     output_file = output_path / "QdrantConnectorStep"
@@ -29,7 +29,7 @@ def test_qdrant_connector_first(input_output_folder: Tuple[Path, Path], dummy_co
     BaseStepExecutor().execute_step(QdrantConnectorStep, {input_path}, output_file)
 
 
-def test_qdrant_connector_has_previous(input_output_folder: Tuple[Path, Path], dummy_collection):
+def test_qdrant_connector_has_previous(input_output_folder: tuple[Path, Path], dummy_collection):
     input_path, output_path = input_output_folder
 
     input_file = input_path / "qdrant_at.csv"
@@ -39,14 +39,14 @@ def test_qdrant_connector_has_previous(input_output_folder: Tuple[Path, Path], d
     BaseStepExecutor().execute_step(QdrantConnectorStep, {input_path}, output_file)
 
 
-def test_qdrant_connector_no_csv(input_output_folder: Tuple[Path, Path]):
+def test_qdrant_connector_no_csv(input_output_folder: tuple[Path, Path]):
     input_path, output_path = input_output_folder
     output_file = output_path / "QdrantConnectorStep"
     with pytest.raises(StepFailed):
         BaseStepExecutor().execute_step(QdrantConnectorStep, {input_path}, output_file)
 
 
-def test_qdrant_connector_one_no_csv(input_output_folder: Tuple[Path, Path]):
+def test_qdrant_connector_one_no_csv(input_output_folder: tuple[Path, Path]):
     input_path, output_path = input_output_folder
     input_file = input_path / "qdrant_at.csv"
     output_file = output_path / "QdrantConnectorStep"
@@ -59,7 +59,7 @@ def test_qdrant_connector_one_no_csv(input_output_folder: Tuple[Path, Path]):
         )
 
 
-def test_qdrant_collection_retirement(input_output_folder: Tuple[Path, Path], env, dummy_collection):
+def test_qdrant_collection_retirement(input_output_folder: tuple[Path, Path], env, dummy_collection):
     input_path, output_path = input_output_folder
     HIST_LEN = 3
     env.set("COLLECTION_HISTORY_LEN", str(HIST_LEN))
@@ -82,7 +82,7 @@ def test_qdrant_collection_retirement(input_output_folder: Tuple[Path, Path], en
         assert len([col.name for col in client.get_collections().collections if "austria" in col.name]) <= HIST_LEN
 
 
-def test_qdrant_get_collections_with_ephemerals(input_output_folder: Tuple[Path, Path], env, dummy_collection):
+def test_qdrant_get_collections_with_ephemerals(input_output_folder: tuple[Path, Path], env, dummy_collection):
     input_path, output_path = input_output_folder
     HIST_LEN = 3
     env.set("COLLECTION_HISTORY_LEN", str(HIST_LEN))
@@ -119,7 +119,7 @@ def test_qdrant_get_collections_with_ephemerals(input_output_folder: Tuple[Path,
 
 
 def test_qdrant_connector_csv_partially_not_same_shape(
-    input_output_folder: Tuple[Path, Path],
+    input_output_folder: tuple[Path, Path],
 ):
     input_path, output_path = input_output_folder
     output_file = output_path / "QdrantConnectorStep"
@@ -148,7 +148,7 @@ def test_qdrant_connector_csv_partially_not_same_shape(
 )
 @pytest.mark.parametrize("tlsh", [True, False])
 def test_qdrant_connector_true_csv(
-    input_output_folder: Tuple[Path, Path],
+    input_output_folder: tuple[Path, Path],
     dummy_collection,
     step: type[Union[QdrantConnectorStep, QdrantConnectorMultiVectorStep]],
     result_type: Union[QdrantResult, QdranttMultiVectorResult],

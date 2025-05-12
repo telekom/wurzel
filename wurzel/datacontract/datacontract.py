@@ -9,7 +9,7 @@ import types
 import typing
 from ast import literal_eval
 from pathlib import Path
-from typing import Self, Type, Union, get_origin
+from typing import Self, Union, get_origin
 
 import pandera as pa
 import pandera.typing as patyp
@@ -87,12 +87,12 @@ class PydanticModel(pydantic.BaseModel, DataModel):
 
     # pylint: disable=arguments-differ
     @classmethod
-    def load_from_path(cls, path: Path, model_type: Type[Union[Self, list[Self]]]) -> Union[Self, list[Self]]:
+    def load_from_path(cls, path: Path, model_type: type[Union[Self, list[Self]]]) -> Union[Self, list[Self]]:
         """Wurzel load model.
 
         Args:
             path (Path): load model from
-            model_type (Type[Union[Self, list[Self]]]): expected type
+            model_type (type[Union[Self, list[Self]]]): expected type
 
         Raises:
             NotImplementedError

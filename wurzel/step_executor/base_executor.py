@@ -13,7 +13,7 @@ from contextvars import copy_context
 from logging import getLogger
 from pathlib import Path
 from types import NoneType
-from typing import Any, Callable, Optional, Self, Type, TypeAlias, Union
+from typing import Any, Callable, Optional, Self, TypeAlias, Union
 
 import pandas
 import pandera.typing as patyp
@@ -79,7 +79,7 @@ def _try_sort(x: StepReturnType) -> StepReturnType:
 
 
 @contextmanager
-def step_env_encapsulation(step_cls: Type[TypedStep]):
+def step_env_encapsulation(step_cls: type[TypedStep]):
     """Create a virtual env and remove it afterwards."""
     old = os.environ.copy()
     name = step_cls.__name__.upper()
@@ -171,7 +171,7 @@ class BaseStepExecutor:
         if not path.is_dir():
             path.mkdir()
         obj = _try_sort(obj)
-        output_model_class: Type[datacontract.DataModel] = step.output_model_class
+        output_model_class: type[datacontract.DataModel] = step.output_model_class
         return output_model_class.save_to_path(path / f"{hist}", obj)
 
     def load(self, step: TypedStep, path: PathToFolderWithBaseModels):
@@ -186,7 +186,7 @@ class BaseStepExecutor:
             Union[Type[None], Union[PanderaDataFrameModel, PydanticModel]]: _description_
 
         """
-        input_model_class: Type[datacontract.DataModel] = step.input_model_class
+        input_model_class: type[datacontract.DataModel] = step.input_model_class
         for p in path.glob("*"):
             start = time.time()
             data = input_model_class.load_from_path(p, step.input_model_type)
@@ -255,7 +255,7 @@ class BaseStepExecutor:
 
     def _execute_step(
         self,
-        step_cls: Type[TypedStep],
+        step_cls: type[TypedStep],
         inputs: set[PathToFolderWithBaseModels],
         output_path: Optional[PathToFolderWithBaseModels],
     ):
@@ -315,7 +315,7 @@ class BaseStepExecutor:
 
     def execute_step(
         self,
-        step_cls: Type[TypedStep],
+        step_cls: type[TypedStep],
         inputs: Optional[set[PathToFolderWithBaseModels]],
         output_dir: Optional[PathToFolderWithBaseModels],
     ) -> list[tuple[Any, StepReport]]:

@@ -11,7 +11,6 @@ from typing import (
     Generic,
     Optional,
     Self,
-    Type,
     TypeAlias,
     TypeVar,
     Union,
@@ -28,7 +27,7 @@ from wurzel.step.settings import Settings
 from wurzel.step.step import Step
 
 # pylint: disable-next=invalid-name
-MODEL_TYPE: TypeAlias = Type[Union[PydanticModel, PanderaDataFrameModel]]
+MODEL_TYPE: TypeAlias = type[Union[PydanticModel, PanderaDataFrameModel]]
 #  ^Should be a Intersection between DataModel & {BaseModel, DataFrameModel}
 log = getLogger(__name__)
 INCONTRACT = TypeVar("INCONTRACT")
@@ -92,14 +91,14 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     ```
     """
 
-    _internal_input_class: Type[PathToFolderWithBaseModels]
-    _internal_output_class: Type[PathToFolderWithBaseModels]
+    _internal_input_class: type[PathToFolderWithBaseModels]
+    _internal_output_class: type[PathToFolderWithBaseModels]
     input_model_type: Union[MODEL_TYPE, list[MODEL_TYPE], None]
     output_model_type: Union[MODEL_TYPE, list[MODEL_TYPE], None]
-    settings_class: Type[SETTS]
+    settings_class: type[SETTS]
     output_model_class: MODEL_TYPE
     input_model_class: MODEL_TYPE
-    _supported_containers: Iterable[Type[Iterable]] = (list, set, patyp.DataFrame)
+    _supported_containers: Iterable[type[Iterable]] = (list, set, patyp.DataFrame)
     settings: SETTS
 
     def output_path(self, folder: Path) -> Path:
@@ -110,9 +109,9 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     @classmethod  #
     def _unpack_list_containers(
         cls,
-        list_or_type: Union[list, Type, None],
-        containers: Optional[list[Type[Iterable]]] = None,
-    ) -> tuple[Optional[Iterable[Type[Iterable]]], Type]:
+        list_or_type: Union[list, type, None],
+        containers: Optional[list[type[Iterable]]] = None,
+    ) -> tuple[Optional[Iterable[type[Iterable]]], type]:
         """Unpacks the containers around a given nested Type.
 
         Args:
@@ -128,7 +127,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         """
         if containers is None:
             containers = []
-        origin_t: Union[Type[Iterable], Type, None] = get_origin(list_or_type)
+        origin_t: Union[type[Iterable], type, None] = get_origin(list_or_type)
         if origin_t is None:
             # list_or_type is now a type/class
             if list_or_type is None:
@@ -229,7 +228,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         """
 
     def __new__(cls) -> Self:
-        instance = super(TypedStep, cls).__new__(cls)
+        instance = super().__new__(cls)
         super().__init__(instance)
         # Get Input and output type from annotations
         # Get Type annotations, fallback to None if they don't exist

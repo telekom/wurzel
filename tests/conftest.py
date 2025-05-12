@@ -5,7 +5,6 @@
 import os
 from logging import getLogger
 from pathlib import Path
-from typing import Tuple
 
 import pytest
 from pydantic import BaseModel
@@ -57,7 +56,7 @@ def milvus(env: SetEnv):
 
 
 @pytest.fixture(scope="function")
-def input_output_folder(tmp_path: Path) -> Tuple[Path, Path]:
+def input_output_folder(tmp_path: Path) -> tuple[Path, Path]:
     input_path = tmp_path / "input"
     output_path = tmp_path / "output"
     input_path.mkdir()

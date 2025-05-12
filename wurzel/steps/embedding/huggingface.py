@@ -7,7 +7,7 @@
 from json.decoder import JSONDecodeError
 from logging import getLogger
 from re import Pattern as RegexPattern
-from typing import List, Literal, Union
+from typing import Literal, Union
 
 import requests
 from langchain_core.embeddings import Embeddings
@@ -76,7 +76,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
         return False
 
     @validate_call
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """Get the embeddings for a list of texts."""
         return [self.embed_query(text) for text in texts]
 
@@ -119,7 +119,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
         )
 
     @validate_call
-    def embed_query(self, text: str) -> List[float]:
+    def embed_query(self, text: str) -> list[float]:
         """Compute query embeddings using a HuggingFace transformer model.
 
         Args:
@@ -165,7 +165,7 @@ class PrefixedAPIEmbeddings(HuggingFaceInferenceAPIEmbeddings):
 
     @validate_call
     # overrides
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """Get the embeddings for a list of texts."""
         texts = [f"{self.prefix}{text}" for text in texts]
         embedding_response = super().embed_documents(texts)

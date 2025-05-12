@@ -8,7 +8,7 @@ import logging.config
 import os
 import sys
 from collections.abc import Mapping
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from asgi_correlation_id import correlation_id
 
@@ -84,7 +84,7 @@ class JsonFormatter(logging.Formatter):
     def __init__(
         self,
         datefmt: Optional[str] = "%Y-%m-%dT%H:%M:%S%z",
-        reduced: Optional[List[str]] = None,
+        reduced: Optional[list[str]] = None,
         indent: Optional[str] = None,
         *,
         defaults: Optional[Mapping[str, Any]] = None,

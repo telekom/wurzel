@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from pathlib import Path
-from typing import Any, Generic, Type, TypeVar, get_args
+from typing import Any, Generic, TypeVar, get_args
 
 import pandera.typing as patyp
 import pydantic
@@ -50,14 +50,14 @@ class PathToFolderWithBaseModels(type(Path()), Generic[B]):  # type: ignore[misc
     """
 
     @classmethod
-    def _type(cls) -> Type["PathToFolderWithBaseModels"]:
+    def _type(cls) -> type["PathToFolderWithBaseModels"]:
         """Get own type (used for pydantic).
 
         Raises:
             RuntimeError: if own type can't be found
 
         Returns:
-            Type: PathToBaseModel
+            type: PathToBaseModel
 
         """
         typ = getattr(cls, "__orig_bases__", [None])[0]
@@ -66,13 +66,13 @@ class PathToFolderWithBaseModels(type(Path()), Generic[B]):  # type: ignore[misc
         return typ
 
     @classmethod
-    def model_type(cls) -> Type[B]:
+    def model_type(cls) -> type[B]:
         """_summary_.
 
         Raises:
             RuntimeError: if type can't be found
         Returns:
-            Type[pydantic.BaseModel]: Type of Generic
+            type[pydantic.BaseModel]: Type of Generic
 
         """
         try:

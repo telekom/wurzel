@@ -153,7 +153,7 @@ select = [
     "I",  # sorting for imports
     "E",  # formatting
    # "D",  # formatting for docs (disabled)
-   # "UP", # upgrade to latest syntax if possible (disabled)
+    "UP", # upgrade to latest syntax if possible
     "C4", # cleaner comprehensions
 ]
 

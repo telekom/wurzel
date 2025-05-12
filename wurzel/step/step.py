@@ -7,7 +7,6 @@ import glob
 from logging import getLogger
 from pathlib import Path
 from re import Pattern
-from typing import Set
 
 log = getLogger(__name__)
 
@@ -15,12 +14,12 @@ log = getLogger(__name__)
 class Step(abc.ABC):
     """abstract class to define a WurzelStep."""
 
-    required_steps: Set["Step"]
+    required_steps: set["Step"]
 
     def __init__(self) -> None:  # pylint: disable=dangerous-default-value
         self.required_steps = set()
 
-    def _search_needed_files(self, inputs: Set[Path], file_name_pattern: Pattern) -> Set[Path]:
+    def _search_needed_files(self, inputs: set[Path], file_name_pattern: Pattern) -> set[Path]:
         matched_files = set()
         for folder in inputs:
             match = set(glob.glob(f"{str(folder)}/**/*{str(file_name_pattern)}*")) | set(

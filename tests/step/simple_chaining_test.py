@@ -3,19 +3,18 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from pathlib import Path
-from typing import Set
 
 from wurzel.adapters import DvcBackend
 from wurzel.step import Step
 
 
 class A(Step):
-    def execute(self, inputs: Set[Path], output: Path):
+    def execute(self, inputs: set[Path], output: Path):
         pass
 
 
 class B(Step):
-    def execute(self, inputs: Set[Path], output: Path):
+    def execute(self, inputs: set[Path], output: Path):
         pass
 
 

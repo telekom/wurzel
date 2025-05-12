@@ -4,7 +4,7 @@
 
 import inspect
 from pathlib import Path
-from typing import Any, Type, TypedDict
+from typing import Any, TypedDict
 
 import yaml
 
@@ -46,7 +46,7 @@ class DvcBackend(Backend):
     ) -> None:
         if not isinstance(data_dir, Path):
             data_dir = Path(data_dir)
-        self.executor: Type[BaseStepExecutor] = executer
+        self.executor: type[BaseStepExecutor] = executer
         self.data_dir = data_dir
         self.encapsulate_env = encapsulate_env
         super().__init__()
