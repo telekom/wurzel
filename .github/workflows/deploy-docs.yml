@@ -5,7 +5,7 @@ name: Documentation Deployment
 
 on:
   push:
-    #branches: [main]
+    branches: [main]
 
 jobs:
     deploy:
