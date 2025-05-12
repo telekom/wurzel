@@ -4,7 +4,9 @@
 
 from wurzel.utils import HAS_DOCLING as _HAS_DOCLING
 
-__all__ = []
+from .settings import DoclingSettings
+
+__all__ = ["DoclingSettings"]
 if _HAS_DOCLING:
     from .docling_step import DoclingStep  # noqa: F401
 
