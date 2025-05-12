@@ -145,7 +145,7 @@ prerelease_token = "dev"
 [tool.ruff]
 
 target-version = "py39"
-
+line-length = 140
 
 [tool.ruff.lint]
 select = [

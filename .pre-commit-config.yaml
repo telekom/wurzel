@@ -30,12 +30,31 @@ repos:
     -   id: trailing-whitespace
     -   id: check-toml
 
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.9
+    hooks:
+      - id: ruff
+        args: [ --fix ]
+      - id: ruff-format
+
+
   - repo: local
     hooks:
-      - id: lint
-        name: lint
-        description: "Run 'make lint'"
-        entry: make lint
-        language: python
-        types_or: [python]
-        minimum_pre_commit_version: "2.9.2"
+      - id: pylint
+        name: pylint
+        entry: .venv/bin/uv run pylint ./wurzel
+        language: system
+        types: [python]
+        require_serial: true
+        args: []
+
+  #- repo: local
+  #  hooks:
+  #    - id: lint
+   #     name: lint
+   #     description: "Run 'make lint'"
+   #     entry: make lint
+   #     language: python
+    #    types_or: [python]
+    #    minimum_pre_commit_version: "2.9.2"

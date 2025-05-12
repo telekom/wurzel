@@ -69,11 +69,7 @@ class SettingsBase(_PydanticBaseSettings):
                 if key in data:
                     if get_origin(field.annotation) is dict:
                         continue
-                    if (
-                        isinstance(data[key], str)
-                        and inspect.isclass(field.annotation)
-                        and issubclass(field.annotation, SettingsBase)
-                    ):
+                    if isinstance(data[key], str) and inspect.isclass(field.annotation) and issubclass(field.annotation, SettingsBase):
                         data[key] = json.loads(data[key])
                     # if annotation is optional and not a SettingsBase
                     elif (
