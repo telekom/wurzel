@@ -107,16 +107,6 @@ def pipeline() -> TypedStep:
 
 ```
 
-## Community
-
-Wurzel is a collaborative project aiming to combine the best ideas in the field of RAG systems. Join us in building the future of retrieval-augmented generation!
-
-### Steps to Contribute
-1. Fork this repository.
-2. Create a new branch for your feature or bug fix: `git checkout -b feature/feature-name`.
-3. Make your changes and commit them: `git commit -m "Add awesome feature"`.
-4. Push to your branch: `git push origin feature/feature-name`.
-5. Submit a pull request for review.
 
 
 ## Code of Conduct
