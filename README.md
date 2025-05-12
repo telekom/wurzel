@@ -20,7 +20,7 @@ The repository includes initial implementations for widely-used frameworks in th
 
 To get started with wurzel, install the library using pip:
 
-```
+```bash
 pip install wurzel
 ```
 

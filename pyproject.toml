@@ -81,6 +81,10 @@ test = [
     "milvus-lite==2.*", # used for miluvs mock
 ]
 
+docs = [
+    "mkdocstrings[python]"
+]
+
 all = ["wurzel[qdrant,milvus,tlsh,docling]"]
 dev = ["wurzel[lint,test,all]"]
 
