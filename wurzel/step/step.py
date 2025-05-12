@@ -13,7 +13,7 @@ log = getLogger(__name__)
 
 
 class Step(abc.ABC):
-    """abstract class to define a WurzelStep"""
+    """abstract class to define a WurzelStep."""
 
     required_steps: Set["Step"]
 
@@ -33,7 +33,7 @@ class Step(abc.ABC):
         return set(map(Path, matched_files))
 
     def is_leaf(self) -> bool:
-        """Returns if the node is a leaf in the pipeline tree
+        """Returns if the node is a leaf in the pipeline tree.
 
         Returns
         -------
@@ -44,11 +44,11 @@ class Step(abc.ABC):
         return not self.required_steps
 
     def output_path(self, folder: Path) -> Path:
-        """Returns a generated output path"""
+        """Returns a generated output path."""
         return (folder / self.__class__.__name__).with_suffix(".file")
 
     def add_required_step(self, step: "Step"):
-        """Adds a required step
+        """Adds a required step.
 
         Args:
             step (Step): will be added to required_steps

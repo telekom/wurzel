@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 
-"""Note: Known Limitations with EasyOCR (`EasyOcrOptions`)
+"""Note: Known Limitations with EasyOCR (`EasyOcrOptions`).
 
 1. Table structure is often lost or misaligned in the OCR output.
 2. Spelling inaccuracies are occasionally observed (e.g., "Verlängern" → "Verlängenng").

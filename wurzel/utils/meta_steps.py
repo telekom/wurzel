@@ -50,5 +50,5 @@ def find_sub_classes(parent: T, package: str = __package__) -> dict[str, T]:
 
 
 def find_typed_steps_in_package(package: str) -> dict[str, Type[TypedStep]]:
-    """Recursively find all subclasses of TypedStep"""
+    """Recursively find all subclasses of TypedStep."""
     return find_sub_classes(TypedStep, package)

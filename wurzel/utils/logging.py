@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 # pylint: disable-next=too-many-positional-arguments
 def warnings_to_logger(message: str, category: str, filename: str, lineno: str, file=None, line=None):
     # pylint: disable=unused-argument
-    """Replaces warnings.showwarning
+    """Replaces warnings.showwarning.
 
     Args:
         message (str):
@@ -67,7 +67,7 @@ def _make_dict_serializable(item: Any):
 
 
 class JsonFormatter(logging.Formatter):
-    """Custom formatter for structured logging"""
+    """Custom formatter for structured logging."""
 
     key_blacklist = [
         "msg",
@@ -89,7 +89,7 @@ class JsonFormatter(logging.Formatter):
         *,
         defaults: Optional[Mapping[str, Any]] = None,
     ) -> None:
-        """Create a new Formatter
+        """Create a new Formatter.
 
         Args:
             datefmt (str, optional): Used in @timestamp. Defaults to "%Y-%m-%dT%H:%M:%S%z".
@@ -140,7 +140,7 @@ class JsonFormatter(logging.Formatter):
 
 
 def get_logging_dict_config(level) -> dict[str, str]:
-    """Generate a logging.config.dictConfig compatible dict
+    """Generate a logging.config.dictConfig compatible dict.
 
     Returns:
         dict: logging.config.dictConfig

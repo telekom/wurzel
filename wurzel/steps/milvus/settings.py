@@ -55,7 +55,7 @@ class MilvusSettings(Settings):
     @classmethod
     # pylint: disable-next=R0801
     def parse_json(cls, v):
-        """Validation for json"""
+        """Validation for json."""
         if isinstance(v, str):
             return json.loads(v)
         return v

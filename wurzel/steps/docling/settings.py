@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 
-"""Specific docling settings"""
+"""Specific docling settings."""
 
 from docling.datamodel.base_models import InputFormat
 

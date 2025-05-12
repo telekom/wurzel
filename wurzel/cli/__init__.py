@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""CLI program"""
+"""CLI program."""
 
 import importlib.metadata
 from pathlib import Path
@@ -28,7 +28,7 @@ def generate_cli_call(
     encapsulate_env: bool = True,
 ) -> str:
     """Generate the cli call to execute a given step with its
-    inputs and output
+    inputs and output.
 
     Args:
         step_cls (Type[TypedStep]): Step to execute

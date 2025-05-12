@@ -15,7 +15,7 @@ def main(
     executor_str_value: str,
     encapsulate_env=True,
 ):
-    """Execute"""
+    """Execute."""
     executor = executor_str_value
     with executor(dont_encapsulate=not encapsulate_env) as ex:
         ex(step, input_folders, output_path)

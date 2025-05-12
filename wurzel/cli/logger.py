@@ -10,7 +10,7 @@ from wurzel.utils.logging import JsonFormatter
 
 
 class WithExtraFormatter(JsonFormatter):
-    """Custom formatter with some structured logging support"""
+    """Custom formatter with some structured logging support."""
 
     def format(self, record: logging.LogRecord) -> str:
         super().format(record)

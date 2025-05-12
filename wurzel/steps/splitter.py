@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""consists of DVCSteps to embedd files and save them as for example as csv"""
+"""consists of DVCSteps to embedd files and save them as for example as csv."""
 
 # Standard library imports
 from logging import getLogger
@@ -19,7 +19,7 @@ from wurzel.utils.semantic_splitter import SemanticSplitter
 
 
 class SplitterSettings(Settings):
-    """Anything Embedding-related"""
+    """Anything Embedding-related."""
 
     BATCH_SIZE: int = Field(100, gt=0)
     NUM_THREADS: int = Field(4, gt=1)
@@ -32,7 +32,7 @@ log = getLogger(__name__)
 
 
 class SimpleSplitterStep(TypedStep[SplitterSettings, list[MarkdownDataContract], list[MarkdownDataContract]]):
-    """SimpleSplitterStep to split Markdown Documents rundimentory in medium size chunks"""
+    """SimpleSplitterStep to split Markdown Documents rundimentory in medium size chunks."""
 
     def __init__(self) -> None:
         super().__init__()

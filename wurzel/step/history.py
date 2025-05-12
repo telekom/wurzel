@@ -16,7 +16,7 @@ step_history.set(None)
 
 
 class History:
-    """internal history object"""
+    """internal history object."""
 
     __SEP_STR = "-"
     _history: list[str]
@@ -45,11 +45,11 @@ class History:
         return self
 
     def copy(self) -> "History":
-        """Returns a copy of self"""
+        """Returns a copy of self."""
         return History(initial=self.get())
 
     def get(self) -> list[str]:
-        """Get History
+        """Get History.
 
         Returns:
             list[str]: history (copy)
@@ -81,7 +81,7 @@ class History:
         return self._history == value._history
 
     def to_json(self):
-        """Converts to json string
+        """Converts to json string.
 
         Returns:
             str: json list of str
@@ -91,7 +91,7 @@ class History:
 
     @classmethod
     def from_json(cls, s: str) -> "History":
-        """Converts from json string
+        """Converts from json string.
 
         Args:
             s (str): json string list of str
@@ -104,7 +104,7 @@ class History:
 
     @classmethod
     def from_str(cls, s: str) -> "History":
-        """Converts from str(History)
+        """Converts from str(History).
 
         Args:
             s (str)

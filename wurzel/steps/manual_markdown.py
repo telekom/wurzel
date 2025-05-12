@@ -9,13 +9,13 @@ from wurzel.step import Settings, TypedStep
 
 
 class ManualMarkdownSettings(Settings):
-    """Settings fro ManMdstep"""
+    """Settings fro ManMdstep."""
 
     FOLDER_PATH: Path
 
 
 class ManualMarkdownStep(TypedStep[ManualMarkdownSettings, None, list[MarkdownDataContract]]):
-    """Data Source for md files from a configurable path"""
+    """Data Source for md files from a configurable path."""
 
     def run(self, inpt: None) -> list[MarkdownDataContract]:
         return [

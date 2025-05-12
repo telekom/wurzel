@@ -103,7 +103,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     settings: SETTS
 
     def output_path(self, folder: Path) -> Path:
-        """Used in generate dvc yml. Creates a path"""
+        """Used in generate dvc yml. Creates a path."""
         pth = folder / self.__class__.__name__
         return pth.with_suffix(self.output_model_class.kt_file_extension())
 
@@ -113,7 +113,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         list_or_type: Union[list, Type, None],
         containers: Optional[list[Type[Iterable]]] = None,
     ) -> tuple[Optional[Iterable[Type[Iterable]]], Type]:
-        """Unpacks the containers around a given nested Type
+        """Unpacks the containers around a given nested Type.
 
         Args:
             list_or_type (Union[list, Type, None]): Type or container to try to unpack
@@ -145,7 +145,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
 
     @classmethod  # pylint: disable-next=unused-private-member # used in __new__
     def _static_type_check_self(cls):
-        """Confirms the type annotations of child classes TypedStep"""
+        """Confirms the type annotations of child classes TypedStep."""
         type_annotations = [get_args(parent) for parent in getattr(cls, "__orig_bases__", []) if get_args(parent)][0]
         if type_annotations == ():
             raise StaticTypeError(
@@ -170,7 +170,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     @classmethod  # pylint: disable-next=unused-private-member # used in __new__
     def _static_type_check_run(cls):
         """Confirms the type annotations of child classes run method.
-        Currently allows missing type annotations with a warning
+        Currently allows missing type annotations with a warning.
         """
         # Since type annotation of class does not want list container
         # but run adds it, we add it manually
@@ -221,7 +221,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
             raise ContractFailedException("Could not get annotations from run") from k
 
     def finalize(self) -> None:
-        """Called after execution in Executor finished
+        """Called after execution in Executor finished.
 
         Can be used for cleanup etc.
 
@@ -242,10 +242,10 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
 
         # Sadly we cant use type() or types.new_class for this.
         class InCls(PathToFolderWithBaseModels[instance.input_model_type]):
-            """Used internally"""
+            """Used internally."""
 
         class OutCls(PathToFolderWithBaseModels[instance.output_model_type]):
-            """Used internally"""
+            """Used internally."""
 
         instance._internal_input_class = InCls
         instance._internal_output_class = OutCls
@@ -262,7 +262,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         self.settings = self.settings_class()
 
     def add_required_step(self, step: "TypedStep"):
-        """Add step to execution graph
+        """Add step to execution graph.
 
         Args:
             step (TypedStep) Step to add
@@ -283,7 +283,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
 
     def traverse(self) -> set["TypedStep"]:
         """Retrieve a set of all required steps
-        including self
+        including self.
         """
         return self._traverse(set())
 

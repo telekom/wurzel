@@ -119,7 +119,7 @@ def test_nested_at_root(env, env_dict):
 
 
 class _EmbeddingSettings(SettingsLeaf):
-    """Anything Embedding-related"""
+    """Anything Embedding-related."""
 
     API: Url = Url("https://ex/embed")
     NORMALIZE: bool = Field(False)

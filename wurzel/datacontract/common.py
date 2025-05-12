@@ -18,7 +18,7 @@ _RE_BODY = _re_compile(r"---[\s\S]*?---\s*([\s\S]*)")
 
 
 class MarkdownDataContract(PydanticModel):
-    """contract of the input of the EmbeddingStep"""
+    """contract of the input of the EmbeddingStep."""
 
     md: str
     keywords: str
@@ -27,7 +27,7 @@ class MarkdownDataContract(PydanticModel):
     @classmethod
     @pydantic.validate_call
     def from_dict_w_function(cls, doc: dict[str, Any], func: Callable[[str], str]):
-        """Create a MarkdownDataContract from a dict and apply a custom func to test"""
+        """Create a MarkdownDataContract from a dict and apply a custom func to test."""
         return cls(
             md=func(doc["text"]),
             url=doc["metadata"]["url"],
@@ -36,7 +36,7 @@ class MarkdownDataContract(PydanticModel):
 
     @classmethod
     def from_file(cls, path: Path, url_prefix: str = "") -> Self:
-        """Load MdContract from .md file
+        """Load MdContract from .md file.
 
         Args:
             path (Path): Path to file

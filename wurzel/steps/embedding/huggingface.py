@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""contains Embedding Manager"""
+"""contains Embedding Manager."""
 
 from json.decoder import JSONDecodeError
 from logging import getLogger
@@ -59,7 +59,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
         self._update_model_history(self.get_info()["model_id"])
 
     def _update_model_history(self, model: str) -> bool:
-        """Updates internal model history if model name is new
+        """Updates internal model history if model name is new.
 
         Args:
             model (str): string name/ path of model
@@ -81,7 +81,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
         return [self.embed_query(text) for text in texts]
 
     def __make_request(self, url: Url, json_body: dict, method: Union[Literal["post"], Literal["get"]]) -> dict:
-        """Creates a request, tries to parse json
+        """Creates a request, tries to parse json.
 
         Args:
             url (str)
@@ -140,7 +140,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
 
     def get_info(self):
         """Returns the infos of the model, described here:
-        https://huggingface.github.io/text-embeddings-inference/#/
+        https://huggingface.github.io/text-embeddings-inference/#/.
         """
         response_model_key = "model_id"
         resp_dict = self.__make_request(self.info_url, None, method="get")
@@ -172,7 +172,7 @@ class PrefixedAPIEmbeddings(HuggingFaceInferenceAPIEmbeddings):
         return embedding_response
 
     def update_prefix(self):
-        """Updates prompt/ embedding prefix used internally in every embedded request
+        """Updates prompt/ embedding prefix used internally in every embedded request.
 
         Raises:
             UnrecoverableFatalException: no prefix-definition for a model was found

@@ -81,7 +81,7 @@ class PrometheusStepExecutor(BaseStepExecutor):
         inputs: Optional[set[PathToFolderWithBaseModels]],
         output_dir: Optional[PathToFolderWithBaseModels],
     ) -> list[tuple[Any, StepReport]]:
-        """Run a given Step
+        """Run a given Step.
 
         Args:
             step_cls (Type[TypedDVCStep]): Step to run

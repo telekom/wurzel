@@ -14,7 +14,7 @@ from wurzel.utils import WZ
 
 
 def main(step: Type[TypedStep], gen_env=False):
-    """Execute"""
+    """Execute."""
     ins = WZ(step)
     set_cls: Settings = ins.settings_class
     env_prefix = step.__name__.upper()

@@ -51,7 +51,7 @@ class PathToFolderWithBaseModels(type(Path()), Generic[B]):  # type: ignore[misc
 
     @classmethod
     def _type(cls) -> Type["PathToFolderWithBaseModels"]:
-        """Get own type (used for pydantic)
+        """Get own type (used for pydantic).
 
         Raises:
             RuntimeError: if own type can't be found
@@ -67,7 +67,7 @@ class PathToFolderWithBaseModels(type(Path()), Generic[B]):  # type: ignore[misc
 
     @classmethod
     def model_type(cls) -> Type[B]:
-        """_summary_
+        """_summary_.
 
         Raises:
             RuntimeError: if type can't be found

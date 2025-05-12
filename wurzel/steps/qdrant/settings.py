@@ -56,7 +56,7 @@ class QdrantSettings(Settings):
     @validator("SEARCH_PARAMS", "INDEX_PARAMS", pre=True)
     @classmethod
     def parse_json(cls, v):
-        """Validation for json"""
+        """Validation for json."""
         if isinstance(v, str):
             return json.loads(v)
         return v

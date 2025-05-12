@@ -33,7 +33,7 @@ __all__ = [
 
 
 def try_get_length(x: Any) -> int:
-    """Tries to get length, return 1 if fails
+    """Tries to get length, return 1 if fails.
 
     Args:
         x (Any): get length of

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Semantic Markdown Splitter"""
+"""Semantic Markdown Splitter."""
 
 import re
 from logging import getLogger
@@ -37,14 +37,14 @@ log = getLogger(__name__)
 
 
 class MetaDataDict(TypedDict):
-    """Dict definition of metadata"""
+    """Dict definition of metadata."""
 
     keywords: str
     url: str
 
 
 class DocumentNode(TypedDict):
-    """Dict definition of internal tree structure for splitting"""
+    """Dict definition of internal tree structure for splitting."""
 
     highest_level: int
     token_len: int
@@ -54,7 +54,7 @@ class DocumentNode(TypedDict):
 
 
 def _get_token_len(text: str) -> int:
-    """Get OpenAI Token length
+    """Get OpenAI Token length.
 
     Args:
         text (str): Test to encode
@@ -92,7 +92,7 @@ def _get_highest_level_of_children(children: list[DocumentNode]) -> int:
 
 
 def _get_heading_text(token: block_token.Heading):
-    """Get heading text from Mistletoe heading block token"""
+    """Get heading text from Mistletoe heading block token."""
     if token.content:
         return token.content
     if "children" in vars(token) and len(token.children) > 0:
@@ -108,7 +108,7 @@ def _is_standalone_a_heading(text):
 
 
 def _cut_to_tokenlen(text: str, token_len: int) -> str:
-    """Cut Text to token length using OpenAI"""
+    """Cut Text to token length using OpenAI."""
     tokens_old = OPENAI_ENCODING.encode(text)
     if len(tokens_old) > token_len:
         tokens = tokens_old[:token_len]
@@ -119,7 +119,7 @@ def _cut_to_tokenlen(text: str, token_len: int) -> str:
 def _format_markdown_docs(
     docs: list[MarkdownDataContract],
 ) -> list[MarkdownDataContract]:
-    """Formats the Markdown Document by the standards"""
+    """Formats the Markdown Document by the standards."""
     return [
         MarkdownDataContract(
             md=mdformat.text(doc.md).strip(),
@@ -131,7 +131,7 @@ def _format_markdown_docs(
 
 
 class WurzelMarkdownRenderer(markdown_renderer.MarkdownRenderer):
-    """Fix For markdown_renderer.MarkdownRenderer"""
+    """Fix For markdown_renderer.MarkdownRenderer."""
 
     # pylint: disable=unused-argument, arguments-differ
     def render_table_cell(self, token: block_token.TableCell, max_line_length: int) -> str:
@@ -142,7 +142,7 @@ class WurzelMarkdownRenderer(markdown_renderer.MarkdownRenderer):
 
 
 class SemanticSplitter:
-    """Splitter implementation"""
+    """Splitter implementation."""
 
     nlp: "spacy.language.Language"
     token_limit: int
@@ -174,7 +174,7 @@ class SemanticSplitter:
         return self.token_limit + self.token_limit_buffer >= length >= self.token_limit - self.token_limit_buffer
 
     def _render_doc(self, doc: MisDocument) -> str:
-        """Render Mistletoe Markdown Document"""
+        """Render Mistletoe Markdown Document."""
         try:
             with WurzelMarkdownRenderer() as renderer:
                 return renderer.render(doc)  # type: ignore[no-any-return]
@@ -182,13 +182,13 @@ class SemanticSplitter:
             raise MarkdownException(e) from e
 
     def _get_custom_level(self, block: block_token.BlockToken) -> int:
-        """Get the hierarchical level for a mistletoe node"""
+        """Get the hierarchical level for a mistletoe node."""
         if isinstance(block, block_token.Heading):
             return int(block.level)
         return LEVEL_MAPPING.get(type(block), LEVEL_UNDEFINED)
 
     def _merge_children(self, children: list[DocumentNode]) -> MisDocument:
-        """Create a document out of a list of children"""
+        """Create a document out of a list of children."""
         new_doc = MisDocument([])
         # If all children a span tokens add them to a paragraph
         # because problems otherwise
@@ -202,11 +202,11 @@ class SemanticSplitter:
 
     def _find_highest_level(self, children: list[DocumentNode], min_level: int = 0) -> Tuple[int, Optional[Token], Optional[DocumentNode]]:
         """Among a list of children nodes find the one with the highest level.
-        Return a tuple of that level, level node type and that child
+        Return a tuple of that level, level node type and that child.
         """
 
         def is_any_children(children: list[DocumentNode], block_type: Type[block_token.BlockToken]):
-            """Check if any Mistletoe Node (child) is of specific type"""
+            """Check if any Mistletoe Node (child) is of specific type."""
             for child in children:
                 if isinstance(child, block_type):
                     return True
@@ -248,7 +248,7 @@ class SemanticSplitter:
 
     def _split_children(self, children: list[MisDocument], min_level: int = 0) -> list[MisDocument]:
         """Split a list of children in the most semantic way
-        and return a list of Documents with them merged
+        and return a list of Documents with them merged.
         """
         if len(children) == 1:
             if "children" in vars(children[0]) or "_children" in vars(children[0]):
@@ -297,7 +297,7 @@ class SemanticSplitter:
         return [sentence_span.text for sentence_span in self.nlp(text).sents]
 
     def _markdown_hierarchy_parser(self, text: str, metadata: MetaDataDict, max_depth: int = 30) -> DocumentNode:
-        """Splits a Markdown string into a semantic Markdown based hierarchy
+        """Splits a Markdown string into a semantic Markdown based hierarchy.
 
         Given a Markdown string it hierarchically splits that text using
         the semantic information from the Markdown document until
@@ -374,7 +374,7 @@ class SemanticSplitter:
     # unused
     def _split_by_sentence(self, text: str) -> list[str]:
         """Sometimes _split_children does not find children leafs with are smaller then TOKEN_LIMIT.
-        Thus we need to split by sentence
+        Thus we need to split by sentence.
         """
         token_limit = self.token_limit
         token_buffer = self.token_limit_buffer
@@ -572,7 +572,7 @@ class SemanticSplitter:
         self,
         docs: list[MarkdownDataContract],
     ) -> list[MarkdownDataContract]:
-        """Function to improve the semantic meaning of the Markdown document by reattaching a parent heading
+        """Function to improve the semantic meaning of the Markdown document by reattaching a parent heading.
 
         Does not yet respect the token limit, however headings usually have little impact
         """
@@ -605,7 +605,7 @@ class SemanticSplitter:
         return docs
 
     def split_markdown_document(self, doc: MarkdownDataContract) -> list[MarkdownDataContract]:
-        """Split a Markdown Document into Snippets"""
+        """Split a Markdown Document into Snippets."""
         metadata = MetaDataDict(url=doc.url, keywords=doc.keywords)
         doc_hierarchy: DocumentNode = self._markdown_hierarchy_parser(doc.md, metadata)
         doc_snippets: list[MarkdownDataContract] = self._parse_hierarchical(doc_hierarchy)

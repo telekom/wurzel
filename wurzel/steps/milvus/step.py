@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""containing the DVCStep sending embedding data into milvus"""
+"""containing the DVCStep sending embedding data into milvus."""
 
 from logging import getLogger
 
@@ -24,7 +24,7 @@ log = getLogger(__name__)
 
 
 class MilvusConnectorStep(TypedStep[MilvusSettings, DataFrame[EmbeddingResult], MilvusResult]):  # pragma: no cover
-    """Milvus connector step. It consumes embedding csv files, creates a new schema and inserts the embeddings"""
+    """Milvus connector step. It consumes embedding csv files, creates a new schema and inserts the embeddings."""
 
     milvus_timeout: float = 20.0
 

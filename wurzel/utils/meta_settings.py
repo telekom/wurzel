@@ -14,7 +14,7 @@ from wurzel.step.typed_step import TypedStep
 
 # pylint: disable-next=invalid-name
 def WZ(typ: Type[TypedStep]):
-    """Creates a Pipeline Element"""
+    """Creates a Pipeline Element."""
     return TypedStep.__new__(typ)
 
 
@@ -27,7 +27,7 @@ def create_model(
         - If list of Type[TypedStep]: WZ(item) will be applied
         - If list of TypedStep (WZ was already aplpied): nothing
     - if input single TypedStep: required_steps will be traversed
-        - Minimum step itself
+        - Minimum step itself.
 
 
 

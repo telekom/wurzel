@@ -18,23 +18,23 @@ import pydantic
 
 class DataModel:
     """interface definition of a Contract model
-    Contains method to store and load to a path
+    Contains method to store and load to a path.
     """
 
     @classmethod
     @abc.abstractmethod
     def save_to_path(cls, path: Path, obj: Union[Self, list[Self]]) -> Path:
-        """Abstract function to save the obj at the given path"""
+        """Abstract function to save the obj at the given path."""
 
     @classmethod
     @abc.abstractmethod
     def load_from_path(cls, path: Path, *args) -> Self:
-        """Abstract function to load the data from the given Path"""
+        """Abstract function to load the data from the given Path."""
 
 
 class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
     """Data Model contract specified with pandera
-    Using Panda Dataframe. Mainly for CSV shaped data
+    Using Panda Dataframe. Mainly for CSV shaped data.
     """
 
     @classmethod
@@ -49,7 +49,7 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
 
     @classmethod
     def load_from_path(cls, path: Path, *args) -> Self:
-        """Switch case to find the matching file ending"""
+        """Switch case to find the matching file ending."""
         import pandas as pd  # pylint: disable=import-outside-toplevel
 
         read_data = pd.read_csv(path.open(encoding="utf-8"))
@@ -60,11 +60,11 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
 
 
 class PydanticModel(pydantic.BaseModel, DataModel):
-    """DataModel contract specified with pydantic"""
+    """DataModel contract specified with pydantic."""
 
     @classmethod
     def save_to_path(cls, path: Path, obj: Union[Self, list[Self]]):
-        """Wurzel save model
+        """Wurzel save model.
 
         Args:
             path (Path): location
@@ -88,7 +88,7 @@ class PydanticModel(pydantic.BaseModel, DataModel):
     # pylint: disable=arguments-differ
     @classmethod
     def load_from_path(cls, path: Path, model_type: Type[Union[Self, list[Self]]]) -> Union[Self, list[Self]]:
-        """Wurzel load model
+        """Wurzel load model.
 
         Args:
             path (Path): load model from

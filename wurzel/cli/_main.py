@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""CLI Entry"""
+"""CLI Entry."""
 
 import importlib
 import inspect
@@ -35,7 +35,7 @@ log = logging.getLogger(__name__)
 
 
 def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: str):
-    """Convert a cli-str to a Type[BaseStepExecutor]
+    """Convert a cli-str to a Type[BaseStepExecutor].
 
     Args:
         _ctx (typer.Context)
@@ -57,7 +57,7 @@ def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: s
 
 
 def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str) -> TypedStep:
-    """Converts a cli-str to a TypedStep
+    """Converts a cli-str to a TypedStep.
 
     Args:
         _ctx (typer.Context):
@@ -91,7 +91,7 @@ def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path:
 
 
 def complete_step_import(incomplete: str):
-    """AutoComplete for steps"""
+    """AutoComplete for steps."""
     packages = [p for p in pkgutil.iter_modules() if p.ispkg and p.name.startswith(incomplete if incomplete else "wurzel")]
     hints = []
     for pkg in packages:
@@ -144,7 +144,7 @@ def run(
     ] = "BaseStepExecutor",
     encapsulate_env: Annotated[bool, typer.Option()] = True,
 ):
-    """Run"""
+    """Run."""
     output_path = Path(output_path.as_posix().replace("<step-name>", step.__name__))
     log.debug(
         "executing run",
@@ -174,18 +174,18 @@ def inspekt(
     ],
     gen_env: Annotated[bool, typer.Option()] = False,
 ):
-    """Inspect"""
+    """Inspect."""
     return cmd_inspect(step, gen_env)
 
 
 def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, _backend: str):
-    """Validates input and returns fitting backend. Currently always DVCBackend"""
+    """Validates input and returns fitting backend. Currently always DVCBackend."""
     logging.warning("only DVCBackend is supported currently")
     return DvcBackend
 
 
 def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str) -> TypedStep:
-    """Based on step_callback transform them to WZ pipeline elements"""
+    """Based on step_callback transform them to WZ pipeline elements."""
     step = step_callback(_ctx, _param, import_path)
     if not hasattr(step, "required_steps"):
         step = WZ(step)
@@ -218,7 +218,7 @@ def generate(
         ),
     ] = DvcBackend,
 ):
-    """Run"""
+    """Run."""
     log.debug(
         "generate pipeline",
         extra={
@@ -239,7 +239,7 @@ def generate(
 
 
 def update_log_level(log_level: str):
-    """Fix for typer logs"""
+    """Fix for typer logs."""
     log_config = get_logging_dict_config(log_level)
     log_config["formatters"]["default"] = {
         "()": "wurzel.cli.logger.WithExtraFormatter",
@@ -263,7 +263,7 @@ def main_args(
         ),
     ] = "INFO",
 ):
-    """Global settings, main"""
+    """Global settings, main."""
     if not os.isatty(1):
         typer.core.rich = None
         logging.config.dictConfig(get_logging_dict_config(log_level))
@@ -277,6 +277,6 @@ def main_args(
 
 
 def main():
-    """Main"""
+    """Main."""
     sys.path.append(os.getcwd())  # needed fo find the files relative to cwd
     app()

@@ -9,7 +9,7 @@ from wurzel.datacontract import PanderaDataFrameModel
 
 
 class EmbeddingResult(PanderaDataFrameModel):
-    """data contract of embedding output"""
+    """data contract of embedding output."""
 
     text: Series[str]
     url: Series[str] = Field(nullable=True, default=" ", coerce=True, description="url used for search ")
@@ -18,7 +18,7 @@ class EmbeddingResult(PanderaDataFrameModel):
 
 
 class EmbeddingMultiVectorResult(PanderaDataFrameModel):
-    """data contract of embedding output"""
+    """data contract of embedding output."""
 
     text: Series[str]
     url: Series[str] = Field(nullable=True, default=" ", coerce=True, description="url used for search ")

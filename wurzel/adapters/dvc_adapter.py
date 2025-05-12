@@ -15,7 +15,7 @@ from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 
 
 class DvcDict(TypedDict):
-    """Internal Representation"""
+    """Internal Representation."""
 
     cmd: str
     deps: list[str]
@@ -24,19 +24,19 @@ class DvcDict(TypedDict):
 
 
 class Backend:
-    """Abstract class to specify the Backend"""
+    """Abstract class to specify the Backend."""
 
     def generate_dict(self, step: TypedStep):
-        """Generate the dict"""
+        """Generate the dict."""
         raise NotImplementedError()
 
     def generate_yaml(self, step: TypedStep):
-        """Generate the dict and saves it"""
+        """Generate the dict and saves it."""
         raise NotImplementedError()
 
 
 class DvcBackend(Backend):
-    """'Adapter' which creates DVC yamls"""
+    """'Adapter' which creates DVC yamls."""
 
     def __init__(
         self,
@@ -91,7 +91,7 @@ class DvcBackend(Backend):
         self,
         step: TypedStep,
     ) -> str:
-        """Generates the dvc.yaml"""
+        """Generates the dvc.yaml."""
         data = self.generate_dict(step)
         for k in data:
             for key in ["outs", "deps"]:
@@ -100,6 +100,6 @@ class DvcBackend(Backend):
 
     @classmethod
     def save_yaml(cls, yml: str, file: Path):
-        """Saves given yml string int file"""
+        """Saves given yml string int file."""
         with open(file, "w", encoding="utf-8") as f:
             yaml.dump(yml, f)

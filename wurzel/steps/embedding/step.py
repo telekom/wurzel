@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""consists of DVCSteps to embedd files and save them as for example as csv"""
+"""consists of DVCSteps to embedd files and save them as for example as csv."""
 
 # Standard library imports
 import os
@@ -32,7 +32,7 @@ log = getLogger(__name__)
 
 
 class Embedded(TypedDict):
-    """dict definition of a embedded document"""
+    """dict definition of a embedded document."""
 
     text: str
     url: str
@@ -44,7 +44,7 @@ class EmbeddingStep(
     TypedStep[EmbeddingSettings, list[MarkdownDataContract], DataFrame[EmbeddingResult]],
 ):
     """Step for consuming list[MarkdownDataContract]
-    and returning DataFrame[EmbeddingResult]
+    and returning DataFrame[EmbeddingResult].
     """
 
     embedding: HuggingFaceInferenceAPIEmbeddings
@@ -150,16 +150,16 @@ class EmbeddingStep(
         return {"text": doc.md, "vector": vector, "url": doc.url, "keywords": context}
 
     def is_stopword(self, word: str) -> bool:
-        """Stopword Detection Function"""
+        """Stopword Detection Function."""
         return word.lower() in self.settingstopwords
 
     @classmethod
     def whitespace_word_tokenizer(cls, text: str) -> list[str]:
-        """Simple Regex based whitespace word tokenizer"""
+        """Simple Regex based whitespace word tokenizer."""
         return [x for x in re.split(r"([.,!?]+)?\s+", text) if x]
 
     def get_simple_context(self, text):
-        """Simple function to create a context from a text"""
+        """Simple function to create a context from a text."""
         tokens = self.whitespace_word_tokenizer(text)
         filtered_tokens = [token for token in tokens if not self.is_stopword(token)]
         return " ".join(filtered_tokens)

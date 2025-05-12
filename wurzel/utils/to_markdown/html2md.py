@@ -46,7 +46,7 @@ Wrapper module around html2md binary
 
 def to_markdown(html: str, binary_path: Path = __HTML2MD) -> str:
     """Convert HTML XML string to Markdown using an external binary or a Python library.
-    In acknowledge to https://github.com/suntong/html2md
+    In acknowledge to https://github.com/suntong/html2md.
 
     Parameters
     ----------
@@ -124,7 +124,7 @@ def remove_images(markdown: str) -> str:
 
 
 def clean_tree(div: lxml.etree.ElementBase) -> lxml.etree.ElementBase:
-    """Cleans the lxml.html tree from html unneded html obstacales"""
+    """Cleans the lxml.html tree from html unneded html obstacales."""
     # Remove all link or script tags
     for tag in ["script", "link", "style", "svg", "footer"]:
         for bad in div.xpath("//" + tag):
@@ -146,7 +146,7 @@ def clean_tree(div: lxml.etree.ElementBase) -> lxml.etree.ElementBase:
 
 
 def clean_html(html: str) -> str:
-    """Clean HTML string"""
+    """Clean HTML string."""
     tree = lxml.html.fromstring(html)
     cleaned_tree = clean_tree(tree)
     cleaned_html = lxml.html.tostring(cleaned_tree).decode()
@@ -211,5 +211,5 @@ def normalize_urls(html_content: str, base_url: str = "https://www.magenta.at"):
 
 
 def html2str(html: lxml) -> str:
-    """Converts lxml html to str"""
+    """Converts lxml html to str."""
     return lxml.html.tostring(html, pretty_print=False, method="html").decode("utf-8")
