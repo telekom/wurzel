@@ -88,7 +88,7 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
 
         - Parses and renders the Markdown content into HTML using a custom HTML renderer
         - Removes unwanted HTML comments and escaped underscores
-        - Extracts the first heading from the content (e.g., <h1> to <h6>)
+        - Extracts the first heading from the content (e.g., `<h1>` to `<h6>`)
         - Converts the cleaned HTML into plain text
 
         Args:

@@ -4,7 +4,7 @@
 
 import pytest
 
-from wurzel.steps.step_docling.docling_step import CleanMarkdownRenderer, DoclingStep
+from wurzel.steps.docling.docling_step import CleanMarkdownRenderer, DoclingStep
 
 
 @pytest.mark.parametrize(
