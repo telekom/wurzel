@@ -1,4 +1,5 @@
 # Wurzel
+<img src=https://raw.githubusercontent.com/telekom/wurzel/main/docs/icon.png width=20% align=right>
 
 Wurzel is an open-source Python library built to address advanced Extract, Transform, Load (ETL) needs for Retrieval-Augmented Generation (RAG) systems. It is designed to streamline ETL processes while offering essential features like multi-tenancy, cloud-native deployment support, and job scheduling.
 

@@ -32,7 +32,7 @@ clean:
 	@rm -rf .coverage reports dist
 
 documentation:
-	sphinx-apidoc  -o ./docs . -f && cd docs && make html && cd .. && firefox ./docs/build/html/index.html
+	$(UV) run mkdocs serve
 
 .PHONY: reuse-lint
 reuse-lint:

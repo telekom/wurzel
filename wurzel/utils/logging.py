@@ -29,7 +29,7 @@ def warnings_to_logger(message: str, category: str, filename: str, lineno: str, 
     """
     for module_name, module in sys.modules.items():
         module_path = getattr(module, "__file__", None)
-        if module_path and os.path.samefile(module_path, filename):
+        if module_path and os.path.abspath(module_path) == os.path.abspath(filename):
             break
     else:
         module_name = os.path.splitext(os.path.split(filename)[1])[0]
