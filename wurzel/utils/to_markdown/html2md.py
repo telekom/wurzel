@@ -222,6 +222,6 @@ def normalize_urls(html_content: str, base_url: str = "https://www.magenta.at"):
     return html2str(tree)
 
 
-def html2str(html: lxml) -> str:
+def html2str(html: lxml.html) -> str:
     """converts lxml html to str"""
     return lxml.html.tostring(html, pretty_print=False, method="html").decode("utf-8")
