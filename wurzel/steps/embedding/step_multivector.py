@@ -47,8 +47,22 @@ class EmbeddingMultiVectorStep(
     """
 
     def run(self, inpt: list[MarkdownDataContract]) -> DataFrame[EmbeddingMultiVectorResult]:
-        """Executes the embedding step by processing input markdown files, generating embeddings,
-        and saving them to a CSV file.
+        """Executes the embedding step by processing a list of MarkdownDataContract objects,
+        generating embeddings for each document, and returning the results as a DataFrame.
+
+        Args:
+            inpt (list[MarkdownDataContract]): A list of markdown data contracts to process.
+
+        Returns:
+            DataFrame[EmbeddingMultiVectorResult]: A DataFrame containing the embedding results.
+
+        Raises:
+            StepFailed: If all input documents fail to generate embeddings.
+
+        Logs:
+            - Warnings for documents skipped due to EmbeddingAPIException.
+            - A summary warning if some or all documents are skipped.
+
         """
 
         def process_document(doc):

@@ -23,6 +23,7 @@ def create_model(
     allow_extra_fields=False,
 ) -> SettingsBase:
     """Takes all fields.setting_class and creates a pydantic_settings Model.
+
     - If input is a list:
         - If list of Type[TypedStep]: WZ(item) will be applied
         - If list of TypedStep (WZ was already aplpied): nothing
@@ -46,6 +47,7 @@ def create_model(
 
     Args:
         fields (list[Union[TypedStep, Type[TypedStep]]]): will be fields
+        allow_extra_fields (bool): if True, allows extra fields in the model
 
     Returns:
         SettingsBase: MetaModel with set fields

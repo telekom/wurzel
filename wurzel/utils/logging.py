@@ -17,16 +17,20 @@ log = logging.getLogger(__name__)
 
 # pylint: disable-next=too-many-positional-arguments
 def warnings_to_logger(message: str, category: str, filename: str, lineno: str, file=None, line=None):
-    # pylint: disable=unused-argument
-    """Replaces warnings.showwarning.
+    """Replaces the default `warnings.showwarning` function to log warnings using the Python logging framework.
 
-    Args:
-        message (str):
-        category (str): Warnings class
-        filename (str):
-        lineno (str):
+    This function captures warning messages and logs them to a logger associated with the module where the warning originated.
+    If the module cannot be determined, it uses the filename as the logger name.
+
+        message (str): The warning message to be logged.
+        category (str): The category of the warning (e.g., `UserWarning`, `DeprecationWarning`).
+        filename (str): The name of the file where the warning was triggered.
+        lineno (str): The line number in the file where the warning was triggered.
+        file (Optional[IO], optional): Not used. Included for compatibility with `warnings.showwarning`. Defaults to None.
+        line (Optional[str], optional): Not used. Included for compatibility with `warnings.showwarning`. Defaults to None.
 
     """
+    # pylint: disable=unused-argument
     for module_name, module in sys.modules.items():
         module_path = getattr(module, "__file__", None)
         if module_path and os.path.abspath(module_path) == os.path.abspath(filename):

@@ -152,9 +152,25 @@ select = [
     "F",  # pyflakes rules,
     "I",  # sorting for imports
     "E",  # formatting
-   # "D",  # formatting for docs (disabled)
+    "D",  # formatting for docs (disabled)
     "UP", # upgrade to latest syntax if possible
     "C4", # cleaner comprehensions
+]
+
+ignore = [
+    "D401", # First line of docstring should be in imperative mood
+    "D100",# Missing docstring in public module #TODO:
+    "D104", # Missing docstring in public package #TODO:
+    "D105", # Missing docstring in magic method #TODO:
+    "D102",  #Missing docstring in public method #TODO:
+    "D417", # Missing argument description in the docstring for `__init__`: `defaults` #TODO:
+    "D107", # Missing docstring in `__init__` #TODO:
+    "D103", # Missing docstring in public function #TODO:
+    "D101",  #Missing docstring in public class #TODO:
+    "D205", #1 blank line required between summary line and description
+    "D211", # `incorrect-blank-line-before-class` (D203) and `no-blank-line-before-class` (D211) are incompatible.
+    "D213", #`multi-line-summary-first-line` (D212) and `multi-line-summary-second-line` (D213) are incompatible.
+    "D203", #cause conflicts when used with the formatter
 ]
 
 [tool.ruff.format]

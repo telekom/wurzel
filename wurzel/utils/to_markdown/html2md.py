@@ -46,6 +46,7 @@ Wrapper module around html2md binary
 
 def to_markdown(html: str, binary_path: Path = __HTML2MD) -> str:
     """Convert HTML XML string to Markdown using an external binary or a Python library.
+
     In acknowledge to https://github.com/suntong/html2md.
 
     Parameters
@@ -92,18 +93,16 @@ def to_markdown(html: str, binary_path: Path = __HTML2MD) -> str:
 
 
 def remove_images(markdown: str) -> str:
-    """Recursively remove image and thematic break tokens from a document object.
+    """Recursively remove image and thematic break tokens from a Markdown string.
 
-    Parameters
-    ----------
-    doc : Document
-        The document object from which image and thematic break tokens are to be removed.
+    This function processes a Markdown string, removes any image and thematic break
+    tokens, and returns the cleaned Markdown content.
 
-    Returns
-    -------
-    Document
-        The modified document object without image and thematic break tokens.
+    markdown : str
+        The input Markdown string to be processed.
 
+    str
+        The cleaned Markdown string with image and thematic break tokens removed.
     """
 
     def _to_markdown(doc: Document) -> str:
@@ -211,5 +210,13 @@ def normalize_urls(html_content: str, base_url: str = "https://www.magenta.at"):
 
 
 def html2str(html: lxml) -> str:
-    """Converts lxml html to str."""
+    """Convert an lxml HTML element to a string.
+
+    Args:
+        html (lxml): The lxml HTML element to be converted.
+
+    Returns:
+        str: The HTML content as a string.
+
+    """
     return lxml.html.tostring(html, pretty_print=False, method="html").decode("utf-8")

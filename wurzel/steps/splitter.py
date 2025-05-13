@@ -43,8 +43,20 @@ class SimpleSplitterStep(TypedStep[SplitterSettings, list[MarkdownDataContract],
         )
 
     def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
-        """Executes the split step by processing input markdown files, generating smaller splitted markdown files,
-        by preserving the headline.
+        """Executes the split step by processing input markdown files and generating smaller split markdown files and preservs the headline.
+
+        Args:
+            inpt (list[MarkdownDataContract]): A list of MarkdownDataContract objects representing
+                                               the input markdown files to be processed.
+
+        Returns:
+            list[MarkdownDataContract]: A list of MarkdownDataContract objects representing
+                                         the smaller split markdown files.
+
+        The method splits the input markdown files into batches based on the configured batch size
+        (`self.settings.BATCH_SIZE`). Each batch is processed in parallel using threading, and the
+        results are flattened into a single list of split markdown files.
+
         """
 
         def _batchify(data: list, size: int) -> list[list]:

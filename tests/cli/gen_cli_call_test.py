@@ -11,12 +11,12 @@ from wurzel.steps.manual_markdown import ManualMarkdownStep
 
 @pytest.mark.parametrize("executor", [BaseStepExecutor, PrometheusStepExecutor])
 def test_good_cli_call(executor, tmp_path):
-    """
-    Test the generate_cli_call function with valid parameters and different executors.
+    """Test the generate_cli_call function with valid parameters and different executors.
 
     Args:
         executor: The step executor class to use (BaseStepExecutor or PrometheusStepExecutor).
         tmp_path: Temporary directory path provided by pytest.
+
     """
     out_path = tmp_path / "out"
     res = generate_cli_call(ManualMarkdownStep, [], out_path, executor=executor)

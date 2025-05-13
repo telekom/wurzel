@@ -135,9 +135,29 @@ class WurzelMarkdownRenderer(markdown_renderer.MarkdownRenderer):
 
     # pylint: disable=unused-argument, arguments-differ
     def render_table_cell(self, token: block_token.TableCell, max_line_length: int) -> str:
+        """Renders the content of a table cell.
+
+        Args:
+            token (block_token.TableCell): The table cell token to render.
+            max_line_length (int): The maximum allowed line length for the content.
+
+        Returns:
+            str: The rendered content of the table cell.
+
+        """
         return self.render_inner(token)
 
     def render_table_row(self, token: block_token.TableRow, max_line_length: int) -> str:
+        """Renders a table row from the given token.
+
+        Args:
+            token (block_token.TableRow): The table row token to be rendered.
+            max_line_length (int): The maximum allowed line length for the rendered row.
+
+        Returns:
+            str: The rendered table row as a string.
+
+        """
         return self.render_inner(token)
 
 
@@ -156,6 +176,18 @@ class SemanticSplitter:
         token_limit_min: int = 64,
         spacy_model: str = "de_core_news_sm",
     ) -> None:
+        """Initializes the SemanticSplitter class with specified token limits and a spaCy language model.
+
+        Args:
+            token_limit (int, optional): The maximum number of tokens allowed. Defaults to 256.
+            token_limit_buffer (int, optional): The buffer size for token limit to allow flexibility. Defaults to 32.
+            token_limit_min (int, optional): The minimum number of tokens required. Defaults to 64.
+            spacy_model (str, optional): The name of the spaCy language model to load. Defaults to "de_core_news_sm".
+
+        Raises:
+            OSError: If the specified spaCy model cannot be loaded.
+
+        """
         import spacy  # pylint: disable=import-outside-toplevel
 
         self.nlp = spacy.load(spacy_model)
@@ -202,6 +234,7 @@ class SemanticSplitter:
 
     def _find_highest_level(self, children: list[DocumentNode], min_level: int = 0) -> tuple[int, Optional[Token], Optional[DocumentNode]]:
         """Among a list of children nodes find the one with the highest level.
+
         Return a tuple of that level, level node type and that child.
         """
 
@@ -247,9 +280,7 @@ class SemanticSplitter:
         return highest_level, highest_type, highest_element
 
     def _split_children(self, children: list[MisDocument], min_level: int = 0) -> list[MisDocument]:
-        """Split a list of children in the most semantic way
-        and return a list of Documents with them merged.
-        """
+        """Split a list of children in the most semantic way and return a list of Documents with them merged."""
         if len(children) == 1:
             if "children" in vars(children[0]) or "_children" in vars(children[0]):
                 return self._split_children(children[0].children)
@@ -374,6 +405,7 @@ class SemanticSplitter:
     # unused
     def _split_by_sentence(self, text: str) -> list[str]:
         """Sometimes _split_children does not find children leafs with are smaller then TOKEN_LIMIT.
+
         Thus we need to split by sentence.
         """
         token_limit = self.token_limit
