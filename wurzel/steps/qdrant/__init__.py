@@ -4,14 +4,11 @@
 
 from wurzel.utils import HAS_QDRANT as _HAS_QDRANT
 
-from .data import QdrantResult
-
-__all__ = ["QdrantResult"]
+from .data import QdrantResult  # noqa: F401
 
 if _HAS_QDRANT:
     from .step import QdrantConnectorStep  # noqa: F401
     from .step_multi_vector import QdrantConnectorMultiVectorStep  # noqa: F401
 
-    __all__.extend(["QdrantConnectorStep", "QdrantConnectorMultiVectorStep"])
 else:
     pass

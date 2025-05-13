@@ -3,10 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 from wurzel.utils import HAS_MILVUS as _HAS_MILVUS
 
-from .settings import MilvusSettings
+from .settings import MilvusSettings  # noqa: F401
 
-__all__ = ["MilvusSettings"]
 if _HAS_MILVUS:
     from .step import MilvusConnectorStep  # noqa: F401
-
-    __all__.append("MilvusConnectorStep")
