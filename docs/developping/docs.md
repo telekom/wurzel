@@ -8,5 +8,5 @@ Wurzel uses MkDocs to manage and build its project documentation. MkDocs is a fa
 To preview the documentation on your local machine (for development or testing), use the following command:
 
 ```bash
-mkdocs serve
+make documentation
 ```
