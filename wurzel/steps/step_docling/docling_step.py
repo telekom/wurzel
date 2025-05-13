@@ -23,7 +23,7 @@ Despite these limitations, we have decided to proceed with EasyOCR.
 import re
 from logging import getLogger
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import EasyOcrOptions, PdfPipelineOptions
 from docling.document_converter import (
@@ -49,8 +49,10 @@ class CleanMarkdownRenderer(HTMLRenderer):
     @staticmethod
     def render_html_block(token):
         # Remove comments like <!-- image -->
-        cleaned = re.sub(r"<!--.*?-->", "", token.content)
-        return cleaned.strip()
+        soup = BeautifulSoup(token.content, "html.parser")
+        for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
+            comment.extract()
+        return soup.decode_contents().strip()
 
 
 class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
