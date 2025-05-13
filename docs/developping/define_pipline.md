@@ -1,6 +1,6 @@
 # 🔗 Defining a Pipeline in Wurzel
 
-At the heart of Wurzel lies the concept of the pipeline—a chain of steps that are connected and executed in sequence. Each step processes the output of the previous one, enabling modular, reusable, and optimally scheduled workflows.
+At the heart of Wurzel lies the concept of the pipeline — a chain of steps that are connected and executed in sequence. Each step processes the output of the previous one, enabling modular, reusable, and optimally scheduled workflows.
 
 ## 🧩 What is a Wurzel Pipeline?
 
