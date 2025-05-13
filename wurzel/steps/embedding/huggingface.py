@@ -134,7 +134,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
             value = response[0]
         except (KeyError, IndexError) as err:
             raise EmbeddingException(
-                f"Response invalid Structure of received dict is incorrect: {response}should contain a list with one entry"
+                f"Response invalid Structure of received dict is incorrect: {response} should contain a list with one entry"
             ) from err
         return value
 
