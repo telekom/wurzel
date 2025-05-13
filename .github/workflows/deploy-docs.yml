@@ -16,6 +16,11 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
+            - name: Configure Git Credentials
+              run: |
+                git config user.name github-actions[bot]
+                git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+
 
             - name: Install the latest version of uv and set the python version
               uses: astral-sh/setup-uv@v5
@@ -29,4 +34,4 @@ jobs:
 
             - name: Publish documentation
               run: |
-                mkdocs gh-deploy
+                mkdocs gh-deploy --force
