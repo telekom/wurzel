@@ -20,7 +20,6 @@ Example:
 Despite these limitations, we have decided to proceed with EasyOCR.
 """
 
-import re
 from logging import getLogger
 
 from bs4 import BeautifulSoup, Comment
