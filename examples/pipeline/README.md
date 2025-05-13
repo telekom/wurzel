@@ -21,9 +21,9 @@ source >> embedding >> step
 pipeline = step
 
 ```
-2. Build your own Dockerfile based on the tweigeldev/wurzel:beta image. Here you can add depdencies where your own files are placed. either pass them directly or within the requirements.txt
+2. Build your own Dockerfile based on the [ghcr.io/telekom/wurzel:](https://github.com/telekom/wurzel/pkgs/container/wurzel) image. Here you can add depdencies where your own files are placed. either pass them directly or within the requirements.txt
 ```Docker
-FROM tweigeldev/wurzel:beta
+FROM ghcr.io/telekom/wurzel:latest
 # if your steps are located in other dependencies
 COPY requirements.txt requirements.txt
 RUN pip install -r requirements.txt
