@@ -11,10 +11,7 @@ from wurzel.utils import create_model
 
 
 def main(step: TypedStep, data_dir: Path, backend: Backend) -> str:
-    """
-    Generates the yaml for the given backend
-    """
-
+    """Generates the yaml for the given backend."""
     adapter: Backend = backend(data_dir)
     # validate the envs of the steps
     create_model(

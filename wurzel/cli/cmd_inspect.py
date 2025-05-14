@@ -5,7 +5,6 @@
 import json
 from inspect import getfile
 from types import NoneType
-from typing import Type
 
 from pydantic_core import PydanticUndefined
 
@@ -13,8 +12,8 @@ from wurzel.step import Settings, TypedStep
 from wurzel.utils import WZ
 
 
-def main(step: Type[TypedStep], gen_env=False):
-    """Execute"""
+def main(step: type[TypedStep], gen_env=False):
+    """Execute."""
     ins = WZ(step)
     set_cls: Settings = ins.settings_class
     env_prefix = step.__name__.upper()

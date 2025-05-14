@@ -229,3 +229,8 @@ uv.lock
 /output_md
 .idea
 test_file.py
+
+
+# Local development files
+#   These files are used for local development and should not be included in version control.
+tmp.py

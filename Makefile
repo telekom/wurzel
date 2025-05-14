@@ -25,17 +25,14 @@ test: install
 	$(UV) run pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov-fail-under=90  --cov=$(SRC_DIR)
 
 lint: install
-	-make reuse-lint
-	$(UV) run ruff format .
-	$(UV) run ruff check . --fix
-	$(UV) run pylint $(SRC_DIR)
+	$(UV) run pre-commit run --all-files
 
 clean:
 	@rm -rf __pycache__ ${SRC_DIR}/*.egg-info **/__pycache__ .pytest_cache
 	@rm -rf .coverage reports dist
 
 documentation:
-	sphinx-apidoc  -o ./docs . -f && cd docs && make html && cd .. && firefox ./docs/build/html/index.html
+	$(UV) run mkdocs serve
 
 .PHONY: reuse-lint
 reuse-lint:

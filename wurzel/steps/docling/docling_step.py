@@ -2,8 +2,7 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 
-"""
-Note: Known Limitations with EasyOCR (`EasyOcrOptions`)
+"""Note: Known Limitations with EasyOCR (`EasyOcrOptions`).
 
 1. Table structure is often lost or misaligned in the OCR output.
 2. Spelling inaccuracies are occasionally observed (e.g., "Verlängern" → "Verlängenng").
@@ -18,6 +17,7 @@ Example:
   Tel ekom   Kunde, schön,   dass  Si e  si ch  f ür..."
 
 Despite these limitations, we have decided to proceed with EasyOCR.
+
 """
 
 from logging import getLogger
@@ -40,8 +40,7 @@ log = getLogger(__name__)
 
 
 class CleanMarkdownRenderer(HTMLRenderer):
-    """
-    Custom Markdown renderer extending mistletoe's HTMLRenderer to clean up
+    """Custom Markdown renderer extending mistletoe's HTMLRenderer to clean up
     unwanted elements from Markdown input.
     """
 
@@ -72,11 +71,10 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
 
         Returns:
             DocumentConverter: Configured document converter.
+
         """
         pipeline_options = PdfPipelineOptions()
-        ocr_options = EasyOcrOptions(
-            force_full_page_ocr=self.settings.FORCE_FULL_PAGE_OCR
-        )
+        ocr_options = EasyOcrOptions(force_full_page_ocr=self.settings.FORCE_FULL_PAGE_OCR)
         pipeline_options.ocr_options = ocr_options
 
         return DocumentConverter(
@@ -90,26 +88,23 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
 
     @staticmethod
     def clean_markdown_with_mistletoe(md_text: str) -> tuple[str, str]:
-        """
-        Cleans a Markdown string using mistletoe and extracts useful content.
+        """Cleans a Markdown string using mistletoe and extracts useful content.
 
         - Parses and renders the Markdown content into HTML using a custom HTML renderer
         - Removes unwanted HTML comments and escaped underscores
-        - Extracts the first heading from the content (e.g., <h1> to <h6>)
+        - Extracts the first heading from the content (e.g., `<h1>` to `<h6>`)
         - Converts the cleaned HTML into plain text
 
         Args:
             md_text (str): The raw Markdown input string.
-        """
 
+        """
         with CleanMarkdownRenderer() as renderer:
             ast = Document(md_text)
             cleaned = renderer.render(ast).replace("\n", "")
             soup = BeautifulSoup(cleaned, "html.parser")
             first_heading_tag = soup.find(["h1", "h2", "h3", "h4", "h5", "h6"])
-            heading = (
-                first_heading_tag.get_text(strip=True) if first_heading_tag else ""
-            )
+            heading = first_heading_tag.get_text(strip=True) if first_heading_tag else ""
             plain_text = soup.get_text(separator=" ").strip()
             return heading, plain_text
 
@@ -121,6 +116,7 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
 
         Returns:
             List[MarkdownDataContract]: List of converted Markdown contracts.
+
         """
         urls = self.settings.URLS
         contracts = []

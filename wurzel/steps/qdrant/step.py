@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""containing the DVCStep sending embedding data into Qdrant"""
+"""containing the DVCStep sending embedding data into Qdrant."""
 
 # pylint: disable=duplicate-code
 import itertools
@@ -28,12 +28,8 @@ def _batch(iterable, size):
         yield item
 
 
-class QdrantConnectorStep(
-    TypedStep[QdrantSettings, DataFrame[EmbeddingResult], DataFrame[QdrantResult]]
-):
-    """
-    Qdrant connector step. It consumes embedding csv files, creates a new schema and inserts the embeddings
-    """
+class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], DataFrame[QdrantResult]]):
+    """Qdrant connector step. It consumes embedding csv files, creates a new schema and inserts the embeddings."""
 
     _timeout: int = 20
     s: QdrantSettings
@@ -48,10 +44,7 @@ class QdrantConnectorStep(
         # uri = ":memory:"
         log.info(f"connecting to {self.settings.URI}")
         if not self.settings.APIKEY:
-            log.warning(
-                "QDRANT__APIKEY for Qdrant not provided."
-                " Thus running in non-credential Mode"
-            )
+            log.warning("QDRANT__APIKEY for Qdrant not provided. Thus running in non-credential Mode")
         self.client = QdrantClient(
             location=self.settings.URI,
             api_key=self.settings.APIKEY,
@@ -86,9 +79,7 @@ class QdrantConnectorStep(
         log.debug(f"Creating Qdrant collection {self.collection_name}")
         self.client.create_collection(
             collection_name=self.collection_name,
-            vectors_config=models.VectorParams(
-                size=size, distance=self.settings.DISTANCE
-            ),
+            vectors_config=models.VectorParams(size=size, distance=self.settings.DISTANCE),
             replication_factor=self.settings.REPLICATION_FACTOR,
         )
 
@@ -112,13 +103,9 @@ class QdrantConnectorStep(
             for _, row in data.iterrows()
         ]
         for point_chunk in _batch(points, self.settings.BATCH_SIZE):
-            operation_info = self.client.upsert(
-                collection_name=self.collection_name, wait=True, points=point_chunk
-            )
+            operation_info = self.client.upsert(collection_name=self.collection_name, wait=True, points=point_chunk)
             if operation_info.status != "completed":
-                raise StepFailed(
-                    f"Failed to insert df chunk into collection '{self.collection_name}' {operation_info}"
-                )
+                raise StepFailed(f"Failed to insert df chunk into collection '{self.collection_name}' {operation_info}")
             log.info(
                 "Successfully inserted vector_chunk",
                 extra={"collection": self.collection_name, "count": len(point_chunk)},
@@ -164,16 +151,12 @@ class QdrantConnectorStep(
         self.client.create_payload_index(
             collection_name=self.collection_name,
             field_name="history",
-            field_schema=models.TextIndexParams(
-                type=models.TextIndexType.TEXT, tokenizer=models.TokenizerType.WORD
-            ),
+            field_schema=models.TextIndexParams(type=models.TextIndexType.TEXT, tokenizer=models.TokenizerType.WORD),
         )
 
     def _retire_collections(self):
         collections_versioned: dict[int, str] = self._get_collection_versions()
-        to_delete = list(collections_versioned.keys())[
-            : -self.settings.COLLECTION_HISTORY_LEN
-        ]
+        to_delete = list(collections_versioned.keys())[: -self.settings.COLLECTION_HISTORY_LEN]
         if not to_delete:
             return
 
@@ -229,6 +212,7 @@ class QdrantConnectorStep(
 
         Returns:
             dict[str, str]: keys: `text_<algo>_hash` hash as string ! Dict might be empty!
+
         """
         hashes = {}
         if HAS_TLSH:

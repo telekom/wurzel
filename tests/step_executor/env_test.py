@@ -40,15 +40,9 @@ class MyStep(TypedStep[MySettings, None, MyResult]):
 @pytest.mark.parametrize(
     "base_env_gen",
     [
+        pytest.param(lambda cls, x: {cls.__name__.upper(): x.model_dump_json()}, id="json"),
         pytest.param(
-            lambda cls, x: {cls.__name__.upper(): x.model_dump_json()}, id="json"
-        ),
-        pytest.param(
-            lambda cls, x: {
-                f"{cls.__name__.upper()}__{k}": json.dumps(v)
-                for k, v in x.model_dump(mode="json").items()
-                if v is not None
-            },
+            lambda cls, x: {f"{cls.__name__.upper()}__{k}": json.dumps(v) for k, v in x.model_dump(mode="json").items() if v is not None},
             id="keys",
         ),
     ],

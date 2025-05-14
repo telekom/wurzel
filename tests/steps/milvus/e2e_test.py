@@ -5,7 +5,6 @@
 
 import shutil
 from pathlib import Path
-from typing import Tuple
 
 import pytest
 
@@ -37,7 +36,7 @@ def milvus_lite(tmp_path: Path, env):
 #     shutil.copytree(MILV_OUT_DIR / "logs", f"./reports/logs/{test_name}")
 
 
-def test_milvus_connector_first(input_output_folder: Tuple[Path, Path], milvus_lite):
+def test_milvus_connector_first(input_output_folder: tuple[Path, Path], milvus_lite):
     input_path, output_path = input_output_folder
     input_file = input_path / "milvus_at.csv"
     output_file = output_path / "MilvusConnectorStep"
@@ -45,9 +44,7 @@ def test_milvus_connector_first(input_output_folder: Tuple[Path, Path], milvus_l
     BaseStepExecutor().execute_step(MilvusConnectorStep, {input_file}, output_file)
 
 
-def test_milvus_connector_has_previous(
-    input_output_folder: Tuple[Path, Path], milvus_lite
-):
+def test_milvus_connector_has_previous(input_output_folder: tuple[Path, Path], milvus_lite):
     input_path, output_path = input_output_folder
 
     input_file = input_path / "milvus_at.csv"
@@ -57,16 +54,14 @@ def test_milvus_connector_has_previous(
     BaseStepExecutor().execute_step(MilvusConnectorStep, {input_file}, output_file)
 
 
-def test_milvus_connector_no_csv(input_output_folder: Tuple[Path, Path], milvus_lite):
+def test_milvus_connector_no_csv(input_output_folder: tuple[Path, Path], milvus_lite):
     input_path, output_path = input_output_folder
     output_file = output_path / "MilvusConnectorStep"
     with pytest.raises(StepFailed):
         BaseStepExecutor().execute_step(MilvusConnectorStep, {input_path}, output_file)
 
 
-def test_milvus_connector_one_no_csv(
-    input_output_folder: Tuple[Path, Path], milvus_lite
-):
+def test_milvus_connector_one_no_csv(input_output_folder: tuple[Path, Path], milvus_lite):
     input_path, output_path = input_output_folder
     input_file = input_path / "milvus_at.csv"
     output_file = output_path / "MilvusConnectorStep"
@@ -79,9 +74,7 @@ def test_milvus_connector_one_no_csv(
         )
 
 
-def test_milvus_collection_retirement(
-    input_output_folder: Tuple[Path, Path], env, milvus_lite
-):
+def test_milvus_collection_retirement(input_output_folder: tuple[Path, Path], env, milvus_lite):
     input_path, output_path = input_output_folder
     env.set("MILVUS__COLLECTION_HISTORY_LEN", "3")
     input_file = input_path / "milvus_at.csv"
@@ -95,9 +88,7 @@ def test_milvus_collection_retirement(
         ex(MilvusConnectorStep, {input_file}, output_file)
 
 
-def test_milvus_connector_csv_partially_not_same_shape(
-    input_output_folder: Tuple[Path, Path], milvus_lite
-):
+def test_milvus_connector_csv_partially_not_same_shape(input_output_folder: tuple[Path, Path], milvus_lite):
     input_path, output_path = input_output_folder
     output_file = output_path / "MilvusConnectorStep"
     input_file = input_path / "milvus_at.csv"
@@ -106,7 +97,7 @@ def test_milvus_connector_csv_partially_not_same_shape(
         BaseStepExecutor().execute_step(MilvusConnectorStep, {input_file}, output_file)
 
 
-def test_milvus_connector_true_csv(input_output_folder: Tuple[Path, Path], milvus_lite):
+def test_milvus_connector_true_csv(input_output_folder: tuple[Path, Path], milvus_lite):
     input_path, output_path = input_output_folder
     input_file = input_path / "milvus_at.csv"
     output_file = output_path / MilvusConnectorStep.__name__

@@ -2,14 +2,12 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""
-contains Embedding Manager
-"""
+"""contains Embedding Manager."""
 
 from json.decoder import JSONDecodeError
 from logging import getLogger
 from re import Pattern as RegexPattern
-from typing import List, Literal, Union
+from typing import Literal, Union
 
 import requests
 from langchain_core.embeddings import Embeddings
@@ -61,13 +59,14 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
         self._update_model_history(self.get_info()["model_id"])
 
     def _update_model_history(self, model: str) -> bool:
-        """Updates internal model history if model name is new
+        """Updates internal model history if model name is new.
 
         Args:
             model (str): string name/ path of model
 
         Returns:
             bool: has the model changed
+
         """
         model_name = model.strip("/").split("/")[-1]
         log.info(f"Model history: name={model_name}")
@@ -77,14 +76,12 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
         return False
 
     @validate_call
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """Get the embeddings for a list of texts."""
         return [self.embed_query(text) for text in texts]
 
-    def __make_request(
-        self, url: Url, json_body: dict, method: Union[Literal["post"], Literal["get"]]
-    ) -> dict:
-        """Creates a request, tries to parse json
+    def __make_request(self, url: Url, json_body: dict, method: Union[Literal["post"], Literal["get"]]) -> dict:
+        """Creates a request, tries to parse json.
 
         Args:
             url (str)
@@ -97,25 +94,20 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
 
         Returns:
             dict: parsed response
+
         """
         try:
-            response = requests.request(
-                method, url, json=json_body, timeout=self._timeout
-            )
+            response = requests.request(method, url, json=json_body, timeout=self._timeout)
         except (requests.exceptions.ConnectTimeout, requests.exceptions.Timeout) as err:
             raise EmbeddingAPIException(f"timed out after {self._timeout}") from err
         except requests.ConnectionError as err:
             raise EmbeddingAPIException("Connection Error") from err
         if response.status_code != 200:
-            raise EmbeddingAPIException(
-                f"failed, invalid status_code {response.status_code}"
-            )
+            raise EmbeddingAPIException(f"failed, invalid status_code {response.status_code}")
         try:
             resp_dict = response.json()
         except JSONDecodeError as err:
-            raise EmbeddingAPIException(
-                f"failed due to invalid json {response.content}"
-            ) from err
+            raise EmbeddingAPIException(f"failed due to invalid json {response.content}") from err
 
         return resp_dict
 
@@ -127,36 +119,33 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
         )
 
     @validate_call
-    def embed_query(self, text: str) -> List[float]:
+    def embed_query(self, text: str) -> list[float]:
         """Compute query embeddings using a HuggingFace transformer model.
+
         Args:
             text: The text to embed.
 
         Returns:
             Embeddings for the text.
+
         """
         response = self._request_embed_query(text)
         try:
             value = response[0]
         except (KeyError, IndexError) as err:
             raise EmbeddingException(
-                "Response invalid "
-                "Structure of received dict is incorrect: "
-                f"{response}"
-                "should contain a list with one entry"
+                f"Response invalid Structure of received dict is incorrect: {response} should contain a list with one entry"
             ) from err
         return value
 
     def get_info(self):
-        """returns the infos of the model, described here:
-        https://huggingface.github.io/text-embeddings-inference/#/"""
+        """Returns the infos of the model, described here:
+        https://huggingface.github.io/text-embeddings-inference/#/.
+        """
         response_model_key = "model_id"
         resp_dict = self.__make_request(self.info_url, None, method="get")
         if response_model_key not in resp_dict:
-            raise EmbeddingException(
-                f"Response invalid format {self.info_url} {resp_dict}"
-                f"requires {response_model_key}"
-            )
+            raise EmbeddingException(f"Response invalid format {self.info_url} {resp_dict}requires {response_model_key}")
         return resp_dict
 
 
@@ -176,14 +165,14 @@ class PrefixedAPIEmbeddings(HuggingFaceInferenceAPIEmbeddings):
 
     @validate_call
     # overrides
-    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """Get the embeddings for a list of texts."""
         texts = [f"{self.prefix}{text}" for text in texts]
         embedding_response = super().embed_documents(texts)
         return embedding_response
 
     def update_prefix(self):
-        """Updates prompt/ embedding prefix used internally in every embedded request
+        """Updates prompt/ embedding prefix used internally in every embedded request.
 
         Raises:
             UnrecoverableFatalException: no prefix-definition for a model was found
@@ -195,6 +184,5 @@ class PrefixedAPIEmbeddings(HuggingFaceInferenceAPIEmbeddings):
                 log.info(f"Using prefix={prefix}")
                 return
         raise UnrecoverableFatalException(
-            f"Tried to get prefix for {self._last_model}:"
-            + f"No match found in {self.prefix_mapping.keys()}"
+            f"Tried to get prefix for {self._last_model}:" + f"No match found in {self.prefix_mapping.keys()}"
         )

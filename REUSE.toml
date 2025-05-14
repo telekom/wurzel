@@ -22,6 +22,7 @@ path = [
     "VERSION",
     ".vscode/settings.json",
     "DIRECT_REQUIREMENTS.txt",
+    "docs/**/*.md",
     ]
 precedence = "override"
 SPDX-FileCopyrightText = "NONE"

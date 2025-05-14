@@ -2,16 +2,18 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""
-Mock Responses for Unit Testing
+"""Mock Responses for Unit Testing.
 
-This module contains mock response classes used in unit testing. These classes are designed to simulate the behavior of real responses from asynchronous HTTP requests, specifically for use with the aiohttp library. The mocks facilitate testing of async functions and methods by providing controlled responses, including both successful responses and errors.
+This module contains mock response classes used in unit testing. These classes are designed to simulate the behavior of real responses
+from asynchronous HTTP requests, specifically for use with the aiohttp library. The mocks facilitate testing of async functions and methods
+by providing controlled responses, including both successful responses and errors.
 
 Classes:
 - MockResponse_1: Simulates the response object returned by aiohttp.ClientSession().get() for successful HTTP requests.
 - MockResponse: Simulates an HTTP response object for testing error handling and other response scenarios.
 
-These mock classes are utilized in the unit tests of async functions to ensure proper handling of various HTTP responses without the need for actual network calls, thus enabling more efficient and isolated testing.
+These mock classes are utilized in the unit tests of async functions to ensure proper handling of various HTTP responses
+without the need for actual network calls, thus enabling more efficient and isolated testing.
 """
 
 
@@ -31,8 +33,7 @@ class MockResponse_download_faq:
 
 
 class MockResponse_faq_entries:
-    """
-    Simulates the response object returned by aiohttp.ClientSession().get().
+    """Simulates the response object returned by aiohttp.ClientSession().get().
 
     Parameters
     ----------
@@ -47,6 +48,7 @@ class MockResponse_faq_entries:
         Returns the JSON data.
     async text():
         Returns the JSON data as a string.
+
     """
 
     def __init__(self, json_data, status):
