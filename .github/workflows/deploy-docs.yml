@@ -4,7 +4,7 @@
 name: Documentation Deployment
 
 permissions:
-  contents: read
+  contents: write
   pages: write
 
 on:
