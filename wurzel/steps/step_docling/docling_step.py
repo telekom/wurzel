@@ -47,8 +47,14 @@ class CleanMarkdownRenderer(HTMLRenderer):
 
     @staticmethod
     def render_html_block(token):
-        # Remove comments like <!-- image -->
+        """Render HTML block tokens and clean up unwanted elements.
+
+        This method removes HTML comments and returns the cleaned HTML content.
+        Remove comments like <!-- image -->
+        """
+
         soup = BeautifulSoup(token.content, "html.parser")
+
         for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
             comment.extract()
         return soup.decode_contents().strip()
