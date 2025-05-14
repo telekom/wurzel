@@ -51,7 +51,6 @@ class CleanMarkdownRenderer(HTMLRenderer):
         This method removes HTML comments and returns the cleaned HTML content.
         Remove comments like <!-- image -->
         """
-
         soup = BeautifulSoup(token.content, "html.parser")
 
         for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
