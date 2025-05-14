@@ -55,20 +55,18 @@ HTML = """
 def test_to_markdown_long():
     markdown: str = to_markdown(HTML)
 
-    assert "Lorem ipsum dolor sit amet, consectetur adipiscing elit" in markdown, (
-        markdown
-    )
+    assert "Lorem ipsum dolor sit amet, consectetur adipiscing elit" in markdown, markdown
     assert "# Welcome to My Webpage" in markdown, markdown
 
 
 def test_to_markdown_and_remove_images_integration():
-    """
-    Test integration of `to_markdown` and `remove_images` methods.
+    """Test integration of `to_markdown` and `remove_images` methods.
 
     Parameters
     ----------
     converter : ConvertToMarkdown
         An instance of ConvertToMarkdown.
+
     """
     html_content = "<p>This is a test</p><img src='test.jpg'/>"
     markdown_content = remove_images(html_content)
@@ -95,11 +93,8 @@ def test_failed_to_markdown():
 @patch("platform.uname")
 def test_file_not_found_error(mock_is_file):
     """Test handling of FileNotFoundError."""
-
     # Simulate the html2md binary file not being found
-    mock_is_file.return_value = Namespace(
-        machine="invalid_platform_mock", system="invalid_platform_mock_system"
-    )
+    mock_is_file.return_value = Namespace(machine="invalid_platform_mock", system="invalid_platform_mock_system")
     with pytest.raises(InvalidPlatform):
         __get_html2md()
 

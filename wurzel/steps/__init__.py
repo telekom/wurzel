@@ -2,17 +2,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from wurzel.utils import HAS_QDRANT as _HAS_QDRANT
-
-from ..step import TypedStep
-from .embedding import EmbeddingStep
-from .manual_markdown import ManualMarkdownStep
-
-__all__ = ["TypedStep", "ManualMarkdownStep", "EmbeddingStep"]
-if _HAS_QDRANT:
-    from .qdrant import QdrantConnectorMultiVectorStep, QdrantConnectorStep
-
-    __all__ += [
-        "QdrantConnectorMultiVectorStep",
-        "QdrantConnectorStep",
-    ]
+from .docling import *  # noqa: F403 Allow importing Step classes from docling
+from .embedding import *  # noqa: F403 Allow importing Step classes
+from .embedding import EmbeddingStep  # noqa: F401
+from .manual_markdown import ManualMarkdownStep  # noqa: F401
+from .milvus import *  # noqa: F403 Allow importing Step classes
+from .qdrant import *  # noqa: F403 Allow importing Step classes

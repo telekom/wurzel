@@ -6,9 +6,6 @@
 import shutil
 from pathlib import Path
 
-# Related third-party imports
-from typing import List
-
 import numpy as np
 import pytest
 
@@ -21,8 +18,7 @@ from wurzel.steps.embedding.step_multivector import EmbeddingMultiVectorStep
 
 @pytest.fixture(scope="module")
 def mock_embedding():
-    """
-    A pytest fixture that provides a mock embedding class for testing.
+    """A pytest fixture that provides a mock embedding class for testing.
 
     Overrides the `_select_embedding` method of the `EmbeddingStep` class
     to return an instance of the mock embedding class, which generates
@@ -32,12 +28,12 @@ def mock_embedding():
     -------
     MockEmbedding
         An instance of the mock embedding class.
+
     """
 
     class MockEmbedding:
-        def embed_query(self, _: str) -> List[float]:
-            """
-            Simulates embedding of a query string into a fixed-size random vector.
+        def embed_query(self, _: str) -> list[float]:
+            """Simulates embedding of a query string into a fixed-size random vector.
 
             Parameters
             ----------
@@ -48,6 +44,7 @@ def mock_embedding():
             -------
             np.ndarray
                 A random vector of size 768.
+
             """
             return list(np.random.random(768))
 
@@ -58,8 +55,7 @@ def mock_embedding():
 
 
 def test_embedding_step(mock_embedding, tmp_path, env):
-    """
-    Tests the execution of the `EmbeddingStep` with a mock input file.
+    """Tests the execution of the `EmbeddingStep` with a mock input file.
 
     Parameters
     ----------
@@ -71,6 +67,7 @@ def test_embedding_step(mock_embedding, tmp_path, env):
     Asserts
     -------
     Asserts that the `embedding.csv` file is created in the output folder.
+
     """
     env.set("EMBEDDINGSTEP__API", "https://example-embedding.com/embed")
     EmbeddingStep._select_embedding = mock_embedding
@@ -79,16 +76,13 @@ def test_embedding_step(mock_embedding, tmp_path, env):
     input_folder.mkdir()
     shutil.copy(mock_file, input_folder)
     output_folder = tmp_path / "out"
-    BaseStepExecutor(dont_encapsulate=False).execute_step(
-        EmbeddingStep, [input_folder], output_folder
-    )
+    BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingStep, [input_folder], output_folder)
     assert output_folder.is_dir()
     assert len(list(output_folder.glob("*"))) > 0
 
 
 def test_mutlivector_embedding_step(mock_embedding, tmp_path, env):
-    """
-    Tests the execution of the `EmbeddingMultiVectorStep` with a mock input file.
+    """Tests the execution of the `EmbeddingMultiVectorStep` with a mock input file.
 
     Parameters
     ----------
@@ -100,6 +94,7 @@ def test_mutlivector_embedding_step(mock_embedding, tmp_path, env):
     Asserts
     -------
     Asserts that the `embedding.csv` file is created in the output folder.
+
     """
     env.set("EMBEDDINGMULTIVECTORSTEP__API", "https://example-embedding.com/embed")
     EmbeddingStep._select_embedding = mock_embedding
@@ -110,8 +105,6 @@ def test_mutlivector_embedding_step(mock_embedding, tmp_path, env):
     input_folder.mkdir()
     shutil.copy(mock_file, input_folder)
     output_folder = tmp_path / "out"
-    BaseStepExecutor(dont_encapsulate=False).execute_step(
-        EmbeddingMultiVectorStep, [input_folder], output_folder
-    )
+    BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingMultiVectorStep, [input_folder], output_folder)
     assert output_folder.is_dir()
     assert len(list(output_folder.glob("*"))) > 0

@@ -37,7 +37,10 @@ class AnException(Exception):
             (SomeClass, None),
             (AnException("Instance"), "AnException('Instance')"),
             # (SomeDataClass(),  {'A': 'Data Object'}), Todo: fix
-            # (MilvusSettings(PASSWORD="123", USER="AA"), {"VECTOR_STORE_TYPE": "milvus", "HOST": "localhost", "PORT": 19530, "COLLECTION": "", "SEARCH_PARAMS": {"metric_type": "IP", "params": {"a": "b"}}, "INDEX_PARAMS": {"index_type": "FLAT", "metric_type": "IP", "params": {}}, "USER": "AA", "PASSWORD": "****", "SECURED": False})
+            # (MilvusSettings(PASSWORD="123", USER="AA"), {"VECTOR_STORE_TYPE": "milvus", "HOST": "localhost", "PORT": 19530,
+            # "COLLECTION": "",
+            # "SEARCH_PARAMS": {"metric_type": "IP", "params": {"a": "b"}}, "INDEX_PARAMS": {"index_type": "FLAT",
+            #  "metric_type": "IP", "params": {}}, "USER": "AA", "PASSWORD": "****", "SECURED": False})
         ]
     ],
 )

@@ -14,9 +14,7 @@ from wurzel.steps.embedding.data import EmbeddingResult
 @pytest.mark.parametrize(
     "inpt",
     [
-        pytest.param(
-            MarkdownDataContract(md="md", keywords="kw", url="ur"), id="Single Pyd Obj"
-        ),
+        pytest.param(MarkdownDataContract(md="md", keywords="kw", url="ur"), id="Single Pyd Obj"),
         pytest.param(
             [
                 MarkdownDataContract(md="md", keywords="kw", url="ur"),
@@ -36,9 +34,7 @@ from wurzel.steps.embedding.data import EmbeddingResult
     ],
 )
 def test_sorted(inpt):
-    sorted_inpt: pandas.DataFrame | PydanticModel | list[PydanticModel] = _try_sort(
-        inpt
-    )
+    sorted_inpt: pandas.DataFrame | PydanticModel | list[PydanticModel] = _try_sort(inpt)
     if isinstance(inpt, pandas.DataFrame):
         assert sorted_inpt.equals(inpt)
     else:
@@ -78,15 +74,11 @@ def test_unsorted_df():
         ]
     )
     assert not sort.equals(unsorted), "sanity check"
-    assert sort.reset_index(drop=True).equals(
-        _try_sort(unsorted).reset_index(drop=True)
-    )
+    assert sort.reset_index(drop=True).equals(_try_sort(unsorted).reset_index(drop=True))
 
 
 def test_hashing():
     args = {"md": "md", "keywords": "kwds", "url": "urls"}
     expected = hash(MarkdownDataContract(**args))
     for i in range(100):
-        assert hash(MarkdownDataContract(**args)) == expected, (
-            f"Failed in iteration {i}"
-        )
+        assert hash(MarkdownDataContract(**args)) == expected, f"Failed in iteration {i}"

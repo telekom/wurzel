@@ -48,9 +48,7 @@ def test_no_settings():
         MyWithoutSettingsStep()
 
 
-@pytest.mark.parametrize(
-    "env_set", [("MYSTEP__key", "value"), ("MYSTEP", '{"key": "value"}')]
-)
+@pytest.mark.parametrize("env_set", [("MYSTEP__key", "value"), ("MYSTEP", '{"key": "value"}')])
 def test_env_set(env, env_set):
     env.set(*env_set)
     with pytest.raises(ValidationError):

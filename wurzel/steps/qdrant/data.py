@@ -10,7 +10,7 @@ from wurzel.steps.embedding.data import EmbeddingMultiVectorResult, EmbeddingRes
 
 
 class QdrantResult(EmbeddingResult):
-    """Data Contract Proxy adding collection name to the PanderaDataframe"""
+    """Data Contract Proxy adding collection name to the PanderaDataframe."""
 
     text_tlsh_hash: Optional[Series[str]]
     collection: Series[str]
@@ -18,7 +18,7 @@ class QdrantResult(EmbeddingResult):
 
 
 class QdranttMultiVectorResult(EmbeddingMultiVectorResult):
-    """Data Contract Proxy adding collection name to the PanderaDataframe"""
+    """Data Contract Proxy adding collection name to the PanderaDataframe."""
 
     text_tlsh_hash: Optional[Series[str]]
     collection: Series[str]

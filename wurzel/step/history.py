@@ -16,14 +16,12 @@ step_history.set(None)
 
 
 class History:
-    """internal history object"""
+    """internal history object."""
 
     __SEP_STR = "-"
     _history: list[str]
 
-    def __init__(
-        self, *args: Union[TypedStep, str, list[str]], initial: list[str] = None
-    ) -> NoneType:
+    def __init__(self, *args: Union[TypedStep, str, list[str]], initial: list[str] = None) -> NoneType:
         if initial is None:
             initial = []
         self._history = initial
@@ -47,14 +45,15 @@ class History:
         return self
 
     def copy(self) -> "History":
-        """Returns a copy of self"""
+        """Returns a copy of self."""
         return History(initial=self.get())
 
     def get(self) -> list[str]:
-        """get History
+        """Get History.
 
         Returns:
             list[str]: history (copy)
+
         """
         return self._history.copy()
 
@@ -82,33 +81,36 @@ class History:
         return self._history == value._history
 
     def to_json(self):
-        """converts to json string
+        """Converts to json string.
 
         Returns:
             str: json list of str
+
         """
         return json.dumps(self._history)
 
     @classmethod
     def from_json(cls, s: str) -> "History":
-        """converts from json string
+        """Converts from json string.
 
         Args:
             s (str): json string list of str
 
         Returns:
             History: new Instance
+
         """
         return History(initial=json.loads(s))
 
     @classmethod
     def from_str(cls, s: str) -> "History":
-        """converts from str(History)
+        """Converts from str(History).
 
         Args:
             s (str)
 
         Returns:
             History: new Instance
+
         """
         return History(initial=json.loads(s))

@@ -11,7 +11,6 @@ from typing import (
     Generic,
     Optional,
     Self,
-    Type,
     TypeAlias,
     TypeVar,
     Union,
@@ -28,7 +27,7 @@ from wurzel.step.settings import Settings
 from wurzel.step.step import Step
 
 # pylint: disable-next=invalid-name
-MODEL_TYPE: TypeAlias = Type[Union[PydanticModel, PanderaDataFrameModel]]
+MODEL_TYPE: TypeAlias = type[Union[PydanticModel, PanderaDataFrameModel]]
 #  ^Should be a Intersection between DataModel & {BaseModel, DataFrameModel}
 log = getLogger(__name__)
 INCONTRACT = TypeVar("INCONTRACT")
@@ -92,28 +91,28 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     ```
     """
 
-    _internal_input_class: Type[PathToFolderWithBaseModels]
-    _internal_output_class: Type[PathToFolderWithBaseModels]
+    _internal_input_class: type[PathToFolderWithBaseModels]
+    _internal_output_class: type[PathToFolderWithBaseModels]
     input_model_type: Union[MODEL_TYPE, list[MODEL_TYPE], None]
     output_model_type: Union[MODEL_TYPE, list[MODEL_TYPE], None]
-    settings_class: Type[SETTS]
+    settings_class: type[SETTS]
     output_model_class: MODEL_TYPE
     input_model_class: MODEL_TYPE
-    _supported_containers: Iterable[Type[Iterable]] = (list, set, patyp.DataFrame)
+    _supported_containers: Iterable[type[Iterable]] = (list, set, patyp.DataFrame)
     settings: SETTS
 
     def output_path(self, folder: Path) -> Path:
-        """Used in generate dvc yml. Creates a path"""
+        """Used in generate dvc yml. Creates a path."""
         pth = folder / self.__class__.__name__
         return pth.with_suffix(self.output_model_class.kt_file_extension())
 
     @classmethod  #
     def _unpack_list_containers(
         cls,
-        list_or_type: Union[list, Type, None],
-        containers: Optional[list[Type[Iterable]]] = None,
-    ) -> tuple[Optional[Iterable[Type[Iterable]]], Type]:
-        """Unpacks the containers around a given nested Type
+        list_or_type: Union[list, type, None],
+        containers: Optional[list[type[Iterable]]] = None,
+    ) -> tuple[Optional[Iterable[type[Iterable]]], type]:
+        """Unpacks the containers around a given nested Type.
 
         Args:
             list_or_type (Union[list, Type, None]): Type or container to try to unpack
@@ -124,10 +123,11 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
 
         Returns:
             tuple[Optional[Iterable[Type[Iterable]]], Type]: (container types, type)
+
         """
         if containers is None:
             containers = []
-        origin_t: Union[Type[Iterable], Type, None] = get_origin(list_or_type)
+        origin_t: Union[type[Iterable], type, None] = get_origin(list_or_type)
         if origin_t is None:
             # list_or_type is now a type/class
             if list_or_type is None:
@@ -144,23 +144,15 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
 
     @classmethod  # pylint: disable-next=unused-private-member # used in __new__
     def _static_type_check_self(cls):
-        """Confirms the type annotations of child classes TypedStep"""
-        type_annotations = [
-            get_args(parent)
-            for parent in getattr(cls, "__orig_bases__", [])
-            if get_args(parent)
-        ][0]
+        """Confirms the type annotations of child classes TypedStep."""
+        type_annotations = [get_args(parent) for parent in getattr(cls, "__orig_bases__", []) if get_args(parent)][0]
         if type_annotations == ():
             raise StaticTypeError(
-                f"No type-annotation provided when creating subclass of {cls.__name__}"
-                + f"Use: MyStep({cls.__name__}[INPUT_T, OUTPUT_T])"
+                f"No type-annotation provided when creating subclass of {cls.__name__}" + f"Use: MyStep({cls.__name__}[INPUT_T, OUTPUT_T])"
             )
         cls._prepare_datamodels(type_annotations)
         if not issubclass(cls.settings_class, (Settings, NoneType)):
-            raise StaticTypeError(
-                "Settings provided in TypedStep[<>, ...]"
-                + " is not a subclass of settings_class"
-            )
+            raise StaticTypeError("Settings provided in TypedStep[<>, ...]" + " is not a subclass of settings_class")
         _ = cls._unpack_list_containers(cls.input_model_type)
         out_t = cls._unpack_list_containers(cls.output_model_type)
 
@@ -168,35 +160,25 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
             return c == [] and t == NoneType
 
         if has_no_annotation(*out_t):
-            raise StaticTypeError(
-                f"Type-annotation for output of {cls.__name__}[..., None] can't be None"
-            )
+            raise StaticTypeError(f"Type-annotation for output of {cls.__name__}[..., None] can't be None")
 
     @classmethod
     def _prepare_datamodels(cls, type_annotations):
-        cls.settings_class, cls.input_model_type, cls.output_model_type = (
-            type_annotations
-        )
+        cls.settings_class, cls.input_model_type, cls.output_model_type = type_annotations
 
     @classmethod  # pylint: disable-next=unused-private-member # used in __new__
     def _static_type_check_run(cls):
         """Confirms the type annotations of child classes run method.
-        Currently allows missing type annotations with a warning
+        Currently allows missing type annotations with a warning.
         """
         # Since type annotation of class does not want list container
         # but run adds it, we add it manually
         expected_run_input = cls.input_model_type
-        expected_signature_str = (
-            f"run(inputs: {expected_run_input}) -> {cls.output_model_type}:"
-        )
+        expected_signature_str = f"run(inputs: {expected_run_input}) -> {cls.output_model_type}:"
         try:
             if not cls.run.__annotations__:
-                log.warning(
-                    f"The step {cls.__name__} has no types. This is not recommended!"
-                )
-                log.info(
-                    f"Method signature should be {cls.__name__}.{expected_signature_str}:"
-                )
+                log.warning(f"The step {cls.__name__} has no types. This is not recommended!")
+                log.info(f"Method signature should be {cls.__name__}.{expected_signature_str}:")
                 # raise StaticTypeError(
                 #    "incorrect function signature for run method:  no typing"
                 # )
@@ -208,10 +190,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
                 annotations = cls.run.__annotations__.copy()
             run_retur = annotations.pop("return")
             if len(annotations) != 1:
-                raise StaticTypeError(
-                    "incorrect funtion signature (inputs) for run method: "
-                    + f"Expected one input, got {annotations}"
-                )
+                raise StaticTypeError("incorrect funtion signature (inputs) for run method: " + f"Expected one input, got {annotations}")
             _, run_input = annotations.popitem()
             run_input_cons, run_input_orig = cls._unpack_list_containers(run_input)
             run_retur_cons, run_retur_orig = cls._unpack_list_containers(run_retur)
@@ -236,14 +215,12 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
                     + f"\texpected {expected_signature_str}"
                 )
         except IndexError as i:
-            raise ContractFailedException(
-                "Could not get_args of either run inputs or return"
-            ) from i
+            raise ContractFailedException("Could not get_args of either run inputs or return") from i
         except KeyError as k:
             raise ContractFailedException("Could not get annotations from run") from k
 
     def finalize(self) -> None:
-        """Called after execution in Executor finished
+        """Called after execution in Executor finished.
 
         Can be used for cleanup etc.
 
@@ -251,7 +228,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         """
 
     def __new__(cls) -> Self:
-        instance = super(TypedStep, cls).__new__(cls)
+        instance = super().__new__(cls)
         super().__init__(instance)
         # Get Input and output type from annotations
         # Get Type annotations, fallback to None if they don't exist
@@ -264,10 +241,10 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
 
         # Sadly we cant use type() or types.new_class for this.
         class InCls(PathToFolderWithBaseModels[instance.input_model_type]):
-            """Used internally"""
+            """Used internally."""
 
         class OutCls(PathToFolderWithBaseModels[instance.output_model_type]):
-            """Used internally"""
+            """Used internally."""
 
         instance._internal_input_class = InCls
         instance._internal_output_class = OutCls
@@ -275,12 +252,8 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
 
     @classmethod
     def _prepare_instance_datamodels(cls, instance):
-        instance.input_model_class = (
-            get_args(instance.input_model_type) or [instance.input_model_type]
-        )[-1]
-        instance.output_model_class = (
-            get_args(instance.output_model_type) or [instance.output_model_type]
-        )[-1]
+        instance.input_model_class = (get_args(instance.input_model_type) or [instance.input_model_type])[-1]
+        instance.output_model_class = (get_args(instance.output_model_type) or [instance.output_model_type])[-1]
 
     # super was called in __new__
     # pylint: disable-next=super-init-not-called
@@ -288,18 +261,17 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         self.settings = self.settings_class()
 
     def add_required_step(self, step: "TypedStep"):
-        """Add step to execution graph
+        """Add step to execution graph.
 
         Args:
             step (TypedStep) Step to add
 
         Raises:
             TypeError: On incompatible types
+
         """
         if self.input_model_type != step.output_model_type:
-            raise TypeError(
-                f"Cannot chain {self} to {step} ({step.output_model_type} -> {self.input_model_type})"
-            )
+            raise TypeError(f"Cannot chain {self} to {step} ({step.output_model_type} -> {self.input_model_type})")
         super().add_required_step(step)
 
     def _traverse(self, set_of: set["TypedStep"]):
@@ -310,13 +282,14 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
 
     def traverse(self) -> set["TypedStep"]:
         """Retrieve a set of all required steps
-        including self"""
+        including self.
+        """
         return self._traverse(set())
 
     # pylint: disable=method-hidden
     @abc.abstractmethod
     def run(self, inpt: INCONTRACT) -> OUTCONTRACT:
-        """abstract function which is called with the parsed data in the shape of INCONTRACT.
+        """Abstract function which is called with the parsed data in the shape of INCONTRACT.
         It's implementation should return the OUTCONTRACT
         ### It will be called mutliple times.
 

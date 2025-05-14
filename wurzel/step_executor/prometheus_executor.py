@@ -41,7 +41,7 @@ class PrometheusStepExecutor(BaseStepExecutor):
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
-            cls._instance = super(PrometheusStepExecutor, cls).__new__(cls)
+            cls._instance = super().__new__(cls)
             cls._instance.__init__(*args, **kwargs)
             # pylint: disable=protected-access
             cls._instance.s = Settings()
@@ -52,27 +52,17 @@ class PrometheusStepExecutor(BaseStepExecutor):
     def __setup_metrics(self):
         if self.s.PROMETHEUS_DISABLE_CREATED_METRIC:
             os.environ["PROMETHEUS_DISABLE_CREATED_SERIES"] = "True"
-        self.counter_started = Counter(
-            "steps_started", "Total number of TypedSteps started", ("step_name",)
-        )
-        self.counter_failed = Counter(
-            "steps_failed", "Total number of TypedSteps failed", ("step_name",)
-        )
+        self.counter_started = Counter("steps_started", "Total number of TypedSteps started", ("step_name",))
+        self.counter_failed = Counter("steps_failed", "Total number of TypedSteps failed", ("step_name",))
         self.counter_results = Counter(
             "step_results",
             "count of result, if its an array, otherwise -1",
             ("step_name",),
         )
         self.counter_inputs = Counter("step_inputs", "count of inputs", ("step_name",))
-        self.histogram_save = Histogram(
-            "step_hist_save", "Time to save results", ("step_name",)
-        )
-        self.histogram_load = Histogram(
-            "step_hist_load", "Time to load inputs", ("step_name",)
-        )
-        self.histogram_execute = Histogram(
-            "step_hist_execute", "Time to execute results", ("step_name",)
-        )
+        self.histogram_save = Histogram("step_hist_save", "Time to save results", ("step_name",))
+        self.histogram_load = Histogram("step_hist_load", "Time to load inputs", ("step_name",))
+        self.histogram_execute = Histogram("step_hist_execute", "Time to execute results", ("step_name",))
 
     def __enter__(self) -> Self:
         return self
@@ -91,12 +81,13 @@ class PrometheusStepExecutor(BaseStepExecutor):
         inputs: Optional[set[PathToFolderWithBaseModels]],
         output_dir: Optional[PathToFolderWithBaseModels],
     ) -> list[tuple[Any, StepReport]]:
-        """Run a given Step
+        """Run a given Step.
 
         Args:
             step_cls (Type[TypedDVCStep]): Step to run
             inputs (set[PathToBaseModel]): Step inputs
             output (PathToBaseModel): Step output
+
         """
         lbl = step_cls.__name__
         self.counter_started.labels(lbl).inc()

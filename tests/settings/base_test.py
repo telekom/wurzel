@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
-from typing import Dict, List, Literal, Tuple, Type, Union
+from typing import Literal, Union
 
 import pytest
 from pydantic import Field
@@ -55,7 +55,7 @@ def test_nest_1(init_method, env):
 @pytest.mark.parametrize("init_dict", [{"1": "Eins"}, {1: "Eins"}])
 def test_complex_nest_0(init_method, init_dict, env):
     class A(SettingsBase):
-        ARG: Dict[int, str]
+        ARG: dict[int, str]
 
     if init_method == "constructor":
         a = A(ARG=init_dict)
@@ -77,9 +77,7 @@ class leaf_cls(SettingsLeaf):
     A: str = "a"
 
 
-@pytest.mark.parametrize(
-    "cls", [leaf_cls, leaf_field_default, leaf_field_defaultfactory]
-)
+@pytest.mark.parametrize("cls", [leaf_cls, leaf_field_default, leaf_field_defaultfactory])
 def test_leaf_defaults(cls):
     a = cls()
     assert a.A == "a"
@@ -90,9 +88,7 @@ def test_leaf_defaults(cls):
     "mapping_default",
     [
         pytest.param(Field, id="Field_default"),
-        pytest.param(
-            lambda x: Field(default_factory=lambda: x), id="Field_defaultfactory"
-        ),
+        pytest.param(lambda x: Field(default_factory=lambda: x), id="Field_defaultfactory"),
         pytest.param(lambda x: x, id="Class"),
     ],
 )
@@ -105,7 +101,7 @@ def test_nested_mapping(init_method, mapping_default, env):
     EXPECTED_CHILDREN = {"Thomas": Child({"HAIR": "yes"})}
 
     class Parent(Child, SettingsBase):
-        CHILDREN: Dict[str, Child] = mapping_default(EXPECTED_CHILDREN)
+        CHILDREN: dict[str, Child] = mapping_default(EXPECTED_CHILDREN)
 
     if init_method == "defaults":
         pass
@@ -122,9 +118,7 @@ def test_nested_mapping(init_method, mapping_default, env):
     "mapping_default",
     [
         pytest.param(Field, id="Field_default"),
-        pytest.param(
-            lambda x: Field(default_factory=lambda: x), id="Field_defaultfactory"
-        ),
+        pytest.param(lambda x: Field(default_factory=lambda: x), id="Field_defaultfactory"),
         pytest.param(lambda x: x, id="Class"),
     ],
 )
@@ -133,14 +127,12 @@ def test_nested_mapping_no_defaults(init_method, mapping_default, env):
 
     class Child(SettingsLeaf):
         HAIR: str = EXPECTED_HAIR
-        EYES: Dict[str, bool] = mapping_default({"left": True, "right": True})
+        EYES: dict[str, bool] = mapping_default({"left": True, "right": True})
 
     EXPECTED_CHILDREN = {"Thomas": Child()}
 
     class Parent(Child, SettingsBase):
-        CHILDREN: Dict[str, Child] = Field(
-            default_factory=lambda: {n: Child() for n in ["Thomas"]}
-        )
+        CHILDREN: dict[str, Child] = Field(default_factory=lambda: {n: Child() for n in ["Thomas"]})
 
     # pytest.fail(mapping_default)
     if init_method == "defaults":
@@ -171,9 +163,7 @@ def test_nested_mapping_no_defaults(init_method, mapping_default, env):
     "mapping_default",
     [
         pytest.param(Field, id="Field_default"),
-        pytest.param(
-            lambda x: Field(default_factory=lambda: x), id="Field_defaultfactory"
-        ),
+        pytest.param(lambda x: Field(default_factory=lambda: x), id="Field_defaultfactory"),
         pytest.param(lambda x: x, id="Class"),
     ],
 )
@@ -185,16 +175,14 @@ def test_nested_twice_mapping_no_defaults(env_values, validator, mapping_default
 
     class Child(SettingsLeaf):
         HAIR: str = EXPECTED_HAIR
-        EYES: Dict[str, Eye] = mapping_default({"left": Eye(), "right": Eye()})
+        EYES: dict[str, Eye] = mapping_default({"left": Eye(), "right": Eye()})
 
     class Parent(Child, SettingsBase):
-        CHILDREN: Dict[str, Child] = Field(
-            default_factory=lambda: {n: Child() for n in ["Thomas", "Tom"]}
-        )
+        CHILDREN: dict[str, Child] = Field(default_factory=lambda: {n: Child() for n in ["Thomas", "Tom"]})
 
     # pytest.fail(mapping_default)
     if env_values is not None:
-        env_values: List[Tuple[str, dict]]
+        env_values: list[tuple[str, dict]]
         for tup in env_values:
             key, val = tup
             env.set(key, json.dumps(val))
@@ -206,9 +194,7 @@ def test_nested_twice_mapping_no_defaults(env_values, validator, mapping_default
     assert validator(p)
 
 
-def url_param(
-    scheme: Union[Literal["http"], Literal["https"]], host: str, port: int, path: str
-) -> pytest.param:
+def url_param(scheme: Union[Literal["http"], Literal["https"]], host: str, port: int, path: str) -> pytest.param:
     tpl = (scheme, host, port, path)
     return pytest.param(*tpl, id=f"{scheme}://{host}:{port}/{path}")
 
@@ -216,15 +202,11 @@ def url_param(
 @pytest.mark.parametrize("url_class", [pyd_c_Url, str])
 @pytest.mark.parametrize(
     "scheme,host,port,path",
-    [
-        url_param(status_code, "my-url.example.local", 8080, path)
-        for status_code in ["http", "https"]
-        for path in ["", "my-long/path/"]
-    ],
+    [url_param(status_code, "my-url.example.local", 8080, path) for status_code in ["http", "https"] for path in ["", "my-long/path/"]],
 )
 def test_url_parsing(
     env,
-    url_class: Type[Union[pyd_c_Url, str]],
+    url_class: type[Union[pyd_c_Url, str]],
     scheme: Union[Literal["http"], Literal["https"]],
     host: str,
     port: int,

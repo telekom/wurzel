@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from pathlib import Path
-from typing import Any, Generic, Type, TypeVar, get_args
+from typing import Any, Generic, TypeVar, get_args
 
 import pandera.typing as patyp
 import pydantic
@@ -50,14 +50,15 @@ class PathToFolderWithBaseModels(type(Path()), Generic[B]):  # type: ignore[misc
     """
 
     @classmethod
-    def _type(cls) -> Type["PathToFolderWithBaseModels"]:
-        """Get own type (used for pydantic)
+    def _type(cls) -> type["PathToFolderWithBaseModels"]:
+        """Get own type (used for pydantic).
 
         Raises:
             RuntimeError: if own type can't be found
 
         Returns:
-            Type: PathToBaseModel
+            type: PathToBaseModel
+
         """
         typ = getattr(cls, "__orig_bases__", [None])[0]
         if typ is None:
@@ -65,13 +66,14 @@ class PathToFolderWithBaseModels(type(Path()), Generic[B]):  # type: ignore[misc
         return typ
 
     @classmethod
-    def model_type(cls) -> Type[B]:
-        """_summary_
+    def model_type(cls) -> type[B]:
+        """_summary_.
 
         Raises:
             RuntimeError: if type can't be found
         Returns:
-            Type[pydantic.BaseModel]: Type of Generic
+            type[pydantic.BaseModel]: Type of Generic
+
         """
         try:
             return get_args(cls._type())[0]
@@ -79,19 +81,11 @@ class PathToFolderWithBaseModels(type(Path()), Generic[B]):  # type: ignore[misc
             raise RuntimeError("Model type could not be found") from err
 
     @classmethod
-    def __get_pydantic_core_schema__(
-        cls, _: Any, handler: pydantic.GetCoreSchemaHandler
-    ):
-        return core_schema.with_info_after_validator_function(
-            cls._validate_path, handler(cls._type())
-        )
+    def __get_pydantic_core_schema__(cls, _: Any, handler: pydantic.GetCoreSchemaHandler):
+        return core_schema.with_info_after_validator_function(cls._validate_path, handler(cls._type()))
 
     @classmethod
-    def _validate_path(
-        cls, path: "PathToFolderWithBaseModels", _: core_schema.ValidationInfo
-    ) -> Path:
+    def _validate_path(cls, path: "PathToFolderWithBaseModels", _: core_schema.ValidationInfo) -> Path:
         if not path.is_dir():
-            raise PydanticCustomError(
-                "path_not_dir", "Path is not a directory but a file"
-            )
+            raise PydanticCustomError("path_not_dir", "Path is not a directory but a file")
         return cls(path)

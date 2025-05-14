@@ -27,13 +27,9 @@ def __get_html2md() -> Path:
         "Darwin_arm64": Path(__file__).parent / "html2md_darwin_arm",
         "Darwin_x86_64": Path(__file__).parent / "html2md_darwin_amd64",
     }
-    fallback = default_path.get(
-        f"{platform.uname().system}_{platform.uname().machine}", None
-    )
+    fallback = default_path.get(f"{platform.uname().system}_{platform.uname().machine}", None)
     if fallback is None:
-        raise InvalidPlatform(
-            f"Could not create path to binary from {platform.uname()} we only support {default_path.keys()}"
-        )
+        raise InvalidPlatform(f"Could not create path to binary from {platform.uname()} we only support {default_path.keys()}")
     return Path(fallback)
 
 
@@ -49,9 +45,10 @@ Wrapper module around html2md binary
 
 
 def to_markdown(html: str, binary_path: Path = __HTML2MD) -> str:
-    """
-    Convert HTML XML string to Markdown using an external binary or a Python library.
-    In acknowledge to https://github.com/suntong/html2md
+    """Convert HTML XML string to Markdown using an external binary or a Python library.
+
+    In acknowledge to https://github.com/suntong/html2md.
+
     Parameters
     ----------
     html : str
@@ -79,6 +76,7 @@ def to_markdown(html: str, binary_path: Path = __HTML2MD) -> str:
     >>> print(markdown)
     # Title
     Hello, world!
+
     """
     with tempfile.NamedTemporaryFile(delete=False, suffix=".html", mode="w+") as file:
         cleaned_html = clean_html(html)
@@ -88,27 +86,23 @@ def to_markdown(html: str, binary_path: Path = __HTML2MD) -> str:
         status_code, markdown = subprocess.getstatusoutput(convert_cmd)
         Path(file.name).unlink()
     if status_code != 0:
-        raise MarkdownConvertFailed(
-            f"{binary_path} returned {status_code} ({markdown} based on {html})"
-        )
+        raise MarkdownConvertFailed(f"{binary_path} returned {status_code} ({markdown} based on {html})")
     if not markdown.replace(" ", "").replace("\n", ""):
         raise MarkdownConvertFailed(f"Failed to convert {html} to md {markdown}")
     return markdown
 
 
 def remove_images(markdown: str) -> str:
-    """
-    Recursively remove image and thematic break tokens from a document object.
+    """Recursively remove image and thematic break tokens from a Markdown string.
 
-    Parameters
-    ----------
-    doc : Document
-        The document object from which image and thematic break tokens are to be removed.
+    This function processes a Markdown string, removes any image and thematic break
+    tokens, and returns the cleaned Markdown content.
 
-    Returns
-    -------
-    Document
-        The modified document object without image and thematic break tokens.
+    markdown : str
+        The input Markdown string to be processed.
+
+    str
+        The cleaned Markdown string with image and thematic break tokens removed.
     """
 
     def _to_markdown(doc: Document) -> str:
@@ -120,11 +114,7 @@ def remove_images(markdown: str) -> str:
     def _remove_image_from_document(doc: Document) -> Document:
         if not hasattr(doc, "children") or not doc.children:
             return doc
-        doc.children = [
-            _remove_image_from_document(x)
-            for x in doc.children
-            if not isinstance(x, (Image, ThematicBreak))
-        ]
+        doc.children = [_remove_image_from_document(x) for x in doc.children if not isinstance(x, (Image, ThematicBreak))]
         return doc
 
     doc = Document(markdown)
@@ -133,7 +123,7 @@ def remove_images(markdown: str) -> str:
 
 
 def clean_tree(div: lxml.etree.ElementBase) -> lxml.etree.ElementBase:
-    """cleans the lxml.html tree from html unneded html obstacales"""
+    """Cleans the lxml.html tree from html unneded html obstacales."""
     # Remove all link or script tags
     for tag in ["script", "link", "style", "svg", "footer"]:
         for bad in div.xpath("//" + tag):
@@ -155,18 +145,15 @@ def clean_tree(div: lxml.etree.ElementBase) -> lxml.etree.ElementBase:
 
 
 def clean_html(html: str) -> str:
-    """Clean HTML string"""
+    """Clean HTML string."""
     tree = lxml.html.fromstring(html)
     cleaned_tree = clean_tree(tree)
     cleaned_html = lxml.html.tostring(cleaned_tree).decode()
     return cleaned_html
 
 
-def normalize_urls_in_tree(
-    tree: lxml.html.HtmlElement, base_url: str = "https://www.magenta.at"
-):
-    """
-    Normalizes all relative URLs within an lxml HTML tree by converting them to absolute URLs.
+def normalize_urls_in_tree(tree: lxml.html.HtmlElement, base_url: str = "https://www.magenta.at"):
+    """Normalizes all relative URLs within an lxml HTML tree by converting them to absolute URLs.
 
     This function searches through the parsed HTML tree (`tree`) for elements that contain
     `href` or `src` attributes (commonly found in `<a>`, `<img>`, `<link>`, etc.), and if the value
@@ -183,8 +170,8 @@ def normalize_urls_in_tree(
 
     Returns:
         None: The function modifies the HTML tree in place.
-    """
 
+    """
     # List of attributes to check for relative URLs
     attributes = ["href", "src"]
 
@@ -199,8 +186,7 @@ def normalize_urls_in_tree(
 
 
 def normalize_urls(html_content: str, base_url: str = "https://www.magenta.at"):
-    """
-    Converts all relative URLs in the provided HTML content to absolute URLs.
+    """Converts all relative URLs in the provided HTML content to absolute URLs.
 
     This function parses the input HTML content, searches for elements with
     attributes that typically contain URLs (such as `href` and `src`), and
@@ -216,6 +202,7 @@ def normalize_urls(html_content: str, base_url: str = "https://www.magenta.at"):
 
     Returns:
         str: The HTML content with all relative URLs replaced by absolute URLs.
+
     """
     tree = lxml.html.fromstring(html_content)
     tree = normalize_urls_in_tree(tree, base_url)
@@ -223,5 +210,13 @@ def normalize_urls(html_content: str, base_url: str = "https://www.magenta.at"):
 
 
 def html2str(html: lxml) -> str:
-    """converts lxml html to str"""
+    """Convert an lxml HTML element to a string.
+
+    Args:
+        html (lxml): The lxml HTML element to be converted.
+
+    Returns:
+        str: The HTML content as a string.
+
+    """
     return lxml.html.tostring(html, pretty_print=False, method="html").decode("utf-8")

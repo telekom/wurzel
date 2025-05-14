@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""CLI Entry"""
+"""CLI Entry."""
 
 import importlib
 import inspect
@@ -35,7 +35,7 @@ log = logging.getLogger(__name__)
 
 
 def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: str):
-    """Convert a cli-str to a Type[BaseStepExecutor]
+    """Convert a cli-str to a Type[BaseStepExecutor].
 
     Args:
         _ctx (typer.Context)
@@ -47,6 +47,7 @@ def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: s
 
     Returns:
         Type[BaseStepExecutor]: {BaseStepExecutor, PrometheusStepExecutor}
+
     """
     if "BASESTEPEXECUTOR".startswith(value.upper()):
         return BaseStepExecutor
@@ -55,10 +56,8 @@ def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: s
     raise typer.BadParameter(f"{value} is not a recognized executor")
 
 
-def step_callback(
-    _ctx: typer.Context, _param: typer.CallbackParam, import_path: str
-) -> TypedStep:
-    """Converts a cli-str to a TypedStep
+def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str) -> TypedStep:
+    """Converts a cli-str to a TypedStep.
 
     Args:
         _ctx (typer.Context):
@@ -70,6 +69,7 @@ def step_callback(
 
     Returns:
         Type[TypedStep]: <<step>>
+
     """
     try:
         if ":" in import_path:
@@ -78,13 +78,9 @@ def step_callback(
             mod, kls = import_path.rsplit(".", 1)
         module = importlib.import_module(mod)
         step = getattr(module, kls)
-        assert (inspect.isclass(step) and issubclass(step, TypedStep)) or isinstance(
-            step, TypedStep
-        )
+        assert (inspect.isclass(step) and issubclass(step, TypedStep)) or isinstance(step, TypedStep)
     except ValueError as ve:
-        raise typer.BadParameter(
-            "Path is not in correct format, should be module.submodule.Step"
-        ) from ve
+        raise typer.BadParameter("Path is not in correct format, should be module.submodule.Step") from ve
     except ModuleNotFoundError as me:
         raise typer.BadParameter(f"Module '{mod}' could not be imported") from me
     except AttributeError as ae:
@@ -95,13 +91,8 @@ def step_callback(
 
 
 def complete_step_import(incomplete: str):
-    """AutoComplete for steps"""
-
-    packages = [
-        p
-        for p in pkgutil.iter_modules()
-        if p.ispkg and p.name.startswith(incomplete if incomplete else "wurzel")
-    ]
+    """AutoComplete for steps."""
+    packages = [p for p in pkgutil.iter_modules() if p.ispkg and p.name.startswith(incomplete if incomplete else "wurzel")]
     hints = []
     for pkg in packages:
         hints.extend(
@@ -153,7 +144,7 @@ def run(
     ] = "BaseStepExecutor",
     encapsulate_env: Annotated[bool, typer.Option()] = True,
 ):
-    """run"""
+    """Run."""
     output_path = Path(output_path.as_posix().replace("<step-name>", step.__name__))
     log.debug(
         "executing run",
@@ -183,21 +174,18 @@ def inspekt(
     ],
     gen_env: Annotated[bool, typer.Option()] = False,
 ):
-    """inspect"""
-
+    """Inspect."""
     return cmd_inspect(step, gen_env)
 
 
 def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, _backend: str):
-    """validates input and returns fitting backend. Currently always DVCBackend"""
+    """Validates input and returns fitting backend. Currently always DVCBackend."""
     logging.warning("only DVCBackend is supported currently")
     return DvcBackend
 
 
-def pipeline_callback(
-    _ctx: typer.Context, _param: typer.CallbackParam, import_path: str
-) -> TypedStep:
-    """Based on step_callback transform them to WZ pipeline elements"""
+def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str) -> TypedStep:
+    """Based on step_callback transform them to WZ pipeline elements."""
     step = step_callback(_ctx, _param, import_path)
     if not hasattr(step, "required_steps"):
         step = WZ(step)
@@ -218,9 +206,7 @@ def generate(
     ],
     data_dir: Annotated[
         Path,
-        typer.Option(
-            "-d", "--data-dir", file_okay=False, help="Target folder for pipeline"
-        ),
+        typer.Option("-d", "--data-dir", file_okay=False, help="Target folder for pipeline"),
     ] = Path("./data"),
     backend: Annotated[
         str,
@@ -232,7 +218,7 @@ def generate(
         ),
     ] = DvcBackend,
 ):
-    """run"""
+    """Run."""
     log.debug(
         "generate pipeline",
         extra={
@@ -253,7 +239,7 @@ def generate(
 
 
 def update_log_level(log_level: str):
-    """Fix for typer logs"""
+    """Fix for typer logs."""
     log_config = get_logging_dict_config(log_level)
     log_config["formatters"]["default"] = {
         "()": "wurzel.cli.logger.WithExtraFormatter",
@@ -277,7 +263,7 @@ def main_args(
         ),
     ] = "INFO",
 ):
-    """global settings, main"""
+    """Global settings, main."""
     if not os.isatty(1):
         typer.core.rich = None
         logging.config.dictConfig(get_logging_dict_config(log_level))
@@ -291,6 +277,6 @@ def main_args(
 
 
 def main():
-    """main"""
+    """Main."""
     sys.path.append(os.getcwd())  # needed fo find the files relative to cwd
     app()

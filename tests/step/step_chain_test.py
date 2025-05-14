@@ -42,9 +42,7 @@ class SecondListStep(TypedStep[None, list[OtherDataType], OtherDataType]):
     [
         pytest.param(lambda: FirstStep() >> FirstStep(), id="None got input"),
         pytest.param(lambda: SecondStep() >> FirstStep(), id="got wrong"),
-        pytest.param(
-            lambda: FirstListStep() >> SecondListStep(), id="got wrong in list"
-        ),
+        pytest.param(lambda: FirstListStep() >> SecondListStep(), id="got wrong in list"),
     ],
 )
 def test_invalid_chain(chain):

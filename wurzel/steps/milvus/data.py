@@ -6,7 +6,7 @@ from wurzel.datacontract import PydanticModel
 
 
 class Result(PydanticModel):
-    """dummy output because its required to have a output data contract"""
+    """dummy output because its required to have a output data contract."""
 
     old: str
     new: str

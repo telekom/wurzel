@@ -4,14 +4,13 @@
 
 import hashlib
 from pathlib import Path
-from typing import Type
 
 import pytest
 
 from wurzel.step import TypedStep
 from wurzel.steps import ManualMarkdownStep
 
-EXCLUDE_FROM_LEAF_TESTS: list[Type[TypedStep]] = []
+EXCLUDE_FROM_LEAF_TESTS: list[type[TypedStep]] = []
 
 
 def get_dvc_step_leafs() -> list[TypedStep]:
@@ -20,7 +19,7 @@ def get_dvc_step_leafs() -> list[TypedStep]:
 
 @pytest.mark.repeatability_test
 @pytest.mark.parametrize("step_cls", get_dvc_step_leafs())
-def test_repeatability(step_cls: Type[TypedStep], tmp_path: Path):
+def test_repeatability(step_cls: type[TypedStep], tmp_path: Path):
     pytest.skip("TEST DISABLED")
     step = step_cls()
     if not step.is_leaf():

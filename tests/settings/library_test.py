@@ -9,13 +9,13 @@ from wurzel.step.settings import SettingsBase, SettingsLeaf
 
 
 class BSettings(SettingsLeaf):
-    """All Settings related to logging"""
+    """All Settings related to logging."""
 
     LEVEL: str = "INFO"
 
 
 class CSettings(SettingsLeaf):
-    """Settings related to Uvicorn"""
+    """Settings related to Uvicorn."""
 
     WORKERS: int = Field(1, gt=0, le=2)
 

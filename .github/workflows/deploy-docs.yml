@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: 2024 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: CC0-1.0
+name: Documentation Deployment
+
+permissions:
+  contents: read
+  pages: write
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - name: Configure Git Credentials
+              run: |
+                git config user.name github-actions[bot]
+                git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+
+
+            - name: Install the latest version of uv and set the python version
+              uses: astral-sh/setup-uv@v5
+              with:
+               enable-cache: true
+               cache-dependency-glob: "**/pyproject.toml"
+               python-version: "3.11"
+
+            - name: Install dependencies
+              run: UV=$(which uv) PIP=$(which pip) make install
+
+            - name: Publish documentation
+              run: |
+                mkdocs gh-deploy --force
