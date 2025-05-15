@@ -4,6 +4,10 @@
 
 import pytest
 
+from wurzel.utils import HAS_DOCLING
+
+if not HAS_DOCLING:
+    pytest.skip("Docling is not available", allow_module_level=True)
 from wurzel.steps.docling.docling_step import CleanMarkdownRenderer, DoclingStep
 
 
