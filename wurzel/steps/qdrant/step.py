@@ -212,10 +212,11 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             dict[str, str]: keys: `text_<algo>_hash` hash as string ! Dict might be empty!
         """
         hashes = {}
+        encoded_text = text.encode(encoding)
         if HAS_TLSH:
             # pylint: disable=no-name-in-module, import-outside-toplevel
             from tlsh import hash as tlsh_hash
 
-            hashes["text_tlsh_hash"] = tlsh_hash(text.encode(encoding))
-        hashes["text_sha256_hash"] = sha256(text.encode(encoding)).hexdigest()
+            hashes["text_tlsh_hash"] = tlsh_hash(encoded_text)
+        hashes["text_sha256_hash"] = sha256(encoded_text).hexdigest()
         return hashes
