@@ -199,7 +199,17 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
 
     @staticmethod
     def get_available_hashes(text: str, encoding: str = "utf-8") -> dict:
-        """Compute
+        """
+        Compute `n` hashes for a given input text based.
+        The number `n` depends on the optionally installed python libs.
+        For now only TLSH (Trend Micro Locality Sensitive Hash) is supported
+        ## TLSH
+        Given a byte stream with a minimum length of 50 bytes TLSH generates a hash value which can be used for similarity comparisons.
+        Args:
+            text (str): Input text
+            encoding (str, optional): Input text will encoded to bytes using this encoding. Defaults to "utf-8".
+        Returns:
+            dict[str, str]: keys: `text_<algo>_hash` hash as string ! Dict might be empty!
         """
         hashes = {}
         if HAS_TLSH:
