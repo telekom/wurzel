@@ -28,36 +28,36 @@ classifiers = [
     'Topic :: Software Development :: Version Control',
 ]
 dependencies= [
-    "tqdm==4.66.5",
-    "pandas==2.2.2",
-    "numpy < 2.0.0",
-    "dvc==3.53.1",
-    "Markdown==3.6",
-    "pydantic-settings==2.5.2",
+    "tqdm==4.67.1",
+    "pandas==2.2.3",
+    "numpy < 3.0.0",
+    "dvc==3.59.2",
+    "Markdown==3.8",
+    "pydantic-settings==2.9.1",
     "pydantic>=2.6.4, == 2.*",
     "asgi-correlation-id>=4.3.1, == 4.*",
     "langchain-core>=0.2.0",
     "prometheus-client==0.21.1",
     "mistletoe==1.4.0",
-    "pandera==0.20.3",
-    "mdformat==0.7.17",
-    "spacy==3.7.5",
-    "tiktoken==0.7.0",
+    "pandera==0.23.1",
+    "mdformat==0.7.22",
+    "spacy==3.8.5",
+    "tiktoken==0.9.0",
     "joblib>=1.4.0",
-    "lxml==5.2.*",
-    "marshmallow<4.0.0",
+    "lxml>=5.2,<5.5",
+    "marshmallow<5.0.0",
 
 ]
 
 [project.optional-dependencies]
 qdrant = [
-    "qdrant-client==1.10.1"
+    "qdrant-client==1.14.2"
 ]
 docling = [
-    "docling==2.30.0"
+    "docling==2.31.2"
 ]
 milvus = [
-    "pymilvus==2.4.4",
+    "pymilvus==2.5.8",
 ]
 tlsh = [
     "python-tlsh==4.5.0"
@@ -65,14 +65,14 @@ tlsh = [
 lint = [
     "pylint[spelling]==3.3.7",
     "pylint-json2html==0.5.0",
-    "pre-commit==4.1.*",
+    "pre-commit>=4.1,<4.3",
     "reuse==5.0.2",
-    "ruff==0.9.10",
+    "ruff==0.11.9",
 ]
 test = [
     "pytest==8.*",
-    "pytest-asyncio==0.23.*",
-    "pytest-cov==4.*",
+    "pytest-asyncio>=0.23,<0.27",
+    "pytest-cov>=4,<7",
     "pytest-html==4.*",
     "pytest_env==1.*",
     "pytest-xdist==3.*",
