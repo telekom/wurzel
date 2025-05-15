@@ -6,6 +6,7 @@
 
 # pylint: disable=duplicate-code
 import itertools
+from hashlib import sha256
 from logging import getLogger
 
 from pandera.typing import DataFrame
@@ -199,10 +200,8 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
     @staticmethod
     def get_available_hashes(text: str, encoding: str = "utf-8") -> dict:
         """Compute `n` hashes for a given input text based.
-
         The number `n` depends on the optionally installed python libs.
         For now only TLSH (Trend Micro Locality Sensitive Hash) is supported
-
         ## TLSH
         Given a byte stream with a minimum length of 50 bytes TLSH generates a hash value which can be used for similarity comparisons.
 
@@ -215,9 +214,11 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
 
         """
         hashes = {}
+        encoded_text = text.encode(encoding)
         if HAS_TLSH:
             # pylint: disable=no-name-in-module, import-outside-toplevel
             from tlsh import hash as tlsh_hash
 
-            hashes["text_tlsh_hash"] = tlsh_hash(text.encode(encoding))
+            hashes["text_tlsh_hash"] = tlsh_hash(encoded_text)
+        hashes["text_sha256_hash"] = sha256(encoded_text).hexdigest()
         return hashes
