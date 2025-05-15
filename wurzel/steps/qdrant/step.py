@@ -5,6 +5,7 @@
 """containing the DVCStep sending embedding data into Qdrant."""
 
 # pylint: disable=duplicate-code
+from hashlib import sha256
 import itertools
 from logging import getLogger
 
@@ -198,21 +199,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
 
     @staticmethod
     def get_available_hashes(text: str, encoding: str = "utf-8") -> dict:
-        """Compute `n` hashes for a given input text based.
-
-        The number `n` depends on the optionally installed python libs.
-        For now only TLSH (Trend Micro Locality Sensitive Hash) is supported
-
-        ## TLSH
-        Given a byte stream with a minimum length of 50 bytes TLSH generates a hash value which can be used for similarity comparisons.
-
-        Args:
-            text (str): Input text
-            encoding (str, optional): Input text will encoded to bytes using this encoding. Defaults to "utf-8".
-
-        Returns:
-            dict[str, str]: keys: `text_<algo>_hash` hash as string ! Dict might be empty!
-
+        """Compute
         """
         hashes = {}
         if HAS_TLSH:
@@ -220,4 +207,5 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             from tlsh import hash as tlsh_hash
 
             hashes["text_tlsh_hash"] = tlsh_hash(text.encode(encoding))
+        hashes["text_sha256_hash"] = sha256(text.encode(encoding)).hexdigest()
         return hashes
