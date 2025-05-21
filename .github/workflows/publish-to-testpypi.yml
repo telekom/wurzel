@@ -31,12 +31,6 @@ jobs:
         run: |
           git reset --hard ${{ github.sha }}
 
-      - name: Create new version Tag
-        id: create-tag
-        shell: bash
-        run: |
-            BRANCH_NAME=$(git branch --show-current | tr '/.' '-')
-            echo BUILD_TAG="${BRANCH_NAME}.$(date +%Y%m%d)" >> $GITHUB_ENV
 
       - name: Python Semantic Release
         id: release
@@ -47,7 +41,6 @@ jobs:
           git_committer_name: "github-actions"
           git_committer_email: "actions@users.noreply.github.com"
           prerelease: true
-          build_metadata: ${{ env.BUILD_TAG }}
 
 
 
