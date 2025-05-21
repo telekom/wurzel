@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: CC0-1.0
 [project]
 name = "wurzel"
-version = "0.10.0+9a459984be28d823ed412e2cf3556a8de8d122d4"
+version = "0.10.0+dev.20250521"
 description = "Pick, choose and chain your RAG tools in a pythonic way"
 authors = [
     {name ="Thomas Weigel", email="thomas.weigel@telekom.de"},
