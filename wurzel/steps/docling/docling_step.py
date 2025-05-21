@@ -33,6 +33,7 @@ from mistletoe import Document, HTMLRenderer
 
 from wurzel.datacontract.common import MarkdownDataContract
 from wurzel.step.typed_step import TypedStep
+from wurzel.utils.to_markdown.html2md import MD_RENDER_LOCK
 
 from .settings import DoclingSettings
 
@@ -98,7 +99,7 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
             md_text (str): The raw Markdown input string.
 
         """
-        with CleanMarkdownRenderer() as renderer:
+        with MD_RENDER_LOCK, CleanMarkdownRenderer() as renderer:
             ast = Document(md_text)
             cleaned = renderer.render(ast).replace("\n", "")
             soup = BeautifulSoup(cleaned, "html.parser")
