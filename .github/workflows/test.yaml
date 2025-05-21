@@ -35,9 +35,18 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
+        shell: bash
         run: |
           uv lock
-          UV=$(which uv) PIP=$(which pip) make install
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            UV=$(where uv | head -n 1)
+            PIP=$(where pip | head -n 1)
+            make install UV="$UV" PIP="$PIP"
+          else
+            UV=$(which uv)
+            PIP=$(which pip)
+            make install UV="$UV" PIP="$PIP"
+          fi
 
 
       - name: Test with python ${{ matrix.python-version }}
