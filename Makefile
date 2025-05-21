@@ -6,7 +6,7 @@ SRC_DIR = ./wurzel
 TEST_DIR= ./tests
 VENV = .venv
 SYSTEM_PYTHON?= python3.12
-
+SHELL := bash
 
 
 ifeq ($(OS),Windows_NT)
