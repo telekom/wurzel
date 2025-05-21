@@ -50,7 +50,6 @@ jobs:
         shell: bash
 
       - name: Install dependencies
-        shell: bash
         run: |
           ${{ env.UV }} lock
           make install UV="${{ env.UV }}" PIP="${{ env.PIP }}" SYSTEM_PYTHON="${{ env.SYSTEM_PYTHON }}"
