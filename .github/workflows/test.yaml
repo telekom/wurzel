@@ -39,9 +39,10 @@ jobs:
         run: |
           uv lock
           if [[ "$RUNNER_OS" == "Windows" ]]; then
-            UV=$(where uv | head -n 1)
-            PIP=$(where pip | head -n 1)
-            make install UV="$UV" PIP="$PIP"
+            UV="$UV_TOOL_BIN_DIR/uv"
+            PIP="$UV_TOOL_BIN_DIR/pip"
+            PYTHON="$UV_TOOL_BIN_DIR/python"
+            make install UV="$UV" PIP="$PIP" PY="$PYTHON"
           else
             UV=$(which uv)
             PIP=$(which pip)
