@@ -35,7 +35,8 @@ jobs:
         id: create-tag
         shell: bash
         run: |
-          echo BUILD_TAG="$(git branch --show-current).$(date +%Y%m%d)" >> $GITHUB_ENV
+            BRANCH_NAME=$(git branch --show-current | tr '/.' '-')
+            echo BUILD_TAG="${BRANCH_NAME}.$(date +%Y%m%d)" >> $GITHUB_ENV
 
       - name: Python Semantic Release
         id: release
