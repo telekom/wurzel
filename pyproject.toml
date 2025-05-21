@@ -59,8 +59,13 @@ docling = [
 milvus = [
     "pymilvus==2.4.4",
 ]
+
+# https://github.com/trendmicro/tlsh
+# There is no release new versions installation from source is failing for version 4.12.0
+# https://pypi.org/project/python-tlsh/ is a not maintained pypi package latest version (4.5.0) dose not work on windows
+# https://pypi.org/project/py-tlsh/ is also not maintained
 tlsh = [
-    "python-tlsh==4.5.0"
+    "py-tlsh==4.7.2"
 ]
 lint = [
     "pylint[spelling]==3.3.7",
