@@ -6,14 +6,18 @@ SRC_DIR = ./wurzel
 TEST_DIR= ./tests
 VENV = .venv
 
+PY ?=
+PIP ?=
+UV ?=
+
 ifeq ($(OS),Windows_NT)
-	PY = $(VENV)/Scripts/python.exe
-	PIP = $(VENV)/Scripts/pip.exe
-	UV = $(VENV)/Scripts/uv.exe
+	PY ?= $(VENV)/Scripts/python.exe
+	PIP ?= $(VENV)/Scripts/pip.exe
+	UV ?= $(VENV)/Scripts/uv.exe
 else
-	UV=$(VENV)/bin/uv
-	PY=$(VENV)/bin/python
-	PIP=$(VENV)/bin/pip
+	UV ?= $(VENV)/bin/uv
+	PY ?= $(VENV)/bin/python
+	PIP ?= $(VENV)/bin/pip
 endif
 
 
