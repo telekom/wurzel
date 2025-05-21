@@ -2,12 +2,22 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 
+import os
+
 import pytest
 
 from wurzel.utils import HAS_DOCLING
 
 if not HAS_DOCLING:
     pytest.skip("Docling is not available", allow_module_level=True)
+
+import platform
+
+if platform.system() == "Darwin":
+    IS_MACOS = True
+else:
+    IS_MACOS = False
+
 from wurzel.steps.docling.docling_step import CleanMarkdownRenderer, DoclingStep
 
 
@@ -23,6 +33,8 @@ from wurzel.steps.docling.docling_step import CleanMarkdownRenderer, DoclingStep
     ],
 )
 def test_docling_step(real_data_path, expected_md_start, expected_contract_count):
+    if IS_MACOS and os.environ.get("GITHUB_ACTIONS") == "true":
+        pytest.skip("Skipping test on  macOS due to MPS error in CI")
     docling_step = DoclingStep()
     docling_step.settings = type(
         "Settings",
