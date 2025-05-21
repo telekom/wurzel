@@ -6,7 +6,7 @@ SRC_DIR = ./wurzel
 TEST_DIR= ./tests
 VENV = .venv
 UV?=$(VENV)/bin/uv
-PY=$(VENV)/bin/python
+PY?=$(VENV)/bin/python
 PIP?=$(VENV)/bin/pip
 build: install
 	$(PY) -m build .
@@ -16,9 +16,13 @@ $(VENV)/touchfile: pyproject.toml $(UV)
 	$(UV) --no-progress pip install -r DIRECT_REQUIREMENTS.txt
 	@$(shell if [ "$(OS)" = "Windows_NT" ]; then echo type nul > $(VENV)\\touchfile; else echo touch $(VENV)/touchfile; fi)
 $(PY):
-	python3 -m venv $(VENV)
+	@if [ ! -d "$(VENV)" ]; then \
+		python3 -m venv $(VENV); \
+	fi
 $(UV): $(PY)
-	$(PIP) install uv
+	@if [ ! -x "$(UV)" ]; then \
+		$(PIP) install uv; \
+	fi
 install: $(VENV)/touchfile
 
 test: install
