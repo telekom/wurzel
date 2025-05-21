@@ -42,11 +42,11 @@ jobs:
           if [[ "$RUNNER_OS" == "Windows" ]]; then
             UV=$(where uv)
             PIP=$(where pip)
-            make install UV="$UV" PIP="$PIP"
+            make install UV="$UV" PIP="$PIP" SYSTEM_PYTHON="python${{ matrix.python-version }}"
           else
             UV=$(which uv)
             PIP=$(which pip)
-            make install UV="$UV" PIP="$PIP"
+            make install UV="$UV" PIP="$PIP" SYSTEM_PYTHON="python${{ matrix.python-version }}"
           fi
 
 
