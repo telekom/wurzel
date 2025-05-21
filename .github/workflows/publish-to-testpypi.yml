@@ -35,7 +35,7 @@ jobs:
         id: create-tag
         shell: bash
         run: |
-          echo BUILD_TAG=dev.$(date +%Y%m%d) >> $GITHUB_ENV
+          echo BUILD_TAG=dev$(date +%Y%m%d) >> $GITHUB_ENV
 
       - name: Python Semantic Release
         id: release
