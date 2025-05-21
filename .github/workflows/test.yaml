@@ -35,20 +35,24 @@ jobs:
           python-version: ${{ matrix.python-version }}
           activate-environment: true
 
+      - name: Set environment variables
+        id: set-env
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            echo "UV=$(where uv)" >> $GITHUB_ENV
+            echo "PIP=$(where pip)" >> $GITHUB_ENV
+            echo "SYSTEM_PYTHON=python${{ matrix.python-version }}" >> $GITHUB_ENV
+          else
+            echo "UV=$(which uv)" >> $GITHUB_ENV
+            echo "PIP=$(which pip)" >> $GITHUB_ENV
+            echo "SYSTEM_PYTHON=python${{ matrix.python-version }}" >> $GITHUB_ENV
+          fi
+
       - name: Install dependencies
         shell: bash
         run: |
-          uv lock
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            UV=$(where uv)
-            PIP=$(where pip)
-            make install UV="$UV" PIP="$PIP" SYSTEM_PYTHON="python${{ matrix.python-version }}"
-          else
-            UV=$(which uv)
-            PIP=$(which pip)
-            make install UV="$UV" PIP="$PIP" SYSTEM_PYTHON="python${{ matrix.python-version }}"
-          fi
-
+          ${{steps.set-env.outputs.UV}} lock
+          make install UV="${{steps.set-env.outputs.UV}}" PIP="${{steps.set-env.outputs.PIP}}" SYSTEM_PYTHON="${{steps.set-env.outputs.PIP}}"
 
       - name: Test with python ${{ matrix.python-version }}
         run: make test
