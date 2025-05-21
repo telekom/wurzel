@@ -5,9 +5,18 @@
 SRC_DIR = ./wurzel
 TEST_DIR= ./tests
 VENV = .venv
-UV?=$(VENV)/bin/uv
-PY?=$(VENV)/bin/python
-PIP?=$(VENV)/bin/pip
+
+ifeq ($(OS),Windows_NT)
+	PY = $(VENV)/Scripts/python.exe
+	PIP = $(VENV)/Scripts/pip.exe
+	UV = $(VENV)/Scripts/uv.exe
+else
+	UV=$(VENV)/bin/uv
+	PY=$(VENV)/bin/python
+	PIP=$(VENV)/bin/pip
+endif
+
+
 build: install
 	$(PY) -m build .
 
@@ -20,9 +29,9 @@ $(PY):
 		python3 -m venv $(VENV); \
 	fi
 $(UV): $(PY)
-	@if [ ! -x "$(UV)" ]; then \
-		$(PIP) install uv; \
-	fi
+	$(PIP) install --upgrade pip
+	$(PIP) install uv
+
 install: $(VENV)/touchfile
 
 test: install
