@@ -143,7 +143,7 @@ match = "(main)"
 prerelease = false
 
 [tool.semantic_release.branches.dev]
-match = "^(feature|feat|fix|perf|ci)/.+"
+match = "^(?!main$).+"
 prerelease = true
 prerelease_token = "dev"
 
