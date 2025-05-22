@@ -9,7 +9,6 @@ import os
 import re
 from io import StringIO
 from logging import getLogger
-from pathlib import Path
 from typing import Optional, TypedDict
 
 from markdown import Markdown
