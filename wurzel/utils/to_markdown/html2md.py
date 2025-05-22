@@ -28,6 +28,7 @@ def __get_html2md() -> Path:
         "Linux_x86_64": Path(__file__).parent / "html2md",
         "Darwin_arm64": Path(__file__).parent / "html2md_darwin_arm",
         "Darwin_x86_64": Path(__file__).parent / "html2md_darwin_amd64",
+        "Windows_AMD64": Path(__file__).parent / "html2md_win_amd64",
     }
     fallback = default_path.get(f"{platform.uname().system}_{platform.uname().machine}", None)
     if fallback is None:
@@ -84,7 +85,7 @@ def to_markdown(html: str, binary_path: Path = __HTML2MD) -> str:
         cleaned_html = clean_html(html)
         file.write(cleaned_html)
         file.close()
-        convert_cmd = f"{binary_path.absolute().as_posix()} -i {file.name}"
+        convert_cmd = f"\"{binary_path.absolute().as_posix()}\" -i \"{file.name}\""
         status_code, markdown = subprocess.getstatusoutput(convert_cmd)
         Path(file.name).unlink()
     if status_code != 0:
