@@ -24,7 +24,7 @@ from wurzel.steps.docling.docling_step import CleanMarkdownRenderer, DoclingStep
     [
         (
             ["https://pdfobject.com/pdf/sample.pdf"],
-            "Samole PDF This is a simple PDF file. Fun fun fun: Lorem ipsum dolor sit amet;",
+            "## Sample PDF\n\n## This is a simple PDF file. Fun fun fun.\n\nLorem ipsum dolor sit amet,  consectetuer",
             1,
         ),
         (["example.com/pdf"], "", 0),
@@ -41,6 +41,7 @@ def test_docling_step(real_data_path, expected_md_start, expected_contract_count
             "URLS": real_data_path,
             "FORCE_FULL_PAGE_OCR": docling_step.settings.FORCE_FULL_PAGE_OCR,
             "FORMATS": docling_step.settings.FORMATS,
+            "DEFAULT_KEYWORD": "",
         },
     )
 
