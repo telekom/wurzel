@@ -16,6 +16,7 @@ from mistletoe.token import Token
 
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import MarkdownException
+from wurzel.utils.to_markdown.html2md import MD_RENDER_LOCK
 
 if TYPE_CHECKING:
     import spacy
@@ -208,7 +209,7 @@ class SemanticSplitter:
     def _render_doc(self, doc: MisDocument) -> str:
         """Render Mistletoe Markdown Document."""
         try:
-            with WurzelMarkdownRenderer() as renderer:
+            with MD_RENDER_LOCK, WurzelMarkdownRenderer() as renderer:
                 return renderer.render(doc)  # type: ignore[no-any-return]
         except Exception as e:
             raise MarkdownException(e) from e

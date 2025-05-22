@@ -6,6 +6,7 @@ import platform
 import re
 import subprocess
 import tempfile
+import threading
 from pathlib import Path
 
 # Related third-party imports
@@ -19,6 +20,7 @@ from mistletoe.span_token import Image
 from wurzel.exceptions import InvalidPlatform, MarkdownConvertFailed
 
 # pylint: disable=c-extension-no-member
+MD_RENDER_LOCK = threading.Lock()
 
 
 def __get_html2md() -> Path:
@@ -107,7 +109,7 @@ def remove_images(markdown: str) -> str:
     """
 
     def _to_markdown(doc: Document) -> str:
-        with MarkdownRenderer() as renderer:
+        with MD_RENDER_LOCK, MarkdownRenderer() as renderer:
             rendered = renderer.render(doc)
         # Adjust for excessive newlines
         return re.sub(r"\n\n+", "\n\n", rendered)
