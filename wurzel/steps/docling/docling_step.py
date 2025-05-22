@@ -88,7 +88,7 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
         )
 
     @staticmethod
-    def extract_keywords(md_text: str) -> tuple[str, str]:
+    def extract_keywords(md_text: str) -> tuple[str]:
         """Cleans a Markdown string using mistletoe and extracts useful content.
 
         - Parses and renders the Markdown content into HTML using a custom HTML renderer
