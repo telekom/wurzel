@@ -3,6 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 """Test for cyclic imports in utils."""
 
+from unittest import mock
+
+import pytest
+
 from wurzel.utils import HAS_DOCLING, HAS_MILVUS, HAS_QDRANT
 
 
@@ -38,6 +42,22 @@ def test_import_steps():
     import wurzel.steps.embedding.settings  # noqa: F401 I001
     from wurzel.steps import ManualMarkdownStep  # noqa: F401 I001
     from wurzel.steps import EmbeddingStep  # noqa: F401 I001
+
+
+def test_fail_import_steps():
+    with (
+        mock.patch("wurzel.utils.HAS_QDRANT", False),
+        mock.patch("wurzel.utils.HAS_DOCLING", False),
+        mock.patch("wurzel.utils.HAS_MILVUS", False),
+    ):
+        with pytest.raises(ImportError):
+            pass
+
+        with pytest.raises(ImportError):
+            pass
+
+        with pytest.raises(ImportError):
+            from wurzel.steps import MilvusConnectorStep  # noqa: F401 I001
 
 
 def test_import_utils_meta_settings():
