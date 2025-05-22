@@ -9,10 +9,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from wurzel.exceptions import StepFailed
 from wurzel.step_executor import BaseStepExecutor
 
 # Local application/library specific imports
 from wurzel.steps import EmbeddingStep
+from wurzel.steps.embedding.huggingface import HuggingFaceInferenceAPIEmbeddings
 from wurzel.steps.embedding.step_multivector import EmbeddingMultiVectorStep
 
 
@@ -54,7 +56,17 @@ def mock_embedding():
     return mock_func
 
 
-def test_embedding_step(mock_embedding, tmp_path, env):
+@pytest.fixture
+def default_embedding_data(tmp_path):
+    mock_file = Path("tests/data/markdown.json")
+    input_folder = tmp_path / "input"
+    input_folder.mkdir()
+    shutil.copy(mock_file, input_folder)
+    output_folder = tmp_path / "out"
+    return (input_folder, output_folder)
+
+
+def test_embedding_step(mock_embedding, default_embedding_data, env):
     """Tests the execution of the `EmbeddingStep` with a mock input file.
 
     Parameters
@@ -71,11 +83,7 @@ def test_embedding_step(mock_embedding, tmp_path, env):
     """
     env.set("EMBEDDINGSTEP__API", "https://example-embedding.com/embed")
     EmbeddingStep._select_embedding = mock_embedding
-    mock_file = Path("tests/data/markdown.json")
-    input_folder = tmp_path / "input"
-    input_folder.mkdir()
-    shutil.copy(mock_file, input_folder)
-    output_folder = tmp_path / "out"
+    input_folder, output_folder = default_embedding_data
     BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingStep, [input_folder], output_folder)
     assert output_folder.is_dir()
     assert len(list(output_folder.glob("*"))) > 0
@@ -108,3 +116,19 @@ def test_mutlivector_embedding_step(mock_embedding, tmp_path, env):
     BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingMultiVectorStep, [input_folder], output_folder)
     assert output_folder.is_dir()
     assert len(list(output_folder.glob("*"))) > 0
+
+
+def test_inheritance(env, default_embedding_data):
+    env.set("INHERITEDSTEP__API", "https://example-embedding.com/embed")
+    EXPECTED_EXCEPTION = "1234-exepected-4321"
+
+    class InheritedStep(EmbeddingStep):
+        @staticmethod
+        def _select_embedding(*args, **kwargs) -> HuggingFaceInferenceAPIEmbeddings:
+            raise RuntimeError(EXPECTED_EXCEPTION)
+
+    inp, out = default_embedding_data
+    with pytest.raises(StepFailed) as sf:
+        with BaseStepExecutor() as ex:
+            ex(InheritedStep, [inp], out)
+    assert sf.value.message.endswith(EXPECTED_EXCEPTION)
