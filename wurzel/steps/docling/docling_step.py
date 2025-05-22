@@ -29,7 +29,8 @@ from docling.document_converter import (
     DocumentConverter,
     PdfFormatOption,
 )
-from mistletoe import Document, HTMLRenderer
+from mistletoe import Document as MTDocument
+from mistletoe import HTMLRenderer
 
 from wurzel.datacontract.common import MarkdownDataContract
 from wurzel.step.typed_step import TypedStep
@@ -74,7 +75,7 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
 
         """
         pipeline_options = PdfPipelineOptions()
-        ocr_options = EasyOcrOptions(force_full_page_ocr=self.settings.FORCE_FULL_PAGE_OCR)
+        ocr_options = EasyOcrOptions()
         pipeline_options.ocr_options = ocr_options
 
         return DocumentConverter(
@@ -87,7 +88,7 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
         )
 
     @staticmethod
-    def clean_markdown_with_mistletoe(md_text: str) -> tuple[str, str]:
+    def extract_keywords(md_text: str) -> str:
         """Cleans a Markdown string using mistletoe and extracts useful content.
 
         - Parses and renders the Markdown content into HTML using a custom HTML renderer
@@ -100,13 +101,13 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
 
         """
         with MD_RENDER_LOCK, CleanMarkdownRenderer() as renderer:
-            ast = Document(md_text)
+            ast = MTDocument(md_text)
             cleaned = renderer.render(ast).replace("\n", "")
             soup = BeautifulSoup(cleaned, "html.parser")
             first_heading_tag = soup.find(["h1", "h2", "h3", "h4", "h5", "h6"])
             heading = first_heading_tag.get_text(strip=True) if first_heading_tag else ""
-            plain_text = soup.get_text(separator=" ").strip()
-            return heading, plain_text
+
+        return heading
 
     def run(self, inpt: None) -> list[MarkdownDataContract]:
         """Run the document extraction and conversion process for German PDFs.
@@ -124,9 +125,9 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
         for url in urls:
             try:
                 converted_contract = self.converter.convert(url)
-                md = converted_contract.document.export_to_markdown()
-                keyword, cleaned_md = self.clean_markdown_with_mistletoe(md)
-                contract_instance = {"md": cleaned_md, "keywords": keyword, "url": url}
+                md = converted_contract.document.export_to_markdown(image_placeholder="")
+                keyword = self.extract_keywords(md)
+                contract_instance = {"md": md, "keywords": " ".join([self.settings.DEFAULT_KEYWORD, keyword]), "url": url}
                 contracts.append(contract_instance)
 
             except (FileNotFoundError, OSError) as e:
