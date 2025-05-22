@@ -4,7 +4,7 @@
 [project]
 name = "wurzel"
 
-version = "0.10.1-dev.2"
+version = "0.10.2"
 
 description = "Pick, choose and chain your RAG tools in a pythonic way"
 authors = [
