@@ -24,7 +24,7 @@ from logging import getLogger
 
 from bs4 import BeautifulSoup, Comment
 from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import EasyOcrOptions, PdfPipelineOptions
+from docling.datamodel.pipeline_options import AcceleratorDevice, AcceleratorOptions, EasyOcrOptions, PdfPipelineOptions
 from docling.document_converter import (
     DocumentConverter,
     PdfFormatOption,
@@ -64,16 +64,20 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
 
     def __init__(self):
         super().__init__()
+        self.pipline_options: dict = {"accelerator_options": AcceleratorOptions(device=AcceleratorDevice.AUTO)}
         self.converter = self.create_converter()
 
     def create_converter(self) -> DocumentConverter:
         """Create and configure the document converter for PDF and DOCX.
 
+        Args:
+            pipline_options (dict): Options for the PDF pipeline. Default is an empty dictionary.
+
         Returns:
             DocumentConverter: Configured document converter.
 
         """
-        pipeline_options = PdfPipelineOptions()
+        pipeline_options = PdfPipelineOptions(**self.pipline_options)
         ocr_options = EasyOcrOptions(force_full_page_ocr=self.settings.FORCE_FULL_PAGE_OCR)
         pipeline_options.ocr_options = ocr_options
 

@@ -5,6 +5,7 @@
 import os
 
 import pytest
+from docling.datamodel.pipeline_options import AcceleratorDevice, AcceleratorOptions
 
 from wurzel.utils import HAS_DOCLING
 
@@ -32,9 +33,7 @@ from wurzel.steps.docling.docling_step import CleanMarkdownRenderer, DoclingStep
         (["example.com/pdf"], "", 0),
     ],
 )
-def test_docling_step(real_data_path, expected_md_start, expected_contract_count):
-    if IS_MACOS and os.environ.get("GITHUB_ACTIONS") == "true":
-        pytest.skip("Skipping test on  macOS due to MPS error in CI")
+def test_docling_step(real_data_path, expected_md_start, expected_contract_count, mocker):
     docling_step = DoclingStep()
     docling_step.settings = type(
         "Settings",
@@ -45,6 +44,8 @@ def test_docling_step(real_data_path, expected_md_start, expected_contract_count
             "FORMATS": docling_step.settings.FORMATS,
         },
     )
+    if IS_MACOS and os.environ.get("GITHUB_ACTIONS") == "true":
+        docling_step.pipline_options = {"accelerator_options": AcceleratorOptions(device=AcceleratorDevice.CPU)}
 
     contracts = docling_step.run({})
     assert len(contracts) == expected_contract_count, f"Expected {expected_contract_count} contracts, got {len(contracts)}"
