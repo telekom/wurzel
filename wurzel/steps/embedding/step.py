@@ -9,7 +9,6 @@ import os
 import re
 from io import StringIO
 from logging import getLogger
-from pathlib import Path
 from typing import Optional, TypedDict
 
 from markdown import Markdown
@@ -51,31 +50,31 @@ class EmbeddingStep(
     n_jobs: int
     markdown: Markdown
     stopwords: list[str]
+    settings: EmbeddingSettings
 
     def __init__(self) -> None:
         super().__init__()
         self.settings = EmbeddingSettings()
-        self.embedding = self._select_embedding(self.settings.API)
+        self.embedding = self._select_embedding()
         self.n_jobs = max(1, (os.cpu_count() or 0) - 1)
         # Inject net output_format into 3rd party library Markdown
         Markdown.output_formats["plain"] = self.__md_to_plain  # type: ignore[index]
         self.markdown = Markdown(output_format="plain")  # type: ignore[arg-type]
         self.markdown.stripTopLevelTags = False
-        self.settingstopwords = self._load_stopwords(self.settings.STEPWORDS_PATH)
+        self.settingstopwords = self._load_stopwords()
         self.splitter = SemanticSplitter(
             token_limit=self.settings.TOKEN_COUNT_MAX,
             token_limit_buffer=self.settings.TOKEN_COUNT_BUFFER,
             token_limit_min=self.settings.TOKEN_COUNT_MIN,
         )
 
-    @staticmethod
-    def _load_stopwords(path: Path) -> list[str]:
+    def _load_stopwords(self) -> list[str]:
+        path = self.settings.STEPWORDS_PATH
         with path.open(encoding="utf-8") as f:
             stopwords = [w.strip() for w in f.readlines() if not w.startswith(";")]
         return stopwords
 
-    @staticmethod
-    def _select_embedding(*args, **kwargs) -> HuggingFaceInferenceAPIEmbeddings:
+    def _select_embedding(self) -> HuggingFaceInferenceAPIEmbeddings:
         """Selects the embedding model to be used for generating embeddings.
 
         Returns
@@ -84,7 +83,7 @@ class EmbeddingStep(
             An instance of the Embeddings class.
 
         """
-        return PrefixedAPIEmbeddings(*args, **kwargs)
+        return PrefixedAPIEmbeddings(self.settings.API, self.settings.PREFIX_MAP)
 
     def run(self, inpt: list[MarkdownDataContract]) -> DataFrame[EmbeddingResult]:
         """Executes the embedding step by processing input markdown files, generating embeddings,
