@@ -41,7 +41,7 @@ UNAME_S := $(shell uname)
 test: install
 	@echo "🧪 Running tests..."
 ifeq ($(UNAME_S),Darwin)
-ifneq ($(GITHUB_PIPLINE),)
+ifneq ($(GITHUB_ACTIONS),)
 	@echo "Running tests on MacOS in GitHub pipeline"
 	@echo "Skipping coverage check"
 # https://github.com/actions/runner-images/issues/9918
