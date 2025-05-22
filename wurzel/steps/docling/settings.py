@@ -5,6 +5,8 @@
 """Specific docling settings."""
 
 from docling.datamodel.base_models import InputFormat
+from docling.datamodel.pipeline_options import AcceleratorDevice, AcceleratorOptions, PdfPipelineOptions
+from pydantic import computed_field
 
 from wurzel.step import Settings
 
@@ -34,6 +36,9 @@ class DoclingSettings(Settings):
     """
 
     FORCE_FULL_PAGE_OCR: bool = True
+    DOCLING_PDF_PIPLINE_OPTIONS: PdfPipelineOptions = PdfPipelineOptions(
+        accelerator_options=AcceleratorOptions(device=AcceleratorDevice.AUTO)
+    )
     FORMATS: list[InputFormat] = [
         "docx",
         "asciidoc",
@@ -49,3 +54,16 @@ class DoclingSettings(Settings):
         "json_docling",
     ]
     URLS: list[str] = []
+
+    @computed_field
+    @property
+    def use_gpu(self) -> bool:
+        """Check if GPU is selected for processing.
+
+        Returns:
+            bool: True if GPU is selected, False otherwise.
+
+        """
+        if self.DOCLING_PDF_PIPLINE_OPTIONS.accelerator_options.device in [AcceleratorDevice.CUDA, AcceleratorDevice.MPS]:
+            return True
+        return False
