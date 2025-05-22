@@ -36,9 +36,23 @@ $(UV): $(PY)
 
 install: $(VENV)/touchfile
 
+UNAME_S := $(shell uname)
+
 test: install
 	@echo "🧪 Running tests..."
-	$(UV) run pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov-fail-under=90  --cov=$(SRC_DIR)
+ifeq ($(UNAME_S),Darwin)
+ifneq ($(GITHUB_PIPLINE),)
+	@echo "Running tests on MacOS in GitHub pipeline"
+	@echo "Skipping coverage check"
+# https://github.com/actions/runner-images/issues/9918
+# Docling coverage is not working when tests are skipped on MacOS
+	$(UV) run pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov=$(SRC_DIR)
+else
+	$(UV) run pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov-fail-under=90 --cov=$(SRC_DIR)
+endif
+else
+	$(UV) run pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov-fail-under=90 --cov=$(SRC_DIR)
+endif
 
 lint: install
 	@echo "🔍 Running lint checks..."

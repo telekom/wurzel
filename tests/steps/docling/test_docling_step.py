@@ -2,16 +2,20 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 
+import os
+import platform
 
 import pytest
-from docling.datamodel.pipeline_options import AcceleratorDevice, AcceleratorOptions, PdfPipelineOptions
+
+if platform.system() == "Darwin":
+    IS_MACOS = True
+else:
+    IS_MACOS = False
 
 from wurzel.utils import HAS_DOCLING
 
 if not HAS_DOCLING:
     pytest.skip("Docling is not available", allow_module_level=True)
-
-
 from wurzel.steps.docling.docling_step import CleanMarkdownRenderer, DoclingStep
 
 
@@ -26,7 +30,9 @@ from wurzel.steps.docling.docling_step import CleanMarkdownRenderer, DoclingStep
         (["example.com/pdf"], "", 0),
     ],
 )
-def test_docling_step(real_data_path, expected_md_start, expected_contract_count, mocker):
+def test_docling_step(real_data_path, expected_md_start, expected_contract_count):
+    if IS_MACOS and os.environ.get("GITHUB_ACTIONS") == "true":
+        pytest.skip("Skipping test on  macOS due to MPS error in CI")
     docling_step = DoclingStep()
     docling_step.settings = type(
         "Settings",
@@ -35,7 +41,6 @@ def test_docling_step(real_data_path, expected_md_start, expected_contract_count
             "URLS": real_data_path,
             "FORCE_FULL_PAGE_OCR": docling_step.settings.FORCE_FULL_PAGE_OCR,
             "FORMATS": docling_step.settings.FORMATS,
-            "DOCLING_PDF_PIPLINE_OPTIONS": PdfPipelineOptions(accelerator_options=AcceleratorOptions(device=AcceleratorDevice.CPU)),
         },
     )
 
