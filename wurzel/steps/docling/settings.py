@@ -49,3 +49,4 @@ class DoclingSettings(Settings):
         "json_docling",
     ]
     URLS: list[str] = []
+    DEFAULT_KEYWORD: str = ""
