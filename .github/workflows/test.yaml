@@ -41,12 +41,11 @@ jobs:
           if [ "$RUNNER_OS" == "Windows" ]; then
             echo "UV=$(where uv)" >> $GITHUB_ENV
             echo "PIP=$(where pip)" >> $GITHUB_ENV
-            echo "SYSTEM_PYTHON=python${{ matrix.python-version }}" >> $GITHUB_ENV
           else
             echo "UV=$(which uv)" >> $GITHUB_ENV
             echo "PIP=$(which pip)" >> $GITHUB_ENV
-            echo "SYSTEM_PYTHON=python${{ matrix.python-version }}" >> $GITHUB_ENV
           fi
+          echo "SYSTEM_PYTHON=python${{ matrix.python-version }}" >> $GITHUB_ENV
         shell: bash
 
       - name: Install dependencies
