@@ -17,11 +17,13 @@ from wurzel.step_executor import BaseStepExecutor
 def is_valid_dvc_yaml(path: Path) -> bool:
     import os
 
-    shell = os.name == "nt"
+    is_windows_environment = os.name == "nt"
     create_stdout = subprocess.getoutput(
-        f"cd {path.parent} && git init && dvc init" if not shell else f"cd /d {path.parent} && git init && dvc init"
+        f"cd {path.parent} && git init && dvc init" if not is_windows_environment else f"cd /d {path.parent} && git init && dvc init"
     )
-    status_stdout = subprocess.getoutput(f"cd {path.parent} && dvc stage list" if not shell else f"cd /d {path.parent} && dvc stage list")
+    status_stdout = subprocess.getoutput(
+        f"cd {path.parent} && dvc stage list" if not is_windows_environment else f"cd /d {path.parent} && dvc stage list"
+    )
     assert "Initialized empty Git repository in" in create_stdout, create_stdout
     assert "Initialized DVC repository." in create_stdout, create_stdout
     assert "is invalid" not in status_stdout
