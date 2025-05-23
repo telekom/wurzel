@@ -19,7 +19,7 @@ from wurzel.step_executor.base_executor import step_env_encapsulation
 
 
 class MySettings(Settings):
-    key: str
+    KEY: str
 
 
 class MyStep(TypedStep[MySettings, PydanticModel, PydanticModel]):
@@ -48,7 +48,7 @@ def test_no_settings():
         MyWithoutSettingsStep()
 
 
-@pytest.mark.parametrize("env_set", [("MYSTEP__key", "value"), ("MYSTEP", '{"key": "value"}')])
+@pytest.mark.parametrize("env_set", [("MYSTEP__KEY", "value"), ("MYSTEP", '{"KEY": "value"}')])
 def test_env_set(env, env_set):
     env.set(*env_set)
     with pytest.raises(ValidationError):

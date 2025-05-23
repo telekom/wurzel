@@ -14,10 +14,10 @@ from wurzel.step_executor import BaseStepExecutor
 
 
 class MySettings(Settings):
-    a: int
-    b: str
-    c: list[int]
-    d: Optional[int] = None
+    A: int
+    B: str
+    C: list[int]
+    D: Optional[int] = None
 
 
 class MyResult(PydanticModel):
@@ -32,9 +32,9 @@ class MyStep(TypedStep[MySettings, None, MyResult]):
 @pytest.mark.parametrize(
     "base_env",
     [
-        MySettings(a=1, b="b", c=[1, 2], d=None),
-        MySettings(a=1, b="b", c=[], d=None),
-        MySettings(a=1, b="b", c=[1, 2], d=2),
+        MySettings(A=1, B="b", C=[1, 2], D=None),
+        MySettings(A=1, B="b", C=[], D=None),
+        MySettings(A=1, B="b", C=[1, 2], D=2),
     ],
 )
 @pytest.mark.parametrize(
