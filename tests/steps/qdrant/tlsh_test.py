@@ -5,6 +5,7 @@
 import pytest
 
 from wurzel.steps.qdrant.step import QdrantConnectorStep
+from wurzel.utils import HAS_TLSH
 
 
 @pytest.mark.parametrize(
@@ -26,5 +27,7 @@ def test_tlsh_hash_same_output(text: str, expected_hash: str):
         The 'text_sha256_hash' key in the result matches the expected_hash.
 
     """
+    if not HAS_TLSH:
+        pytest.skip("TLSH dep is not installed")
     result = QdrantConnectorStep.get_available_hashes(text)
     assert result["text_sha256_hash"] == expected_hash
