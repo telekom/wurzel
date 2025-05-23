@@ -347,10 +347,7 @@ class BaseStepExecutor:
             log.info(f"{self.__class__.__name__} - done: {step_cls.__name__}")
             correlation_id.set(None)
 
-    def __call__(
-        self, step_cls: type[TypedStep], inputs: Optional[set[PathToFolderWithBaseModels]], output_dir: Optional[PathToFolderWithBaseModels]
-    ):
-        return self.execute_step(step_cls, inputs, output_dir)
+    __call__ = execute_step
 
     def __enter__(self) -> Self:
         return self
