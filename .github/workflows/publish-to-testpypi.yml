@@ -42,6 +42,7 @@ jobs:
           git_committer_email: "actions@users.noreply.github.com"
           prerelease: true
           vcs_release: false
+          prerelease_token: "dev.${{ github.sha }}"
 
 
 
