@@ -15,23 +15,41 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        python-version: ["3.11", "3.12"]
+        python-version: [3.11, 3.12]
+        include:
+          - os: windows-latest
+            python-version: "3.11"
+          - os: macos-latest
+            python-version: "3.11"
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Install the latest version of uv and set the python version
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
           python-version: ${{ matrix.python-version }}
+          activate-environment: true
+
+      - name: Set environment variables
+        id: set-env
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            echo "UV=$(where uv)" >> $GITHUB_ENV
+            echo "PIP=$(where pip)" >> $GITHUB_ENV
+          else
+            echo "UV=$(which uv)" >> $GITHUB_ENV
+            echo "PIP=$(which pip)" >> $GITHUB_ENV
+          fi
+          echo "SYSTEM_PYTHON=python${{ matrix.python-version }}" >> $GITHUB_ENV
+        shell: bash
 
       - name: Install dependencies
         run: |
-          uv lock
-          UV=$(which uv) PIP=$(which pip) make install
-
+          ${{ env.UV }} lock
+          make install UV="${{ env.UV }}" PIP="${{ env.PIP }}" SYSTEM_PYTHON="${{ env.SYSTEM_PYTHON }}"
 
       - name: Test with python ${{ matrix.python-version }}
-        run: uv run --frozen pytest ./tests --cov-branch --cov-report term --cov-fail-under=80 --cov=wurzel/
+        run: make test
