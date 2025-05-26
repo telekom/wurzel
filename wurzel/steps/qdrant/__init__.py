@@ -9,6 +9,3 @@ from .data import QdrantResult  # noqa: F401
 if _HAS_QDRANT:
     from .step import QdrantConnectorStep  # noqa: F401
     from .step_multi_vector import QdrantConnectorMultiVectorStep  # noqa: F401
-
-else:
-    pass
