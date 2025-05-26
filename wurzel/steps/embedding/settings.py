@@ -53,5 +53,5 @@ class EmbeddingSettings(SplitterSettings):
     STEPWORDS_PATH: Path = Path("data/german_stopwords_full.txt")
     N_JOBS: int = Field(1, gt=0)
     PREFIX_MAP: Annotated[dict[re.Pattern, str], WrapValidator(_wrap_validator_model_mapping)] = Field(
-        default={"e5-": "query : ", "DPR|dpr": ""}
+        default={"e5-": "query: ", "DPR|dpr": ""}
     )
