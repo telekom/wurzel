@@ -40,7 +40,7 @@ jobs:
           changelog: false
           git_committer_name: "github-actions"
           git_committer_email: "actions@users.noreply.github.com"
-          prerelease: true
+          build_metadata: "dev.${{ github.sha }}"
           vcs_release: false
 
 
