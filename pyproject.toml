@@ -146,8 +146,9 @@ prerelease = false
 
 [tool.semantic_release.branches.dev]
 match = "^(?!main$).+"
-prerelease = true
-prerelease_token = "dev"
+# not used to use metadata in github actions
+#prerelease = true
+#prerelease_token = "dev"
 
 
 [tool.ruff]
