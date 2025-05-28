@@ -41,27 +41,32 @@ class ArgoBackend(Backend):
 
         with Workflow(
             generate_name="wurzel",
-            entrypoint="diamond",
+            entrypoint="wurzel-pipeline",
         ) as w:
 
             self.__generate_dag(step)
         return w
     w = Workflow()
-    def _create_task(self,dag:DAG, step:type[TypedStep], inputs:list[str]=None)->Task:
-        if inputs is None:
+    def _create_task(self,dag:DAG, step:type[TypedStep], reqs:list[Task]=None)->Task:
+        if reqs:
+            inputs = [reqs[0].get_artifact("wurzel-artifact").from_]
+        else:
             inputs = []
         commands:list[str] = generate_cli_call(step.__class__, inputs=inputs, output=self.data_dir/step.__class__.__name__).split(" ")
         dag.__exit__()
         wurzel_call = Container(
-            name="wurzel_call",
+            name=f"wurzel-run-{step.__class__.__name__}",
             image=self.image,
             command=commands,
             inputs=[Parameter(name="inputs")],
+            outputs=Artifact(name=f"wurzel-artifact", path=f"/tmp/{step.__class__.__name__}")
         )
         dag.__enter__()
         return wurzel_call(
+
             name=step.__class__.__name__,
-            arguments={"inputs":inputs},
+            arguments={"inputs": inputs},
+
         )
     def __generate_dag(self, step: type[TypedStep])-> DAG:
         def resolve_requirements(step: type[TypedStep])->Task:
@@ -76,11 +81,11 @@ class ArgoBackend(Backend):
                     req_argo =self._create_task(dag, req)
                 artifacts.append(req_argo.result)
                 argo_reqs.append(req_argo)
-            step_argo:Task = self._create_task(dag,step,[argo_req.result for argo_req in argo_reqs] )
+            step_argo:Task = self._create_task(dag,step,[argo_req for argo_req in argo_reqs] )
             for argo_req in argo_reqs:
                 argo_req >> step_argo
             return step_argo
-        with DAG() as dag:
+        with DAG(name="wurzel-pipeline") as dag:
             resolve_requirements(step)
         return dag
 

@@ -11,10 +11,11 @@ from wurzel.backend import DvcBackend,ArgoBackend
 from wurzel.backend.backend import Backend
 from wurzel.step import Step
 from wurzel.step.typed_step import TypedStep
+from wurzel.steps.docling.docling_step import DoclingStep
 from wurzel.utils.meta_settings import WZ
 from wurzel.datacontract import MarkdownDataContract
-
-
+from wurzel.steps.duplication import DropDuplicationStep
+from wurzel.steps.splitter import SimpleSplitterStep
 class A(TypedStep[None,None,MarkdownDataContract]):
     def run(self, inpt: None) -> MarkdownDataContract:
         return super().run(inpt)
@@ -77,3 +78,19 @@ def test_yaml(backend:type[Backend], keys):
     y = backend().generate_yaml(a)
     y_dict = yaml.safe_load(y)
     assert len(safeget(y_dict,*keys))==1
+
+@pytest.mark.parametrize(
+    "backend",
+    [
+        pytest.param(DvcBackend, id="DVC Backend"),
+        pytest.param(ArgoBackend, id="ArGo Backend"),
+    ]
+)
+def test_minimal_pipeline(backend:type[Backend]):
+    agb = WZ(DoclingStep)
+    splitter = WZ(SimpleSplitterStep)
+    duplication = WZ(DropDuplicationStep)
+    agb >> splitter >> duplication
+
+    y = backend().generate_yaml(duplication)
+    pass
