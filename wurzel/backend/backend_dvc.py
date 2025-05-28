@@ -9,10 +9,13 @@ from typing import Any, TypedDict
 import yaml
 
 import wurzel
+from wurzel.backend.backend import Backend
 import wurzel.cli
 from wurzel.step import TypedStep
+from wurzel.step.typed_step import MODEL_TYPE
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 
+from hera.workflows import DAG, Workflow, script,Artifact
 
 class DvcDict(TypedDict):
     """Internal Representation."""
@@ -23,16 +26,7 @@ class DvcDict(TypedDict):
     always_changed: bool
 
 
-class Backend:
-    """Abstract class to specify the Backend."""
 
-    def generate_dict(self, step: TypedStep):
-        """Generate the dict."""
-        raise NotImplementedError()
-
-    def generate_yaml(self, step: TypedStep):
-        """Generate the dict and saves it."""
-        raise NotImplementedError()
 
 
 class DvcBackend(Backend):
@@ -98,8 +92,3 @@ class DvcBackend(Backend):
                 data[k][key] = [str(p) for p in data[k][key]]
         return yaml.dump({"stages": data})
 
-    @classmethod
-    def save_yaml(cls, yml: str, file: Path):
-        """Saves given yml string int file."""
-        with open(file, "w", encoding="utf-8") as f:
-            yaml.dump(yml, f)

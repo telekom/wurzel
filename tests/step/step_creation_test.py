@@ -8,7 +8,7 @@ from typing import Any
 import pytest
 from pandera.typing import Series
 
-from wurzel.adapters import DvcBackend
+from wurzel.backend import DvcBackend
 from wurzel.datacontract import PanderaDataFrameModel, PydanticModel
 from wurzel.step import TypedStep
 from wurzel.step.settings import Settings

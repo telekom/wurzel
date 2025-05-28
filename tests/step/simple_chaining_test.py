@@ -3,24 +3,77 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from pathlib import Path
+from typing import Any
 
-from wurzel.adapters import DvcBackend
+import pytest
+import yaml
+from wurzel.backend import DvcBackend,ArgoBackend
+from wurzel.backend.backend import Backend
 from wurzel.step import Step
+from wurzel.step.typed_step import TypedStep
+from wurzel.utils.meta_settings import WZ
+from wurzel.datacontract import MarkdownDataContract
 
 
-class A(Step):
-    def execute(self, inputs: set[Path], output: Path):
-        pass
+class A(TypedStep[None,None,MarkdownDataContract]):
+    def run(self, inpt: None) -> MarkdownDataContract:
+        return super().run(inpt)
 
+class B(TypedStep[None,MarkdownDataContract,MarkdownDataContract]):
+    def run(self, inpt: MarkdownDataContract) -> MarkdownDataContract:
+        return super().run(inpt)
 
-class B(Step):
-    def execute(self, inputs: set[Path], output: Path):
-        pass
+class C(TypedStep[None,MarkdownDataContract,MarkdownDataContract]):
+    def run(self, inpt: MarkdownDataContract) -> MarkdownDataContract:
+        return super().run(inpt)
+class D(TypedStep[None,MarkdownDataContract,MarkdownDataContract]):
+    def run(self, inpt: MarkdownDataContract) -> MarkdownDataContract:
+        return super().run(inpt)
 
-
-def test_asd():
-    a = A()
-    b = B()
+@pytest.mark.parametrize(
+    "backend",
+    [
+        pytest.param(DvcBackend, id="DVC Backend"),
+        pytest.param(ArgoBackend, id="ArGo Backend"),
+    ],
+)
+def test_dict(backend:type[Backend]):
+    a = WZ(A)
+    b = WZ(B)
     a >> b
-    dic = DvcBackend().generate_dict(b)
+    dic = backend().generate_dict(b)
     assert dic
+
+@pytest.mark.parametrize(
+    "backend,keys",
+    [
+        pytest.param(DvcBackend,["stages"], id="DVC Backend"),
+        pytest.param(ArgoBackend,["spec","templates",0,"dag","tasks"], id="ArGo Backend"),
+    ]
+)
+def test_yaml(backend:type[Backend], keys):
+    def safeget(dct, *keys):
+        for key in keys:
+            try:
+                dct = dct[key]
+            except KeyError:
+                return None
+        return dct
+    a = WZ(A)
+    b = WZ(B)
+    c = WZ(C)
+    d = WZ(D)
+    a >> b >> c
+    d >> c
+    y = backend().generate_yaml(b)
+    y_dict = yaml.safe_load(y)
+    assert len(safeget(y_dict,*keys))==2
+    y = backend().generate_yaml(c)
+    y_dict = yaml.safe_load(y)
+    assert len(safeget(y_dict,*keys))==4
+    y = backend().generate_yaml(d)
+    y_dict = yaml.safe_load(y)
+    assert len(safeget(y_dict,*keys))==1
+    y = backend().generate_yaml(a)
+    y_dict = yaml.safe_load(y)
+    assert len(safeget(y_dict,*keys))==1

@@ -4,7 +4,7 @@
 
 from pathlib import Path
 
-from wurzel.adapters.dvc_adapter import Backend
+from wurzel.backend.backend_dvc import Backend
 from wurzel.step.typed_step import TypedStep
 from wurzel.step_executor.base_executor import BaseStepExecutor
 from wurzel.utils import create_model

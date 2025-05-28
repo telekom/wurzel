@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from wurzel.adapters import DvcBackend
+from wurzel.backend import DvcBackend
 from wurzel.step import Step
 from wurzel.step_executor import BaseStepExecutor
 

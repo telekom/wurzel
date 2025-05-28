@@ -18,7 +18,7 @@ from typing import Annotated
 import typer
 import typer.core
 
-from wurzel.adapters.dvc_adapter import DvcBackend
+from wurzel.backend.backend_dvc import DvcBackend
 from wurzel.cli.cmd_generate import main as cmd_generate
 from wurzel.cli.cmd_inspect import main as cmd_inspect
 from wurzel.cli.cmd_run import main as cmd_run
