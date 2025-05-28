@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from pathlib import Path
-from typing import Annotated, Callable
 
 from wurzel.backend.backend import Backend
 from wurzel.cli import generate_cli_call
@@ -11,7 +10,7 @@ from wurzel.step import TypedStep
 from wurzel.step.typed_step import MODEL_TYPE
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 
-from hera.workflows import DAG, Workflow, script,Artifact, Task, Script
+from hera.workflows import DAG, Workflow, script,Artifact, Task, Script, Container, Parameter
 
 
 
@@ -38,24 +37,6 @@ class ArgoBackend(Backend):
     def generate_yaml(self, step: TypedStep):
         return self._generate_workflow(step).to_yaml()
 
-    def generate_script(self,dag:DAG,step_cls:type[TypedStep]) -> Script:
-        
-        # TODO set inputs by artifacts
-        dag.__exit__() # temporary leaf the dag context to create the script
-        @script(image="ghcr.io/telekom/wurzel")
-        def run_step(step_cls:type[TypedStep], input= None) ->MODEL_TYPE:
-                with BaseStepExecutor() as ex:
-                    return ex.execute_step(step_cls=step_cls)
-        dag.__enter__()
-        return run_step
-
-    @staticmethod
-    @script(image="ghcr.io/telekom/wurzel")
-    def run_step(step_cls:type[TypedStep], input= None) ->MODEL_TYPE:
-            with BaseStepExecutor() as ex:
-                return ex.execute_step(step_cls=step_cls)
-
-
     def _generate_workflow(self, step: type[TypedStep])->Workflow:
 
         with Workflow(
@@ -66,20 +47,39 @@ class ArgoBackend(Backend):
             self.__generate_dag(step)
         return w
     w = Workflow()
+    def _create_task(self,dag:DAG, step:type[TypedStep], inputs:list[str]=None)->Task:
+        if inputs is None:
+            inputs = []
+        commands:list[str] = generate_cli_call(step.__class__, inputs=inputs, output=self.data_dir/step.__class__.__name__).split(" ")
+        dag.__exit__()
+        wurzel_call = Container(
+            name="wurzel_call",
+            image=self.image,
+            command=commands,
+            inputs=[Parameter(name="inputs")],
+        )
+        dag.__enter__()
+        return wurzel_call(
+            name=step.__class__.__name__,
+            arguments={"inputs":inputs},
+        )
     def __generate_dag(self, step: type[TypedStep])-> DAG:
         def resolve_requirements(step: type[TypedStep])->Task:
             artifacts = []
-            step_argo:Task  = self.generate_script(dag=dag,step_cls=step)(name=step.__class__.__name__)
+            argo_reqs:list[Task] = []
+
             for req in step.required_steps:
                 if req.required_steps:
                     req_argo = resolve_requirements(req)
-                    artifacts.append(req_argo.result)
-                else:
 
-                    req_argo =self.generate_script(dag=dag,step_cls=req)(name=req.__class__.__name__)
-                    req_argo >> step_argo
+                else: # Leaf
+                    req_argo =self._create_task(dag, req)
+                artifacts.append(req_argo.result)
+                argo_reqs.append(req_argo)
+            step_argo:Task = self._create_task(dag,step,[argo_req.result for argo_req in argo_reqs] )
+            for argo_req in argo_reqs:
+                argo_req >> step_argo
             return step_argo
-
         with DAG() as dag:
             resolve_requirements(step)
         return dag

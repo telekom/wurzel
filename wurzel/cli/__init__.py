@@ -39,7 +39,7 @@ def generate_cli_call(
 
     """
     if inputs:
-        inputs = "-i " + " -i ".join(i.as_posix() for i in inputs)
+        inputs = "-i " + " -i ".join(str(i) for i in inputs)
     else:
         inputs = ""
     return " ".join(
