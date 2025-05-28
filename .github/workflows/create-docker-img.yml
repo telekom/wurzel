@@ -8,6 +8,7 @@ on:
   workflow_run:
     workflows:
       - test.pypi.org Release
+      - pypi.orgRelease
     types:
       - completed
 
