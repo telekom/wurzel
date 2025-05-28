@@ -3,13 +3,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from pathlib import Path
+from typing import Annotated, Callable
 
 from wurzel.backend.backend import Backend
+from wurzel.cli import generate_cli_call
 from wurzel.step import TypedStep
 from wurzel.step.typed_step import MODEL_TYPE
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 
-from hera.workflows import DAG, Workflow, script,Artifact, Task
+from hera.workflows import DAG, Workflow, script,Artifact, Task, Script
 
 
 
@@ -32,9 +34,21 @@ class ArgoBackend(Backend):
         super().__init__()
 
     def generate_dict(self, step: TypedStep):
-        return self.__generate_workflow(step).to_dict()
+        return self._generate_workflow(step).to_dict()
     def generate_yaml(self, step: TypedStep):
-        return self.__generate_workflow(step).to_yaml()
+        return self._generate_workflow(step).to_yaml()
+
+    def generate_script(self,dag:DAG,step_cls:type[TypedStep]) -> Script:
+        
+        # TODO set inputs by artifacts
+        dag.__exit__() # temporary leaf the dag context to create the script
+        @script(image="ghcr.io/telekom/wurzel")
+        def run_step(step_cls:type[TypedStep], input= None) ->MODEL_TYPE:
+                with BaseStepExecutor() as ex:
+                    return ex.execute_step(step_cls=step_cls)
+        dag.__enter__()
+        return run_step
+
     @staticmethod
     @script(image="ghcr.io/telekom/wurzel")
     def run_step(step_cls:type[TypedStep], input= None) ->MODEL_TYPE:
@@ -42,7 +56,7 @@ class ArgoBackend(Backend):
                 return ex.execute_step(step_cls=step_cls)
 
 
-    def __generate_workflow(self, step: type[TypedStep])->Workflow:
+    def _generate_workflow(self, step: type[TypedStep])->Workflow:
 
         with Workflow(
             generate_name="wurzel",
@@ -55,14 +69,14 @@ class ArgoBackend(Backend):
     def __generate_dag(self, step: type[TypedStep])-> DAG:
         def resolve_requirements(step: type[TypedStep])->Task:
             artifacts = []
-            step_argo:Task  = self.run_step(step_cls=step,name=step.__class__.__name__)
+            step_argo:Task  = self.generate_script(dag=dag,step_cls=step)(name=step.__class__.__name__)
             for req in step.required_steps:
                 if req.required_steps:
                     req_argo = resolve_requirements(req)
                     artifacts.append(req_argo.result)
                 else:
 
-                    req_argo =self.run_step(step_cls=req,name=req.__class__.__name__)
+                    req_argo =self.generate_script(dag=dag,step_cls=req)(name=req.__class__.__name__)
                     req_argo >> step_argo
             return step_argo
 
