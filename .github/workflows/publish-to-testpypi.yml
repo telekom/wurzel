@@ -31,6 +31,11 @@ jobs:
         run: |
           git reset --hard ${{ github.sha }}
 
+      - name: Set environment variables
+        id: set-env
+        run: |
+          echo "DEV_VERSION=$(date +%Y%m%d)" >> $GITHUB_ENV
+        shell: bash
 
       - name: Python Semantic Release
         id: release
@@ -40,7 +45,7 @@ jobs:
           changelog: false
           git_committer_name: "github-actions"
           git_committer_email: "actions@users.noreply.github.com"
-          build_metadata: "dev.${{ github.sha }}"
+          build_metadata: "dev.${{ env.DEV_VERSION }}"
           vcs_release: false
 
 
