@@ -22,6 +22,10 @@ jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64]
+
     permissions:
       contents: read
       packages: write
@@ -59,13 +63,13 @@ jobs:
 
 
 
-      - name: Build and push Docker image linux/amd64
+      - name: Build and push Docker image ${{ matrix.platform}}
         id: push
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          platforms: linux/amd64
+          platforms: ${{ matrix.platform}}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
