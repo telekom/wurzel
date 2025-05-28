@@ -47,26 +47,26 @@ class ArgoBackend(Backend):
             self.__generate_dag(step)
         return w
     w = Workflow()
-    def _create_task(self,dag:DAG, step:type[TypedStep], reqs:list[Task]=None)->Task:
-        if reqs:
-            inputs = [reqs[0].get_artifact("wurzel-artifact").from_]
+    def _create_task(self,dag:DAG, step:type[TypedStep],argo_reqs:list[Task])->Task:
+        if step.required_steps:
+            inputs = [Artifact(name="wurzel-artifact",path=f"/tmp/{req.__class__.__name__}")for req in step.required_steps]
         else:
             inputs = []
-        commands:list[str] = generate_cli_call(step.__class__, inputs=inputs, output=self.data_dir/step.__class__.__name__).split(" ")
+        commands:list[str] = generate_cli_call(step.__class__, inputs=[inpt.from_ for inpt in inputs], output=self.data_dir/step.__class__.__name__).split(" ")
         dag.__exit__()
         wurzel_call = Container(
-            name=f"wurzel-run-{step.__class__.__name__}",
+            name=f"wurzel-run-template-{step.__class__.__name__.lower()}",
             image=self.image,
             command=commands,
-            inputs=[Parameter(name="inputs")],
+            inputs= inputs,
             outputs=Artifact(name=f"wurzel-artifact", path=f"/tmp/{step.__class__.__name__}")
         )
         dag.__enter__()
+        input_refs = [argo_req.get_artifact("wurzel-artifact") for argo_req in argo_reqs] if argo_reqs else []
         return wurzel_call(
-
-            name=step.__class__.__name__,
-            arguments={"inputs": inputs},
-
+            name=step.__class__.__name__.lower(),
+            arguments=input_refs,
+            outputs=[Artifact(name=f"wurzel-artifact-{step.__class__.__name__.lower()}", path=f"/tmp/{step.__class__.__name__}")]
         )
     def __generate_dag(self, step: type[TypedStep])-> DAG:
         def resolve_requirements(step: type[TypedStep])->Task:
@@ -78,10 +78,10 @@ class ArgoBackend(Backend):
                     req_argo = resolve_requirements(req)
 
                 else: # Leaf
-                    req_argo =self._create_task(dag, req)
+                    req_argo =self._create_task(dag, req, argo_reqs=[])
                 artifacts.append(req_argo.result)
                 argo_reqs.append(req_argo)
-            step_argo:Task = self._create_task(dag,step,[argo_req for argo_req in argo_reqs] )
+            step_argo:Task = self._create_task(dag,step, argo_reqs=argo_reqs)
             for argo_req in argo_reqs:
                 argo_req >> step_argo
             return step_argo
