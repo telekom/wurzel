@@ -53,7 +53,7 @@ class QdrantSettings(Settings):
     REPLICATION_FACTOR: int = Field(default=3, gt=0)
     BATCH_SIZE: int = Field(default=1024, gt=0)
 
-    @field_validator("SEARCH_PARAMS", "INDEX_PARAMS")
+    @field_validator("SEARCH_PARAMS", "INDEX_PARAMS",mode='before')
     @classmethod
     def parse_json(cls, v):
         """Validation for json."""

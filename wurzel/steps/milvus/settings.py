@@ -51,7 +51,7 @@ class MilvusSettings(Settings):
     PASSWORD: str
     SECURED: bool = False
 
-    @field_validator("SEARCH_PARAMS", "INDEX_PARAMS")
+    @field_validator("SEARCH_PARAMS", "INDEX_PARAMS",mode='before')
     @classmethod
     # pylint: disable-next=R0801
     def parse_json(cls, v):
