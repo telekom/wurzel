@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://telekom.github.io/wurzel/developping/Building_your_one_step/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>📚 How to Build Your Own Step - Wurzel</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "\ud83d\udcda How to Build Your Own Step";
+        var mkdocs_page_input_path = "developping/Building_your_one_step.md";
+        var mkdocs_page_url = "/wurzel/developping/Building_your_one_step/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Wurzel
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Wurzel</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developping</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">📚 How to Build Your Own Step</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#initialization-logic">⚙️ Initialization Logic</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example-step-with-initialization">🗃️ Example: Step with Initialization</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#finalization-logic">🛠️ Finalization Logic</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example-step-with-finalization">🗃️ Example: Step with Finalization</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#creating-a-new-wurzeltip-datasource-step">🧱 Creating a New WurzelTip (Datasource Step)</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#requirements">✅ Requirements</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example">📦 Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#creating-a-new-wurzelstep-processing-step">🔁 Creating a New WurzelStep (Processing Step)</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example-filter-step">🧹 Example: Filter Step</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#example-transformation-step">🔄 Example: Transformation Step</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../define_pipline/">🔗 Defining a Pipeline in Wurzel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../docs/">📖 Documentation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../getting_started/">👩‍💻 Developer Guide</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Steps</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../steps/docling/">Docling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../steps/embedding/">Embedding</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../steps/milvus/">Milvus</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../steps/qdrant/">Qdrant</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Wurzel</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Developping</li>
+      <li class="breadcrumb-item active">📚 How to Build Your Own Step</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/telekom/wurzel/edit/master/docs/developping/Building_your_one_step.md">Edit on telekom/wurzel</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="how-to-build-your-own-step">📚 How to Build Your Own Step</h1>
+<p>Wurzel provides a modular pipeline system where each unit of processing is encapsulated in a Step. There are two main types of steps:</p>
+<ul>
+<li>Datasource Steps (WurzelTips): These are entry points to your pipeline, ingesting data from external sources.</li>
+<li>Processing Steps (WurzelSteps): These consume and transform data from earlier steps.</li>
+</ul>
+<h2 id="initialization-logic">⚙️ Initialization Logic</h2>
+<p>The run method of each step may be executed multiple times—once per upstream dependency. If your step needs to perform setup actions (e.g., creating database tables or opening persistent connections), implement that logic in the constructor (<strong>init</strong>) instead of run.</p>
+<h3 id="example-step-with-initialization">🗃️ Example: Step with Initialization</h3>
+<pre><code class="language-python">class MyDatabaseStep(TypedStep[DatabaseSettings, DataFrame[EmbeddingResult], DataFrame[EmbeddingResult]]):
+
+    def __init__(self):
+        # Initialize database connections, create tables, etc.
+        self.connection = establish_connection()
+        self.ensure_tables()
+
+    def run(self, inpt: DataFrame[EmbeddingResult]) -&gt; DataFrame[EmbeddingResult]:
+        # Insert data into database or perform other processing
+        return inpt
+</code></pre>
+<h2 id="finalization-logic">🛠️ Finalization Logic</h2>
+<p>Each step also provides a <code>finalize</code> method, which is called after the execution in the Executor has finished. This method can be used for cleanup or other post-processing tasks.</p>
+<h3 id="example-step-with-finalization">🗃️ Example: Step with Finalization</h3>
+<pre><code class="language-python">class MyDatabaseStep(TypedStep[DatabaseSettings, DataFrame[EmbeddingResult], DataFrame[EmbeddingResult]]):
+
+    def __init__(self):
+        # Initialize database connections, create tables, etc.
+        self.connection = establish_connection()
+        self.ensure_tables()
+
+    def run(self, inpt: DataFrame[EmbeddingResult]) -&gt; DataFrame[EmbeddingResult]:
+        # Insert data into database or perform other processing
+        return inpt
+
+    def finalize(self) -&gt; None:
+        # Cleanup logic, such as retiring collections or closing connections
+        self.connection.close()
+</code></pre>
+<h2 id="creating-a-new-wurzeltip-datasource-step">🧱 Creating a New WurzelTip (Datasource Step)</h2>
+<p>A WurzelTip is a step that introduces data into the pipeline. Since it does not rely on any prior step, its InputDataContract is always None.</p>
+<p>By convention, we use MarkdownDataContract as the initial data format for document retrieval pipelines, but you are free to define and use your own custom contracts.</p>
+<h3 id="requirements">✅ Requirements</h3>
+<ul>
+<li>
+<p>Settings: Optional configuration schema using Pydantic's BaseModel (via Settings).</p>
+</li>
+<li>
+<p>InputDataContract: Always None for data sources.</p>
+</li>
+<li>
+<p>OutputDataContract: Required. Typically list[MarkdownDataContract].</p>
+</li>
+</ul>
+<h3 id="example">📦 Example</h3>
+<pre><code class="language-python">class MySettings(Settings):
+    &quot;&quot;&quot;Configuration for MyDatasourceStep&quot;&quot;&quot;
+    YOUR_REQUIRED_ENVIRONMENT: Any
+
+
+class MyDatasourceStep(TypedStep[MySettings, None, list[MarkdownDataContract]]):
+    &quot;&quot;&quot;Data source step for loading Markdown files from a configurable path.&quot;&quot;&quot;
+
+    def run(self, inpt: None) -&gt; list[MarkdownDataContract]:
+        # Your custom data ingestion logic here
+        return result
+</code></pre>
+<h2 id="creating-a-new-wurzelstep-processing-step">🔁 Creating a New WurzelStep (Processing Step)</h2>
+<p>A WurzelStep consumes the output of a previous step, performs a transformation, and passes its output to the next step in the pipeline. These can include:</p>
+<ul>
+<li>Filters: Narrow down data based on a condition.</li>
+<li>Validators: Check for schema or content correctness.</li>
+<li>Transformers: Change the data structure, such as converting from a list of documents to a DataFrame of embeddings.</li>
+</ul>
+<h3 id="example-filter-step">🧹 Example: Filter Step</h3>
+<pre><code class="language-python">class MyFilterStep(TypedStep[MySettings, list[MarkdownDataContract], list[MarkdownDataContract]]):
+    def run(self, inpt: list[MarkdownDataContract]) -&gt; list[MarkdownDataContract]:
+        # Your filtering logic here
+        return result
+</code></pre>
+<h2 id="example-transformation-step">🔄 Example: Transformation Step</h2>
+<p>Sometimes a step will change the shape or structure of the data entirely, for example transforming a list of documents into a pandas.DataFrame. This is common in steps that perform embedding or analytics.</p>
+<pre><code class="language-python">class MyEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract], DataFrame[EmbeddingResult]]):
+    def run(self, inpt: list[MarkdownDataContract]) -&gt; DataFrame[EmbeddingResult]:
+        &quot;&quot;&quot;Transforms input markdown files into embeddings stored in a DataFrame.&quot;&quot;&quot;
+        # Your embedding logic here
+        return df
+</code></pre>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../.." class="btn btn-neutral float-left" title="Wurzel"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../define_pipline/" class="btn btn-neutral float-right" title="🔗 Defining a Pipeline in Wurzel">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/telekom/wurzel" class="fa fa-code-fork" style="color: #fcfcfc"> telekom/wurzel</a>
+        </span>
+    
+    
+      <span><a href="../.." style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../define_pipline/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
