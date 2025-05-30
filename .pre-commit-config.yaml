@@ -54,3 +54,4 @@ repos:
         files: ^wurzel/
         language: system
         args: ["--enable","spelling"]
+        stages: [pre-push]
