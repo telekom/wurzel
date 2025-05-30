@@ -4,7 +4,7 @@
 
 import json
 
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 
 from wurzel.step.settings import Settings
 
@@ -51,7 +51,7 @@ class MilvusSettings(Settings):
     PASSWORD: str
     SECURED: bool = False
 
-    @validator("SEARCH_PARAMS", "INDEX_PARAMS", pre=True)
+    @field_validator("SEARCH_PARAMS", "INDEX_PARAMS")
     @classmethod
     # pylint: disable-next=R0801
     def parse_json(cls, v):
