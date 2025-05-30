@@ -11,9 +11,9 @@ from wurzel.utils import HAS_TLSH
 @pytest.mark.parametrize(
     "text,expected_hash",
     [
-        ("example_text_1", "5840445c9d0a1457627eaa4718d48bbc5071782ac6df6d85dfef7f82a4dc01a6"),
-        ("example_text_2", "69cee72aa104c9a62e6ceb4e7cebdffef3ce0f385cbb807c4a587149bd9fc028"),
-        ("example_text_3", "7fde1636e509f9a34474f6dcdaddb66db7b09871ed6f934a384b3fb3b491a24e"),
+        ("example_text_1", "5840445c9d0a1457627eaa4718d48bbc5071782ac6df6d85dfef7f82a4dc01a6"),  # pragma: allowlist secret
+        ("example_text_2", "69cee72aa104c9a62e6ceb4e7cebdffef3ce0f385cbb807c4a587149bd9fc028"),  # pragma: allowlist secret
+        ("example_text_3", "7fde1636e509f9a34474f6dcdaddb66db7b09871ed6f934a384b3fb3b491a24e"),  # pragma: allowlist secret
     ],
 )
 def test_tlsh_hash_same_output(text: str, expected_hash: str):
