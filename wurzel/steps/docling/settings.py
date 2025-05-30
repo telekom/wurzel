@@ -48,5 +48,5 @@ class DoclingSettings(Settings):
         "xml_jats",
         "json_docling",
     ]
-    URLS: list[str] = ["https://www.telekom.de/pdf/bedienungsanleitung-aeg-protect-home-600"]
+    URLS: list[str] = []
     DEFAULT_KEYWORD: str = ""
