@@ -1,30 +1,47 @@
-import itertools
+import os
 import pandas as pd
 import requests
 from tqdm import tqdm
+from pathlib import Path
 from logging import getLogger
 import tlsh
 from fuzzywuzzy import fuzz
 import difflib
 import openai
 import re
+import json
 from wurzel.step import TypedStep
 from wurzel.exceptions import StepFailed
 from wurzel.step.settings import Settings
 from qdrant_client import QdrantClient, models
+import openai
+import httpx
+import socket
+import traceback
+
 
 log = getLogger(__name__)
 
+import logging
+
+# Logging configuration: Write everything from INFO level to the desired file
+logging.basicConfig(
+    level=logging.INFO,
+    filename='/Users/A1167082/Desktop/your_file.log',  # <--- Enter the desired path/filename here
+    filemode='a',  # 'a' for append, 'w' for overwrite on each start
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+
+log = logging.getLogger(__name__)
 
 
-#from wurzel.settings import QdrantCompareSettings
 
 from settings import QdrantCompareSettings
 
 
 
 class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
-    """Vergleicht zwei Qdrant-Collections und analysiert Unterschiede, Redundanzen und Widersprüche."""
+    """Compares two Qdrant collections and analyzes differences, redundancies, and contradictions."""
 
     #client: QdrantClient
 
@@ -32,26 +49,32 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
         super().__init__()
         self.headers = {
             "Content-Type": "application/json",
-            "api-key": self.settings.API_KEY
+            "api-key": self.settings.QDRANT_API_KEY
         }
         self.gpt_client = openai.AzureOpenAI(
-            api_key="5f65edd5152a475dac99ea8f555dc3a9",
+
+            api_key=self.settings.OPAI_API_KEY,
             api_version="2024-02-01",
             azure_endpoint="https://gpt4-ch.openai.azure.com/",
         )
 
-    def run(self, inpt=None):
-        # 1. Daten laden
 
-        last_2_collections = self.list_top_collections(self.settings.QDRANT_URL, headers=self.headers, prefix= self.settings.prefix, top_n=2, verbose=True)
-        print(last_2_collections)
-        df1 = self._get_all_points_as_df(last_2_collections[0])  # Verwende die erste Collection aus der Liste
-        df2 = self._get_all_points_as_df(last_2_collections[1])  # Verwende die zweite Collection aus der Liste
+
+
+    def run(self, inpt=None):
+        # 1. Load data
+
+        last_2_collections = self.list_top_collections(self.settings.QDRANT_URL, headers=self.headers, prefix= self.settings.QDRANT_COLLECTION_PREFIX, top_n=2, verbose=True)
+        print(last_2_collections[1])
+        log.info(last_2_collections)
+        df1 = self._get_all_points_as_df(last_2_collections[0])  # Use the first collection from the list
+        df2 = self._get_all_points_as_df(last_2_collections[1])  # Use the second collection from the list
+
         n1 = len(df1)
         n2 = len(df2)
-        print(n1, n2)
 
-        # 2. Bestimmen, welche Collection kleiner ist
+
+        # 2. Determine which collection is smaller
         if len(df1) <= len(df2):
             df_small, df_large = df1, df2
             name_small, name_large = last_2_collections[0], last_2_collections[1]
@@ -62,26 +85,26 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
         log.info(f"Smaller collection: {name_small} ({len(df_small)})")
         log.info(f"Larger collection: {name_large} ({len(df_large)})")
 
-        # 3. Identische Dokumente
+        # 3. Identical documents
 
         identical_set, identical_count = self._identical_tlsh_analysis(df_small, df_large, 'tlsh')
 
-        # 4. Extra-Dokumente
+        # 4. Extra documents
         tlsh_small = set(df_small['tlsh'].dropna())
         tlsh_large = set(df_large['tlsh'].dropna())
         extra_tlsh = tlsh_large - tlsh_small
         extra_docs = df_large[df_large['tlsh'].isin(extra_tlsh)]
 
-        # 5. Detailanalyse der Extra-Dokumente
+        # 5. Detailed analysis of extra documents
         extra_analysis = self._analyze_extra_docs_detail(df_small, extra_docs, text_col='text', threshold=self.settings.FUZZY_THRESHOLD)
         extra_analysis_df = pd.DataFrame(extra_analysis)
 
-        # 6. Redundanzen und Widersprüche in der großen Collection
+        # 6. Redundancies and contradictions in the large collection
         fuzzy_matches = self._fuzzy_tlsh_matches(df_large, 'tlsh', self.settings.TLSH_MAX_DIFF)
         suspicious = self._suspicious_cases_analysis(df_large, fuzzy_matches, 'text')
         suspicious_df = pd.DataFrame(suspicious)
 
-        # 7. GPT-Analyse für verdächtige Paare
+        # 7. GPT analysis for suspicious pairs
         gpt_results, gpt_shortforms = [], []
         if not suspicious_df.empty:
             log.info(f"Starting GPT analysis for {len(suspicious_df)} pairs...")
@@ -92,23 +115,14 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
             suspicious_df['gpt_recommendation'] = gpt_results
             suspicious_df['gpt_shortform'] = gpt_shortforms
 
-        # 8. Ergebnisse als DataFrames
+        # 8. Results as DataFrames
         identical_docs_df = df_large[df_large['tlsh'].isin(identical_set)].copy()
         identical_docs_df["point_index"] = identical_docs_df.index + 1
         extra_docs_with_idx = extra_docs.copy()
         extra_docs_with_idx["point_index"] = extra_docs_with_idx.index + 1
 
-        # 9. Export als Excel
-        #excel_name = f"compare_{name_small}_vs_{name_large}.xlsx"
-        """with pd.ExcelWriter(excel_name, engine="openpyxl") as writer:
-            identical_docs_df.to_excel(writer, sheet_name="Identical_Documents", index=False)
-            extra_docs_with_idx.to_excel(writer, sheet_name="Extra_Documents", index=False)
-            extra_analysis_df.to_excel(writer, sheet_name="Extra_Details", index=False)
-            suspicious_df.to_excel(writer, sheet_name="Redundant_or_Contradictory_Pairs", index=False)
 
-        log.info(f"All results have been saved to {excel_name}.")"""
-
-        # 10. Zusammenfassung (als Log-Ausgabe)
+        # 10. Summary (as log output)
         log.info(f"Comparison between '{name_small}' and '{name_large}'")
         log.info(f"Identical: {identical_count}, Extra: {len(extra_docs)}, Suspicious: {len(suspicious)}")
         if not suspicious_df.empty:
@@ -118,7 +132,7 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
             log.info(f"Keep only document 2: {sum(s == 'a remove' for s in suspicious_df['gpt_shortform'])}")
             log.info(f"Contradiction, clarification needed: {sum(s == 'contradiction' for s in suspicious_df['gpt_shortform'])}")
 
-        # Rückgabe der wichtigsten Ergebnisse als Dict
+        # Return the most important results as dict
         return {
             "comparison between": [last_2_collections[0],n1, last_2_collections[1],n2],
             "tslh_identical_documents": identical_count,
@@ -127,34 +141,44 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
 
 
 
+
         }
+
+
+    def save_to_path(self, path: Path):
+        with open(path, "w") as f:
+            if hasattr(self.result, "to_dict"):
+                json.dump(self.result.to_dict(), f, indent=2)
+            else:
+                json.dump(self.result, f, indent=2)
 
     def list_top_collections(self, qdrant_url, headers=None, prefix="germany_v", top_n=2, verbose=True):
         """
-        Gibt die Namen der `top_n`-Collections mit dem höchsten numerischen Suffix für ein gegebenes Präfix zurück.
+        Returns the names of the `top_n` collections with the highest numeric suffix for a given prefix.
 
         Args:
-            qdrant_url (str): Qdrant-Basis-URL.
-            headers (dict, optional): HTTP-Header mit optionalem API-Key.
-            prefix (str): Das Präfix der Collections, z. B. "germany_v".
-            top_n (int): Wie viele Collections mit höchster Nummer zurückgegeben werden sollen.
-            verbose (bool): Ob Ergebnisse gedruckt werden sollen.
+            qdrant_url (str): Qdrant base URL.
+            headers (dict, optional): HTTP headers with optional API key.
+            prefix (str): The prefix of the collections, e.g. "germany_v".
+            top_n (int): How many collections with highest number should be returned.
+            verbose (bool): Whether results should be printed.
 
         Returns:
-            list: Liste der `top_n`-Collection-Namen mit höchstem Index, oder leere Liste bei Fehler.
+            list: List of `top_n` collection names with highest index, or empty list on error.
         """
         url = f"{qdrant_url}/collections"
         try:
             response = requests.get(url, headers=headers)
+            print(response)
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
-            print(f"Fehler beim Abrufen der Collections: {e}")
+            log.info(f"Error retrieving collections: {e}")
             return []
 
         collections = response.json().get("result", {}).get("collections", [])
         collection_names = [col.get("name") for col in collections]
 
-        # Filtere nach passendem Präfix und extrahiere numerische Suffixe
+        # Filter by matching prefix and extract numeric suffixes
         pattern = re.compile(rf"^{re.escape(prefix)}(\d+)$")
         matching = []
         for name in collection_names:
@@ -163,17 +187,17 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
                 number = int(match.group(1))
                 matching.append((number, name))
 
-        # Sortiere absteigend nach Nummer und nimm die Top-N
+        # Sort descending by number and take top N
         matching.sort(reverse=True)
         top_collections = [name for _, name in matching[:top_n]]
 
         if verbose:
             if top_collections:
-                print(f"Top {top_n} Collections with prefix '{prefix}':")
+                log.info(f"Top {top_n} Collections with prefix '{prefix}':")
                 for name in top_collections:
-                    print(f" - {name}")
+                    log.info(f" - {name}")
             else:
-                print(f"Keine Collections mit Präfix '{prefix}' gefunden.")
+                log.info(f"No collections found with prefix '{prefix}'.")
 
         return top_collections
 
@@ -310,21 +334,7 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
             })
         return results
 
-    """def _gpt_contradict_check(self, doc1, doc2, idx1=None, idx2=None):
-        response = self.gpt_client.chat.completions.create(
-            model=self.settings.GPT_MODEL,
-            messages=[{
-                "role": "user",
-                "content": f"Analyze these documents for contradictions:\n\nDOC1:{doc1}\n\nDOC2:{doc2}"
-            }]
-        )
-        return {
-            "index_a": idx1,
-            "index_b": idx2,
-            "gpt_analysis": response.choices[0].message.content,
-            "contradiction_found": "contradiction" in response.choices[0].message.content.lower()
-        }
-    """
+
     def _gpt_contradict_check(self, doc1, doc2, idx1=None, idx2=None):
         doc1_header = f"[Index {idx1} (Point {idx1 + 1})]" if idx1 is not None else ""
         doc2_header = f"[Index {idx2} (Point {idx2 + 1})]" if idx2 is not None else ""
@@ -372,22 +382,57 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
                 ],
             )
             result_text = response.choices[0].message.content.strip()
+            print(result_text)
             return {
                 "index_a": idx1,
                 "index_b": idx2,
                 "gpt_analysis": result_text,
                 "contradiction_found": "contradiction" in result_text.lower()
             }
-        except Exception as e:
+
+        except openai.OpenAIError as e:
             return {
                 "index_a": idx1,
                 "index_b": idx2,
-                "gpt_analysis": f"Error: {e}",
+                "gpt_analysis": f"OpenAI API error: {e}",
+                "contradiction_found": False
+            }
+
+        except httpx.RequestError as e:
+            return {
+                "index_a": idx1,
+                "index_b": idx2,
+                "gpt_analysis": f"HTTP error: {e}",
+                "contradiction_found": False
+            }
+
+        except socket.timeout as e:
+            return {
+                "index_a": idx1,
+                "index_b": idx2,
+                "gpt_analysis": "Socket timeout error",
+                "contradiction_found": False
+            }
+
+        except ValueError as e:
+            return {
+                "index_a": idx1,
+                "index_b": idx2,
+                "gpt_analysis": f"Value error: {e}",
+                "contradiction_found": False
+            }
+
+        except Exception as e:
+            error_trace = traceback.format_exc()
+            return {
+                "index_a": idx1,
+                "index_b": idx2,
+                "gpt_analysis": f"Unexpected error: {e}\nTraceback:\n{error_trace}",
                 "contradiction_found": False
             }
 
     def _extract_gpt_shortform(self, gpt_result):
-        # Dummy-Implementierung, passe nach Bedarf an!
+        # Dummy implementation, adjust as needed!
         content = gpt_result.get("gpt_analysis", "").lower()
         if not isinstance(content, str):
             return ""
@@ -401,23 +446,5 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
             return "b remove"
         return ""
 
-
-
-
-
-if __name__ == "__main__":
-    # Setze deine Parameter
-    settings = QdrantCompareSettings()
-    """ settings.QDRANT_URL = "https://qdrant.intra.oneai.yo-digital.com"
-        settings.API_KEY = "RSFR0bjRIQ1FUcT"
-        settings.OPAI_API_KEY = "5f65edd5152a475dac99ea8f555dc3a9"
-    """
-    step = QdrantCompareStep()
-    step.settings = settings
-
-    # Step ausführen
-    result = step.run()
-    print("Vergleich abgeschlossen. Zusammenfassung:")
-    print(result)
 
 
