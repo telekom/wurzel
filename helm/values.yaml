@@ -49,7 +49,7 @@ TENANTS:
     MANUALMARKDOWNSTEP:
       FOLDER_PATH: data/
     WURZEL_PIPELINE: "pipelinedemo:pipeline"
-    secret_name: wurzel-demo
+    secret_name: wurzel-demo #pragma: allowlist secret
 
 
 ALLOW_EXTRA_SETTINGS: False # setting you may enbale when you want to allow additional environment variables in the same Step Namespace although they are not expected from the Settings (Not recommended for prod or staging)

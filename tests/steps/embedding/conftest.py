@@ -18,7 +18,7 @@ GET_RESULT_INFO_DICT = {
     "max_client_batch_size": 512,
     "tokenization_workers": 2,
     "version": "1.2.0",
-    "sha": "3edace22f22d5dab32d421034683183953fe5061",
+    "sha": "3edace22f22d5dab32d421034683183953fe5061",  # pragma: allowlist secret
     "docker_label": "sha-3edace2",
 }
 
