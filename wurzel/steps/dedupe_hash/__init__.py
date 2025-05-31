@@ -3,6 +3,5 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from .step import QdrantCompareStep
-
-from .settings import QdrantCompareSettings
+# from .settings import QdrantCompareSettings  # as QdrantCompareSettings
+# from .step import QdrantCompareStep  # as QdrantCompareStep

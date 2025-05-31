@@ -1,78 +1,97 @@
-import os
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG
+
+# Standard library imports
+
+import difflib
+import logging
+import re
+import socket
+from logging import getLogger
+
+import httpx
+import openai
 import pandas as pd
 import requests
-from tqdm import tqdm
-from pathlib import Path
-from logging import getLogger
 import tlsh
 from fuzzywuzzy import fuzz
-import difflib
-import openai
-import re
-import json
-from wurzel.step import TypedStep
-from wurzel.exceptions import StepFailed
-from wurzel.step.settings import Settings
-from qdrant_client import QdrantClient, models
-import openai
-import httpx
-import socket
-import traceback
+from tqdm import tqdm
 
+from wurzel.step import TypedStep
+from wurzel.steps.dedupe_hash.settings import QdrantCompareSettings
+from wurzel.steps.qdrant.step import QdrantConnectorStep
 
 log = getLogger(__name__)
 
-import logging
 
 # Logging configuration: Write everything from INFO level to the desired file
 logging.basicConfig(
     level=logging.INFO,
-    filename='/Users/A1167082/Desktop/your_file.log',  # <--- Enter the desired path/filename here
-    filemode='a',  # 'a' for append, 'w' for overwrite on each start
-    format='%(asctime)s - %(levelname)s - %(message)s'
+    filename="/Users/A1167082/Desktop/your_file.log",  # <--- Enter the desired path/filename here
+    filemode="a",  # 'a' for append, 'w' for overwrite on each start
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
 log = logging.getLogger(__name__)
 
 
+class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, dict]):
+    """Compares the two most recent Qdrant collections to identify identical entries,
+    newly added documents, redundant content, and potential contradictions.
 
-from settings import QdrantCompareSettings
+    Main functionality:
+    - Automatically fetches the two latest Qdrant collections matching a given prefix.
+    - Uses TLSH (Trend Micro Locality Sensitive Hashing) to detect identical or similar documents.
+    - Detects extra documents in the larger collection that are not in the smaller one.
+    - Uses fuzzy string matching to detect near-duplicates.
+    - Applies GPT-based analysis to semantically assess potential contradictions or redundancies.
+    - Logs key statistics and returns a summary dictionary of the comparison.
 
+    Workflow steps:
+    1. Load the two latest Qdrant collections using the provided prefix.
+    2. Identify identical documents using TLSH hashes.
+    3. Analyze extra documents in the larger collection.
+    4. Detect suspiciously similar documents using fuzzy matching.
+    5. Use GPT to semantically evaluate whether pairs are redundant, contradictory, or unclear.
+    6. Output a summary of results via logging and return values.
 
+    Returns:
+        dict: A dictionary containing:
+            - Collection names and sizes
+            - Number of identical documents
+            - Number of extra (new) documents
+            - Number of suspicious duplicates with potential contradictions
 
-class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
-    """Compares two Qdrant collections and analyzes differences, redundancies, and contradictions."""
+    Requirements:
+    - A working Qdrant API connection with a valid API key.
+    - TLSH hashes and a 'text' field must be present in the Qdrant vectors.
+    - A functional Azure OpenAI GPT client must be configured.
 
-    #client: QdrantClient
+    """
 
     def __init__(self):
         super().__init__()
-        self.headers = {
-            "Content-Type": "application/json",
-            "api-key": self.settings.QDRANT_API_KEY
-        }
+        self.headers = {"Content-Type": "application/json", "api-key": self.settings.QDRANT_API_KEY}
         self.gpt_client = openai.AzureOpenAI(
-
-            api_key=self.settings.OPAI_API_KEY,
-            api_version="2024-02-01",
-            azure_endpoint="https://gpt4-ch.openai.azure.com/",
+            api_key=self.settings.OPAI_API_KEY, api_version="2024-02-01", azure_endpoint=self.settings.AZURE_ENDPOINT
         )
 
 
-
-
-    def run(self, inpt=None):
+    def run(self, inpt=QdrantConnectorStep):
         # 1. Load data
 
-        last_2_collections = self.list_top_collections(self.settings.QDRANT_URL, headers=self.headers, prefix= self.settings.QDRANT_COLLECTION_PREFIX, top_n=2, verbose=True)
-        print(last_2_collections[1])
+        last_2_collections = self.list_top_collections(
+            self.settings.QDRANT_URL, headers=self.headers, prefix=self.settings.QDRANT_COLLECTION_PREFIX, top_n=2
+        )
         log.info(last_2_collections)
         df1 = self._get_all_points_as_df(last_2_collections[0])  # Use the first collection from the list
         df2 = self._get_all_points_as_df(last_2_collections[1])  # Use the second collection from the list
 
         n1 = len(df1)
         n2 = len(df2)
-
 
         # 2. Determine which collection is smaller
         if len(df1) <= len(df2):
@@ -87,21 +106,22 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
 
         # 3. Identical documents
 
-        identical_set, identical_count = self._identical_tlsh_analysis(df_small, df_large, 'tlsh')
+        identical_set, identical_count = self._identical_tlsh_analysis(df_small, df_large, "tlsh")
 
         # 4. Extra documents
-        tlsh_small = set(df_small['tlsh'].dropna())
-        tlsh_large = set(df_large['tlsh'].dropna())
+        tlsh_small = set(df_small["tlsh"].dropna())
+        tlsh_large = set(df_large["tlsh"].dropna())
         extra_tlsh = tlsh_large - tlsh_small
-        extra_docs = df_large[df_large['tlsh'].isin(extra_tlsh)]
+        extra_docs = df_large[df_large["tlsh"].isin(extra_tlsh)]
 
         # 5. Detailed analysis of extra documents
-        extra_analysis = self._analyze_extra_docs_detail(df_small, extra_docs, text_col='text', threshold=self.settings.FUZZY_THRESHOLD)
+        extra_analysis = self._analyze_extra_docs_detail(df_small, extra_docs, text_col="text", threshold=self.settings.FUZZY_THRESHOLD)
         extra_analysis_df = pd.DataFrame(extra_analysis)
+        log.info(len(extra_analysis_df))
 
         # 6. Redundancies and contradictions in the large collection
-        fuzzy_matches = self._fuzzy_tlsh_matches(df_large, 'tlsh', self.settings.TLSH_MAX_DIFF)
-        suspicious = self._suspicious_cases_analysis(df_large, fuzzy_matches, 'text')
+        fuzzy_matches = self._fuzzy_tlsh_matches(df_large, "tlsh", self.settings.TLSH_MAX_DIFF)
+        suspicious = self._suspicious_cases_analysis(df_large, fuzzy_matches, "text")
         suspicious_df = pd.DataFrame(suspicious)
 
         # 7. GPT analysis for suspicious pairs
@@ -109,52 +129,46 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
         if not suspicious_df.empty:
             log.info(f"Starting GPT analysis for {len(suspicious_df)} pairs...")
             for i, row in tqdm(suspicious_df.iterrows(), total=len(suspicious_df)):
-                gpt_result = self._gpt_contradict_check(row['text_a'], row['text_b'], row['index_a'], row['index_b'])
+                gpt_result = self._gpt_contradict_check(row["text_a"], row["text_b"], row["index_a"], row["index_b"])
                 gpt_results.append(gpt_result)
                 gpt_shortforms.append(self._extract_gpt_shortform(gpt_result))
-            suspicious_df['gpt_recommendation'] = gpt_results
-            suspicious_df['gpt_shortform'] = gpt_shortforms
+            suspicious_df["gpt_recommendation"] = gpt_results
+            suspicious_df["gpt_shortform"] = gpt_shortforms
 
         # 8. Results as DataFrames
-        identical_docs_df = df_large[df_large['tlsh'].isin(identical_set)].copy()
+        identical_docs_df = df_large[df_large["tlsh"].isin(identical_set)].copy()
         identical_docs_df["point_index"] = identical_docs_df.index + 1
         extra_docs_with_idx = extra_docs.copy()
         extra_docs_with_idx["point_index"] = extra_docs_with_idx.index + 1
-
 
         # 10. Summary (as log output)
         log.info(f"Comparison between '{name_small}' and '{name_large}'")
         log.info(f"Identical: {identical_count}, Extra: {len(extra_docs)}, Suspicious: {len(suspicious)}")
         if not suspicious_df.empty:
             log.info("GPT recommendations summary:")
-            log.info(f"Keep both (Redundancy): {sum((s == 'both') or ('Redundancy' in str(s)) or (str(s).strip() == '') or pd.isna(s) for s in suspicious_df['gpt_shortform'])}")
+            log.info(
+                "Keep both (Redundancy): %s",
+                sum(
+                    (s == "both") or ("Redundancy" in str(s)) or (str(s).strip() == "") or pd.isna(s)
+                    for s in suspicious_df["gpt_shortform"]
+                ),
+            )
+
             log.info(f"Keep only document 1: {sum(s == 'b remove' for s in suspicious_df['gpt_shortform'])}")
             log.info(f"Keep only document 2: {sum(s == 'a remove' for s in suspicious_df['gpt_shortform'])}")
             log.info(f"Contradiction, clarification needed: {sum(s == 'contradiction' for s in suspicious_df['gpt_shortform'])}")
 
         # Return the most important results as dict
         return {
-            "comparison between": [last_2_collections[0],n1, last_2_collections[1],n2],
+            "comparison between": [last_2_collections[0], n1, last_2_collections[1], n2],
             "tslh_identical_documents": identical_count,
             "tslh_differing_docs": len(extra_docs),
             "duplicates_with_contradictions": len(suspicious),
-
-
-
-
         }
 
 
-    def save_to_path(self, path: Path):
-        with open(path, "w") as f:
-            if hasattr(self.result, "to_dict"):
-                json.dump(self.result.to_dict(), f, indent=2)
-            else:
-                json.dump(self.result, f, indent=2)
-
-    def list_top_collections(self, qdrant_url, headers=None, prefix="germany_v", top_n=2, verbose=True):
-        """
-        Returns the names of the `top_n` collections with the highest numeric suffix for a given prefix.
+    def list_top_collections(self, qdrant_url, headers=None, prefix="germany_v", top_n=2):
+        """Returns the names of the `top_n` collections with the highest numeric suffix for a given prefix.
 
         Args:
             qdrant_url (str): Qdrant base URL.
@@ -165,6 +179,7 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
 
         Returns:
             list: List of `top_n` collection names with highest index, or empty list on error.
+
         """
         url = f"{qdrant_url}/collections"
         try:
@@ -191,32 +206,42 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
         matching.sort(reverse=True)
         top_collections = [name for _, name in matching[:top_n]]
 
-        if verbose:
-            if top_collections:
-                log.info(f"Top {top_n} Collections with prefix '{prefix}':")
-                for name in top_collections:
-                    log.info(f" - {name}")
-            else:
-                log.info(f"No collections found with prefix '{prefix}'.")
-
         return top_collections
 
-
-
     def _get_collection_info(self, collection_name):
-        response = requests.get(
-            f"{self.settings.QDRANT_URL}/collections/{collection_name}",
-            headers=self.headers
-        )
+        response = requests.get(f"{self.settings.QDRANT_URL}/collections/{collection_name}", headers=self.headers)
 
         return response.json() if response.status_code == 200 else None
 
     def _calc_tlsh(self, text):
-        if text and isinstance(text, str) and len(text) > 50:
-            try:
-                return tlsh.hash(text.encode('utf-8'))
-            except Exception:
-                return None
+        """Safely calculate the TLSH hash of a given text if it meets basic criteria.
+
+        Args:
+            text (str): The input text to be hashed.
+
+        Returns:
+            str or None: The TLSH hash string, or None if input is invalid or hashing fails.
+
+        """
+        if not text:
+            log.debug("TLSH skipped: Empty or None input.")
+            return None
+
+        if not isinstance(text, str):
+            log.warning(f"TLSH skipped: Expected string but got {type(text)}")
+            return None
+
+        if len(text) <= 50:
+            log.debug("TLSH skipped: Text too short (<= 50 characters).")
+            return None
+
+        try:
+            return tlsh.hash(text.encode("utf-8"))
+        except UnicodeEncodeError as e:
+            log.error(f"TLSH Unicode encoding error: {e}")
+        except tlsh.TlshException as e:
+            log.error(f"TLSH hashing error: {e}")
+
         return None
 
     def _get_all_points_as_df(self, collection_name):
@@ -226,7 +251,7 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
 
         collection_info = self._get_collection_info(collection_name)
 
-        total_points = collection_info.get('result', {}).get('vectors_count') if collection_info else 0
+        total_points = collection_info.get("result", {}).get("vectors_count") if collection_info else 0
 
         with tqdm(total=total_points, desc=f"Fetching {collection_name}") as pbar:
             while True:
@@ -235,16 +260,14 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
                     payload["offset"] = offset
 
                 response = requests.post(
-                    f"{self.settings.QDRANT_URL}/collections/{collection_name}/points/scroll",
-                    headers=self.headers,
-                    json=payload
+                    f"{self.settings.QDRANT_URL}/collections/{collection_name}/points/scroll", headers=self.headers, json=payload
                 )
 
                 if not response.ok:
                     break
 
                 data = response.json()
-                points = data['result']['points']
+                points = data["result"]["points"]
                 if not points:
                     break
 
@@ -254,7 +277,7 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
                     row["tlsh"] = row.get("text_tlsh_hash") or self._calc_tlsh(row.get("text"))
                     all_rows.append(row)
 
-                offset = data['result'].get('next_page_offset')
+                offset = data["result"].get("next_page_offset")
                 pbar.update(len(points))
                 if not offset:
                     break
@@ -272,7 +295,7 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
         idx_hash = list(hashes.items())
         for i in range(len(idx_hash)):
             idx_a, hash_a = idx_hash[i]
-            for j in range(i+1, len(idx_hash)):
+            for j in range(i + 1, len(idx_hash)):
                 idx_b, hash_b = idx_hash[j]
                 try:
                     diff = tlsh.diff(hash_a, hash_b)
@@ -285,7 +308,7 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
     def _diff_snippet(self, a, b, context=20):
         sm = difflib.SequenceMatcher(None, a, b)
         for tag, i1, i2, j1, j2 in sm.get_opcodes():
-            if tag != 'equal':
+            if tag != "equal":
                 start_a = max(i1 - context, 0)
                 end_a = min(i2 + context, len(a))
                 start_b = max(j1 - context, 0)
@@ -302,17 +325,19 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
             text_b = str(df.loc[idx_b, text_col])
             fuzzval = fuzz.ratio(text_a, text_b)
             if fuzzval < 100:
-                suspicious.append({
-                    'index_a': idx_a,
-                    'point_index_a': idx_a+1,
-                    'index_b': idx_b,
-                    'point_index_b': idx_b+1,
-                    'text_a': text_a,
-                    'text_b': text_b,
-                    'fuzz_ratio': fuzzval,
-                    'tlsh_diff': diff,
-                    'diff': self._diff_snippet(text_a, text_b)
-                })
+                suspicious.append(
+                    {
+                        "index_a": idx_a,
+                        "point_index_a": idx_a + 1,
+                        "index_b": idx_b,
+                        "point_index_b": idx_b + 1,
+                        "text_a": text_a,
+                        "text_b": text_b,
+                        "fuzz_ratio": fuzzval,
+                        "tlsh_diff": diff,
+                        "diff": self._diff_snippet(text_a, text_b),
+                    }
+                )
         return suspicious
 
     def _analyze_extra_docs_detail(self, df_base, df_extra, text_col, threshold):
@@ -325,15 +350,16 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
                 if ratio > best_ratio:
                     best_ratio = ratio
             is_truly_new = best_ratio < threshold
-            results.append({
-                "index": idx,
-                "point_index": idx + 1,
-                "best_ratio": best_ratio,
-                "is_truly_new": is_truly_new,
-                "diff": self._diff_snippet(extra_text, str(df_base[text_col].iloc[0]))
-            })
+            results.append(
+                {
+                    "index": idx,
+                    "point_index": idx + 1,
+                    "best_ratio": best_ratio,
+                    "is_truly_new": is_truly_new,
+                    "diff": self._diff_snippet(extra_text, str(df_base[text_col].iloc[0])),
+                }
+            )
         return results
-
 
     def _gpt_contradict_check(self, doc1, doc2, idx1=None, idx2=None):
         doc1_header = f"[Index {idx1} (Point {idx1 + 1})]" if idx1 is not None else ""
@@ -343,20 +369,24 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
     You are an expert technical editor. You receive two FAQ documents and must analyze their relationship.
 
     **IMPORTANT INSTRUCTIONS:**
-    - ONLY use the word 'contradiction' if you have found a clear, factual, and direct contradiction between the two documents. 
+    - ONLY use the word 'contradiction' if you have found a clear, factual, and direct contradiction between the two documents.
     - DO NOT use the word 'contradiction' for minor differences, missing information, differences in detail, or differences in wording.
     - If there is NO contradiction, DO NOT use the word 'contradiction' ANYWHERE in your answer.
     - If you are unsure, DO NOT use the word 'contradiction'.
     - If the documents are simply different or complementary, but not contradictory, DO NOT use the word 'contradiction'.
-    - If you use the word 'contradiction', you MUST quote the exact sentences or phrases from both documents that contradict each other, and explain why they are contradictory.
-    - If there is no contradiction, check if the documents are redundant. Only use 'redundancy' or 'redundant' if the information is truly duplicated and the two documents share the same exact semantic information.
+    - If you use the word 'contradiction', you MUST quote the exact sentences or phrases from both documents that contradict each other,
+        and explain why they are contradictory.
+    - If there is no contradiction, check if the documents are redundant. Only use 'redundancy' or 'redundant' if the information
+        is truly duplicated and the two documents share the same exact semantic information.
 
     **YOUR TASKS:**
-    1. Decide if the two documents are in factual contradiction. If yes, quote the exact contradictory statements and explain the contradiction.
-    2. If there is NO contradiction, check if the documents are redundant (i.e., only if they contain the exact semantic same information). If so, state which document is redundant and what is duplicated.
+    1. Decide if the two documents are in factual contradiction. If yes, quote the exact contradictory statements
+        and explain the contradiction.
+    2. If there is NO contradiction, check if the documents are redundant (i.e., only if they contain
+        the exact semantic same information). If so, state which document is redundant and what is duplicated.
     3. If neither contradiction nor redundancy is present, state that both documents are needed.
 
-    **FINAL RECOMMENDATION:**  
+    **FINAL RECOMMENDATION:**
     Write ONLY ONE of the following at the end of your answer (and nothing else):
     - ['Contradiction']   (ONLY if you have quoted and explained a real contradiction)
     - ['Redundancy']      (ONLY if you have explained real redundancy)
@@ -376,9 +406,13 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
             response = self.gpt_client.chat.completions.create(
                 model=self.settings.GPT_MODEL,
                 messages=[
-                    {'role': 'system',
-                     'content': 'You are a critical and precise analyst for technical documents. Only use the word "contradiction" if you can literally quote two sentences from the documents that directly contradict each other. Otherwise, do not use this word.'},
-                    {'role': 'user', 'content': prompt},
+                    {
+                        "role": "system",
+                        "content": "You are a critical and precise analyst for technical documents. "
+                        'Only use the word "contradiction" if you can literally quote two sentences from the documents that directly '
+                        "contradict each other. Otherwise, do not use this word.",
+                    },
+                    {"role": "user", "content": prompt},
                 ],
             )
             result_text = response.choices[0].message.content.strip()
@@ -387,49 +421,20 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
                 "index_a": idx1,
                 "index_b": idx2,
                 "gpt_analysis": result_text,
-                "contradiction_found": "contradiction" in result_text.lower()
+                "contradiction_found": "contradiction" in result_text.lower(),
             }
 
         except openai.OpenAIError as e:
-            return {
-                "index_a": idx1,
-                "index_b": idx2,
-                "gpt_analysis": f"OpenAI API error: {e}",
-                "contradiction_found": False
-            }
+            return {"index_a": idx1, "index_b": idx2, "gpt_analysis": f"OpenAI API error: {e}", "contradiction_found": False}
 
         except httpx.RequestError as e:
-            return {
-                "index_a": idx1,
-                "index_b": idx2,
-                "gpt_analysis": f"HTTP error: {e}",
-                "contradiction_found": False
-            }
+            return {"index_a": idx1, "index_b": idx2, "gpt_analysis": f"HTTP error: {e}", "contradiction_found": False}
 
-        except socket.timeout as e:
-            return {
-                "index_a": idx1,
-                "index_b": idx2,
-                "gpt_analysis": "Socket timeout error",
-                "contradiction_found": False
-            }
+        except socket.timeout:
+            return {"index_a": idx1, "index_b": idx2, "gpt_analysis": "Socket timeout error", "contradiction_found": False}
 
         except ValueError as e:
-            return {
-                "index_a": idx1,
-                "index_b": idx2,
-                "gpt_analysis": f"Value error: {e}",
-                "contradiction_found": False
-            }
-
-        except Exception as e:
-            error_trace = traceback.format_exc()
-            return {
-                "index_a": idx1,
-                "index_b": idx2,
-                "gpt_analysis": f"Unexpected error: {e}\nTraceback:\n{error_trace}",
-                "contradiction_found": False
-            }
+            return {"index_a": idx1, "index_b": idx2, "gpt_analysis": f"Value error: {e}", "contradiction_found": False}
 
     def _extract_gpt_shortform(self, gpt_result):
         # Dummy implementation, adjust as needed!
@@ -445,6 +450,3 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, None, dict]):
         if "remove document 2" in content:
             return "b remove"
         return ""
-
-
-
