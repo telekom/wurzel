@@ -4,8 +4,10 @@
 
 import json
 from typing import Optional
+
 from pydantic import Field, field_validator
 from qdrant_client.models import Distance
+
 from wurzel.step.settings import Settings
 
 
@@ -51,7 +53,7 @@ class QdrantSettings(Settings):
     REPLICATION_FACTOR: int = Field(default=3, gt=0)
     BATCH_SIZE: int = Field(default=1024, gt=0)
 
-    @field_validator("SEARCH_PARAMS", "INDEX_PARAMS",mode='before')
+    @field_validator("SEARCH_PARAMS", "INDEX_PARAMS", mode="before")
     @classmethod
     def parse_json(cls, v):
         """Validation for json."""

@@ -3,7 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
+
 from pydantic import Field, field_validator
+
 from wurzel.step.settings import Settings
 
 
@@ -49,7 +51,7 @@ class MilvusSettings(Settings):
     PASSWORD: str
     SECURED: bool = False
 
-    @field_validator("SEARCH_PARAMS", "INDEX_PARAMS",mode='before')
+    @field_validator("SEARCH_PARAMS", "INDEX_PARAMS", mode="before")
     @classmethod
     # pylint: disable-next=R0801
     def parse_json(cls, v):
