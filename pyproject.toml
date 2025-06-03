@@ -50,7 +50,6 @@ dependencies= [
     "joblib>=1.4.0",
     "lxml==5.2.*",
     "marshmallow<4.0.0",
-
 ]
 
 [project.optional-dependencies]
@@ -80,7 +79,7 @@ lint = [
     "ruff==0.9.10",
 ]
 test = [
-    "pytest==8.*",
+    "pytest==8.4.*",
     "pytest-asyncio==0.23.*",
     "pytest-cov==4.*",
     "pytest-html==4.*",
