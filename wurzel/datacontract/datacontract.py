@@ -120,7 +120,7 @@ class PydanticModel(pydantic.BaseModel, DataModel):
         return int(
             hashlib.sha256(
                 bytes(
-                    "".join([getattr(self, name) for name in sorted(self.model_fields)]),
+                    "".join([getattr(self, name) for name in sorted(type(self).model_fields)]),
                     encoding="utf-8",
                 ),
                 usedforsecurity=False,
@@ -130,7 +130,7 @@ class PydanticModel(pydantic.BaseModel, DataModel):
 
     def __eq__(self, other: object) -> bool:
         # pylint: disable-next=not-an-iterable
-        for field in self.model_fields:
+        for field in type(self).model_fields:
             other_value = getattr(other, field, None)
             if isinstance(other, dict):
                 other_value = other.get(field, None)
