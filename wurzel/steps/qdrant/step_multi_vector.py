@@ -15,7 +15,7 @@ from wurzel.step import TypedStep
 from wurzel.steps.embedding.data import EmbeddingMultiVectorResult
 from wurzel.steps.qdrant.step import QdrantConnectorStep
 
-from .data import QdranttMultiVectorResult
+from .data import QdrantMultiVectorResult
 from .settings import QdrantSettings
 
 log = getLogger(__name__)
@@ -32,13 +32,13 @@ class QdrantConnectorMultiVectorStep(
     TypedStep[
         QdrantSettings,
         DataFrame[EmbeddingMultiVectorResult],
-        DataFrame[QdranttMultiVectorResult],
+        DataFrame[QdrantMultiVectorResult],
     ],
 ):
     """Qdrant connector step. It consumes embedding csv files, creates a new schema and inserts the embeddings."""
 
     vector_key = "vectors"
-    result_class = QdranttMultiVectorResult
+    result_class = QdrantMultiVectorResult
 
     def _create_collection(self, size: int):
         self.client.create_collection(
@@ -51,14 +51,14 @@ class QdrantConnectorMultiVectorStep(
             replication_factor=self.settings.REPLICATION_FACTOR,
         )
 
-    def run(self, inpt: DataFrame[EmbeddingMultiVectorResult]) -> DataFrame[QdranttMultiVectorResult]:
+    def run(self, inpt: DataFrame[EmbeddingMultiVectorResult]) -> DataFrame[QdrantMultiVectorResult]:
         log.debug(f"Creating Qdrant collection {self.collection_name}")
         if not self.client.collection_exists(self.collection_name):
             self._create_collection(len(inpt["vectors"].loc[0][0]))
         df_result = self._insert_embeddings(inpt)
         return df_result
 
-    def _insert_embeddings(self, data: DataFrame[EmbeddingMultiVectorResult]) -> DataFrame[QdranttMultiVectorResult]:
+    def _insert_embeddings(self, data: DataFrame[EmbeddingMultiVectorResult]) -> DataFrame[QdrantMultiVectorResult]:
         log.info("Inserting embeddings", extra={"count": len(data), "collection": self.collection_name})
 
         points = [self._create_point(row) for _, row in data.iterrows()]
@@ -66,5 +66,6 @@ class QdrantConnectorMultiVectorStep(
         self._upsert_points(points)
 
         self._create_indices()
+        self._update_alias()
 
         return self._build_result_dataframe(points)

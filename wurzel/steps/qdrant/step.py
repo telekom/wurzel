@@ -94,10 +94,8 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             "keywords": row["keywords"],
             "history": str(step_history.get()),
         }
-        # pylint: disable-next=import-outside-toplevel, cyclic-import
-        from .step_multi_vector import QdrantConnectorMultiVectorStep
 
-        if isinstance(self, QdrantConnectorMultiVectorStep):
+        if self.vector_key == "vectors":
             payload["splits"] = row["splits"]
 
         return models.PointStruct(
