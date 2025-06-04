@@ -36,6 +36,8 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
     s: QdrantSettings
     client: QdrantClient
     collection_name: str
+    result_class = QdrantResult
+    vector_key = "vector"
 
     def __init__(self) -> None:
         super().__init__()
@@ -84,44 +86,60 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             replication_factor=self.settings.REPLICATION_FACTOR,
         )
 
-    def _insert_embeddings(self, data: DataFrame[EmbeddingResult]):
-        log.info(
-            "Inserting embeddings",
-            extra={"count": len(data), "collection": self.collection_name},
+    def _create_point(self, row: dict) -> models.PointStruct:
+        payload = {
+            "url": row["url"],
+            "text": row["text"],
+            **self.get_available_hashes(row["text"]),
+            "keywords": row["keywords"],
+            "history": str(step_history.get()),
+        }
+        # pylint: disable-next=import-outside-toplevel, cyclic-import
+        from .step_multi_vector import QdrantConnectorMultiVectorStep
+
+        if isinstance(self, QdrantConnectorMultiVectorStep):
+            payload["splits"] = row["splits"]
+
+        return models.PointStruct(
+            id=next(self.id_iter),  # type: ignore[arg-type]
+            vector=row[self.vector_key],
+            payload=payload,
         )
-        points = [
-            models.PointStruct(
-                id=next(self.id_iter),  # type: ignore[arg-type] # No MultiIndex, so always int.
-                vector=row["vector"],
-                payload={
-                    "url": row["url"],
-                    "text": row["text"],
-                    **self.get_available_hashes(row["text"]),
-                    "keywords": row["keywords"],
-                    "history": str(step_history.get()),
-                },
-            )
-            for _, row in data.iterrows()
-        ]
+
+    def _upsert_points(self, points: list[models.PointStruct]):
         for point_chunk in _batch(points, self.settings.BATCH_SIZE):
-            operation_info = self.client.upsert(collection_name=self.collection_name, wait=True, points=point_chunk)
+            operation_info = self.client.upsert(
+                collection_name=self.collection_name,
+                wait=True,
+                points=point_chunk,
+            )
             if operation_info.status != "completed":
                 raise StepFailed(f"Failed to insert df chunk into collection '{self.collection_name}' {operation_info}")
             log.info(
                 "Successfully inserted vector_chunk",
                 extra={"collection": self.collection_name, "count": len(point_chunk)},
             )
-        data = [
+
+    def _build_result_dataframe(self, points: list[models.PointStruct]):
+        result_data = [
             {
                 **entry.payload,
-                "vector": entry.vector,
+                self.vector_key: entry.vector,
                 "collection": self.collection_name,
                 "id": entry.id,
             }
             for entry in points
         ]
-        result = DataFrame[QdrantResult](data)
-        return result
+        return DataFrame[self.result_class](result_data)
+
+    def _insert_embeddings(self, data: DataFrame[EmbeddingResult]):
+        log.info("Inserting embeddings", extra={"count": len(data), "collection": self.collection_name})
+
+        points = [self._create_point(row) for _, row in data.iterrows()]
+
+        self._upsert_points(points)
+
+        return self._build_result_dataframe(points)
 
     def _create_indices(self):
         self.client.create_payload_index(
