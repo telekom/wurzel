@@ -19,4 +19,3 @@ class UrlItem(PydanticModel):
     title: str
     description: Optional[str] = None
     category: Optional[str] = None
-

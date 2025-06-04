@@ -12,6 +12,7 @@ import requests
 from tqdm import tqdm
 
 from wurzel.datacontract import MarkdownDataContract
+from wurzel.exceptions import StepFailed
 from wurzel.step.typed_step import TypedStep
 from wurzel.steps.scraperapi.data import UrlItem
 from wurzel.steps.scraperapi.settings import ScraperAPISettings
@@ -19,6 +20,7 @@ from wurzel.utils.to_markdown.html2md import html2str, to_markdown
 
 # Local application/library specific imports
 
+log = logging.getLogger(__name__)
 
 
 class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownDataContract]]):
@@ -27,7 +29,7 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
     def run(self, inpt: list[UrlItem]) -> list[MarkdownDataContract]:
         result = []
         for url_item in tqdm(inpt):
-            logging.debug("scraping")
+            log.debug("scraping")
             payload = {
                 "api_key": self.settings.TOKEN,
                 "url": url_item.url,
@@ -38,13 +40,13 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
                 r = requests.get(self.settings.API, params=payload, timeout=self.settings.TIMEOUT)
                 r.raise_for_status()
             except requests.exceptions.ReadTimeout:
-                logging.warning(
+                log.warning(
                     "Crawling failed due to timeout",
                     extra={"url": url_item.url},
                 )
                 continue
             except requests.exceptions.HTTPError:
-                logging.warning(
+                log.warning(
                     "Crawling failed",
                     extra={
                         "url": url_item.url,
@@ -57,7 +59,8 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
             md = to_markdown(self._filter_body(r.text))
             keywords = url_item.title
             result.append(MarkdownDataContract(md=md, url=url_item.url, keywords=keywords))
-        assert result
+        if not result:
+            raise StepFailed("no results from scraperAPI")
         return result
 
     def _filter_body(self, html: str) -> str:

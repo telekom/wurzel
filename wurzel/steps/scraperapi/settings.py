@@ -17,4 +17,3 @@ class ScraperAPISettings(Settings):
     TOKEN: str = ""
     TIMEOUT: int = 30.0
     XPATH: str = "//main"
-
