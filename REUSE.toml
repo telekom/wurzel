@@ -22,6 +22,7 @@ path = [
     "VERSION",
     ".vscode/settings.json",
     "DIRECT_REQUIREMENTS.txt",
+    "tests/data/scraperapi/*.html",
     "docs/**/*.md",
     ]
 precedence = "override"
