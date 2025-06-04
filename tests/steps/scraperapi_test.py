@@ -10,7 +10,7 @@ import pytest
 import requests_mock
 
 from wurzel.step_executor.base_executor import BaseStepExecutor
-from wurzel.steps.scraperapi import ScraperAPIStep, UrlItem
+from wurzel.steps.scraperapi.step import ScraperAPIStep, UrlItem
 
 
 @pytest.fixture(scope="function")

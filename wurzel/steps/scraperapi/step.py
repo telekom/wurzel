@@ -6,40 +6,22 @@
 
 # Standard library imports
 import logging
-from typing import Optional
 
 import lxml
 import requests
 from tqdm import tqdm
 
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.datacontract.datacontract import PydanticModel
-from wurzel.step.settings import Settings
 from wurzel.step.typed_step import TypedStep
+from wurzel.steps.scraperapi.data import UrlItem
+from wurzel.steps.scraperapi.settings import ScraperAPISettings
 from wurzel.utils.to_markdown.html2md import html2str, to_markdown
 
 # Local application/library specific imports
 
 
-class _ScraperAPISettings(Settings):
-    """Settings of ScraperAPIStep."""
 
-    API: str = "https://api.scraperapi.com/"
-    TOKEN: str = ""
-    TIMEOUT: int = 30.0
-    XPATH: str = "//main"
-
-
-class UrlItem(PydanticModel):
-    """Item from webmaster api."""
-
-    url: str
-    title: str
-    description: Optional[str] = None
-    category: Optional[str] = None
-
-
-class ScraperAPIStep(TypedStep[_ScraperAPISettings, list[UrlItem], list[MarkdownDataContract]]):
+class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownDataContract]]):
     """Data Source for md files from a configurable path."""
 
     def run(self, inpt: list[UrlItem]) -> list[MarkdownDataContract]:
