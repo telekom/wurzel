@@ -55,3 +55,4 @@ class EmbeddingSettings(SplitterSettings):
     PREFIX_MAP: Annotated[dict[re.Pattern, str], WrapValidator(_wrap_validator_model_mapping)] = Field(
         default={"e5-": "query: ", "DPR|dpr": ""}
     )
+    CLEAN_MD_BEFORE_EMBEDDING: bool = True
