@@ -110,6 +110,25 @@ class EmbeddingStep(
             raise StepFailed(f"all {len(splitted_md_rows)} embeddings got skipped")
         return DataFrame[EmbeddingResult](DataFrame[EmbeddingResult](rows))
 
+    def get_embedding_input_from_document(self, doc: MarkdownDataContract) -> str:
+        """Clean the document such that it can be used as input to the embedding model.
+
+        Parameters
+        ----------
+        doc : MarkdownDataContract
+            The document containing the page content in Markdown format.
+
+        Returns
+        -------
+        str
+            Cleaned text that can be used as input to the embedding model.
+
+        """
+        plain_text = self.markdown.convert(doc.md)
+        plain_text = self._replace_link(plain_text)
+
+        return plain_text
+
     def _get_embedding(self, doc: MarkdownDataContract) -> Embedded:
         """Generates an embedding for a given text and context.
 
@@ -125,7 +144,8 @@ class EmbeddingStep(
 
         """
         context = self.get_simple_context(doc.keywords)
-        vector = self.embedding.embed_query(doc.md)
+        text = self.get_embedding_input_from_document(doc) if self.settings.CLEAN_MD_BEFORE_EMBEDDING else doc.md
+        vector = self.embedding.embed_query(text)
         return {"text": doc.md, "vector": vector, "url": doc.url, "keywords": context}
 
     def is_stopword(self, word: str) -> bool:
