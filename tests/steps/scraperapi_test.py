@@ -26,15 +26,15 @@ def url_items() -> list[tuple[UrlItem, str]]:
     return [
         (
             UrlItem(url="https://de.wikipedia.org/wiki/Wurzel_(Pflanze)", title="Wurzel"),
-            Path("tests/data/wikipedia_wurzel.html"),
+            Path("tests/data/scraperapi/wikipedia_wurzel.html"),
         ),
         (
             UrlItem(url="https://en.wikipedia.org/wiki/Root", title="Wurzel"),
-            Path("tests/data/wikipedia_root.html"),
+            Path("tests/data/scraperapi/wikipedia_root.html"),
         ),
         (
             UrlItem(url="https://creativecommons.org/licenses/by-sa/4.0/deed.de", title="Wurzel"),
-            Path("tests/data/CCO_deed.html"),
+            Path("tests/data/scraperapi/CCO_deed.html"),
         ),
     ]
 
