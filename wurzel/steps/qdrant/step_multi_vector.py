@@ -11,7 +11,7 @@ from logging import getLogger
 from pandera.typing import DataFrame
 from qdrant_client import models
 
-from wurzel.step import TypedStep
+from wurzel.step import TypedStep, step_history
 from wurzel.steps.embedding.data import EmbeddingMultiVectorResult
 from wurzel.steps.qdrant.step import QdrantConnectorStep
 
@@ -58,12 +58,13 @@ class QdrantConnectorMultiVectorStep(
         df_result = self._insert_embeddings(inpt)
         return df_result
 
-    def _create_point(self, row: dict) -> models.PointStruct:
-        payload = self._get_entry_payload(row)
-        payload["splits"] = row["splits"]
-
-        return models.PointStruct(
-            id=next(self.id_iter),  # type: ignore[arg-type]
-            vector=row[self.vector_key],
-            payload=payload,
-        )
+    def _get_entry_payload(self, row: dict[str, object]) -> dict[str, object]:
+        """Create the payload for the entry."""
+        return {
+            "url": row["url"],
+            "text": row["text"],
+            **self.get_available_hashes(row["text"]),
+            "keywords": row["keywords"],
+            "history": str(step_history.get()),
+            "splits": row["splits"],
+        }
