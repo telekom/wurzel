@@ -86,7 +86,7 @@ def to_markdown(html: str, binary_path: Path = __HTML2MD) -> str:
         file.write(cleaned_html)
         file.close()
         convert_cmd = f'"{binary_path.absolute().as_posix()}" -i "{file.name}"'
-        status_code, markdown = subprocess.getstatusoutput(convert_cmd)
+        status_code, markdown = subprocess.getstatusoutput(convert_cmd, encoding="utf8")
         Path(file.name).unlink()
     if status_code != 0:
         raise MarkdownConvertFailed(f"{binary_path} returned {status_code} ({markdown} based on {html})")
