@@ -2,9 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""
-consists of TypedStep to split documents
-"""
+"""consists of TypedStep to split documents."""
 
 # Standard library imports
 from logging import getLogger

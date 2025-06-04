@@ -2,9 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""
-interacts with the scraperAPI service and converts the retrieved Documents to Markdown
-"""
+"""interacts with the scraperAPI service and converts the retrieved Documents to Markdown."""
 
 # Standard library imports
 import logging
@@ -24,7 +22,7 @@ from wurzel.utils.to_markdown.html2md import html2str, to_markdown
 
 
 class _ScraperAPISettings(Settings):
-    """Settings"""
+    """Settings of ScraperAPIStep."""
 
     API: str = "https://api.scraperapi.com/"
     TOKEN: str = ""
@@ -33,7 +31,7 @@ class _ScraperAPISettings(Settings):
 
 
 class UrlItem(PydanticModel):
-    """Item from webmaster api"""
+    """Item from webmaster api."""
 
     url: str
     title: str
@@ -41,10 +39,8 @@ class UrlItem(PydanticModel):
     category: Optional[str] = None
 
 
-class ScraperAPIStep(
-    TypedStep[_ScraperAPISettings, list[UrlItem], list[MarkdownDataContract]]
-):
-    """Data Source for md files from a configurable path"""
+class ScraperAPIStep(TypedStep[_ScraperAPISettings, list[UrlItem], list[MarkdownDataContract]]):
+    """Data Source for md files from a configurable path."""
 
     def run(self, inpt: list[UrlItem]) -> list[MarkdownDataContract]:
         result = []
@@ -57,9 +53,7 @@ class ScraperAPIStep(
                 "device_type": "desktop",
             }
             try:
-                r = requests.get(
-                    self.settings.API, params=payload, timeout=self.settings.TIMEOUT
-                )
+                r = requests.get(self.settings.API, params=payload, timeout=self.settings.TIMEOUT)
                 r.raise_for_status()
             except requests.exceptions.ReadTimeout:
                 logging.warning(
@@ -80,9 +74,7 @@ class ScraperAPIStep(
 
             md = to_markdown(self._filter_body(r.text))
             keywords = url_item.title
-            result.append(
-                MarkdownDataContract(md=md, url=url_item.url, keywords=keywords)
-            )
+            result.append(MarkdownDataContract(md=md, url=url_item.url, keywords=keywords))
         assert result
         return result
 

@@ -25,9 +25,7 @@ def mock_scraper_api(requests_mock: requests_mock.Mocker, url_items):
 def url_items() -> list[tuple[UrlItem, str]]:
     return [
         (
-            UrlItem(
-                url="https://de.wikipedia.org/wiki/Wurzel_(Pflanze)", title="Wurzel"
-            ),
+            UrlItem(url="https://de.wikipedia.org/wiki/Wurzel_(Pflanze)", title="Wurzel"),
             Path("tests/data/wikipedia_wurzel.html"),
         ),
         (
@@ -38,8 +36,6 @@ def url_items() -> list[tuple[UrlItem, str]]:
             UrlItem(url="https://creativecommons.org/licenses/by-sa/4.0/deed.de", title="Wurzel"),
             Path("tests/data/CCO_deed.html"),
         ),
-
-
     ]
 
 

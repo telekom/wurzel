@@ -245,9 +245,7 @@ class BaseStepExecutor:
             # Only yield once
             yield (None, History(step)), 0
         for inpt in inputs:
-            if isinstance(
-                inpt, (datacontract.DataModel, PydanticModel, patyp.DataFrame, list)
-            ):
+            if isinstance(inpt, (datacontract.DataModel, PydanticModel, patyp.DataFrame, list)):
                 yield (inpt, History("[Memory]", step)), 0
             elif isinstance(inpt, (Path, PathToFolderWithBaseModels)):
                 for (inpt, hist), took in self.load(step, inpt):
