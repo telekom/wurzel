@@ -5,16 +5,16 @@
 import json
 from inspect import getfile
 from types import NoneType
-from typing import Type
 
 from pydantic_core import PydanticUndefined
 
 from wurzel.step import Settings, TypedStep
+from wurzel.step.settings import NoSettings
 from wurzel.utils import WZ
 
 
-def main(step: Type[TypedStep], gen_env=False):
-    """Execute"""
+def main(step: type[TypedStep], gen_env=False):
+    """Execute."""
     ins = WZ(step)
     set_cls: Settings = ins.settings_class
     env_prefix = step.__name__.upper()
@@ -24,9 +24,10 @@ def main(step: Type[TypedStep], gen_env=False):
         "Output": ins.output_model_type,
         "settings": {
             "env_prefix": env_prefix,
-            "fields": {k: str(v) for k, v in set_cls.model_fields.items()},
         },
     }
+    if set_cls != NoneType and set_cls is not None and set_cls != NoSettings:
+        data["settings"]["fields"] = {k: str(v) for k, v in set_cls.model_fields.items()}
     if gen_env:
         setts = {True: [], False: []}
         for name, info in set_cls.model_fields.items():

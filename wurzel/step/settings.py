@@ -61,7 +61,7 @@ class SettingsBase(_PydanticBaseSettings):
     @model_validator(mode="before")
     @classmethod
     def before(cls, data: Any):  # pylint: disable=too-many-branches
-        """Before Validator, handles updating"""
+        """Before Validator, handles updating."""
         if isinstance(data, str):
             data = json.loads(data)
         if isinstance(data, dict):
@@ -69,11 +69,7 @@ class SettingsBase(_PydanticBaseSettings):
                 if key in data:
                     if get_origin(field.annotation) is dict:
                         continue
-                    if (
-                        isinstance(data[key], str)
-                        and inspect.isclass(field.annotation)
-                        and issubclass(field.annotation, SettingsBase)
-                    ):
+                    if isinstance(data[key], str) and inspect.isclass(field.annotation) and issubclass(field.annotation, SettingsBase):
                         data[key] = json.loads(data[key])
                     # if annotation is optional and not a SettingsBase
                     elif (
@@ -119,12 +115,12 @@ class SettingsLeaf(SettingsBase):
     """Base Class for all Setting which are not the main Setting.
     This class is mainly used to fix pydantic_settings incorrect loading of env vars.
     It might be made obsolete by future pydantic_settings releases
-    https://github.com/pydantic/pydantic-settings/pull/261
+    https://github.com/pydantic/pydantic-settings/pull/261.
     """
 
     @classmethod
     def with_prefix(cls, prefix: str) -> "SettingsLeaf":
-        """Returns a new class with env_prefix set"""
+        """Returns a new class with env_prefix set."""
         cpy = create_model(prefix + "." + cls.__class__.__name__, __base__=cls)
         cpy.model_config["env_prefix"] = prefix
         return cpy

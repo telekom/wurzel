@@ -18,7 +18,7 @@ _RE_BODY = _re_compile(r"---[\s\S]*?---\s*([\s\S]*)")
 
 
 class MarkdownDataContract(PydanticModel):
-    """contract of the input of the EmbeddingStep"""
+    """contract of the input of the EmbeddingStep."""
 
     md: str
     keywords: str
@@ -27,7 +27,7 @@ class MarkdownDataContract(PydanticModel):
     @classmethod
     @pydantic.validate_call
     def from_dict_w_function(cls, doc: dict[str, Any], func: Callable[[str], str]):
-        """Create a MarkdownDataContract from a dict and apply a custom func to test"""
+        """Create a MarkdownDataContract from a dict and apply a custom func to test."""
         return cls(
             md=func(doc["text"]),
             url=doc["metadata"]["url"],
@@ -36,13 +36,14 @@ class MarkdownDataContract(PydanticModel):
 
     @classmethod
     def from_file(cls, path: Path, url_prefix: str = "") -> Self:
-        """Load MdContract from .md file
+        """Load MdContract from .md file.
 
         Args:
             path (Path): Path to file
 
         Returns:
             MarkdownDataContract: The file that was loaded
+
         """
 
         def find_first(pattern: _re_pattern, text: str, fallback: str):
@@ -57,7 +58,5 @@ class MarkdownDataContract(PydanticModel):
         return MarkdownDataContract(
             md=str(find_first(_RE_BODY, md, md)),
             url=str(find_first(_RE_URL, find_header(md), url_prefix + path.as_posix())),
-            keywords=str(
-                find_first(_RE_TOPIC, find_header(md), path.name.split(".")[0])
-            ),
+            keywords=str(find_first(_RE_TOPIC, find_header(md), path.name.split(".")[0])),
         )

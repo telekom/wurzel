@@ -2,16 +2,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""
-consists of DVCSteps to embedd files and save them as for example as csv
-"""
+"""consists of DVCSteps to embedd files and save them as for example as csv."""
 
 # Standard library imports
 import os
 import re
 from io import StringIO
 from logging import getLogger
-from pathlib import Path
 from typing import Optional, TypedDict
 
 from markdown import Markdown
@@ -21,7 +18,7 @@ from tqdm.auto import tqdm
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import EmbeddingAPIException, StepFailed
 from wurzel.step import TypedStep
-from wurzel.steps.embedding.huggingface import HuggingFaceInferenceAPIEmbeddings
+from wurzel.steps.embedding.huggingface import HuggingFaceInferenceAPIEmbeddings, PrefixedAPIEmbeddings
 from wurzel.steps.splitter import SimpleSplitterStep
 from wurzel.utils.semantic_splitter import SemanticSplitter
 
@@ -34,7 +31,7 @@ log = getLogger(__name__)
 
 
 class Embedded(TypedDict):
-    "dict definition of a embedded document"
+    """dict definition of a embedded document."""
 
     text: str
     url: str
@@ -43,53 +40,50 @@ class Embedded(TypedDict):
 
 class EmbeddingStep(
     SimpleSplitterStep,
-    TypedStep[
-        EmbeddingSettings, list[MarkdownDataContract], DataFrame[EmbeddingResult]
-    ],
+    TypedStep[EmbeddingSettings, list[MarkdownDataContract], DataFrame[EmbeddingResult]],
 ):
-    """
-    Step for consuming list[MarkdownDataContract]
-    and returning DataFrame[EmbeddingResult]
+    """Step for consuming list[MarkdownDataContract]
+    and returning DataFrame[EmbeddingResult].
     """
 
     embedding: HuggingFaceInferenceAPIEmbeddings
     n_jobs: int
     markdown: Markdown
     stopwords: list[str]
+    settings: EmbeddingSettings
 
     def __init__(self) -> None:
         super().__init__()
         self.settings = EmbeddingSettings()
-        self.embedding = EmbeddingStep._select_embedding(self.settings.API)
+        self.embedding = self._select_embedding()
         self.n_jobs = max(1, (os.cpu_count() or 0) - 1)
         # Inject net output_format into 3rd party library Markdown
-        Markdown.output_formats["plain"] = EmbeddingStep.__md_to_plain  # type: ignore[index]
+        Markdown.output_formats["plain"] = self.__md_to_plain  # type: ignore[index]
         self.markdown = Markdown(output_format="plain")  # type: ignore[arg-type]
         self.markdown.stripTopLevelTags = False
-        self.settingstopwords = self._load_stopwords(self.settings.STEPWORDS_PATH)
+        self.settingstopwords = self._load_stopwords()
         self.splitter = SemanticSplitter(
             token_limit=self.settings.TOKEN_COUNT_MAX,
             token_limit_buffer=self.settings.TOKEN_COUNT_BUFFER,
             token_limit_min=self.settings.TOKEN_COUNT_MIN,
         )
 
-    @staticmethod
-    def _load_stopwords(path: Path) -> list[str]:
+    def _load_stopwords(self) -> list[str]:
+        path = self.settings.STEPWORDS_PATH
         with path.open(encoding="utf-8") as f:
             stopwords = [w.strip() for w in f.readlines() if not w.startswith(";")]
         return stopwords
 
-    @staticmethod
-    def _select_embedding(*args, **kwargs) -> HuggingFaceInferenceAPIEmbeddings:
-        """
-        Selects the embedding model to be used for generating embeddings.
+    def _select_embedding(self) -> HuggingFaceInferenceAPIEmbeddings:
+        """Selects the embedding model to be used for generating embeddings.
 
         Returns
         -------
         Embeddings
             An instance of the Embeddings class.
+
         """
-        return HuggingFaceInferenceAPIEmbeddings(*args, **kwargs)
+        return PrefixedAPIEmbeddings(self.settings.API, self.settings.PREFIX_MAP)
 
     def run(self, inpt: list[MarkdownDataContract]) -> DataFrame[EmbeddingResult]:
         """Executes the embedding step by processing input markdown files, generating embeddings,
@@ -128,6 +122,7 @@ class EmbeddingStep(
         -------
         str
             Cleaned text that can be used as input to the embedding model.
+
         """
         plain_text = self.markdown.convert(doc.md)
         plain_text = self._replace_link(plain_text)
@@ -135,8 +130,7 @@ class EmbeddingStep(
         return plain_text
 
     def _get_embedding(self, doc: MarkdownDataContract) -> Embedded:
-        """
-        Generates an embedding for a given text and context.
+        """Generates an embedding for a given text and context.
 
         Parameters
         ----------
@@ -147,38 +141,31 @@ class EmbeddingStep(
         -------
         dict
             A dictionary containing the original text, its embedding, and the source URL.
-        """
 
+        """
         context = self.get_simple_context(doc.keywords)
         plain_text = self.get_embedding_input_from_document(doc)
         vector = self.embedding.embed_query(plain_text)
         return {"text": doc.md, "vector": vector, "url": doc.url, "keywords": context}
 
     def is_stopword(self, word: str) -> bool:
-        """
-        Stopword Detection Function
-        """
+        """Stopword Detection Function."""
         return word.lower() in self.settingstopwords
 
     @classmethod
     def whitespace_word_tokenizer(cls, text: str) -> list[str]:
-        """
-        Simple Regex based whitespace word tokenizer
-        """
+        """Simple Regex based whitespace word tokenizer."""
         return [x for x in re.split(r"([.,!?]+)?\s+", text) if x]
 
     def get_simple_context(self, text):
-        """
-        Simple function to create a context from a text
-        """
+        """Simple function to create a context from a text."""
         tokens = self.whitespace_word_tokenizer(text)
         filtered_tokens = [token for token in tokens if not self.is_stopword(token)]
         return " ".join(filtered_tokens)
 
-    @staticmethod
-    def __md_to_plain(element, stream: Optional[StringIO] = None):
-        """
-        Converts a markdown element into plain text.
+    @classmethod
+    def __md_to_plain(cls, element, stream: Optional[StringIO] = None):
+        """Converts a markdown element into plain text.
 
         Parameters
         ----------
@@ -191,21 +178,21 @@ class EmbeddingStep(
         -------
         str
             The plain text representation of the markdown element.
+
         """
         if stream is None:
             stream = StringIO()
         if element.text:
             stream.write(element.text)
         for sub in element:
-            EmbeddingStep.__md_to_plain(sub, stream)
+            cls.__md_to_plain(sub, stream)
         if element.tail:
             stream.write(element.tail)
         return stream.getvalue()
 
     @classmethod
     def _replace_link(cls, text: str):
-        """
-        Replaces URLs in the text with a placeholder.
+        """Replaces URLs in the text with a placeholder.
 
         Parameters
         ----------
@@ -216,9 +203,12 @@ class EmbeddingStep(
         -------
         str
             The text with URLs replaced by 'LINK'.
+
         """
         # Extract URL from a string
-        url_extract_pattern = "https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\/=]*)"  # pylint: disable=line-too-long
+        url_extract_pattern = (
+            "https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\/=]*)"  # pylint: disable=line-too-long
+        )
         links = sorted(re.findall(url_extract_pattern, text), key=len, reverse=True)
         for link in links:
             text = text.replace(link, "LINK")

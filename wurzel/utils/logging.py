@@ -8,7 +8,7 @@ import logging.config
 import os
 import sys
 from collections.abc import Mapping
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 from asgi_correlation_id import correlation_id
 
@@ -16,21 +16,24 @@ log = logging.getLogger(__name__)
 
 
 # pylint: disable-next=too-many-positional-arguments
-def warnings_to_logger(
-    message: str, category: str, filename: str, lineno: str, file=None, line=None
-):
-    # pylint: disable=unused-argument
-    """replaces warnings.showwarning
+def warnings_to_logger(message: str, category: str, filename: str, lineno: str, file=None, line=None):
+    """Replaces the default `warnings.showwarning` function to log warnings using the Python logging framework.
 
-    Args:
-        message (str):
-        category (str): Warnings class
-        filename (str):
-        lineno (str):
+    This function captures warning messages and logs them to a logger associated with the module where the warning originated.
+    If the module cannot be determined, it uses the filename as the logger name.
+
+        message (str): The warning message to be logged.
+        category (str): The category of the warning (e.g., `UserWarning`, `DeprecationWarning`).
+        filename (str): The name of the file where the warning was triggered.
+        lineno (str): The line number in the file where the warning was triggered.
+        file (Optional[IO], optional): Not used. Included for compatibility with `warnings.showwarning`. Defaults to None.
+        line (Optional[str], optional): Not used. Included for compatibility with `warnings.showwarning`. Defaults to None.
+
     """
+    # pylint: disable=unused-argument
     for module_name, module in sys.modules.items():
         module_path = getattr(module, "__file__", None)
-        if module_path and os.path.samefile(module_path, filename):
+        if module_path and os.path.abspath(module_path) == os.path.abspath(filename):
             break
     else:
         module_name = os.path.splitext(os.path.split(filename)[1])[0]
@@ -68,7 +71,7 @@ def _make_dict_serializable(item: Any):
 
 
 class JsonFormatter(logging.Formatter):
-    """Custom formatter for structured logging"""
+    """Custom formatter for structured logging."""
 
     key_blacklist = [
         "msg",
@@ -85,31 +88,26 @@ class JsonFormatter(logging.Formatter):
     def __init__(
         self,
         datefmt: Optional[str] = "%Y-%m-%dT%H:%M:%S%z",
-        reduced: Optional[List[str]] = None,
+        reduced: Optional[list[str]] = None,
         indent: Optional[str] = None,
         *,
         defaults: Optional[Mapping[str, Any]] = None,
     ) -> None:
-        """Create a new Formatter
+        """Create a new Formatter.
 
         Args:
             datefmt (str, optional): Used in @timestamp. Defaults to "%Y-%m-%dT%H:%M:%S%z".
             reduced (Optional[List[str]], optional): List of loglevels to reduce output by. Defaults to None.
                 Reduced output removes filename, thread and process information
             indent (Optional[str], optional): indent for json dumps. Defaults to None.
+
         """
         super().__init__(None, datefmt, defaults=defaults)
         self.indent = indent
-        self.reduced_levels = [
-            logging.getLevelNamesMapping().get(level) for level in reduced or []
-        ]
+        self.reduced_levels = [logging.getLevelNamesMapping().get(level) for level in reduced or []]
 
     def _get_output_dict(self, record: logging.LogRecord) -> dict[str, Any]:
-        data = {
-            k: v
-            for k, v in record.__dict__.items()
-            if k not in self.key_blacklist and v is not None
-        }
+        data = {k: v for k, v in record.__dict__.items() if k not in self.key_blacklist and v is not None}
         logger_name = f"{data.pop('module')}.{data.pop('name')}"
         func_name = data.pop("funcName")
         if func_name != "<module>":
@@ -124,13 +122,8 @@ class JsonFormatter(logging.Formatter):
             "process": f"{data.pop('processName')}({data.pop('process')})",
             "thread": f"{data.pop('threadName')}({data.pop('thread')})",
         }
-        if all(
-            key in data
-            for key in ["warnings.category", "warnings.filename", "warnings.lineno"]
-        ):
-            output["file"] = (
-                f"{data.pop('warnings.filename')}:{data.pop('warnings.lineno')}"
-            )
+        if all(key in data for key in ["warnings.category", "warnings.filename", "warnings.lineno"]):
+            output["file"] = f"{data.pop('warnings.filename')}:{data.pop('warnings.lineno')}"
         if data:
             output["extra"] = _make_dict_serializable(data)
         cor_id = correlation_id.get()
@@ -151,10 +144,11 @@ class JsonFormatter(logging.Formatter):
 
 
 def get_logging_dict_config(level) -> dict[str, str]:
-    """Generate a logging.config.dictConfig compatible dict
+    """Generate a logging.config.dictConfig compatible dict.
 
     Returns:
         dict: logging.config.dictConfig
+
     """
     default_formatter = {
         "json_formatter": {

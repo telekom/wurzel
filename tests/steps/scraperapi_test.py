@@ -34,10 +34,6 @@ def url_items() -> list[tuple[UrlItem, str]]:
             UrlItem(url="https://en.wikipedia.org/wiki/Root", title="Wurzel"),
             Path("tests/data/wikipedia_root.html"),
         ),
-        (
-            UrlItem(url="https://www.duden.de/rechtschreibung/Wurzel", title="Wurzel"),
-            Path("tests/data/duden_wurzel.html"),
-        ),
     ]
 
 

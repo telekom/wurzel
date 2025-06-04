@@ -5,37 +5,67 @@
 SRC_DIR = ./wurzel
 TEST_DIR= ./tests
 VENV = .venv
-UV?=$(VENV)/bin/uv
-PY=$(VENV)/bin/python
-PIP?=$(VENV)/bin/pip
+SYSTEM_PYTHON?= python3.12
+SHELL := bash
+
+
+ifeq ($(OS),Windows_NT)
+	PY  ?= $(VENV)/Scripts/python.exe
+	PIP ?= $(VENV)/Scripts/pip.exe
+	UV  ?= $(VENV)/Scripts/uv.exe
+else
+	PY  ?= $(VENV)/bin/python
+	PIP ?= $(VENV)/bin/pip
+	UV  ?= $(VENV)/bin/uv
+endif
+
+
 build: install
 	$(PY) -m build .
 
 $(VENV)/touchfile: pyproject.toml $(UV)
 	$(UV) --no-progress pip install -r pyproject.toml --all-extras
 	$(UV) --no-progress pip install -r DIRECT_REQUIREMENTS.txt
-	@touch $(VENV)/touchfile
+	@$(shell if [ "$(OS)" = "Windows_NT" ]; then echo type nul > $(VENV)\\touchfile; else echo touch $(VENV)/touchfile; fi)
 $(PY):
-	python3 -m venv $(VENV)
+	$(SYSTEM_PYTHON) -m venv $(VENV)
+
 $(UV): $(PY)
+	$(PIP) install --upgrade pip
 	$(PIP) install uv
+
 install: $(VENV)/touchfile
 
+UNAME_S := $(shell uname)
+
 test: install
-	$(UV) run pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov-fail-under=90  --cov=$(SRC_DIR)
+	@echo "🧪 Running tests..."
+ifeq ($(UNAME_S),Darwin)
+ifneq ($(GITHUB_ACTIONS),)
+	@echo "Running tests on MacOS in GitHub pipeline"
+	@echo "Skipping coverage check"
+# https://github.com/actions/runner-images/issues/9918
+# Docling coverage is not working when tests are skipped on MacOS
+	$(UV) run pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov=$(SRC_DIR)
+else
+	$(UV) run pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov-fail-under=90 --cov=$(SRC_DIR)
+endif
+else
+	$(UV) run pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov-fail-under=90 --cov=$(SRC_DIR)
+endif
 
 lint: install
-	-make reuse-lint
-	$(UV) run ruff format .
-	$(UV) run ruff check . --fix
-	$(UV) run pylint $(SRC_DIR)
+	@echo "🔍 Running lint checks..."
+	$(UV) run pre-commit run --all-files
 
 clean:
+	@echo "🧹 Cleaning up..."
 	@rm -rf __pycache__ ${SRC_DIR}/*.egg-info **/__pycache__ .pytest_cache
 	@rm -rf .coverage reports dist
 
 documentation:
-	sphinx-apidoc  -o ./docs . -f && cd docs && make html && cd .. && firefox ./docs/build/html/index.html
+	@echo "📚 Serving documentation..."
+	$(UV) run mkdocs serve
 
 .PHONY: reuse-lint
 reuse-lint:

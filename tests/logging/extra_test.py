@@ -37,7 +37,10 @@ class AnException(Exception):
             (SomeClass, None),
             (AnException("Instance"), "AnException('Instance')"),
             # (SomeDataClass(),  {'A': 'Data Object'}), Todo: fix
-            # (MilvusSettings(PASSWORD="123", USER="AA"), {"VECTOR_STORE_TYPE": "milvus", "HOST": "localhost", "PORT": 19530, "COLLECTION": "", "SEARCH_PARAMS": {"metric_type": "IP", "params": {"a": "b"}}, "INDEX_PARAMS": {"index_type": "FLAT", "metric_type": "IP", "params": {}}, "USER": "AA", "PASSWORD": "****", "SECURED": False})
+            # (MilvusSettings(PASSWORD="123", USER="AA"), {"VECTOR_STORE_TYPE": "milvus", "HOST": "localhost", "PORT": 19530,
+            # "COLLECTION": "",
+            # "SEARCH_PARAMS": {"metric_type": "IP", "params": {"a": "b"}}, "INDEX_PARAMS": {"index_type": "FLAT",
+            #  "metric_type": "IP", "params": {}}, "USER": "AA", "PASSWORD": "****", "SECURED": False})
         ]
     ],
 )
@@ -45,5 +48,6 @@ def test_make_dict_serializable(in_data, expected):
     res = _make_dict_serializable(in_data)
     if expected is not None:
         if isinstance(in_data, Iterable):
-            return all(d in res for d in expected)
-        assert expected == res
+            assert all(d in res for d in expected)
+        else:
+            assert expected == res

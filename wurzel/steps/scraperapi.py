@@ -18,7 +18,7 @@ from wurzel.datacontract import MarkdownDataContract
 from wurzel.datacontract.datacontract import PydanticModel
 from wurzel.step.settings import Settings
 from wurzel.step.typed_step import TypedStep
-from wurzel.utils.to_markdown.html2md import to_markdown
+from wurzel.utils.to_markdown.html2md import html2str, to_markdown
 
 # Local application/library specific imports
 
@@ -60,13 +60,14 @@ class ScraperAPIStep(
                 r = requests.get(
                     self.settings.API, params=payload, timeout=self.settings.TIMEOUT
                 )
+                r.raise_for_status()
             except requests.exceptions.ReadTimeout:
                 logging.warning(
                     "Crawling failed due to timeout",
                     extra={"url": url_item.url},
                 )
                 continue
-            if r.status_code != 200:
+            except requests.exceptions.HTTPError:
                 logging.warning(
                     "Crawling failed",
                     extra={
@@ -88,4 +89,4 @@ class ScraperAPIStep(
     def _filter_body(self, html: str) -> str:
         tree: lxml.html = lxml.html.fromstring(html)
         tree = tree.xpath(self.settings.XPATH)[0]
-        return lxml.html.tostring(tree)
+        return html2str(tree)

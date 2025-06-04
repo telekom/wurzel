@@ -2,9 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""
-consists of DVCSteps to embedd files and save them as for example as csv
-"""
+"""consists of DVCSteps to embedd files and save them as for example as csv."""
 
 # Standard library imports
 from logging import getLogger
@@ -21,15 +19,13 @@ log = getLogger(__name__)
 
 
 class DropStettings(Settings):
-    """specify DROP_BY_FIELDS to field"""
+    """specify DROP_BY_FIELDS to field."""
 
     DROP_BY_FIELDS: list[str] = ["md"]
 
 
-class DropDuplicationStep(
-    TypedStep[DropStettings, list[MarkdownDataContract], list[MarkdownDataContract]]
-):
-    """SimpleSplitterStep to split Markdown Documents rundimentory in medium size chunks"""
+class DropDuplicationStep(TypedStep[DropStettings, list[MarkdownDataContract], list[MarkdownDataContract]]):
+    """SimpleSplitterStep to split Markdown Documents rundimentory in medium size chunks."""
 
     def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
         """Executes the split step by processing input markdown files, generating smaller splitted markdown files,

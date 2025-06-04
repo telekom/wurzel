@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""containing the DVCStep sending embedding data into milvus"""
+"""containing the DVCStep sending embedding data into milvus."""
 
 from logging import getLogger
 
@@ -23,12 +23,8 @@ from .settings import MilvusSettings
 log = getLogger(__name__)
 
 
-class MilvusConnectorStep(
-    TypedStep[MilvusSettings, DataFrame[EmbeddingResult], MilvusResult]
-):  # pragma: no cover
-    """
-    Milvus connector step. It consumes embedding csv files, creates a new schema and inserts the embeddings
-    """
+class MilvusConnectorStep(TypedStep[MilvusSettings, DataFrame[EmbeddingResult], MilvusResult]):  # pragma: no cover
+    """Milvus connector step. It consumes embedding csv files, creates a new schema and inserts the embeddings."""
 
     milvus_timeout: float = 20.0
 
@@ -39,10 +35,7 @@ class MilvusConnectorStep(
         # not during DVC pipeline definition time
         uri = f"http://{self.settings.HOST}:{self.settings.PORT}"
         if not self.settings.PASSWORD or not self.settings.USER:
-            log.warning(
-                "MILVUS_HOST, MILVUS_USER or MILVUS_PASSWORD for Milvus not provided."
-                " Thus running in non-credential Mode"
-            )
+            log.warning("MILVUS_HOST, MILVUS_USER or MILVUS_PASSWORD for Milvus not provided. Thus running in non-credential Mode")
         self.client: MilvusClient = MilvusClient(
             uri=uri,
             user=self.settings.USER,
@@ -72,9 +65,7 @@ class MilvusConnectorStep(
         log.info(f"Creating milvus collection {collection_name}")
         collection_schema = CollectionSchema(
             fields=[
-                FieldSchema(
-                    name="pk", dtype=DataType.INT64, is_primary=True, auto_id=True
-                ),
+                FieldSchema(name="pk", dtype=DataType.INT64, is_primary=True, auto_id=True),
                 FieldSchema(name="text", dtype=DataType.VARCHAR, max_length=3000),
                 FieldSchema(
                     name="vector",
@@ -87,35 +78,19 @@ class MilvusConnectorStep(
         )
 
         log.info("schema created")
-        self.client.create_collection(
-            collection_name=collection_name, schema=collection_schema
-        )
+        self.client.create_collection(collection_name=collection_name, schema=collection_schema)
         log.info("collection created")
         log.info(f"Inserting embedding {len(data)} into collection {collection_name}")
-        result: dict = self.client.insert(
-            collection_name=collection_name, data=data.to_dict("records")
-        )
+        result: dict = self.client.insert(collection_name=collection_name, data=data.to_dict("records"))
         if result["insert_count"] != len(data):
             raise StepFailed(
-                f"Failed to insert df into collection '{collection_name}'."
-                f"{result['insert_count']}/{len(data)} where successful"
+                f"Failed to insert df into collection '{collection_name}'.{result['insert_count']}/{len(data)} where successful"
             )
-        log.info(
-            f"Successfully inserted {len(data)} vectors"
-            f" into collection '{collection_name}'"
-        )
-        self.client.create_index(
-            collection_name=collection_name, index_params=self.collection_index
-        )
-        log.info(
-            f"Successfully craeted index {self.collection_index}"
-            f" into collection '{collection_name}"
-        )
+        log.info(f"Successfully inserted {len(data)} vectors into collection '{collection_name}'")
+        self.client.create_index(collection_name=collection_name, index_params=self.collection_index)
+        log.info(f"Successfully craeted index {self.collection_index} into collection '{collection_name}")
         self.client.load_collection(collection_name)
-        log.info(
-            f"Successfully loaded the collection {collection_name}'"
-            f" into collection '{collection_name}'"
-        )
+        log.info(f"Successfully loaded the collection {collection_name}' into collection '{collection_name}'")
         try:
             self.client.release_collection(self.__construct_last_collection_name())
         except NoPreviousCollection:
@@ -158,9 +133,7 @@ class MilvusConnectorStep(
     def __construct_last_collection_name(self) -> str:
         previous_collections = self._get_collection_versions()
         if not previous_collections or len(previous_collections) <= 1:
-            raise NoPreviousCollection(
-                f"Milvus does not contain a previous collection for {self.collection_prefix}"
-            )
+            raise NoPreviousCollection(f"Milvus does not contain a previous collection for {self.collection_prefix}")
         previous_version = sorted(previous_collections.keys())[-2]
         log.info(f"Found previous version v{previous_version}")
         return f"{self.collection_prefix}_v{previous_version}"
@@ -168,9 +141,7 @@ class MilvusConnectorStep(
     def __construct_current_collection_name(self) -> str:
         previous_collections = self._get_collection_versions()
         if not previous_collections or len(previous_collections) < 1:
-            raise NoPreviousCollection(
-                f"Milvus does not contain a previous collection for {self.collection_prefix}"
-            )
+            raise NoPreviousCollection(f"Milvus does not contain a previous collection for {self.collection_prefix}")
         previous_version = sorted(previous_collections.keys())[-1]
         log.info(f"Found previous version v{previous_version}")
         return f"{self.collection_prefix}_v{previous_version}"
@@ -178,8 +149,6 @@ class MilvusConnectorStep(
     def _get_collection_versions(self) -> dict[int, str]:
         previous_collections = self.client.list_collections(timeout=self.milvus_timeout)
         versioned_collections = {
-            int(previous.split("_v")[-1]): previous
-            for previous in previous_collections
-            if self.collection_prefix in previous
+            int(previous.split("_v")[-1]): previous for previous in previous_collections if self.collection_prefix in previous
         }
         return versioned_collections

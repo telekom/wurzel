@@ -10,16 +10,22 @@ repos:
     hooks:
       - id: validate-pyproject
 
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
 
   - repo: https://github.com/fsfe/reuse-tool
     rev: v5.0.2
     hooks:
       - id: reuse
 
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v2.3.0
     hooks:
     -   id: check-yaml
+        exclude: ^helm/.*\.yaml$
     -   id: check-json
     -   id: pretty-format-json
         args:
@@ -30,12 +36,21 @@ repos:
     -   id: trailing-whitespace
     -   id: check-toml
 
-  - repo: local
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.9
     hooks:
-      - id: lint
-        name: lint
-        description: "Run 'make lint'"
-        entry: make lint
-        language: python
-        types_or: [python]
-        minimum_pre_commit_version: "2.9.2"
+      - id: ruff-format
+      - id: ruff
+        args: [ --fix ]
+
+
+
+  - repo: https://github.com/PyCQA/pylint
+    rev: v3.3.7
+    hooks:
+      - id: pylint
+        entry: .venv/bin/pylint
+        files: ^wurzel/
+        language: system
+        args: ["--enable","spelling"]

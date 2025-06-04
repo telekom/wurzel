@@ -5,7 +5,7 @@
 import importlib
 import inspect
 import pkgutil
-from typing import Type, TypeVar
+from typing import TypeVar
 
 from wurzel.step.typed_step import TypedStep
 
@@ -13,7 +13,7 @@ T = TypeVar("T", bound=object)
 
 
 def find_sub_classes(parent: T, package: str = __package__) -> dict[str, T]:
-    """searches for all DVC step definitions and returns them based on their name."""
+    """Searches for all DVC step definitions and returns them based on their name."""
 
     def is_non_abs_child(member: object) -> bool:
         return (
@@ -35,14 +35,12 @@ def find_sub_classes(parent: T, package: str = __package__) -> dict[str, T]:
         # Recurse through any sub-packages
         try:
             if is_package:
-                classes_in_subpackage = find_sub_classes(
-                    parent, package=full_module_name
-                )
+                classes_in_subpackage = find_sub_classes(parent, package=full_module_name)
                 result.update(classes_in_subpackage)
             # Load the module for inspection
 
             module = importlib.import_module(full_module_name)
-        except:  # pylint: disable=bare-except
+        except:  # pylint: disable=bare-except  # noqa: E722
             continue
         # Iterate through all the objects in the module and
         # using the lambda, filter for class objects and only objects that exist within the module
@@ -51,6 +49,6 @@ def find_sub_classes(parent: T, package: str = __package__) -> dict[str, T]:
     return result
 
 
-def find_typed_steps_in_package(package: str) -> dict[str, Type[TypedStep]]:
-    """Recursively find all subclasses of TypedStep"""
+def find_typed_steps_in_package(package: str) -> dict[str, type[TypedStep]]:
+    """Recursively find all subclasses of TypedStep."""
     return find_sub_classes(TypedStep, package)
