@@ -86,7 +86,8 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             replication_factor=self.settings.REPLICATION_FACTOR,
         )
 
-    def _create_point(self, row: dict) -> models.PointStruct:
+    def _get_entry_payload(self, row: dict[str, object]) -> dict[str, object]:
+        """Create the payload for the entry."""
         payload = {
             "url": row["url"],
             "text": row["text"],
@@ -94,9 +95,22 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             "keywords": row["keywords"],
             "history": str(step_history.get()),
         }
+        return payload
 
-        if self.vector_key == "vectors":
-            payload["splits"] = row["splits"]
+    def _create_point(self, row: dict) -> models.PointStruct:
+        """Creates a Qdrant PointStruct object from a given row dictionary.
+
+        Args:
+            row (dict): A dictionary representing a data entry, expected to contain at least the vector data under `self.vector_key`.
+
+        Returns:
+            models.PointStruct: An instance of PointStruct with a unique id, vector, and payload extracted from the row.
+
+        Raises:
+            KeyError: If the required vector key is not present in the row.
+
+        """
+        payload = self._get_entry_payload(row)
 
         return models.PointStruct(
             id=next(self.id_iter),  # type: ignore[arg-type]
@@ -105,6 +119,18 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         )
 
     def _upsert_points(self, points: list[models.PointStruct]):
+        """Inserts a list of points into the Qdrant collection in batches.
+
+        Args:
+            points (list[models.PointStruct]): The list of point structures to upsert into the collection.
+
+        Raises:
+            StepFailed: If any batch fails to be inserted into the collection.
+
+        Logs:
+            Logs a message for each successfully inserted batch, including the collection name and number of points.
+
+        """
         for point_chunk in _batch(points, self.settings.BATCH_SIZE):
             operation_info = self.client.upsert(
                 collection_name=self.collection_name,
@@ -119,6 +145,15 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             )
 
     def _build_result_dataframe(self, points: list[models.PointStruct]):
+        """Constructs a DataFrame from a list of PointStruct objects.
+
+        Each PointStruct's payload is unpacked into the resulting dictionary, along with its vector, collection name, and ID.
+        The resulting list of dictionaries is used to create a DataFrame of the specified result_class.
+
+        Args:
+            points (list[models.PointStruct]): A list of PointStruct objects containing payload, vector, and id information.
+
+        """
         result_data = [
             {
                 **entry.payload,

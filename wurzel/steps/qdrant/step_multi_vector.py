@@ -58,14 +58,12 @@ class QdrantConnectorMultiVectorStep(
         df_result = self._insert_embeddings(inpt)
         return df_result
 
-    def _insert_embeddings(self, data: DataFrame[EmbeddingMultiVectorResult]) -> DataFrame[QdrantMultiVectorResult]:
-        log.info("Inserting embeddings", extra={"count": len(data), "collection": self.collection_name})
+    def _create_point(self, row: dict) -> models.PointStruct:
+        payload = self._get_entry_payload(row)
+        payload["splits"] = row["splits"]
 
-        points = [self._create_point(row) for _, row in data.iterrows()]
-
-        self._upsert_points(points)
-
-        self._create_indices()
-        self._update_alias()
-
-        return self._build_result_dataframe(points)
+        return models.PointStruct(
+            id=next(self.id_iter),  # type: ignore[arg-type]
+            vector=row[self.vector_key],
+            payload=payload,
+        )
