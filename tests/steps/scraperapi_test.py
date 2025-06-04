@@ -17,7 +17,7 @@ from wurzel.steps.scraperapi.step import ScraperAPIStep, UrlItem
 def mock_scraper_api(requests_mock: requests_mock.Mocker, url_items):
     requests_mock.get(
         "https://api.scraperapi.com/",
-        response_list=[{"text": open(path).read()} for _url, path in url_items],
+        response_list=[{"text": open(path, encoding="utf-8").read()} for _url, path in url_items],
     )
 
 
