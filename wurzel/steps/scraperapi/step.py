@@ -25,20 +25,23 @@ log = logging.getLogger(__name__)
 
 
 class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownDataContract]]):
-    """Data Source for md files from a configurable path."""
+    """ScraperAPIStep uses the ScraperAPI service to srape the html by the given url through list[UrlItem].
+    this html gets filtered and transformed to MarkdownDataContract.
+    """
 
     def run(self, inpt: list[UrlItem]) -> list[MarkdownDataContract]:
         def fetch_and_process(url_item: UrlItem):
-            log.debug("scraping")
             payload = {
                 "api_key": self.settings.TOKEN,
                 "url": url_item.url,
-                "device_type": "desktop",
-                "follow_redirect": "true",
-                "wait_for_selector": "#cookies-notification-accept-cookie",
-                "country_code": "hr",
-                "render": "true",
-                "premium": "true",
+                "device_type": self.settings.DEVICE_TYPE,
+                "follow_redirect": str(self.settings.FOLLOW_REDIRECT).lower(),
+                "wait_for_selector": self.settings.WAIT_FOR_SELECTOR,
+                "country_code": self.settings.COUNTRY_CODE,
+                "render": str(self.settings.RENDER).lower(),
+                "premium": str(self.settings.PREMIUM).lower(),
+                "ultra_premium": str(self.settings.ULTRA_PREMIUM).lower(),
+                "screenshot": str(self.settings.SCREENSHOT).lower(),
             }
             try:
                 r = requests.get(self.settings.API, params=payload, timeout=self.settings.TIMEOUT)
@@ -62,14 +65,14 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
             try:
                 md = to_markdown(self._filter_body(r.text))
             except (KeyError, IndexError):
-                logging.warning("website does not have the searched xpath", extra={"filter": self.settings.XPATH, "url": url_item.url})
+                log.warning("website does not have the searched xpath", extra={"filter": self.settings.XPATH, "url": url_item.url})
                 return None
 
+            progress_bar.update(1)
             return MarkdownDataContract(md=md, url=url_item.url, keywords=url_item.title)
 
-        results = Parallel(n_jobs=self.settings.CONCURRENCY_NUM, backend="threading")(
-            delayed(fetch_and_process)(item) for item in tqdm(inpt)
-        )
+        with tqdm(total=len(inpt), desc="Processing URLs") as progress_bar:
+            results = Parallel(n_jobs=self.settings.CONCURRENCY_NUM, backend="threading")(delayed(fetch_and_process)(item) for item in inpt)
 
         filtered_results = [res for res in results if res]
         if not filtered_results:
