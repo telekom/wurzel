@@ -9,6 +9,7 @@ import logging
 
 import lxml
 import requests
+from joblib import Parallel, delayed
 from tqdm import tqdm
 
 from wurzel.datacontract import MarkdownDataContract
@@ -24,17 +25,23 @@ log = logging.getLogger(__name__)
 
 
 class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownDataContract]]):
-    """Data Source for md files from a configurable path."""
+    """ScraperAPIStep uses the ScraperAPI service to srape the html by the given url through list[UrlItem].
+    this html gets filtered and transformed to MarkdownDataContract.
+    """
 
     def run(self, inpt: list[UrlItem]) -> list[MarkdownDataContract]:
-        result = []
-        for url_item in tqdm(inpt):
-            log.debug("scraping")
+        def fetch_and_process(url_item: UrlItem):
             payload = {
                 "api_key": self.settings.TOKEN,
                 "url": url_item.url,
-                "render": "true",
-                "device_type": "desktop",
+                "device_type": self.settings.DEVICE_TYPE,
+                "follow_redirect": str(self.settings.FOLLOW_REDIRECT).lower(),
+                "wait_for_selector": self.settings.WAIT_FOR_SELECTOR,
+                "country_code": self.settings.COUNTRY_CODE,
+                "render": str(self.settings.RENDER).lower(),
+                "premium": str(self.settings.PREMIUM).lower(),
+                "ultra_premium": str(self.settings.ULTRA_PREMIUM).lower(),
+                "screenshot": str(self.settings.SCREENSHOT).lower(),
             }
             try:
                 r = requests.get(self.settings.API, params=payload, timeout=self.settings.TIMEOUT)
@@ -44,7 +51,7 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
                     "Crawling failed due to timeout",
                     extra={"url": url_item.url},
                 )
-                continue
+                return None
             except requests.exceptions.HTTPError:
                 log.warning(
                     "Crawling failed",
@@ -54,14 +61,24 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
                         "status": r.status_code,
                     },
                 )
-                continue
+                return None
+            try:
+                md = to_markdown(self._filter_body(r.text))
+            except (KeyError, IndexError):
+                log.warning("website does not have the searched xpath", extra={"filter": self.settings.XPATH, "url": url_item.url})
+                return None
 
-            md = to_markdown(self._filter_body(r.text))
-            keywords = url_item.title
-            result.append(MarkdownDataContract(md=md, url=url_item.url, keywords=keywords))
-        if not result:
+            progress_bar.update(1)
+            return MarkdownDataContract(md=md, url=url_item.url, keywords=url_item.title)
+
+        with tqdm(total=len(inpt), desc="Processing URLs") as progress_bar:
+            results = Parallel(n_jobs=self.settings.CONCURRENCY_NUM, backend="threading")(delayed(fetch_and_process)(item) for item in inpt)
+
+        filtered_results = [res for res in results if res]
+        if not filtered_results:
             raise StepFailed("no results from scraperAPI")
-        return result
+
+        return filtered_results
 
     def _filter_body(self, html: str) -> str:
         tree: lxml.html = lxml.html.fromstring(html)
