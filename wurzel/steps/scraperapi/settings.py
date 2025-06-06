@@ -16,7 +16,8 @@ class ScraperAPISettings(Settings):
     """Settings of ScraperAPIStep. Mainly the list of https://docs.scraperapi.com/python/credits-and-requests."""
 
     API: str = "https://api.scraperapi.com/"
-    TOKEN: str = ""
+    RETRY: int = Field(ge=0, default=5)
+    TOKEN: str
     TIMEOUT: int = 61.0
     XPATH: str = "//main"
     CONCURRENCY_NUM: int = Field(gt=0, default=1)
@@ -25,6 +26,7 @@ class ScraperAPISettings(Settings):
     WAIT_FOR_SELECTOR: str = "#cookies-notification-accept-cookie"
     COUNTRY_CODE: str = "en"
     RENDER: bool = True
-    PREMIUM: bool = True
+    PREMIUM: bool = False
     ULTRA_PREMIUM: bool = False
     SCREENSHOT: bool = False
+    MAX_COST: int = Field(gt=0, default=30)

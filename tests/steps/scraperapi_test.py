@@ -14,7 +14,8 @@ from wurzel.steps.scraperapi.step import ScraperAPIStep, UrlItem
 
 
 @pytest.fixture(scope="function")
-def mock_scraper_api(requests_mock: requests_mock.Mocker, url_items):
+def mock_scraper_api(requests_mock: requests_mock.Mocker, url_items, env):
+    env.set("SCRAPERAPISTEP__TOKEN", "dummy token")
     requests_mock.get(
         "https://api.scraperapi.com/",
         response_list=[{"text": open(path, encoding="utf8").read()} for _url, path in url_items],
@@ -39,7 +40,7 @@ def url_items() -> list[tuple[UrlItem, str]]:
     ]
 
 
-def test_self_consuming_no_input(tmp_path: Path, mock_scraper_api, url_items):
+def test_scraper_api(tmp_path: Path, mock_scraper_api, url_items):
     output = tmp_path / f"{ScraperAPIStep.__name__}"
     os.mkdir(tmp_path / "input")
     shutil.copy("tests/data/markdown.json", tmp_path / "input/")
