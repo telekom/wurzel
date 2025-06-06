@@ -10,10 +10,7 @@ import logging
 import lxml
 import requests
 from joblib import Parallel, delayed
-<<<<<<< HEAD
 from requests.adapters import HTTPAdapter, Retry
-=======
->>>>>>> origin/main
 from tqdm import tqdm
 
 from wurzel.datacontract import MarkdownDataContract
