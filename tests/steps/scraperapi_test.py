@@ -40,7 +40,7 @@ def url_items() -> list[tuple[UrlItem, str]]:
     ]
 
 
-def test_self_consuming_no_input(tmp_path: Path, mock_scraper_api, url_items):
+def test_scraper_api(tmp_path: Path, mock_scraper_api, url_items):
     output = tmp_path / f"{ScraperAPIStep.__name__}"
     os.mkdir(tmp_path / "input")
     shutil.copy("tests/data/markdown.json", tmp_path / "input/")
