@@ -11,7 +11,7 @@ import requests_mock
 
 from wurzel.step_executor.base_executor import BaseStepExecutor
 from wurzel.steps.scraperapi.step import ScraperAPIStep, UrlItem
-from tests import env
+
 
 @pytest.fixture(scope="function")
 def mock_scraper_api(requests_mock: requests_mock.Mocker, url_items, env):
