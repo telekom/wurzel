@@ -29,3 +29,4 @@ class ScraperAPISettings(Settings):
     PREMIUM: bool = False
     ULTRA_PREMIUM: bool = False
     SCREENSHOT: bool = False
+    MAX_COST: int = Field(gt=0, default=30)

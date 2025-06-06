@@ -48,6 +48,7 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
                 "premium": str(self.settings.PREMIUM).lower(),
                 "ultra_premium": str(self.settings.ULTRA_PREMIUM).lower(),
                 "screenshot": str(self.settings.SCREENSHOT).lower(),
+                "max_cost": str(self.settings.MAX_COST),
             }
             try:
                 r = session.get(self.settings.API, params=payload, timeout=self.settings.TIMEOUT)
