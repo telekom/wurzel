@@ -16,7 +16,7 @@ class ScraperAPISettings(Settings):
     """Settings of ScraperAPIStep. Mainly the list of https://docs.scraperapi.com/python/credits-and-requests."""
 
     API: str = "https://api.scraperapi.com/"
-    RETRY: int = 5
+    RETRY: int = Field(ge=0, default=5)
     TOKEN: str = ""
     TIMEOUT: int = 61.0
     XPATH: str = "//main"
