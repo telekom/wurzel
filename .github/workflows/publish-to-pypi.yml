@@ -2,13 +2,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-name: pypi.orgRelease
+name: pypi.org Release
 on:
   workflow_dispatch:
 
 jobs:
   publish-to-pypi:
-    name: PyPIRelease
+    name: PyPI Release
     runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.workflow }}-release-${{ github.ref_name }}
