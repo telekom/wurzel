@@ -2,9 +2,12 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 
+
 import pytest
 
 from wurzel.utils import HAS_DOCLING
+
+from .conftest import skip_if_mac_os_and_github_action  # noqa: F401
 
 if not HAS_DOCLING:
     pytest.skip("Docling is not available", allow_module_level=True)
@@ -22,7 +25,7 @@ from wurzel.steps.docling.docling_step import CleanMarkdownRenderer, DoclingStep
         (["example.com/pdf"], "", 0),
     ],
 )
-def test_docling_step(real_data_path, expected_md_start, expected_contract_count):
+def test_docling_step(real_data_path, expected_md_start, expected_contract_count, skip_if_mac_os_and_github_action):  # noqa: F811
     docling_step = DoclingStep()
     docling_step.settings = type(
         "Settings",

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""consists of DVCSteps to embedd files and save them as for example as csv."""
+"""consists of TypedStep to split documents."""
 
 # Standard library imports
 from logging import getLogger

@@ -5,11 +5,12 @@ name: Create and publish a Docker image
 
 
 on:
-    workflow_run:
-      workflows: [pypi.org Release]
-      types:
-        - completed
-        - requested
+  workflow_run:
+    workflows:
+      - pypi.org Release
+    types:
+      - completed
+
 
 
 
@@ -20,6 +21,10 @@ env:
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        platform: [linux/amd64, linux/arm64]
 
     permissions:
       contents: read
@@ -58,13 +63,13 @@ jobs:
 
 
 
-      - name: Build and push Docker image
+      - name: Build and push Docker image ${{ matrix.platform}}
         id: push
-        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platform}}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 

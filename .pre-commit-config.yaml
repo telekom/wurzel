@@ -10,6 +10,11 @@ repos:
     hooks:
       - id: validate-pyproject
 
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        exclude: .html
 
   - repo: https://github.com/fsfe/reuse-tool
     rev: v5.0.2
@@ -18,9 +23,10 @@ repos:
 
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v2.3.0
+    rev: v5.0.0
     hooks:
     -   id: check-yaml
+        exclude: ^helm/.*\.yaml$
     -   id: check-json
     -   id: pretty-format-json
         args:
@@ -35,9 +41,10 @@ repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.11.9
     hooks:
+      - id: ruff-format
       - id: ruff
         args: [ --fix ]
-      - id: ruff-format
+
 
 
   - repo: https://github.com/PyCQA/pylint

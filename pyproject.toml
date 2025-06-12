@@ -4,7 +4,7 @@
 [project]
 name = "wurzel"
 
-version = "0.10.5"
+version = "1.2.0"
 
 description = "Pick, choose and chain your RAG tools in a pythonic way"
 authors = [
@@ -48,7 +48,6 @@ dependencies= [
     "joblib>=1.4.0",
     "lxml==5.2.*",
     "marshmallow<4.0.0",
-
 ]
 
 [project.optional-dependencies]
@@ -61,8 +60,14 @@ docling = [
 milvus = [
     "pymilvus==2.4.4",
 ]
+
+# TLSH (Trend Micro Locality Sensitive Hash)
+# Note: Official TLSH repo: https://github.com/trendmicro/tlsh
+# - The latest release (4.12.0) requires installation from source, which fails.
+# - https://pypi.org/project/python-tlsh/ is unmaintained; latest (4.5.0) does not work on Windows.
+# - https://pypi.org/project/py-tlsh/ is also unmaintained; latest (4.7.2) works on win & mac & ubuntu.
 tlsh = [
-    "python-tlsh==4.5.0"
+    "py-tlsh==4.7.2"
 ]
 lint = [
     "pylint[spelling]==3.3.7",
@@ -72,7 +77,7 @@ lint = [
     "ruff==0.9.10",
 ]
 test = [
-    "pytest==8.*",
+    "pytest==8.4.*",
     "pytest-asyncio==0.23.*",
     "pytest-cov==4.*",
     "pytest-html==4.*",
@@ -80,7 +85,7 @@ test = [
     "pytest-xdist==3.*",
     "pytest-mock==3.*",
     "requests-mock==1.*",
-    "milvus-lite==2.*", # used for miluvs mock
+    #"milvus-lite==2.*", # used for miluvs mock no support for windows https://github.com/milvus-io/milvus-lite/issues/176
 ]
 
 docs = [
@@ -139,7 +144,7 @@ match = "(main)"
 prerelease = false
 
 [tool.semantic_release.branches.dev]
-match = "^(feature|feat|fix|perf|ci)/.+"
+match = "^(?!main$).+"
 prerelease = true
 prerelease_token = "dev"
 

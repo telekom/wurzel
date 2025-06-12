@@ -144,8 +144,8 @@ class EmbeddingStep(
 
         """
         context = self.get_simple_context(doc.keywords)
-        plain_text = self.get_embedding_input_from_document(doc)
-        vector = self.embedding.embed_query(plain_text)
+        text = self.get_embedding_input_from_document(doc) if self.settings.CLEAN_MD_BEFORE_EMBEDDING else doc.md
+        vector = self.embedding.embed_query(text)
         return {"text": doc.md, "vector": vector, "url": doc.url, "keywords": context}
 
     def is_stopword(self, word: str) -> bool:
