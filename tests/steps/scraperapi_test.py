@@ -15,7 +15,7 @@ from wurzel.steps.scraperapi.step import ScraperAPIStep, UrlItem
 
 @pytest.fixture(scope="function")
 def mock_scraper_api(requests_mock: requests_mock.Mocker, url_items, env):
-    env.set("SCRAPERAPISTEP__TOKEN", "dummy token")
+    env.set("SCRAPERAPISTEP__API_KEY", "dummy token")
     requests_mock.get(
         "https://api.scraperapi.com/",
         response_list=[{"text": open(path, encoding="utf8").read()} for _url, path in url_items],

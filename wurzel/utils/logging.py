@@ -47,7 +47,7 @@ def warnings_to_logger(message: str, category: str, filename: str, lineno: str, 
 
 
 def _make_dict_serializable(item: Any):
-    secret_words = ["password", "key", "secret"]
+    secret_words = ["password", "key", "secret", "token"]
     match item:
         case dict():
             new_dict = {}
@@ -55,9 +55,10 @@ def _make_dict_serializable(item: Any):
                 # If value is None remove item
                 if v is None:
                     continue
+
                 key = k if isinstance(k, str) else repr(k)
                 # Could also use SecretStr but changes usage of Settings object
-                if any(keyword in key.lower() for keyword in secret_words):
+                if not isinstance(v, (int, float)) and any(keyword in key.lower() for keyword in secret_words):
                     new_dict[key] = "****"
                 else:
                     new_dict[key] = _make_dict_serializable(v)
