@@ -38,7 +38,7 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
             )
             session.mount("https://", HTTPAdapter(max_retries=retries))
             payload = {
-                "api_key": self.settings.API_KEY,
+                "api_key": self.settings.TOKEN,
                 "url": url_item.url,
                 "device_type": self.settings.DEVICE_TYPE,
                 "follow_redirect": str(self.settings.FOLLOW_REDIRECT).lower(),
@@ -87,6 +87,14 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
             raise StepFailed("no results from scraperAPI")
 
         return filtered_results
+
+    def __init__(self) -> None:
+        logging.getLogger("connectionpool.urllib3.connectionpool.urlopen").setLevel("ERROR")
+        super().__init__()
+
+    def finalize(self) -> None:
+        logging.getLogger("connectionpool.urllib3.connectionpool.urlopen").setLevel("WARNING")
+        return super().finalize()
 
     def _filter_body(self, html: str) -> str:
         tree: lxml.html = lxml.html.fromstring(html)
