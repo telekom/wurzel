@@ -169,7 +169,7 @@ class BaseStepExecutor:
 
         """
         if not path.is_dir():
-            path.mkdir()
+            path.mkdir(parents=True,exist_ok=True)
         obj = _try_sort(obj)
         output_model_class: type[datacontract.DataModel] = step.output_model_class
         return output_model_class.save_to_path(path / f"{hist}", obj)

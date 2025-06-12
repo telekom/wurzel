@@ -100,5 +100,5 @@ def test_minimal_pipeline(backend: type[Backend]):
     duplication = WZ(DropDuplicationStep)
     agb >> splitter >> duplication
 
-    _y = backend().generate_yaml(duplication)
+    _y = backend(image="ghcr.io/telekom/wurzel:1.2.0").generate_yaml(duplication)
     pass

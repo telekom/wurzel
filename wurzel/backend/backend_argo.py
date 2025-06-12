@@ -20,7 +20,7 @@ class ArgoBackend(Backend):
 
     def __init__(
         self,
-        data_dir: Path = Path("./data"),
+        data_dir: Path = Path("."),
         executer: BaseStepExecutor = PrometheusStepExecutor,
         encapsulate_env: bool = True,
         image: str = "ghcr.io/telekom/wurzel",
@@ -52,19 +52,19 @@ class ArgoBackend(Backend):
 
     def _create_task(self, dag: DAG, step: type[TypedStep], argo_reqs: list[Task]) -> Task:
         if step.required_steps:
-            inputs = [Artifact(name="wurzel-artifact", path=f"/tmp/{req.__class__.__name__}") for req in step.required_steps]
+            inputs = [Artifact(name="wurzel-artifact", path=(self.data_dir/req.__class__.__name__).as_posix()) for req in step.required_steps]
         else:
             inputs = []
-        commands: list[str] = generate_cli_call(
+        commands: list[str] = [entry for entry in generate_cli_call(
             step.__class__, inputs=[inpt.from_ for inpt in inputs], output=self.data_dir / step.__class__.__name__
-        ).split(" ")
+        ).split(" ") if entry.strip()]
         dag.__exit__()
         wurzel_call = Container(
             name=f"wurzel-run-template-{step.__class__.__name__.lower()}",
             image=self.image,
             command=commands,
             inputs=inputs,
-            outputs=Artifact(name="wurzel-artifact", path=f"/tmp/{step.__class__.__name__}"),
+            outputs=Artifact(name="wurzel-artifact", path=(self.data_dir/step.__class__.__name__).as_posix()),
         )
         dag.__enter__()  # pylint: disable=unnecessary-dunder-call
         input_refs = [argo_req.get_artifact("wurzel-artifact") for argo_req in argo_reqs] if argo_reqs else []

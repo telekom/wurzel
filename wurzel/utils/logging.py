@@ -47,7 +47,7 @@ def warnings_to_logger(message: str, category: str, filename: str, lineno: str, 
 
 
 def _make_dict_serializable(item: Any):
-    secret_words = ["password", "key", "secret"]
+    secret_words = ["password", "key", "secret", "token"]
     match item:
         case dict():
             new_dict = {}
