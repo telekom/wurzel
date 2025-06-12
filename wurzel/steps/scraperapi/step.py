@@ -88,6 +88,14 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
 
         return filtered_results
 
+    def __init__(self) -> None:
+        logging.getLogger("connectionpool.urllib3.connectionpool.urlopen").setLevel("ERROR")
+        super().__init__()
+
+    def finalize(self) -> None:
+        logging.getLogger("connectionpool.urllib3.connectionpool.urlopen").setLevel("WARNING")
+        return super().finalize()
+
     def _filter_body(self, html: str) -> str:
         tree: lxml.html = lxml.html.fromstring(html)
         tree = tree.xpath(self.settings.XPATH)[0]
