@@ -9,13 +9,11 @@ from typing import Any, TypedDict
 import yaml
 
 import wurzel
-from wurzel.backend.backend import Backend
 import wurzel.cli
+from wurzel.backend.backend import Backend
 from wurzel.step import TypedStep
-from wurzel.step.typed_step import MODEL_TYPE
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 
-from hera.workflows import DAG, Workflow, script,Artifact
 
 class DvcDict(TypedDict):
     """Internal Representation."""
@@ -24,9 +22,6 @@ class DvcDict(TypedDict):
     deps: list[str]
     outs: list[str]
     always_changed: bool
-
-
-
 
 
 class DvcBackend(Backend):
@@ -91,4 +86,3 @@ class DvcBackend(Backend):
             for key in ["outs", "deps"]:
                 data[k][key] = [str(p) for p in data[k][key]]
         return yaml.dump({"stages": data})
-

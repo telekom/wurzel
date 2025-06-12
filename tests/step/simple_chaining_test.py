@@ -2,34 +2,39 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from pathlib import Path
-from typing import Any
 
 import pytest
 import yaml
-from wurzel.backend import DvcBackend,ArgoBackend
+
+from wurzel.backend import ArgoBackend, DvcBackend
 from wurzel.backend.backend import Backend
-from wurzel.step import Step
+from wurzel.datacontract import MarkdownDataContract
 from wurzel.step.typed_step import TypedStep
 from wurzel.steps.docling.docling_step import DoclingStep
-from wurzel.utils.meta_settings import WZ
-from wurzel.datacontract import MarkdownDataContract
 from wurzel.steps.duplication import DropDuplicationStep
 from wurzel.steps.splitter import SimpleSplitterStep
-class A(TypedStep[None,None,MarkdownDataContract]):
+from wurzel.utils.meta_settings import WZ
+
+
+class A(TypedStep[None, None, MarkdownDataContract]):
     def run(self, inpt: None) -> MarkdownDataContract:
         return super().run(inpt)
 
-class B(TypedStep[None,MarkdownDataContract,MarkdownDataContract]):
+
+class B(TypedStep[None, MarkdownDataContract, MarkdownDataContract]):
     def run(self, inpt: MarkdownDataContract) -> MarkdownDataContract:
         return super().run(inpt)
 
-class C(TypedStep[None,MarkdownDataContract,MarkdownDataContract]):
+
+class C(TypedStep[None, MarkdownDataContract, MarkdownDataContract]):
     def run(self, inpt: MarkdownDataContract) -> MarkdownDataContract:
         return super().run(inpt)
-class D(TypedStep[None,MarkdownDataContract,MarkdownDataContract]):
+
+
+class D(TypedStep[None, MarkdownDataContract, MarkdownDataContract]):
     def run(self, inpt: MarkdownDataContract) -> MarkdownDataContract:
         return super().run(inpt)
+
 
 @pytest.mark.parametrize(
     "backend",
@@ -38,21 +43,22 @@ class D(TypedStep[None,MarkdownDataContract,MarkdownDataContract]):
         pytest.param(ArgoBackend, id="ArGo Backend"),
     ],
 )
-def test_dict(backend:type[Backend]):
+def test_dict(backend: type[Backend]):
     a = WZ(A)
     b = WZ(B)
     a >> b
     dic = backend().generate_dict(b)
     assert dic
 
+
 @pytest.mark.parametrize(
     "backend,keys",
     [
-        pytest.param(DvcBackend,["stages"], id="DVC Backend"),
-        pytest.param(ArgoBackend,["spec","templates",0,"dag","tasks"], id="ArGo Backend"),
-    ]
+        pytest.param(DvcBackend, ["stages"], id="DVC Backend"),
+        pytest.param(ArgoBackend, ["spec", "templates", 0, "dag", "tasks"], id="ArGo Backend"),
+    ],
 )
-def test_yaml(backend:type[Backend], keys):
+def test_yaml(backend: type[Backend], keys):
     def safeget(dct, *keys):
         for key in keys:
             try:
@@ -60,6 +66,7 @@ def test_yaml(backend:type[Backend], keys):
             except KeyError:
                 return None
         return dct
+
     a = WZ(A)
     b = WZ(B)
     c = WZ(C)
@@ -68,29 +75,30 @@ def test_yaml(backend:type[Backend], keys):
     d >> c
     y = backend().generate_yaml(b)
     y_dict = yaml.safe_load(y)
-    assert len(safeget(y_dict,*keys))==2
+    assert len(safeget(y_dict, *keys)) == 2
     y = backend().generate_yaml(c)
     y_dict = yaml.safe_load(y)
-    assert len(safeget(y_dict,*keys))==4
+    assert len(safeget(y_dict, *keys)) == 4
     y = backend().generate_yaml(d)
     y_dict = yaml.safe_load(y)
-    assert len(safeget(y_dict,*keys))==1
+    assert len(safeget(y_dict, *keys)) == 1
     y = backend().generate_yaml(a)
     y_dict = yaml.safe_load(y)
-    assert len(safeget(y_dict,*keys))==1
+    assert len(safeget(y_dict, *keys)) == 1
+
 
 @pytest.mark.parametrize(
     "backend",
     [
         pytest.param(DvcBackend, id="DVC Backend"),
         pytest.param(ArgoBackend, id="ArGo Backend"),
-    ]
+    ],
 )
-def test_minimal_pipeline(backend:type[Backend]):
+def test_minimal_pipeline(backend: type[Backend]):
     agb = WZ(DoclingStep)
     splitter = WZ(SimpleSplitterStep)
     duplication = WZ(DropDuplicationStep)
     agb >> splitter >> duplication
 
-    y = backend().generate_yaml(duplication)
+    _y = backend().generate_yaml(duplication)
     pass
