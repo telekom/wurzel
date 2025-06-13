@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://telekom.github.io/wurzel/steps/docling/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Docling - Wurzel</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Docling";
+        var mkdocs_page_input_path = "steps/docling.md";
+        var mkdocs_page_url = "/wurzel/steps/docling/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Wurzel
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Wurzel</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developping</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developping/Building_your_one_step/">📚 How to Build Your Own Step</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developping/define_pipline/">🔗 Defining a Pipeline in Wurzel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developping/docs/">📖 Documentation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developping/getting_started/">👩‍💻 Developer Guide</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Steps</span></p>
+              <ul class="current">
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Docling</a>
+    <ul class="current">
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../embedding/">Embedding</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../milvus/">Milvus</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../qdrant/">Qdrant</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Wurzel</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Steps</li>
+      <li class="breadcrumb-item active">Docling</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/telekom/wurzel/edit/master/docs/steps/docling.md">Edit on telekom/wurzel</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <div class="doc doc-object doc-module">
+
+
+
+<a id="wurzel.steps.docling.docling_step"></a>
+    <div class="doc doc-contents first">
+
+        <p>Note: Known Limitations with EasyOCR (<code>EasyOcrOptions</code>).</p>
+<ol>
+<li>Table structure is often lost or misaligned in the OCR output.</li>
+<li>Spelling inaccuracies are occasionally observed (e.g., "Verlängern" → "Verlängenng").</li>
+<li>URLs are not parsed correctly (e.g., "www.telekom.de/agb" → "www telekom delagb").</li>
+</ol>
+<p>While investigating EasyOCR issues and testing alternative OCR engines,
+we observed that some documents produced distorted text with irregular whitespace.
+This disrupts the natural sentence flow and significantly reduces readability.</p>
+<p>Example:
+"pra kti sche  i nform ati o nen zu  i h rer  fam i l y  card  basi c Li eber
+  Tel ekom   Kunde, schön,   dass  Si e  si ch  f ür..."</p>
+<p>Despite these limitations, we have decided to proceed with EasyOCR.</p>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="wurzel.steps.docling.docling_step.CleanMarkdownRenderer" class="doc doc-heading">
+            <code>CleanMarkdownRenderer</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="mistletoe.HTMLRenderer">HTMLRenderer</span></code></p>
+
+
+        <p>Custom Markdown renderer extending mistletoe's HTMLRenderer to clean up
+unwanted elements from Markdown input.</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>wurzel/steps/docling/docling_step.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">CleanMarkdownRenderer</span><span class="p">(</span><span class="n">HTMLRenderer</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Custom Markdown renderer extending mistletoe&#39;s HTMLRenderer to clean up</span>
+<span class="sd">    unwanted elements from Markdown input.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">render_html_block</span><span class="p">(</span><span class="n">token</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Render HTML block tokens and clean up unwanted elements.</span>
+
+<span class="sd">        This method removes HTML comments and returns the cleaned HTML content.</span>
+<span class="sd">        Remove comments like &lt;!-- image --&gt;</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">token</span><span class="o">.</span><span class="n">content</span><span class="p">,</span> <span class="s2">&quot;html.parser&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">comment</span> <span class="ow">in</span> <span class="n">soup</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="n">string</span><span class="o">=</span><span class="k">lambda</span> <span class="n">text</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">Comment</span><span class="p">)):</span>
+            <span class="n">comment</span><span class="o">.</span><span class="n">extract</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">soup</span><span class="o">.</span><span class="n">decode_contents</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="wurzel.steps.docling.docling_step.CleanMarkdownRenderer.render_html_block" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">render_html_block</span><span class="p">(</span><span class="n">token</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-staticmethod"><code>staticmethod</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Render HTML block tokens and clean up unwanted elements.</p>
+<p>This method removes HTML comments and returns the cleaned HTML content.
+Remove comments like <!-- image --></p>
+
+
+            <details class="quote">
+              <summary>Source code in <code>wurzel/steps/docling/docling_step.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">render_html_block</span><span class="p">(</span><span class="n">token</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Render HTML block tokens and clean up unwanted elements.</span>
+
+<span class="sd">    This method removes HTML comments and returns the cleaned HTML content.</span>
+<span class="sd">    Remove comments like &lt;!-- image --&gt;</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">token</span><span class="o">.</span><span class="n">content</span><span class="p">,</span> <span class="s2">&quot;html.parser&quot;</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">comment</span> <span class="ow">in</span> <span class="n">soup</span><span class="o">.</span><span class="n">find_all</span><span class="p">(</span><span class="n">string</span><span class="o">=</span><span class="k">lambda</span> <span class="n">text</span><span class="p">:</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">Comment</span><span class="p">)):</span>
+        <span class="n">comment</span><span class="o">.</span><span class="n">extract</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">soup</span><span class="o">.</span><span class="n">decode_contents</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="wurzel.steps.docling.docling_step.DoclingStep" class="doc doc-heading">
+            <code>DoclingStep</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="wurzel.step.typed_step.TypedStep">TypedStep</span>[<a class="autorefs autorefs-internal" title="DoclingSettings (wurzel.steps.docling.settings.DoclingSettings)" href="#wurzel.steps.docling.settings.DoclingSettings">DoclingSettings</a>, None, <span title="list">list</span>[<span title="wurzel.datacontract.common.MarkdownDataContract">MarkdownDataContract</span>]]</code></p>
+
+
+        <p>Step to return local Markdown files with enhanced PDF extraction for German.</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>wurzel/steps/docling/docling_step.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 63</span>
+<span class="normal"> 64</span>
+<span class="normal"> 65</span>
+<span class="normal"> 66</span>
+<span class="normal"> 67</span>
+<span class="normal"> 68</span>
+<span class="normal"> 69</span>
+<span class="normal"> 70</span>
+<span class="normal"> 71</span>
+<span class="normal"> 72</span>
+<span class="normal"> 73</span>
+<span class="normal"> 74</span>
+<span class="normal"> 75</span>
+<span class="normal"> 76</span>
+<span class="normal"> 77</span>
+<span class="normal"> 78</span>
+<span class="normal"> 79</span>
+<span class="normal"> 80</span>
+<span class="normal"> 81</span>
+<span class="normal"> 82</span>
+<span class="normal"> 83</span>
+<span class="normal"> 84</span>
+<span class="normal"> 85</span>
+<span class="normal"> 86</span>
+<span class="normal"> 87</span>
+<span class="normal"> 88</span>
+<span class="normal"> 89</span>
+<span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">DoclingStep</span><span class="p">(</span><span class="n">TypedStep</span><span class="p">[</span><span class="n">DoclingSettings</span><span class="p">,</span> <span class="kc">None</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">MarkdownDataContract</span><span class="p">]]):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Step to return local Markdown files with enhanced PDF extraction for German.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">converter</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">create_converter</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_converter</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DocumentConverter</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create and configure the document converter for PDF and DOCX.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            DocumentConverter: Configured document converter.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pipeline_options</span> <span class="o">=</span> <span class="n">PdfPipelineOptions</span><span class="p">()</span>
+        <span class="n">ocr_options</span> <span class="o">=</span> <span class="n">EasyOcrOptions</span><span class="p">()</span>
+        <span class="n">pipeline_options</span><span class="o">.</span><span class="n">ocr_options</span> <span class="o">=</span> <span class="n">ocr_options</span>
+
+        <span class="k">return</span> <span class="n">DocumentConverter</span><span class="p">(</span>
+            <span class="n">allowed_formats</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">FORMATS</span><span class="p">,</span>
+            <span class="n">format_options</span><span class="o">=</span><span class="p">{</span>
+                <span class="n">InputFormat</span><span class="o">.</span><span class="n">PDF</span><span class="p">:</span> <span class="n">PdfFormatOption</span><span class="p">(</span>
+                    <span class="n">pipeline_options</span><span class="o">=</span><span class="n">pipeline_options</span><span class="p">,</span>
+                <span class="p">)</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">extract_keywords</span><span class="p">(</span><span class="n">md_text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Cleans a Markdown string using mistletoe and extracts useful content.</span>
+
+<span class="sd">        - Parses and renders the Markdown content into HTML using a custom HTML renderer</span>
+<span class="sd">        - Removes unwanted HTML comments and escaped underscores</span>
+<span class="sd">        - Extracts the first heading from the content (e.g., `&lt;h1&gt;` to `&lt;h6&gt;`)</span>
+<span class="sd">        - Converts the cleaned HTML into plain text</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            md_text (str): The raw Markdown input string.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="n">MD_RENDER_LOCK</span><span class="p">,</span> <span class="n">CleanMarkdownRenderer</span><span class="p">()</span> <span class="k">as</span> <span class="n">renderer</span><span class="p">:</span>
+            <span class="n">ast</span> <span class="o">=</span> <span class="n">MTDocument</span><span class="p">(</span><span class="n">md_text</span><span class="p">)</span>
+            <span class="n">cleaned</span> <span class="o">=</span> <span class="n">renderer</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">ast</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">cleaned</span><span class="p">,</span> <span class="s2">&quot;html.parser&quot;</span><span class="p">)</span>
+            <span class="n">first_heading_tag</span> <span class="o">=</span> <span class="n">soup</span><span class="o">.</span><span class="n">find</span><span class="p">([</span><span class="s2">&quot;h1&quot;</span><span class="p">,</span> <span class="s2">&quot;h2&quot;</span><span class="p">,</span> <span class="s2">&quot;h3&quot;</span><span class="p">,</span> <span class="s2">&quot;h4&quot;</span><span class="p">,</span> <span class="s2">&quot;h5&quot;</span><span class="p">,</span> <span class="s2">&quot;h6&quot;</span><span class="p">])</span>
+            <span class="n">heading</span> <span class="o">=</span> <span class="n">first_heading_tag</span><span class="o">.</span><span class="n">get_text</span><span class="p">(</span><span class="n">strip</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">if</span> <span class="n">first_heading_tag</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+
+        <span class="k">return</span> <span class="n">heading</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inpt</span><span class="p">:</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">MarkdownDataContract</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run the document extraction and conversion process for German PDFs.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            inpt (None): Input parameter (not used).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            List[MarkdownDataContract]: List of converted Markdown contracts.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">urls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">URLS</span>
+        <span class="n">contracts</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">urls</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">converted_contract</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">converter</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+                <span class="n">md</span> <span class="o">=</span> <span class="n">converted_contract</span><span class="o">.</span><span class="n">document</span><span class="o">.</span><span class="n">export_to_markdown</span><span class="p">(</span><span class="n">image_placeholder</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+                <span class="n">keyword</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">extract_keywords</span><span class="p">(</span><span class="n">md</span><span class="p">)</span>
+                <span class="n">contract_instance</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;md&quot;</span><span class="p">:</span> <span class="n">md</span><span class="p">,</span> <span class="s2">&quot;keywords&quot;</span><span class="p">:</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">DEFAULT_KEYWORD</span><span class="p">,</span> <span class="n">keyword</span><span class="p">]),</span> <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">url</span><span class="p">}</span>
+                <span class="n">contracts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">contract_instance</span><span class="p">)</span>
+
+            <span class="k">except</span> <span class="p">(</span><span class="ne">FileNotFoundError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to verify URL: </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">. Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">continue</span>
+
+        <span class="k">return</span> <span class="n">contracts</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="wurzel.steps.docling.docling_step.DoclingStep.create_converter" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">create_converter</span><span class="p">()</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Create and configure the document converter for PDF and DOCX.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+<b><code>DocumentConverter</code></b>(                  <code><span title="docling.document_converter.DocumentConverter">DocumentConverter</span></code>
+)              –
+              <div class="doc-md-description">
+                <p>Configured document converter.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+            <details class="quote">
+              <summary>Source code in <code>wurzel/steps/docling/docling_step.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">70</span>
+<span class="normal">71</span>
+<span class="normal">72</span>
+<span class="normal">73</span>
+<span class="normal">74</span>
+<span class="normal">75</span>
+<span class="normal">76</span>
+<span class="normal">77</span>
+<span class="normal">78</span>
+<span class="normal">79</span>
+<span class="normal">80</span>
+<span class="normal">81</span>
+<span class="normal">82</span>
+<span class="normal">83</span>
+<span class="normal">84</span>
+<span class="normal">85</span>
+<span class="normal">86</span>
+<span class="normal">87</span>
+<span class="normal">88</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">create_converter</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">DocumentConverter</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create and configure the document converter for PDF and DOCX.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        DocumentConverter: Configured document converter.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pipeline_options</span> <span class="o">=</span> <span class="n">PdfPipelineOptions</span><span class="p">()</span>
+    <span class="n">ocr_options</span> <span class="o">=</span> <span class="n">EasyOcrOptions</span><span class="p">()</span>
+    <span class="n">pipeline_options</span><span class="o">.</span><span class="n">ocr_options</span> <span class="o">=</span> <span class="n">ocr_options</span>
+
+    <span class="k">return</span> <span class="n">DocumentConverter</span><span class="p">(</span>
+        <span class="n">allowed_formats</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">FORMATS</span><span class="p">,</span>
+        <span class="n">format_options</span><span class="o">=</span><span class="p">{</span>
+            <span class="n">InputFormat</span><span class="o">.</span><span class="n">PDF</span><span class="p">:</span> <span class="n">PdfFormatOption</span><span class="p">(</span>
+                <span class="n">pipeline_options</span><span class="o">=</span><span class="n">pipeline_options</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">},</span>
+    <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="wurzel.steps.docling.docling_step.DoclingStep.extract_keywords" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">extract_keywords</span><span class="p">(</span><span class="n">md_text</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-staticmethod"><code>staticmethod</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Cleans a Markdown string using mistletoe and extracts useful content.</p>
+<ul>
+<li>Parses and renders the Markdown content into HTML using a custom HTML renderer</li>
+<li>Removes unwanted HTML comments and escaped underscores</li>
+<li>Extracts the first heading from the content (e.g., <code>&lt;h1&gt;</code> to <code>&lt;h6&gt;</code>)</li>
+<li>Converts the cleaned HTML into plain text</li>
+</ul>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>md_text</code></b>
+                  (<code><span title="str">str</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>The raw Markdown input string.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+            <details class="quote">
+              <summary>Source code in <code>wurzel/steps/docling/docling_step.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@staticmethod</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">extract_keywords</span><span class="p">(</span><span class="n">md_text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Cleans a Markdown string using mistletoe and extracts useful content.</span>
+
+<span class="sd">    - Parses and renders the Markdown content into HTML using a custom HTML renderer</span>
+<span class="sd">    - Removes unwanted HTML comments and escaped underscores</span>
+<span class="sd">    - Extracts the first heading from the content (e.g., `&lt;h1&gt;` to `&lt;h6&gt;`)</span>
+<span class="sd">    - Converts the cleaned HTML into plain text</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        md_text (str): The raw Markdown input string.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="n">MD_RENDER_LOCK</span><span class="p">,</span> <span class="n">CleanMarkdownRenderer</span><span class="p">()</span> <span class="k">as</span> <span class="n">renderer</span><span class="p">:</span>
+        <span class="n">ast</span> <span class="o">=</span> <span class="n">MTDocument</span><span class="p">(</span><span class="n">md_text</span><span class="p">)</span>
+        <span class="n">cleaned</span> <span class="o">=</span> <span class="n">renderer</span><span class="o">.</span><span class="n">render</span><span class="p">(</span><span class="n">ast</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+        <span class="n">soup</span> <span class="o">=</span> <span class="n">BeautifulSoup</span><span class="p">(</span><span class="n">cleaned</span><span class="p">,</span> <span class="s2">&quot;html.parser&quot;</span><span class="p">)</span>
+        <span class="n">first_heading_tag</span> <span class="o">=</span> <span class="n">soup</span><span class="o">.</span><span class="n">find</span><span class="p">([</span><span class="s2">&quot;h1&quot;</span><span class="p">,</span> <span class="s2">&quot;h2&quot;</span><span class="p">,</span> <span class="s2">&quot;h3&quot;</span><span class="p">,</span> <span class="s2">&quot;h4&quot;</span><span class="p">,</span> <span class="s2">&quot;h5&quot;</span><span class="p">,</span> <span class="s2">&quot;h6&quot;</span><span class="p">])</span>
+        <span class="n">heading</span> <span class="o">=</span> <span class="n">first_heading_tag</span><span class="o">.</span><span class="n">get_text</span><span class="p">(</span><span class="n">strip</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="k">if</span> <span class="n">first_heading_tag</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="k">return</span> <span class="n">heading</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="wurzel.steps.docling.docling_step.DoclingStep.run" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">run</span><span class="p">(</span><span class="n">inpt</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Run the document extraction and conversion process for German PDFs.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>inpt</code></b>
+                  (<code>None</code>)
+              –
+              <div class="doc-md-description">
+                <p>Input parameter (not used).</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code><span title="list">list</span>[<span title="wurzel.datacontract.common.MarkdownDataContract">MarkdownDataContract</span>]</code>
+              –
+              <div class="doc-md-description">
+                <p>List[MarkdownDataContract]: List of converted Markdown contracts.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+            <details class="quote">
+              <summary>Source code in <code>wurzel/steps/docling/docling_step.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inpt</span><span class="p">:</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">MarkdownDataContract</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Run the document extraction and conversion process for German PDFs.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        inpt (None): Input parameter (not used).</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        List[MarkdownDataContract]: List of converted Markdown contracts.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">urls</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">URLS</span>
+    <span class="n">contracts</span> <span class="o">=</span> <span class="p">[]</span>
+
+    <span class="k">for</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">urls</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">converted_contract</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">converter</span><span class="o">.</span><span class="n">convert</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+            <span class="n">md</span> <span class="o">=</span> <span class="n">converted_contract</span><span class="o">.</span><span class="n">document</span><span class="o">.</span><span class="n">export_to_markdown</span><span class="p">(</span><span class="n">image_placeholder</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">)</span>
+            <span class="n">keyword</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">extract_keywords</span><span class="p">(</span><span class="n">md</span><span class="p">)</span>
+            <span class="n">contract_instance</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;md&quot;</span><span class="p">:</span> <span class="n">md</span><span class="p">,</span> <span class="s2">&quot;keywords&quot;</span><span class="p">:</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">DEFAULT_KEYWORD</span><span class="p">,</span> <span class="n">keyword</span><span class="p">]),</span> <span class="s2">&quot;url&quot;</span><span class="p">:</span> <span class="n">url</span><span class="p">}</span>
+            <span class="n">contracts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">contract_instance</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="p">(</span><span class="ne">FileNotFoundError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to verify URL: </span><span class="si">{</span><span class="n">url</span><span class="si">}</span><span class="s2">. Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">continue</span>
+
+    <span class="k">return</span> <span class="n">contracts</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<a id="wurzel.steps.docling.settings"></a>
+    <div class="doc doc-contents first">
+
+        <p>Specific docling settings.</p>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="wurzel.steps.docling.settings.DoclingSettings" class="doc doc-heading">
+            <code>DoclingSettings</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="wurzel.step.Settings">Settings</span></code></p>
+
+
+        <p>DoclingSettings is a configuration class that inherits from the base <code>Settings</code> class.
+It provides customizable settings for document processing.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Attributes:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>FORCE_FULL_PAGE_OCR</code></b>
+                  (<code><span title="bool">bool</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>A flag to enforce full-page OCR processing. Defaults to True.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>FORMATS</code></b>
+                  (<code><span title="list">list</span>[<span title="docling.datamodel.base_models.InputFormat">InputFormat</span>]</code>)
+              –
+              <div class="doc-md-description">
+                <p>A list of supported input formats for document processing.
+Supported formats include:
+- "docx"
+- "asciidoc"
+- "pptx"
+- "html"
+- "image"
+- "pdf"
+- "md"
+- "csv"
+- "xlsx"
+- "xml_uspto"
+- "xml_jats"
+- "json_docling"</p>
+              </div>
+            </li>
+            <li>
+              <b><code>URLS</code></b>
+                  (<code><span title="list">list</span>[<span title="str">str</span>]</code>)
+              –
+              <div class="doc-md-description">
+                <p>A list of URLs for additional configuration or resources. Defaults to an empty list.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>wurzel/steps/docling/settings.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">12</span>
+<span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">DoclingSettings</span><span class="p">(</span><span class="n">Settings</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;DoclingSettings is a configuration class that inherits from the base `Settings` class.</span>
+<span class="sd">    It provides customizable settings for document processing.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        FORCE_FULL_PAGE_OCR (bool): A flag to enforce full-page OCR processing. Defaults to True.</span>
+<span class="sd">        FORMATS (list[InputFormat]): A list of supported input formats for document processing.</span>
+<span class="sd">            Supported formats include:</span>
+<span class="sd">            - &quot;docx&quot;</span>
+<span class="sd">            - &quot;asciidoc&quot;</span>
+<span class="sd">            - &quot;pptx&quot;</span>
+<span class="sd">            - &quot;html&quot;</span>
+<span class="sd">            - &quot;image&quot;</span>
+<span class="sd">            - &quot;pdf&quot;</span>
+<span class="sd">            - &quot;md&quot;</span>
+<span class="sd">            - &quot;csv&quot;</span>
+<span class="sd">            - &quot;xlsx&quot;</span>
+<span class="sd">            - &quot;xml_uspto&quot;</span>
+<span class="sd">            - &quot;xml_jats&quot;</span>
+<span class="sd">            - &quot;json_docling&quot;</span>
+<span class="sd">        URLS (list[str]): A list of URLs for additional configuration or resources. Defaults to an empty list.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">FORCE_FULL_PAGE_OCR</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">FORMATS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">InputFormat</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&quot;docx&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;asciidoc&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;pptx&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;html&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;image&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;pdf&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;md&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;csv&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;xlsx&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;xml_uspto&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;xml_jats&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;json_docling&quot;</span><span class="p">,</span>
+    <span class="p">]</span>
+    <span class="n">URLS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">DEFAULT_KEYWORD</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../../developping/getting_started/" class="btn btn-neutral float-left" title="👩‍💻 Developer Guide"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../embedding/" class="btn btn-neutral float-right" title="Embedding">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/telekom/wurzel" class="fa fa-code-fork" style="color: #fcfcfc"> telekom/wurzel</a>
+        </span>
+    
+    
+      <span><a href="../../developping/getting_started/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../embedding/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
