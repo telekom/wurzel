@@ -78,6 +78,7 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
 
             progress_bar.update(1)
             return MarkdownDataContract(md=md, url=url_item.url, keywords=url_item.title)
+
         with tqdm(total=len(inpt), desc="Processing URLs") as progress_bar:
             results = Parallel(n_jobs=self.settings.CONCURRENCY_NUM, backend="threading")(delayed(fetch_and_process)(item) for item in inpt)
 
