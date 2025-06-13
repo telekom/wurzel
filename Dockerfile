@@ -25,7 +25,7 @@ RUN . ${VENV}/bin/activate && pip install setuptools==78.1.0
 RUN . ${VENV}/bin/activate &&  pip install uv
 
 RUN . ${VENV}/bin/activate && uv pip install --upgrade pip && \
-                               uv pip install ".[all]"
+                               uv pip install "."
 # Prevents Python from writing pyc files.
 ENV PYTHONDONTWRITEBYTECODE=1
 
