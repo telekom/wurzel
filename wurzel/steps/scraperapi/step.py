@@ -62,7 +62,7 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
             except requests.exceptions.HTTPError:
                 log.warning(
                     "Crawling failed",
-                    extra={"url": url_item.url, "error": r.text, "status": r.status_code, "retries": self.settings.RETRY},
+                    extra={"url": url_item.url, "status": r.status_code, "retries": self.settings.RETRY},
                 )
                 return None
             try:
@@ -78,7 +78,6 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
 
             progress_bar.update(1)
             return MarkdownDataContract(md=md, url=url_item.url, keywords=url_item.title)
-
         with tqdm(total=len(inpt), desc="Processing URLs") as progress_bar:
             results = Parallel(n_jobs=self.settings.CONCURRENCY_NUM, backend="threading")(delayed(fetch_and_process)(item) for item in inpt)
 
@@ -89,11 +88,12 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
         return filtered_results
 
     def __init__(self) -> None:
-        logging.getLogger("connectionpool.urllib3.connectionpool.urlopen").setLevel("ERROR")
+        logging.getLogger("urllib3").setLevel("ERROR")
         super().__init__()
 
     def finalize(self) -> None:
-        logging.getLogger("connectionpool.urllib3.connectionpool.urlopen").setLevel("WARNING")
+        logging.getLogger("urllib3").setLevel("WARNING")
+
         return super().finalize()
 
     def _filter_body(self, html: str) -> str:
