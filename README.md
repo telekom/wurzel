@@ -41,7 +41,7 @@ wurzel inspect wurzel.steps.manual_markdown.ManualMarkdownStep
 
 ### Building your one step
 
-For detailed instructions and examples on how to use wurzel, please refer to our [official documentation](https://telekom.github.com/wurzel/).
+For detailed instructions and examples on how to use wurzel, please refer to our [official documentation](https://telekom.github.io/wurzel/).
 
 ## Code of Conduct
 
