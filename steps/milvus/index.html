@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://telekom.github.io/wurzel/steps/milvus/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Milvus - Wurzel</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Milvus";
+        var mkdocs_page_input_path = "steps/milvus.md";
+        var mkdocs_page_url = "/wurzel/steps/milvus/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Wurzel
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Wurzel</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developping</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developping/Building_your_one_step/">📚 How to Build Your Own Step</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developping/define_pipline/">🔗 Defining a Pipeline in Wurzel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developping/docs/">📖 Documentation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developping/getting_started/">👩‍💻 Developer Guide</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Steps</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../docling/">Docling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../embedding/">Embedding</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Milvus</a>
+    <ul class="current">
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../qdrant/">Qdrant</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Wurzel</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Steps</li>
+      <li class="breadcrumb-item active">Milvus</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/telekom/wurzel/edit/master/docs/steps/milvus.md">Edit on telekom/wurzel</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <div class="doc doc-object doc-module">
+
+
+
+<a id="wurzel.steps.milvus.step"></a>
+    <div class="doc doc-contents first">
+
+        <p>containing the DVCStep sending embedding data into milvus.</p>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="wurzel.steps.milvus.step.MilvusConnectorStep" class="doc doc-heading">
+            <code>MilvusConnectorStep</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="wurzel.step.TypedStep">TypedStep</span>[<a class="autorefs autorefs-internal" title="MilvusSettings (wurzel.steps.milvus.settings.MilvusSettings)" href="#wurzel.steps.milvus.settings.MilvusSettings">MilvusSettings</a>, <span title="pandera.typing.DataFrame">DataFrame</span>[<span title="wurzel.steps.embedding.data.EmbeddingResult">EmbeddingResult</span>], <span title="wurzel.steps.milvus.data.Result">Result</span>]</code></p>
+
+
+        <p>Milvus connector step. It consumes embedding csv files, creates a new schema and inserts the embeddings.</p>
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>wurzel/steps/milvus/step.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"> 26</span>
+<span class="normal"> 27</span>
+<span class="normal"> 28</span>
+<span class="normal"> 29</span>
+<span class="normal"> 30</span>
+<span class="normal"> 31</span>
+<span class="normal"> 32</span>
+<span class="normal"> 33</span>
+<span class="normal"> 34</span>
+<span class="normal"> 35</span>
+<span class="normal"> 36</span>
+<span class="normal"> 37</span>
+<span class="normal"> 38</span>
+<span class="normal"> 39</span>
+<span class="normal"> 40</span>
+<span class="normal"> 41</span>
+<span class="normal"> 42</span>
+<span class="normal"> 43</span>
+<span class="normal"> 44</span>
+<span class="normal"> 45</span>
+<span class="normal"> 46</span>
+<span class="normal"> 47</span>
+<span class="normal"> 48</span>
+<span class="normal"> 49</span>
+<span class="normal"> 50</span>
+<span class="normal"> 51</span>
+<span class="normal"> 52</span>
+<span class="normal"> 53</span>
+<span class="normal"> 54</span>
+<span class="normal"> 55</span>
+<span class="normal"> 56</span>
+<span class="normal"> 57</span>
+<span class="normal"> 58</span>
+<span class="normal"> 59</span>
+<span class="normal"> 60</span>
+<span class="normal"> 61</span>
+<span class="normal"> 62</span>
+<span class="normal"> 63</span>
+<span class="normal"> 64</span>
+<span class="normal"> 65</span>
+<span class="normal"> 66</span>
+<span class="normal"> 67</span>
+<span class="normal"> 68</span>
+<span class="normal"> 69</span>
+<span class="normal"> 70</span>
+<span class="normal"> 71</span>
+<span class="normal"> 72</span>
+<span class="normal"> 73</span>
+<span class="normal"> 74</span>
+<span class="normal"> 75</span>
+<span class="normal"> 76</span>
+<span class="normal"> 77</span>
+<span class="normal"> 78</span>
+<span class="normal"> 79</span>
+<span class="normal"> 80</span>
+<span class="normal"> 81</span>
+<span class="normal"> 82</span>
+<span class="normal"> 83</span>
+<span class="normal"> 84</span>
+<span class="normal"> 85</span>
+<span class="normal"> 86</span>
+<span class="normal"> 87</span>
+<span class="normal"> 88</span>
+<span class="normal"> 89</span>
+<span class="normal"> 90</span>
+<span class="normal"> 91</span>
+<span class="normal"> 92</span>
+<span class="normal"> 93</span>
+<span class="normal"> 94</span>
+<span class="normal"> 95</span>
+<span class="normal"> 96</span>
+<span class="normal"> 97</span>
+<span class="normal"> 98</span>
+<span class="normal"> 99</span>
+<span class="normal">100</span>
+<span class="normal">101</span>
+<span class="normal">102</span>
+<span class="normal">103</span>
+<span class="normal">104</span>
+<span class="normal">105</span>
+<span class="normal">106</span>
+<span class="normal">107</span>
+<span class="normal">108</span>
+<span class="normal">109</span>
+<span class="normal">110</span>
+<span class="normal">111</span>
+<span class="normal">112</span>
+<span class="normal">113</span>
+<span class="normal">114</span>
+<span class="normal">115</span>
+<span class="normal">116</span>
+<span class="normal">117</span>
+<span class="normal">118</span>
+<span class="normal">119</span>
+<span class="normal">120</span>
+<span class="normal">121</span>
+<span class="normal">122</span>
+<span class="normal">123</span>
+<span class="normal">124</span>
+<span class="normal">125</span>
+<span class="normal">126</span>
+<span class="normal">127</span>
+<span class="normal">128</span>
+<span class="normal">129</span>
+<span class="normal">130</span>
+<span class="normal">131</span>
+<span class="normal">132</span>
+<span class="normal">133</span>
+<span class="normal">134</span>
+<span class="normal">135</span>
+<span class="normal">136</span>
+<span class="normal">137</span>
+<span class="normal">138</span>
+<span class="normal">139</span>
+<span class="normal">140</span>
+<span class="normal">141</span>
+<span class="normal">142</span>
+<span class="normal">143</span>
+<span class="normal">144</span>
+<span class="normal">145</span>
+<span class="normal">146</span>
+<span class="normal">147</span>
+<span class="normal">148</span>
+<span class="normal">149</span>
+<span class="normal">150</span>
+<span class="normal">151</span>
+<span class="normal">152</span>
+<span class="normal">153</span>
+<span class="normal">154</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">MilvusConnectorStep</span><span class="p">(</span><span class="n">TypedStep</span><span class="p">[</span><span class="n">MilvusSettings</span><span class="p">,</span> <span class="n">DataFrame</span><span class="p">[</span><span class="n">EmbeddingResult</span><span class="p">],</span> <span class="n">MilvusResult</span><span class="p">]):</span>  <span class="c1"># pragma: no cover</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Milvus connector step. It consumes embedding csv files, creates a new schema and inserts the embeddings.&quot;&quot;&quot;</span>
+
+    <span class="n">milvus_timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">20.0</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="c1"># milvus stuff passed as environment</span>
+        <span class="c1"># because we need to enject them into the DVC step during runtime,</span>
+        <span class="c1"># not during DVC pipeline definition time</span>
+        <span class="n">uri</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;http://</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">HOST</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">PORT</span><span class="si">}</span><span class="s2">&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">PASSWORD</span> <span class="ow">or</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">USER</span><span class="p">:</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;MILVUS_HOST, MILVUS_USER or MILVUS_PASSWORD for Milvus not provided. Thus running in non-credential Mode&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="p">:</span> <span class="n">MilvusClient</span> <span class="o">=</span> <span class="n">MilvusClient</span><span class="p">(</span>
+            <span class="n">uri</span><span class="o">=</span><span class="n">uri</span><span class="p">,</span>
+            <span class="n">user</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">USER</span><span class="p">,</span>
+            <span class="n">password</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">PASSWORD</span><span class="p">,</span>
+            <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">milvus_timeout</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collection_index</span><span class="p">:</span> <span class="n">IndexParams</span> <span class="o">=</span> <span class="n">IndexParams</span><span class="p">(</span><span class="o">**</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">INDEX_PARAMS</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">collection_history_len</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">COLLECTION_HISTORY_LEN</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">collection_prefix</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">COLLECTION</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__del__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;client&quot;</span><span class="p">,</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inpt</span><span class="p">:</span> <span class="n">DataFrame</span><span class="p">[</span><span class="n">EmbeddingResult</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">MilvusResult</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_insert_embeddings</span><span class="p">(</span><span class="n">inpt</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">old</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__construct_last_collection_name</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">NoPreviousCollection</span><span class="p">:</span>
+            <span class="n">old</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_retire_collection</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">MilvusResult</span><span class="p">(</span><span class="n">new</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">__construct_current_collection_name</span><span class="p">(),</span> <span class="n">old</span><span class="o">=</span><span class="n">old</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_insert_embeddings</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">):</span>
+        <span class="n">collection_name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">__construct_next_collection_name</span><span class="p">()</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Creating milvus collection </span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">collection_schema</span> <span class="o">=</span> <span class="n">CollectionSchema</span><span class="p">(</span>
+            <span class="n">fields</span><span class="o">=</span><span class="p">[</span>
+                <span class="n">FieldSchema</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;pk&quot;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DataType</span><span class="o">.</span><span class="n">INT64</span><span class="p">,</span> <span class="n">is_primary</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">auto_id</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+                <span class="n">FieldSchema</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DataType</span><span class="o">.</span><span class="n">VARCHAR</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">3000</span><span class="p">),</span>
+                <span class="n">FieldSchema</span><span class="p">(</span>
+                    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;vector&quot;</span><span class="p">,</span>
+                    <span class="n">dtype</span><span class="o">=</span><span class="n">DataType</span><span class="o">.</span><span class="n">FLOAT_VECTOR</span><span class="p">,</span>
+                    <span class="n">dim</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;vector&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span>
+                <span class="p">),</span>
+                <span class="n">FieldSchema</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;url&quot;</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DataType</span><span class="o">.</span><span class="n">VARCHAR</span><span class="p">,</span> <span class="n">max_length</span><span class="o">=</span><span class="mi">300</span><span class="p">),</span>
+            <span class="p">],</span>
+            <span class="n">description</span><span class="o">=</span><span class="s2">&quot;Collection for storing Milvus embeddings&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;schema created&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">create_collection</span><span class="p">(</span><span class="n">collection_name</span><span class="o">=</span><span class="n">collection_name</span><span class="p">,</span> <span class="n">schema</span><span class="o">=</span><span class="n">collection_schema</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;collection created&quot;</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Inserting embedding </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="si">}</span><span class="s2"> into collection </span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">result</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">collection_name</span><span class="o">=</span><span class="n">collection_name</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="s2">&quot;records&quot;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">result</span><span class="p">[</span><span class="s2">&quot;insert_count&quot;</span><span class="p">]</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">StepFailed</span><span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;Failed to insert df into collection &#39;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">&#39;.</span><span class="si">{</span><span class="n">result</span><span class="p">[</span><span class="s1">&#39;insert_count&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="si">}</span><span class="s2"> where successful&quot;</span>
+            <span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Successfully inserted </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="si">}</span><span class="s2"> vectors into collection &#39;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">create_index</span><span class="p">(</span><span class="n">collection_name</span><span class="o">=</span><span class="n">collection_name</span><span class="p">,</span> <span class="n">index_params</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">collection_index</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Successfully craeted index </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">collection_index</span><span class="si">}</span><span class="s2"> into collection &#39;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">load_collection</span><span class="p">(</span><span class="n">collection_name</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Successfully loaded the collection </span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">&#39; into collection &#39;</span><span class="si">{</span><span class="n">collection_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">release_collection</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">__construct_last_collection_name</span><span class="p">())</span>
+        <span class="k">except</span> <span class="n">NoPreviousCollection</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_update_alias</span><span class="p">(</span><span class="n">collection_name</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_retire_collection</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">collections_versioned</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_collection_versions</span><span class="p">()</span>
+        <span class="n">to_delete</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">collections_versioned</span><span class="o">.</span><span class="n">keys</span><span class="p">())[:</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">collection_history_len</span><span class="p">]</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">to_delete</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="k">for</span> <span class="n">col_v</span> <span class="ow">in</span> <span class="n">to_delete</span><span class="p">:</span>
+            <span class="n">col</span> <span class="o">=</span> <span class="n">collections_versioned</span><span class="p">[</span><span class="n">col_v</span><span class="p">]</span>
+            <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;deleting </span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2"> collection caused by retirement&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">drop_collection</span><span class="p">(</span><span class="n">col</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">milvus_timeout</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_update_alias</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">collection_name</span><span class="p">):</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">create_alias</span><span class="p">(</span>
+                <span class="n">collection_name</span><span class="o">=</span><span class="n">collection_name</span><span class="p">,</span>
+                <span class="n">alias</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">collection_prefix</span><span class="p">,</span>
+                <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">milvus_timeout</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">except</span> <span class="n">MilvusException</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">alter_alias</span><span class="p">(</span>
+                <span class="n">collection_name</span><span class="o">=</span><span class="n">collection_name</span><span class="p">,</span>
+                <span class="n">alias</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">collection_prefix</span><span class="p">,</span>
+                <span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">milvus_timeout</span><span class="p">,</span>
+            <span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__construct_next_collection_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">previous_collections</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_collection_versions</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">previous_collections</span><span class="p">:</span>
+            <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">collection_prefix</span><span class="si">}</span><span class="s2">_v1&quot;</span>
+        <span class="n">previous_version</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">previous_collections</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found version v</span><span class="si">{</span><span class="n">previous_version</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">collection_prefix</span><span class="si">}</span><span class="s2">_v</span><span class="si">{</span><span class="n">previous_version</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__construct_last_collection_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">previous_collections</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_collection_versions</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">previous_collections</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">previous_collections</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">NoPreviousCollection</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Milvus does not contain a previous collection for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">collection_prefix</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">previous_version</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">previous_collections</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found previous version v</span><span class="si">{</span><span class="n">previous_version</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">collection_prefix</span><span class="si">}</span><span class="s2">_v</span><span class="si">{</span><span class="n">previous_version</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">__construct_current_collection_name</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="n">previous_collections</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_collection_versions</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">previous_collections</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">previous_collections</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">NoPreviousCollection</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Milvus does not contain a previous collection for </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">collection_prefix</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">previous_version</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">previous_collections</span><span class="o">.</span><span class="n">keys</span><span class="p">())[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found previous version v</span><span class="si">{</span><span class="n">previous_version</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">collection_prefix</span><span class="si">}</span><span class="s2">_v</span><span class="si">{</span><span class="n">previous_version</span><span class="si">}</span><span class="s2">&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_collection_versions</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+        <span class="n">previous_collections</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">list_collections</span><span class="p">(</span><span class="n">timeout</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">milvus_timeout</span><span class="p">)</span>
+        <span class="n">versioned_collections</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="nb">int</span><span class="p">(</span><span class="n">previous</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_v&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]):</span> <span class="n">previous</span> <span class="k">for</span> <span class="n">previous</span> <span class="ow">in</span> <span class="n">previous_collections</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">collection_prefix</span> <span class="ow">in</span> <span class="n">previous</span>
+        <span class="p">}</span>
+        <span class="k">return</span> <span class="n">versioned_collections</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-module">
+
+
+
+<a id="wurzel.steps.milvus.settings"></a>
+    <div class="doc doc-contents first">
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="wurzel.steps.milvus.settings.MilvusSettings" class="doc doc-heading">
+            <code>MilvusSettings</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="wurzel.step.settings.Settings">Settings</span></code></p>
+
+
+        <p>MilvusSettings is a configuration class for managing settings related to MilvusDB.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Attributes:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>HOST</code></b>
+                  (<code><span title="str">str</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>The hostname or IP address of the Milvus server. Defaults to "localhost".</p>
+              </div>
+            </li>
+            <li>
+              <b><code>PORT</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>The port number for the Milvus server. Must be between 1 and 65535. Defaults to 19530.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>COLLECTION</code></b>
+                  (<code><span title="str">str</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>The name of the collection in MilvusDB.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>COLLECTION_HISTORY_LEN</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>The length of the collection history. Defaults to 10.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>SEARCH_PARAMS</code></b>
+                  (<code><span title="dict">dict</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Parameters for search operations in MilvusDB. Defaults to {"metric_type": "IP", "params": {}}.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>INDEX_PARAMS</code></b>
+                  (<code><span title="dict">dict</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Parameters for indexing operations in MilvusDB. Defaults to {"index_type": "FLAT",
+                    "field_name": "vector", "metric_type": "IP", "params": {}}.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>USER</code></b>
+                  (<code><span title="str">str</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>The username for authentication with MilvusDB.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>PASSWORD</code></b>
+                  (<code><span title="str">str</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>The password for authentication with MilvusDB.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>SECURED</code></b>
+                  (<code><span title="bool">bool</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Indicates whether the connection to MilvusDB is secured. Defaults to False.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<p><span class="doc-section-title">Methods:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+            <tr class="doc-section-item">
+              <td><code><a class="autorefs autorefs-internal" title="parse_json(v)
+
+  
+      classmethod
+   (wurzel.steps.milvus.settings.MilvusSettings.parse_json)" href="#wurzel.steps.milvus.settings.MilvusSettings.parse_json">parse_json</a></code></td>
+              <td>
+                <div class="doc-md-description">
+                  <p>Validates and parses JSON strings into Python objects for SEARCH_PARAMS and INDEX_PARAMS.</p>
+                </div>
+              </td>
+            </tr>
+      </tbody>
+    </table>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>v</code></b>
+                  (<code><span title="str">str</span> or <span title="dict">dict</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>The value to validate and parse.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+<b><code>dict</code></b>              –
+              <div class="doc-md-description">
+                <p>The parsed dictionary if the input is a JSON string, or the original value if it is already a dictionary.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>wurzel/steps/milvus/settings.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">13</span>
+<span class="normal">14</span>
+<span class="normal">15</span>
+<span class="normal">16</span>
+<span class="normal">17</span>
+<span class="normal">18</span>
+<span class="normal">19</span>
+<span class="normal">20</span>
+<span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span>
+<span class="normal">25</span>
+<span class="normal">26</span>
+<span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span>
+<span class="normal">52</span>
+<span class="normal">53</span>
+<span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">MilvusSettings</span><span class="p">(</span><span class="n">Settings</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;MilvusSettings is a configuration class for managing settings related to MilvusDB.</span>
+
+<span class="sd">    Attributes:</span>
+<span class="sd">        HOST (str): The hostname or IP address of the Milvus server. Defaults to &quot;localhost&quot;.</span>
+<span class="sd">        PORT (int): The port number for the Milvus server. Must be between 1 and 65535. Defaults to 19530.</span>
+<span class="sd">        COLLECTION (str): The name of the collection in MilvusDB.</span>
+<span class="sd">        COLLECTION_HISTORY_LEN (int): The length of the collection history. Defaults to 10.</span>
+<span class="sd">        SEARCH_PARAMS (dict): Parameters for search operations in MilvusDB. Defaults to {&quot;metric_type&quot;: &quot;IP&quot;, &quot;params&quot;: {}}.</span>
+<span class="sd">        INDEX_PARAMS (dict): Parameters for indexing operations in MilvusDB. Defaults to {&quot;index_type&quot;: &quot;FLAT&quot;,</span>
+<span class="sd">                                &quot;field_name&quot;: &quot;vector&quot;, &quot;metric_type&quot;: &quot;IP&quot;, &quot;params&quot;: {}}.</span>
+<span class="sd">        USER (str): The username for authentication with MilvusDB.</span>
+<span class="sd">        PASSWORD (str): The password for authentication with MilvusDB.</span>
+<span class="sd">        SECURED (bool): Indicates whether the connection to MilvusDB is secured. Defaults to False.</span>
+
+<span class="sd">    Methods:</span>
+<span class="sd">        parse_json(cls, v): Validates and parses JSON strings into Python objects for SEARCH_PARAMS and INDEX_PARAMS.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">                v (str or dict): The value to validate and parse.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">                dict: The parsed dictionary if the input is a JSON string, or the original value if it is already a dictionary.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">HOST</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;localhost&quot;</span>
+    <span class="n">PORT</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">Field</span><span class="p">(</span><span class="mi">19530</span><span class="p">,</span> <span class="n">gt</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">le</span><span class="o">=</span><span class="mi">65535</span><span class="p">)</span>
+    <span class="n">COLLECTION</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">COLLECTION_HISTORY_LEN</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span>
+    <span class="n">SEARCH_PARAMS</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;metric_type&quot;</span><span class="p">:</span> <span class="s2">&quot;IP&quot;</span><span class="p">,</span> <span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="p">{}}</span>
+    <span class="n">INDEX_PARAMS</span><span class="p">:</span> <span class="nb">dict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;index_type&quot;</span><span class="p">:</span> <span class="s2">&quot;FLAT&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;field_name&quot;</span><span class="p">:</span> <span class="s2">&quot;vector&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;metric_type&quot;</span><span class="p">:</span> <span class="s2">&quot;IP&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;params&quot;</span><span class="p">:</span> <span class="p">{},</span>
+    <span class="p">}</span>
+    <span class="n">USER</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">PASSWORD</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">SECURED</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+
+    <span class="nd">@field_validator</span><span class="p">(</span><span class="s2">&quot;SEARCH_PARAMS&quot;</span><span class="p">,</span> <span class="s2">&quot;INDEX_PARAMS&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;before&quot;</span><span class="p">)</span>
+    <span class="nd">@classmethod</span>
+    <span class="c1"># pylint: disable-next=R0801</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">parse_json</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Validation for json.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">v</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="wurzel.steps.milvus.settings.MilvusSettings.parse_json" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">parse_json</span><span class="p">(</span><span class="n">v</span><span class="p">)</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-classmethod"><code>classmethod</code></small>
+  </span>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Validation for json.</p>
+
+
+            <details class="quote">
+              <summary>Source code in <code>wurzel/steps/milvus/settings.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">54</span>
+<span class="normal">55</span>
+<span class="normal">56</span>
+<span class="normal">57</span>
+<span class="normal">58</span>
+<span class="normal">59</span>
+<span class="normal">60</span>
+<span class="normal">61</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nd">@field_validator</span><span class="p">(</span><span class="s2">&quot;SEARCH_PARAMS&quot;</span><span class="p">,</span> <span class="s2">&quot;INDEX_PARAMS&quot;</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;before&quot;</span><span class="p">)</span>
+<span class="nd">@classmethod</span>
+<span class="c1"># pylint: disable-next=R0801</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_json</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">v</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Validation for json.&quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">v</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../embedding/" class="btn btn-neutral float-left" title="Embedding"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../qdrant/" class="btn btn-neutral float-right" title="Qdrant">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/telekom/wurzel" class="fa fa-code-fork" style="color: #fcfcfc"> telekom/wurzel</a>
+        </span>
+    
+    
+      <span><a href="../embedding/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../qdrant/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
