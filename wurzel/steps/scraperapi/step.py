@@ -51,6 +51,7 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
                 "max_cost": str(self.settings.MAX_COST),
             }
             try:
+                r = None  # for short error handling
                 r = session.get(self.settings.API, params=payload, timeout=self.settings.TIMEOUT)
                 r.raise_for_status()
             except requests.exceptions.ReadTimeout:
@@ -59,18 +60,13 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
                     extra={"url": url_item.url},
                 )
                 return None
-            except requests.exceptions.HTTPError:
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
                 log.warning(
                     "Crawling failed",
-                    extra={"url": url_item.url, "status": r.status_code, "retries": self.settings.RETRY},
+                    extra={"url": url_item.url, "status": r.status_code if r else None, "retries": self.settings.RETRY},
                 )
                 return None
-            except ConnectionError:
-                log.warning(
-                    "Crawling failed",
-                    extra={"url": url_item.url, "retries": self.settings.RETRY},
-                )
-                return None
+
             try:
                 md = to_markdown(self._filter_body(r.text))
             except (KeyError, IndexError):
