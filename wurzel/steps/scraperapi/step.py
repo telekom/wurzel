@@ -65,6 +65,12 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
                     extra={"url": url_item.url, "status": r.status_code, "retries": self.settings.RETRY},
                 )
                 return None
+            except ConnectionError:
+                log.warning(
+                    "Crawling failed",
+                    extra={"url": url_item.url, "retries": self.settings.RETRY},
+                )
+                return None
             try:
                 md = to_markdown(self._filter_body(r.text))
             except (KeyError, IndexError):
