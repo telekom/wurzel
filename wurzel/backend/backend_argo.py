@@ -4,7 +4,7 @@
 
 from pathlib import Path
 
-from hera.workflows import DAG, Artifact, Container, Task, Workflow
+from hera.workflows import DAG, Artifact, Container, Task, Workflow, CronWorkflow
 from wurzel.backend.backend import Backend
 from wurzel.cli import generate_cli_call
 from wurzel.step import TypedStep
@@ -20,6 +20,7 @@ class ArgoBackend(Backend):
 
     def __init__(
         self,
+        schedule:str = "0 4 * * *",
         data_dir: Path = Path("."),
         executer: BaseStepExecutor = PrometheusStepExecutor,
         encapsulate_env: bool = True,
@@ -30,7 +31,7 @@ class ArgoBackend(Backend):
         self.executor: type[BaseStepExecutor] = executer
         self.encapsulate_env = encapsulate_env
         self.data_dir = data_dir
-
+        self.schedule = schedule
         self.image = image
         super().__init__()
 
@@ -41,14 +42,14 @@ class ArgoBackend(Backend):
         return self._generate_workflow(step).to_yaml()
 
     def _generate_workflow(self, step: type[TypedStep]) -> Workflow:
-        with Workflow(
-            generate_name="wurzel",
+        with CronWorkflow(
+            schedule=self.schedule,
+            name="wurzel",
             entrypoint="wurzel-pipeline",
         ) as w:
             self.__generate_dag(step)
         return w
 
-    w = Workflow()
 
     def _create_task(self, dag: DAG, step: type[TypedStep], argo_reqs: list[Task]) -> Task:
         if step.required_steps:
@@ -56,7 +57,7 @@ class ArgoBackend(Backend):
         else:
             inputs = []
         commands: list[str] = [entry for entry in generate_cli_call(
-            step.__class__, inputs=[inpt.from_ for inpt in inputs], output=self.data_dir / step.__class__.__name__
+            step.__class__, inputs=[inpt.path for inpt in inputs], output=self.data_dir / step.__class__.__name__
         ).split(" ") if entry.strip()]
         dag.__exit__()
         wurzel_call = Container(
