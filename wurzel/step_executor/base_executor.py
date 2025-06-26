@@ -292,7 +292,7 @@ class BaseStepExecutor:
                     time_to_save=store_time,
                     step_name=step_cls.__name__,
                     inputs=try_get_length(inpt),
-                    results=getattr(res, "__len__", lambda: 1)(),
+                    results=try_get_length(res),
                     history=history.get(),
                 )
                 log.info(
