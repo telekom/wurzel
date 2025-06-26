@@ -285,7 +285,7 @@ class BaseStepExecutor:
                 store_time = 0
                 if output_path:
                     self.store(step, history, res, output_path)
-                    store_time = time.time() - run_start
+                    store_time = time.time() - run_time
                 report = StepReport(
                     time_to_load=load_time,
                     time_to_execute=run_time,
