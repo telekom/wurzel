@@ -1,5 +1,12 @@
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/telekom/wurzel/actions)
+[![Docs](https://img.shields.io/badge/docs-live-brightgreen)](https://telekom.github.io/wurzel/)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
+[![License MIT](https://img.shields.io/github/license/docling-project/docling)](https://reuse.software/)
+[![Pydantic v2](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/pydantic/pydantic/main/docs/badge/v2.json)](https://pydantic.dev)
+
 # wurzel
 <img src=https://raw.githubusercontent.com/telekom/wurzel/main/docs/icon.png width=20% align=right>
+
 
 wurzel is the german word for [root](https://en.wikipedia.org/wiki/Root). So with this framework we provide a combination of the best out of the whole domain of retrieval and beyond.
 
@@ -25,18 +32,26 @@ pip install wurzel
 ```
 
 
-## With CLI
+## Run a Step (Two Ways)
 
-ManualMarkdownStep requires a source-folder to be passed by environment-variable:
-
-```sh
-MANUALMARKDOWNSTEP__FOLDER_PATH="." wurzel run wurzel.steps.manual_markdown.ManualMarkdownStep
+### 1. CLI-based Execution
+Run a step using the CLI:
+```bash
+wurzel run <step_file_path> --inputs ./data --output ./out
 ```
+To inspect the step requirements:
+```bash
+wurzel inspect wurzel.<step_path>
+```
+### 2. Programmatic Execution (Python)
+Run a step using the snippet below:
+```bash
+from wurzel.steps import step
+from pathlib import Path
+from wurzel.step_executor import BaseStepExecutor
 
-Other Steps require other environment-variables. find it out via the Class Definition of the step or by calling:
-
-```sh
-wurzel inspect wurzel.steps.manual_markdown.ManualMarkdownStep
+with BaseStepExecutor() as ex:
+    ex(step, Path("./input"), Path("./output"))
 ```
 
 ### Building your one step
