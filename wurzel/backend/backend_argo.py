@@ -4,11 +4,21 @@
 
 from pathlib import Path
 
-from hera.workflows import DAG, Artifact, Container, Task, Workflow, CronWorkflow
+from hera.workflows import DAG, Container, Task, Workflow, CronWorkflow, S3Artifact,ConfigMapEnvFrom, Container, SecretEnvFrom
+from hera.workflows.archive import NoneArchiveStrategy
+from pydantic import BaseModel
 from wurzel.backend.backend import Backend
 from wurzel.cli import generate_cli_call
 from wurzel.step import TypedStep
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
+
+
+
+
+
+class ArtifactsSettings(BaseModel):
+    pass
+
 
 
 class ArgoBackend(Backend):
@@ -46,14 +56,16 @@ class ArgoBackend(Backend):
             schedule=self.schedule,
             name="wurzel",
             entrypoint="wurzel-pipeline",
+            namespace="knowledge-pipeline-dev"
         ) as w:
             self.__generate_dag(step)
         return w
 
 
     def _create_task(self, dag: DAG, step: type[TypedStep], argo_reqs: list[Task]) -> Task:
+
         if step.required_steps:
-            inputs = [Artifact(name="wurzel-artifact", path=(self.data_dir/req.__class__.__name__).as_posix()) for req in step.required_steps]
+            inputs = [S3Artifact(key=req.__class__.__name__.lower(), endpoint="s3.amazonaws.com", name="wurzel-artifact", path=(self.data_dir/req.__class__.__name__).as_posix(),archive=NoneArchiveStrategy(),bucket=" oneai-nonprod-pipelines") for req in step.required_steps]
         else:
             inputs = []
         commands: list[str] = [entry for entry in generate_cli_call(
@@ -65,14 +77,14 @@ class ArgoBackend(Backend):
             image=self.image,
             command=commands,
             inputs=inputs,
-            outputs=Artifact(name="wurzel-artifact", path=(self.data_dir/step.__class__.__name__).as_posix()),
-        )
+            env_from=[SecretEnvFrom(prefix="", name="knowledge-pipeline-de", optional=True),ConfigMapEnvFrom(prefix="", name="knowledge-pipeline-de", optional=True)],
+            outputs=S3Artifact(key=step.__class__.__name__.lower(), endpoint="s3.amazonaws.com", name="wurzel-artifact", path=(self.data_dir/step.__class__.__name__).as_posix(),archive=NoneArchiveStrategy(),bucket=" oneai-nonprod-pipelines"))
         dag.__enter__()  # pylint: disable=unnecessary-dunder-call
         input_refs = [argo_req.get_artifact("wurzel-artifact") for argo_req in argo_reqs] if argo_reqs else []
         return wurzel_call(
             name=step.__class__.__name__.lower(),
             arguments=input_refs,
-            outputs=[Artifact(name=f"wurzel-artifact-{step.__class__.__name__.lower()}", path=f"/tmp/{step.__class__.__name__}")],
+            outputs=[S3Artifact(key=step.__class__.__name__.lower(), endpoint="s3.amazonaws.com", name=f"wurzel-artifact-{step.__class__.__name__.lower()}", path=f"/tmp/{step.__class__.__name__}",archive=NoneArchiveStrategy(),bucket=" oneai-nonprod-pipelines")],
         )
 
     def __generate_dag(self, step: type[TypedStep]) -> DAG:
