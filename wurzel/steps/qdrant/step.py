@@ -6,9 +6,11 @@
 
 # pylint: disable=duplicate-code
 import itertools
+from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from logging import getLogger
 
+import requests
 from pandera.typing import DataFrame
 from qdrant_client import QdrantClient, models
 
@@ -17,7 +19,7 @@ from wurzel.step import TypedStep, step_history
 from wurzel.steps.embedding.data import EmbeddingResult
 from wurzel.utils import HAS_TLSH
 
-from .data import QdrantResult
+from .data import CollectionInfo, QdrantResult, TelemetryResponse
 from .settings import QdrantSettings
 
 log = getLogger(__name__)
@@ -55,6 +57,8 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         )
         self.collection_name = self.__construct_next_collection_name()
         self.id_iter = self.__id_gen()
+        self._headers = {"api-key": self.settings.APIKEY}
+        self._telemetry_cache: dict[int, dict] = {}
 
     def __del__(self):
         if getattr(self, "client", None):
@@ -71,6 +75,21 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         while True:
             i += 1
             yield i
+
+    def _get_telemetry(self, details_level: int) -> TelemetryResponse:
+        """Get Qdrant Collection Telemetry."""
+        if details_level in self._telemetry_cache:
+            return self._telemetry_cache[details_level]
+        url = f"{self.settings.URI}/telemetry?details_level={details_level}"
+
+        try:
+            response = requests.get(url, headers=self._headers, timeout=self.settings.REQUEST_TIMEOUT)
+            response.raise_for_status()
+            data = TelemetryResponse(**response.json())
+            self._telemetry_cache[details_level] = data
+            return data
+        except requests.RequestException as e:
+            raise RuntimeError(f"Failed to fetch telemetry from Qdrant: {e}") from e
 
     def run(self, inpt: DataFrame[EmbeddingResult]) -> DataFrame[QdrantResult]:
         if not self.client.collection_exists(self.collection_name):
@@ -208,14 +227,55 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
 
     def _retire_collections(self):
         collections_versioned: dict[int, str] = self._get_collection_versions()
-        to_delete = list(collections_versioned.keys())[: -self.settings.COLLECTION_HISTORY_LEN]
-        if not to_delete:
+        if not collections_versioned:
             return
 
-        for col_v in to_delete:
-            col = collections_versioned[col_v]
-            log.info(f"deleting {col} collection caused by retirement")
-            self.client.delete_collection(col)
+        latest_version = max(collections_versioned.keys())
+        retirement_threshold = latest_version - self.settings.COLLECTION_HISTORY_LEN
+
+        aliases_resp = self.client.get_aliases()
+        alias_pointed_collections = {alias.collection_name for alias in aliases_resp.aliases}
+
+        telemetry_raw = self._get_telemetry(details_level=self.settings.TELEMETRY_DETAILS_LEVEL)
+        collection_infos = telemetry_raw.result.collections.collections
+
+        for version, collection_name in collections_versioned.items():
+            if version >= retirement_threshold:
+                continue
+
+            if collection_name in alias_pointed_collections:
+                log.warning(f"Skipping deletion of '{collection_name}': still aliased")
+                continue
+
+            usage_info = next((col for col in collection_infos if col.id == collection_name), None)
+            if usage_info and self._was_recently_used_via_shards(usage_info):
+                log.warning(f"Skipping deletion of '{collection_name}': recently accessed")
+                continue
+
+            log.info(f"Deleting retired collection: {collection_name}")
+            self.client.delete_collection(collection_name)
+
+    def _was_recently_used_via_shards(self, collection_info: CollectionInfo) -> bool:
+        threshold = datetime.now(timezone.utc) - timedelta(days=self.settings.COLLECTION_USAGE_RETENTION_DAYS)
+        latest_usage = None
+
+        for shard in collection_info.shards:
+            local = shard.local
+            if local:
+                responded = local.optimizations.optimizations.last_responded
+                if responded:
+                    dt = datetime.strptime(responded, "%Y-%m-%dT%H:%M:%S.%fZ")
+                    if not latest_usage or dt > latest_usage:
+                        latest_usage = dt
+
+            for remote in shard.remote:
+                responded = remote.searches.last_responded
+                if responded:
+                    dt = datetime.strptime(responded, "%Y-%m-%dT%H:%M:%S.%fZ")
+                    if not latest_usage or dt > latest_usage:
+                        latest_usage = dt
+
+        return latest_usage is not None and latest_usage > threshold
 
     def _update_alias(self):
         success = self.client.update_collection_aliases(
