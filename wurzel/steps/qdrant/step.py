@@ -13,13 +13,14 @@ from logging import getLogger
 import requests
 from pandera.typing import DataFrame
 from qdrant_client import QdrantClient, models
+from qdrant_client.http.models.models import CollectionTelemetry, InlineResponse2002
 
 from wurzel.exceptions import CustomQdrantException, StepFailed
 from wurzel.step import TypedStep, step_history
 from wurzel.steps.embedding.data import EmbeddingResult
 from wurzel.utils import HAS_TLSH
 
-from .data import CollectionInfo, QdrantResult, TelemetryResponse
+from .data import QdrantResult
 from .settings import QdrantSettings
 
 log = getLogger(__name__)
@@ -57,8 +58,6 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         )
         self.collection_name = self.__construct_next_collection_name()
         self.id_iter = self.__id_gen()
-        self._headers = {"api-key": self.settings.APIKEY}
-        self._telemetry_cache: dict[int, dict] = {}
 
     def __del__(self):
         if getattr(self, "client", None):
@@ -76,17 +75,14 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             i += 1
             yield i
 
-    def _get_telemetry(self, details_level: int) -> TelemetryResponse:
+    def _get_telemetry(self, details_level: int) -> InlineResponse2002:
         """Get Qdrant Collection Telemetry."""
-        if details_level in self._telemetry_cache:
-            return self._telemetry_cache[details_level]
         url = f"{self.settings.URI}/telemetry?details_level={details_level}"
-
+        headers = {"api-key": self.settings.APIKEY}
         try:
-            response = requests.get(url, headers=self._headers, timeout=self.settings.REQUEST_TIMEOUT)
+            response = requests.get(url, headers=headers, timeout=self.settings.REQUEST_TIMEOUT)
             response.raise_for_status()
-            data = TelemetryResponse(**response.json())
-            self._telemetry_cache[details_level] = data
+            data = InlineResponse2002(**response.json())
             return data
         except requests.RequestException as e:
             raise RuntimeError(f"Failed to fetch telemetry from Qdrant: {e}") from e
@@ -231,16 +227,17 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             return
 
         latest_version = max(collections_versioned.keys())
+        print("collections_versioned__", collections_versioned)
         retirement_threshold = latest_version - self.settings.COLLECTION_HISTORY_LEN
 
         aliases_resp = self.client.get_aliases()
         alias_pointed_collections = {alias.collection_name for alias in aliases_resp.aliases}
 
         telemetry_raw = self._get_telemetry(details_level=self.settings.TELEMETRY_DETAILS_LEVEL)
-        collection_infos = telemetry_raw.result.collections.collections
+        collection_infos = telemetry_raw.result.collections.collections  # pylint: disable=no-member
 
         for version, collection_name in collections_versioned.items():
-            if version >= retirement_threshold:
+            if version > retirement_threshold:
                 continue
 
             if collection_name in alias_pointed_collections:
@@ -249,13 +246,16 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
 
             usage_info = next((col for col in collection_infos if col.id == collection_name), None)
             if usage_info and self._was_recently_used_via_shards(usage_info):
-                log.warning(f"Skipping deletion of '{collection_name}': recently accessed")
+                log.warning(
+                    "Skipping deletion: recently accessed",
+                    extra={"collection": collection_name},
+                )
                 continue
 
             log.info(f"Deleting retired collection: {collection_name}")
             self.client.delete_collection(collection_name)
 
-    def _was_recently_used_via_shards(self, collection_info: CollectionInfo) -> bool:
+    def _was_recently_used_via_shards(self, collection_info: CollectionTelemetry) -> bool:
         threshold = datetime.now(timezone.utc) - timedelta(days=self.settings.COLLECTION_USAGE_RETENTION_DAYS)
         latest_usage = None
 
@@ -264,14 +264,14 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             if local:
                 responded = local.optimizations.optimizations.last_responded
                 if responded:
-                    dt = datetime.strptime(responded, "%Y-%m-%dT%H:%M:%S.%fZ")
+                    dt = datetime.strptime(responded, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
                     if not latest_usage or dt > latest_usage:
                         latest_usage = dt
 
             for remote in shard.remote:
                 responded = remote.searches.last_responded
                 if responded:
-                    dt = datetime.strptime(responded, "%Y-%m-%dT%H:%M:%S.%fZ")
+                    dt = datetime.strptime(responded, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
                     if not latest_usage or dt > latest_usage:
                         latest_usage = dt
 
