@@ -227,7 +227,6 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             return
 
         latest_version = max(collections_versioned.keys())
-        print("collections_versioned__", collections_versioned)
         retirement_threshold = latest_version - self.settings.COLLECTION_HISTORY_LEN
 
         aliases_resp = self.client.get_aliases()
@@ -241,7 +240,10 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
                 continue
 
             if collection_name in alias_pointed_collections:
-                log.warning(f"Skipping deletion of '{collection_name}': still aliased")
+                log.warning(
+                    "Skipping deletion: still aliased",
+                    extra={"collection": collection_name},
+                )
                 continue
 
             usage_info = next((col for col in collection_infos if col.id == collection_name), None)
@@ -252,7 +254,10 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
                 )
                 continue
 
-            log.info(f"Deleting retired collection: {collection_name}")
+            log.info(
+                "Deleting retired collection",
+                extra={"collection": collection_name},
+            )
             self.client.delete_collection(collection_name)
 
     def _was_recently_used_via_shards(self, collection_info: CollectionTelemetry) -> bool:
