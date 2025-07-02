@@ -181,7 +181,7 @@ def test_qdrant_collection_retirement(
 
                 client.close = old_close
                 remaining = [col.name for col in client.get_collections().collections]
-                assert len(client.get_collections().collections) == count_remaining_collection
+                assert len(remaining) == count_remaining_collection
                 assert aliased_collection in remaining
 
 
