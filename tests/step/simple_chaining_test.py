@@ -88,17 +88,17 @@ def test_yaml(backend: type[Backend], keys):
 
 
 @pytest.mark.parametrize(
-    "backend",
+    "backend,params",
     [
-        pytest.param(DvcBackend, id="DVC Backend"),
-        pytest.param(ArgoBackend, id="ArGo Backend"),
+        pytest.param(DvcBackend, dict(), id="DVC Backend"),
+        pytest.param(ArgoBackend, {"image": "ghcr.io/telekom/wurzel:1.2.0"}, id="ArGo Backend"),
     ],
 )
-def test_minimal_pipeline(backend: type[Backend]):
+def test_minimal_pipeline(backend: type[Backend], params):
     agb = WZ(DoclingStep)
     splitter = WZ(SimpleSplitterStep)
     duplication = WZ(DropDuplicationStep)
     agb >> splitter >> duplication
 
-    _y = backend(image="ghcr.io/telekom/wurzel:1.2.0").generate_yaml(duplication)
+    _y = backend(**params).generate_yaml(duplication)
     pass
