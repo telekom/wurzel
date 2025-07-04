@@ -162,6 +162,7 @@ select = [
     "D",  # formatting for docs (disabled)
     "UP", # upgrade to latest syntax if possible
     "C4", # cleaner comprehensions
+    "T201", # bad function print
 ]
 
 ignore = [
