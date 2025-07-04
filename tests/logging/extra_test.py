@@ -32,6 +32,8 @@ class AnException(Exception):
             (["a", "list"], ["a", "list"]),
             ({"a": "dict"}, {"a": "dict"}),
             ({"a", "set"}, ["a", "set"]),
+            ({"key": 10}, {"key": 10}),
+            ({"key": "10"}, {"key": "*****"}),
             (1, 1),
             (SomeClass(), None),
             (SomeClass, None),

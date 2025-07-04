@@ -51,6 +51,7 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
                 "max_cost": str(self.settings.MAX_COST),
             }
             try:
+                r = None  # for short error handling
                 r = session.get(self.settings.API, params=payload, timeout=self.settings.TIMEOUT)
                 r.raise_for_status()
             except requests.exceptions.ReadTimeout:
@@ -59,12 +60,13 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
                     extra={"url": url_item.url},
                 )
                 return None
-            except requests.exceptions.HTTPError:
+            except (requests.exceptions.HTTPError, requests.exceptions.ConnectionError):
                 log.warning(
                     "Crawling failed",
-                    extra={"url": url_item.url, "error": r.text, "status": r.status_code, "retries": self.settings.RETRY},
+                    extra={"url": url_item.url, "status": r.status_code if r else None, "retries": self.settings.RETRY},
                 )
                 return None
+
             try:
                 md = to_markdown(self._filter_body(r.text))
             except (KeyError, IndexError):
@@ -87,6 +89,15 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
             raise StepFailed("no results from scraperAPI")
 
         return filtered_results
+
+    def __init__(self) -> None:
+        logging.getLogger("urllib3").setLevel("ERROR")
+        super().__init__()
+
+    def finalize(self) -> None:
+        logging.getLogger("urllib3").setLevel("WARNING")
+
+        return super().finalize()
 
     def _filter_body(self, html: str) -> str:
         tree: lxml.html = lxml.html.fromstring(html)
