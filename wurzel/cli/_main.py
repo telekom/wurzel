@@ -210,10 +210,6 @@ def generate(
             callback=pipeline_callback,
         ),
     ],
-    data_dir: Annotated[
-        Path,
-        typer.Option("-d", "--data-dir", file_okay=False, help="Target folder for pipeline"),
-    ] = Path("./data"),
     backend: Annotated[
         str,
         typer.Option(
@@ -230,7 +226,6 @@ def generate(
         extra={
             "parsed_args": {
                 "pipeline": pipeline,
-                "data_dir": data_dir,
                 "backend": backend,
             }
         },
@@ -238,7 +233,6 @@ def generate(
     return print(  # noqa: T201
         cmd_generate(
             pipeline,
-            data_dir,
             backend=backend,
         )
     )

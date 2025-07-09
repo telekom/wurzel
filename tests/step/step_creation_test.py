@@ -110,7 +110,7 @@ def test_generate():
     c = Step2()
     a >> b >> c
     steps = [a, b, c]
-    res = DvcBackend("./data").generate_dict(c)
+    res = DvcBackend().generate_dict(c)
     assert res != {}
     for step in steps:
         data: dict = res.get(step.__class__.__name__, None)
@@ -130,5 +130,5 @@ def test_circular():
     a >> a
     # TODO: Maybe this should be caught before Python.Recursion Error
     with pytest.raises(RecursionError) as err:
-        DvcBackend(".").generate_dict(a)
+        DvcBackend().generate_dict(a)
         assert not isinstance(err, RecursionError)

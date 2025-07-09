@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, TypedDict
 
 import yaml
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 import wurzel
 import wurzel.cli
@@ -24,20 +25,24 @@ class DvcDict(TypedDict):
     always_changed: bool
 
 
+class DvcBackendSettings(BaseSettings):
+    """Settings object which is infusable through ENV variables like DVCBACKEND__ENCAPSULATE_ENV."""
+
+    model_config = SettingsConfigDict(env_prefix="DVCBACKEND__")
+    DATA_DIR: Path = Path("./data")
+    ENCAPSULATE_ENV: bool = True
+
+
 class DvcBackend(Backend):
     """'Adapter' which creates DVC yamls."""
 
     def __init__(
         self,
-        data_dir: Path = Path("./data"),
+        settings: DvcBackendSettings | None = None,
         executer: BaseStepExecutor = PrometheusStepExecutor,
-        encapsulate_env: bool = True,
     ) -> None:
-        if not isinstance(data_dir, Path):
-            data_dir = Path(data_dir)
         self.executor: type[BaseStepExecutor] = executer
-        self.data_dir = data_dir
-        self.encapsulate_env = encapsulate_env
+        self.settings = settings if settings else DvcBackendSettings()
         super().__init__()
 
     def generate_dict(
@@ -59,13 +64,13 @@ class DvcBackend(Backend):
             dep_result = self.generate_dict(o_step)
             result |= dep_result
             outputs_of_deps += dep_result[o_step.__class__.__name__]["outs"]
-        output_path = self.data_dir / step.__class__.__name__
+        output_path = self.settings.DATA_DIR / step.__class__.__name__
         cmd = wurzel.cli.generate_cli_call(
             step.__class__,
             inputs=outputs_of_deps,
             output=output_path,
             executor=self.executor,
-            encapsulate_env=self.encapsulate_env,
+            encapsulate_env=self.settings.ENCAPSULATE_ENV,
         )
         return result | {
             step.__class__.__name__: {

@@ -2,7 +2,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import subprocess
+
 import pytest
+import yaml
 
 from wurzel.cli import generate_cli_call
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
@@ -50,13 +53,12 @@ def test_good_cli_call_with_inputs(tmp_path):
     )
 
 
-# @pytest.mark.parametrize("backend", ["DvcBackend", "ArgoBackend"])
-# def test_backend_cli(tmp_path, backend):
-#     cmd = [
-#         "wurzel",
-#         "generate",
-#         "examples.pipeline.pipelinedemo:pipeline",
-#         "--backend", backend
-#     ]
-#     proc = subprocess.run(cmd, capture_output=True, text=True)
-#     assert proc.returncode == 0
+@pytest.mark.parametrize("backend", ["DvcBackend", "ArgoBackend"])
+def test_backend_cli(tmp_path, backend, env):
+    env.set("EMBEDDINGSTEP__API", "https://example.com/embd")
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", "./data")
+    env.set("QDRANTCONNECTORSTEP__COLLECTION", "test-collection")
+    cmd = ["wurzel", "generate", "examples.pipeline.pipelinedemo:pipeline", "--backend", backend]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    assert proc.returncode == 0, proc
+    _result = yaml.safe_load(proc.stdout)  # loadable
