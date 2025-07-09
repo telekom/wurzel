@@ -235,7 +235,7 @@ def generate(
             }
         },
     )
-    return print(
+    return print(  # noqa: T201
         cmd_generate(
             pipeline,
             data_dir,
