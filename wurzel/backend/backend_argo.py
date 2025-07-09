@@ -4,16 +4,49 @@
 
 from pathlib import Path
 
-from hera.shared import global_config
 from hera.workflows import DAG, ConfigMapEnvFrom, Container, CronWorkflow, S3Artifact, SecretEnvFrom, Task, Workflow
 from hera.workflows.archive import NoneArchiveStrategy
 from hera.workflows.models import S3Artifact as S3ArtifactTemplate
 from hera.workflows.models import SecurityContext
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from wurzel.backend.backend import Backend
 from wurzel.cli import generate_cli_call
 from wurzel.step import TypedStep
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
+
+
+class ArgoBackendSettings(BaseSettings):
+    """Settings object which is infusable through ENV variables like ARGOWORKFLOWBACKEND__ENCAPSULATE_ENV."""
+
+    model_config = SettingsConfigDict(env_prefix="ARGOWORKFLOWBACKEND__")
+    IMAGE: str = "ghcr.io/telekom/wurzel"
+    SCHEDULE: str = "0 4 * * *"
+    DATA_DIR: Path = Path("/usr/app")
+    ENCAPSULATE_ENV: bool = True
+    S3_ARTIFACT_TEMPLATE: S3ArtifactTemplate = Field(
+        S3ArtifactTemplate(
+            bucket="wurzel-bucket",  # "oneai-nonprod-pipelines",
+            endpoint="s3.amazonaws.com",
+        )
+    )
+    SERVICE_ACCOUNT_NAME: str = "wurzel-service-account"
+    SECRET_NAME: str = "wurzel-secret"
+    CONFIG_MAP: str = "wurzel-config"
+    ANNOTATIONS: dict = {"sidecar.istio.io/inject": "false"}
+    NAMESPACE: str = "argo-workflows"
+    PIPELINE_SUFFIX: str = ""
+
+    @field_validator("S3_ARTIFACT_TEMPLATE", mode="plain")
+    @classmethod
+    def validate_s3_artifact_template(cls, value) -> S3ArtifactTemplate:
+        """Spetial validator  is needed because hera is based on pytantic v1."""
+        if isinstance(value, S3ArtifactTemplate):
+            return value
+        if isinstance(value, dict):
+            return S3ArtifactTemplate(**value)
+        raise TypeError("S3_ARTIFACT_TEMPLATE must be a dict or S3ArtifactTemplate instance")
 
 
 class ArgoBackend(Backend):
@@ -23,28 +56,10 @@ class ArgoBackend(Backend):
 
     image: str = "ghcr.io/telekom/wurzel"
 
-    def __init__(
-        self,
-        schedule: str = "0 4 * * *",
-        data_dir: Path = Path("/usr/app"),
-        executer: BaseStepExecutor = PrometheusStepExecutor,
-        encapsulate_env: bool = True,
-        image: str = "ghcr.io/telekom/wurzel",
-        s3_artifact_template: S3ArtifactTemplate = S3ArtifactTemplate(
-            bucket="oneai-nonprod-pipelines",  # "oneai-nonprod-pipelines",
-            endpoint="s3.amazonaws.com",
-        ),
-        service_account_name: str = "argo-workflow",
-    ) -> None:
-        if not isinstance(data_dir, Path):
-            data_dir = Path(data_dir)
+    def __init__(self, settings: ArgoBackendSettings | None = None, executer: BaseStepExecutor = PrometheusStepExecutor) -> None:
         self.executor: type[BaseStepExecutor] = executer
-        self.encapsulate_env = encapsulate_env
-        self.data_dir = data_dir
-        self.schedule = schedule
-        self.image = image
-        self.s3_artifact_template = s3_artifact_template
-        global_config.service_account_name = service_account_name
+        self.settings = settings if settings else ArgoBackendSettings()
+
         super().__init__()
 
     def generate_dict(self, step: TypedStep):
@@ -55,36 +70,36 @@ class ArgoBackend(Backend):
 
     def _generate_workflow(self, step: type[TypedStep]) -> Workflow:
         with CronWorkflow(
-            schedule=self.schedule,
-            name="wurzel",
+            schedule=self.settings.SCHEDULE,
+            name=f"wurzel_{self.settings.PIPELINE_SUFFIX}"[:250].strip(" ,-_+"),  # kubernetes name cleanup
             entrypoint="wurzel-pipeline",
-            annotations={"sidecar.istio.io/inject": "false"},
-            namespace="knowledge-pipeline-dev",
+            annotations=self.settings.ANNOTATIONS,
+            namespace=self.settings.NAMESPACE,
         ) as w:
             self.__generate_dag(step)
         return w
 
-    def _create_task(self, dag: DAG, step: type[TypedStep], argo_reqs: list[Task]) -> Task:
-        def _create_artifact_from_step(step: type[TypedStep]) -> S3Artifact:
-            return S3Artifact(
-                key=step.__class__.__name__.lower(),
-                mode=775,
-                recurse_mode=True,
-                name="wurzel-artifact",
-                path=(self.data_dir / step.__class__.__name__).as_posix(),
-                archive=NoneArchiveStrategy(),
-                endpoint=self.s3_artifact_template.endpoint,
-                bucket=self.s3_artifact_template.bucket,
-            )
+    def _create_artifact_from_step(self, step: type[TypedStep]) -> S3Artifact:
+        return S3Artifact(
+            name="wurzel-artifact",
+            mode=775,
+            recurse_mode=True,
+            archive=NoneArchiveStrategy(),
+            key=step.__class__.__name__.lower(),
+            path=(self.settings.DATA_DIR / step.__class__.__name__).as_posix(),
+            bucket=self.settings.S3_ARTIFACT_TEMPLATE.bucket,  # pylint: disable=no-member
+            endpoint=self.settings.S3_ARTIFACT_TEMPLATE.endpoint,  # pylint: disable=no-member
+        )
 
+    def _create_task(self, dag: DAG, step: type[TypedStep], argo_reqs: list[Task]) -> Task:
         if step.required_steps:
-            inputs = [_create_artifact_from_step(req) for req in step.required_steps]
+            inputs = [self._create_artifact_from_step(req) for req in step.required_steps]
         else:
             inputs = []
         commands: list[str] = [
             entry
             for entry in generate_cli_call(
-                step.__class__, inputs=[inpt.path for inpt in inputs], output=self.data_dir / step.__class__.__name__
+                step.__class__, inputs=[inpt.path for inpt in inputs], output=self.settings.DATA_DIR / step.__class__.__name__
             ).split(" ")
             if entry.strip()
         ]
@@ -94,13 +109,13 @@ class ArgoBackend(Backend):
             image=self.image,
             security_context=SecurityContext(run_as_non_root=True),
             command=commands,
-            annotations={"sidecar.istio.io/inject": "false"},
+            annotations=self.settings.ANNOTATIONS,
             inputs=inputs,
             env_from=[
-                SecretEnvFrom(prefix="", name="knowledge-pipeline-de", optional=True),
-                ConfigMapEnvFrom(prefix="", name="knowledge-pipeline-de", optional=True),
+                SecretEnvFrom(prefix="", name=self.settings.SECRET_NAME, optional=True),
+                ConfigMapEnvFrom(prefix="", name=self.settings.CONFIG_MAP, optional=True),
             ],
-            outputs=_create_artifact_from_step(step),
+            outputs=self._create_artifact_from_step(step),
         )
         dag.__enter__()  # pylint: disable=unnecessary-dunder-call
         input_refs = [argo_req.get_artifact("wurzel-artifact") for argo_req in argo_reqs] if argo_reqs else []

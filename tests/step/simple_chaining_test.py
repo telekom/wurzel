@@ -8,6 +8,7 @@ import yaml
 
 from wurzel.backend import ArgoBackend, DvcBackend
 from wurzel.backend.backend import Backend
+from wurzel.backend.backend_argo import ArgoBackendSettings
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.step.typed_step import TypedStep
 from wurzel.steps.docling.docling_step import DoclingStep
@@ -55,7 +56,7 @@ def test_dict(backend: type[Backend]):
     "backend,keys",
     [
         pytest.param(DvcBackend, ["stages"], id="DVC Backend"),
-        pytest.param(ArgoBackend, ["spec","workflowSpec" , "templates", 0, "dag", "tasks"], id="ArGo Backend"),
+        pytest.param(ArgoBackend, ["spec", "workflowSpec", "templates", 0, "dag", "tasks"], id="ArGo Backend"),
     ],
 )
 def test_yaml(backend: type[Backend], keys):
@@ -90,8 +91,8 @@ def test_yaml(backend: type[Backend], keys):
 @pytest.mark.parametrize(
     "backend,params",
     [
-        pytest.param(DvcBackend, dict(), id="DVC Backend"),
-        pytest.param(ArgoBackend, {"image": "ghcr.io/telekom/wurzel:1.2.0"}, id="ArGo Backend"),
+        pytest.param(DvcBackend, {}, id="DVC Backend"),
+        pytest.param(ArgoBackend, {"settings": ArgoBackendSettings()}, id="ArGo Backend"),
     ],
 )
 def test_minimal_pipeline(backend: type[Backend], params):
