@@ -131,7 +131,7 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
                 contracts.append(contract_instance)
 
             except (FileNotFoundError, OSError) as e:
-                log.error(f"Failed to verify URL: {url}. Error: {e}")
+                log.warning(f"Failed to verify URL: {url}. Error: {e}")
                 continue
 
         return contracts
