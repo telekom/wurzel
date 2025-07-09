@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://telekom.github.io/wurzel/developping/define_pipline/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>🔗 Defining a Pipeline in Wurzel - Wurzel</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "\ud83d\udd17 Defining a Pipeline in Wurzel";
+        var mkdocs_page_input_path = "developping/define_pipline.md";
+        var mkdocs_page_url = "/wurzel/developping/define_pipline/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Wurzel
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Wurzel</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developping</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../Building_your_one_step/">📚 How to Build Your Own Step</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">🔗 Defining a Pipeline in Wurzel</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#what-is-a-wurzel-pipeline">🧩 What is a Wurzel Pipeline?</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#how-to-define-a-pipeline">🛠️ How to Define a Pipeline</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#example">📦 Example</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#execution-order">🔄 Execution Order</a>
+    </li>
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../docs/">📖 Documentation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../getting_started/">👩‍💻 Developer Guide</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Steps</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../steps/docling/">Docling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../steps/embedding/">Embedding</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../steps/milvus/">Milvus</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../steps/qdrant/">Qdrant</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Wurzel</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Developping</li>
+      <li class="breadcrumb-item active">🔗 Defining a Pipeline in Wurzel</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/telekom/wurzel/edit/master/docs/developping/define_pipline.md">Edit on telekom/wurzel</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="defining-a-pipeline-in-wurzel">🔗 Defining a Pipeline in Wurzel</h1>
+<p>At the heart of Wurzel lies the concept of the pipeline — a chain of steps that are connected and executed in sequence. Each step processes the output of the previous one, enabling modular, reusable, and optimally scheduled workflows.</p>
+<h2 id="what-is-a-wurzel-pipeline">🧩 What is a Wurzel Pipeline?</h2>
+<p>A pipeline in Wurzel is a chain of TypedStep instances, linked using the &gt;&gt; operator. This chaining mechanism makes it easy to define complex data processing flows that remain clean and composable.</p>
+<p>Wurzel optimizes the execution of these pipelines automatically based on dependencies and contracts.</p>
+<h2 id="how-to-define-a-pipeline">🛠️ How to Define a Pipeline</h2>
+<p>To define a pipeline:</p>
+<ol>
+<li>Instantiate your steps using the helper WZ(...).</li>
+<li>Chain them together using &gt;&gt;.</li>
+<li>Return the final step (which implicitly carries the full chain).</li>
+</ol>
+<h3 id="example">📦 Example</h3>
+<pre><code class="language-python">from wurzel.steps import (
+    EmbeddingStep,
+    QdrantConnectorStep,
+)
+from wurzel.utils import WZ
+from wurzel.steps.manual_markdown import ManualMarkdownStep
+from wurzel.step import TypedStep
+
+def pipeline() -&gt; TypedStep:
+    &quot;&quot;&quot;Defines a Wurzel pipeline that embeds manual markdown and stores it in Qdrant.&quot;&quot;&quot;
+
+    # Step 1: Load markdown input manually
+    md = WZ(ManualMarkdownStep)
+
+    # Step 2: Generate embeddings from markdown content
+    embed = WZ(EmbeddingStep)
+
+    # Step 3: Store embeddings in a Qdrant vector database
+    db = WZ(QdrantConnectorStep)
+
+    # Chain the steps
+    md &gt;&gt; embed &gt;&gt; db
+
+    # Return the final step in the chain
+    return db
+</code></pre>
+<h2 id="execution-order">🔄 Execution Order</h2>
+<p>Even though the function returns only the last step (db), Wurzel automatically resolves and runs all upstream dependencies in the correct order:</p>
+<ol>
+<li>ManualMarkdownStep runs first to provide data.</li>
+<li>EmbeddingStep transforms that data into vectors.</li>
+<li>QdrantConnectorStep persists the result.</li>
+</ol>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../Building_your_one_step/" class="btn btn-neutral float-left" title="📚 How to Build Your Own Step"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../docs/" class="btn btn-neutral float-right" title="📖 Documentation">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/telekom/wurzel" class="fa fa-code-fork" style="color: #fcfcfc"> telekom/wurzel</a>
+        </span>
+    
+    
+      <span><a href="../Building_your_one_step/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../docs/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
