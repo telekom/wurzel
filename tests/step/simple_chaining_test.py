@@ -55,7 +55,7 @@ def test_dict(backend: type[Backend]):
     "backend,keys",
     [
         pytest.param(DvcBackend, ["stages"], id="DVC Backend"),
-        pytest.param(ArgoBackend, ["spec", "templates", 0, "dag", "tasks"], id="ArGo Backend"),
+        pytest.param(ArgoBackend, ["spec","workflowSpec" , "templates", 0, "dag", "tasks"], id="ArGo Backend"),
     ],
 )
 def test_yaml(backend: type[Backend], keys):
