@@ -54,6 +54,9 @@ dependencies= [
 qdrant = [
     "qdrant-client==1.10.1"
 ]
+argo = [
+    "hera >=5.20.1",
+]
 docling = [
     "docling==2.30.0"
 ]
@@ -95,7 +98,7 @@ docs = [
     "mkdocstrings[python]"
 ]
 
-all = ["wurzel[qdrant,milvus,tlsh,docling,split]"]
+all = ["wurzel[qdrant,milvus,tlsh,docling,split,argo]"]
 dev = ["wurzel[lint,test,all]"]
 
 [build-system]
