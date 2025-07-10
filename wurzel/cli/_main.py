@@ -266,10 +266,11 @@ def main_args(
     """Global settings, main."""
     if not os.isatty(1):
         typer.core.rich = None
-        logging.config.dictConfig(get_logging_dict_config(log_level))
+        logging.config.dictConfig(get_logging_dict_config(log_level, "wurzel.utils.logging.JsonStringFormatter"))
         app.pretty_exceptions_enable = False
         app.pretty_exceptions_show_locals = False
     else:
+        # Interactive Session
         update_log_level(log_level)
         app.pretty_exceptions_enable = True
         app.pretty_exceptions_show_locals = True
