@@ -54,8 +54,6 @@ class ArgoBackend(Backend):
     above 'hera' library.
     """
 
-    image: str = "ghcr.io/telekom/wurzel"
-
     def __init__(self, settings: ArgoBackendSettings | None = None, executer: BaseStepExecutor = PrometheusStepExecutor) -> None:
         self.executor: type[BaseStepExecutor] = executer
         self.settings = settings if settings else ArgoBackendSettings()
@@ -71,7 +69,7 @@ class ArgoBackend(Backend):
     def _generate_workflow(self, step: type[TypedStep]) -> Workflow:
         with CronWorkflow(
             schedule=self.settings.SCHEDULE,
-            name=f"wurzel_{self.settings.PIPELINE_SUFFIX}"[:250].strip(" ,-_+"),  # kubernetes name cleanup
+            name=f"wurzel_{self.settings.PIPELINE_SUFFIX}"[:200].strip(" ,-_+"),  # kubernetes name cleanup
             entrypoint="wurzel-pipeline",
             annotations=self.settings.ANNOTATIONS,
             namespace=self.settings.NAMESPACE,
@@ -103,10 +101,10 @@ class ArgoBackend(Backend):
             ).split(" ")
             if entry.strip()
         ]
-        dag.__exit__()
+        dag.__exit__()  # restriction from hera, can not create Container in context of active dag
         wurzel_call = Container(
             name=f"wurzel-run-template-{step.__class__.__name__.lower()}",
-            image=self.image,
+            image=self.settings.IMAGE,
             security_context=SecurityContext(run_as_non_root=True),
             command=commands,
             annotations=self.settings.ANNOTATIONS,
