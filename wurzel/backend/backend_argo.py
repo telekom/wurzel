@@ -77,7 +77,8 @@ class ArgoBackend(Backend):
         ) as w:
             self.__generate_dag(step)
         return w
-    @cache
+
+    @cache  # pylint: disable=method-cache-max-size-none
     def _create_artifact_from_step(self, step: type[TypedStep]) -> S3Artifact:
         return S3Artifact(
             name=f"wurzel-artifact-{step.__class__.__name__.lower()}",
@@ -90,7 +91,7 @@ class ArgoBackend(Backend):
             endpoint=self.settings.S3_ARTIFACT_TEMPLATE.endpoint,  # pylint: disable=no-member
         )
 
-    def _create_task(self, dag: DAG, step: type[TypedStep], argo_reqs: list[Task]) -> Task:
+    def _create_task(self, dag: DAG, step: type[TypedStep]) -> Task:
         if step.required_steps:
             inputs = [self._create_artifact_from_step(req) for req in step.required_steps]
         else:
@@ -117,7 +118,7 @@ class ArgoBackend(Backend):
             outputs=self._create_artifact_from_step(step),
         )
         dag.__enter__()  # pylint: disable=unnecessary-dunder-call
-        input_refs = [argo_req.get_artifact("wurzel-artifact") for argo_req in argo_reqs] if argo_reqs else []
+        input_refs = [self._create_artifact_from_step(req) for req in step.required_steps]
         return wurzel_call(
             name=step.__class__.__name__.lower(),
             arguments=input_refs,
@@ -133,10 +134,10 @@ class ArgoBackend(Backend):
                     req_argo = resolve_requirements(req)
 
                 else:  # Leaf
-                    req_argo = self._create_task(dag, req, argo_reqs=[])
+                    req_argo = self._create_task(dag, req)
                 artifacts.append(req_argo.result)
                 argo_reqs.append(req_argo)
-            step_argo: Task = self._create_task(dag, step, argo_reqs=argo_reqs)
+            step_argo: Task = self._create_task(dag, step)
             for argo_req in argo_reqs:
                 argo_req >> step_argo  # pylint: disable=pointless-statement
             return step_argo
