@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+from functools import cache
 from pathlib import Path
 
 from hera.workflows import DAG, ConfigMapEnvFrom, Container, CronWorkflow, S3Artifact, SecretEnvFrom, Task, Workflow
@@ -76,10 +77,10 @@ class ArgoBackend(Backend):
         ) as w:
             self.__generate_dag(step)
         return w
-
+    @cache
     def _create_artifact_from_step(self, step: type[TypedStep]) -> S3Artifact:
         return S3Artifact(
-            name="wurzel-artifact",
+            name=f"wurzel-artifact-{step.__class__.__name__.lower()}",
             mode=775,
             recurse_mode=True,
             archive=NoneArchiveStrategy(),
