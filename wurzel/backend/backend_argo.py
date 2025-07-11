@@ -2,12 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import re
 from functools import cache
 from pathlib import Path
 
 from hera.workflows import DAG, ConfigMapEnvFrom, Container, CronWorkflow, S3Artifact, SecretEnvFrom, Task, Workflow
 from hera.workflows.archive import NoneArchiveStrategy
 from hera.workflows.models import SecurityContext
+from pydantic import Field, field_validator
 from pydantic_settings import SettingsConfigDict
 
 from wurzel.backend.backend import Backend
@@ -24,6 +26,9 @@ class S3ArtifactTemplate(SettingsLeaf):
     endpoint: str = "s3.amazonaws.com"
 
 
+DNS_LABEL_REGEX = r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+
+
 class ArgoBackendSettings(SettingsBase):
     """Settings object which is infusable through ENV variables like ARGOWORKFLOWBACKEND__ENCAPSULATE_ENV."""
 
@@ -38,7 +43,22 @@ class ArgoBackendSettings(SettingsBase):
     CONFIG_MAP: str = "wurzel-config"
     ANNOTATIONS: dict = {"sidecar.istio.io/inject": "false"}
     NAMESPACE: str = "argo-workflows"
-    PIPELINE_SUFFIX: str = ""
+    PIPELINE_NAME: str = Field(
+        default="wurzel",
+        max_length=63,
+        description="Kubernetes-compliant name: lowercase alphanumeric, '-' allowed, must start and end with alphanumeric.",
+    )
+
+    @field_validator("PIPELINE_NAME")
+    @classmethod
+    def _validate_pipeline_name(cls, value: str) -> str:
+        pattern = r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+        if not re.fullmatch(pattern, value):
+            raise ValueError(
+                "PIPELINE_NAME must consist of lower-case letters, numbers, and '-', "
+                "start and end with a letter or number, and be <= 63 characters."
+            )
+        return value
 
 
 class ArgoBackend(Backend):
@@ -61,7 +81,7 @@ class ArgoBackend(Backend):
     def _generate_workflow(self, step: type[TypedStep]) -> Workflow:
         with CronWorkflow(
             schedule=self.settings.SCHEDULE,
-            name=f"wurzel_{self.settings.PIPELINE_SUFFIX}"[:200].strip(" ,-_+"),  # kubernetes name cleanup
+            name=self.settings.PIPELINE_NAME,
             entrypoint="wurzel-pipeline",
             annotations=self.settings.ANNOTATIONS,
             namespace=self.settings.NAMESPACE,
