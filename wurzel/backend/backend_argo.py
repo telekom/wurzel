@@ -65,6 +65,7 @@ class ArgoBackend(Backend):
             entrypoint="wurzel-pipeline",
             annotations=self.settings.ANNOTATIONS,
             namespace=self.settings.NAMESPACE,
+            service_account_name=self.settings.SERVICE_ACCOUNT_NAME,
         ) as w:
             self.__generate_dag(step)
         return w
