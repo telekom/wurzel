@@ -23,5 +23,4 @@ class Backend:
     @classmethod
     def save_yaml(cls, yml: str, file: Path):
         """Saves given yml string int file."""
-        with open(file, "w", encoding="utf-8") as f:
-            yaml.dump(yml, f)
+        file.write_text(yaml.dump(yml), encoding="utf-8")

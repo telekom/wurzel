@@ -52,6 +52,15 @@ def test_dict(backend: type[Backend]):
     assert dic
 
 
+def safeget(dct, *keys):
+    for key in keys:
+        try:
+            dct = dct[key]
+        except KeyError:
+            return None
+    return dct
+
+
 @pytest.mark.parametrize(
     "backend,keys",
     [
@@ -60,14 +69,6 @@ def test_dict(backend: type[Backend]):
     ],
 )
 def test_yaml(backend: type[Backend], keys):
-    def safeget(dct, *keys):
-        for key in keys:
-            try:
-                dct = dct[key]
-            except KeyError:
-                return None
-        return dct
-
     a = WZ(A)
     b = WZ(B)
     c = WZ(C)
@@ -89,17 +90,20 @@ def test_yaml(backend: type[Backend], keys):
 
 
 @pytest.mark.parametrize(
-    "backend,params",
+    "backend,keys,params",
     [
-        pytest.param(DvcBackend, {}, id="DVC Backend"),
-        pytest.param(ArgoBackend, {"settings": ArgoBackendSettings()}, id="ArGo Backend"),
+        pytest.param(DvcBackend, ["stages"], {}, id="DVC Backend"),
+        pytest.param(
+            ArgoBackend, ["spec", "workflowSpec", "templates", 0, "dag", "tasks"], {"settings": ArgoBackendSettings()}, id="ArGo Backend"
+        ),
     ],
 )
-def test_minimal_pipeline(backend: type[Backend], params):
+def test_minimal_pipeline(backend: type[Backend], keys, params):
     agb = WZ(DoclingStep)
     splitter = WZ(SimpleSplitterStep)
     duplication = WZ(DropDuplicationStep)
     agb >> splitter >> duplication
 
-    _y = backend(**params).generate_yaml(duplication)
-    pass
+    y = backend(**params).generate_yaml(duplication)
+    y_dict = yaml.safe_load(y)
+    assert len(safeget(y_dict, *keys)) == 3
