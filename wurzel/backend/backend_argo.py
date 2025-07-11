@@ -10,15 +10,16 @@ from hera.workflows.archive import NoneArchiveStrategy
 from hera.workflows.models import S3Artifact as S3ArtifactTemplate
 from hera.workflows.models import SecurityContext
 from pydantic import Field, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import SettingsConfigDict
 
 from wurzel.backend.backend import Backend
 from wurzel.cli import generate_cli_call
 from wurzel.step import TypedStep
+from wurzel.step.settings import SettingsBase
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 
 
-class ArgoBackendSettings(BaseSettings):
+class ArgoBackendSettings(SettingsBase):
     """Settings object which is infusable through ENV variables like ARGOWORKFLOWBACKEND__ENCAPSULATE_ENV."""
 
     model_config = SettingsConfigDict(env_prefix="ARGOWORKFLOWBACKEND__")

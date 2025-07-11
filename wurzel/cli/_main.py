@@ -218,7 +218,7 @@ def generate(
             callback=backend_callback,
             help="backend to use",
         ),
-    ] = DvcBackend,
+    ] = "DvcBackend",
 ):
     """Run."""
     log.debug(
