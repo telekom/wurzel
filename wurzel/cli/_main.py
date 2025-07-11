@@ -18,10 +18,12 @@ from typing import Annotated
 import typer
 import typer.core
 
-from wurzel.adapters.dvc_adapter import DvcBackend
+from wurzel.backend.backend_argo import ArgoBackend
+from wurzel.backend.backend_dvc import DvcBackend
 from wurzel.cli.cmd_generate import main as cmd_generate
 from wurzel.cli.cmd_inspect import main as cmd_inspect
 from wurzel.cli.cmd_run import main as cmd_run
+from wurzel.exceptions import BackendNotFound
 from wurzel.step import TypedStep
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 from wurzel.utils.logging import get_logging_dict_config
@@ -178,10 +180,14 @@ def inspekt(
     return cmd_inspect(step, gen_env)
 
 
-def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, _backend: str):
+def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str):
     """Validates input and returns fitting backend. Currently always DVCBackend."""
-    logging.warning("only DVCBackend is supported currently")
-    return DvcBackend
+    match backend:
+        case DvcBackend.__name__:
+            return DvcBackend
+        case ArgoBackend.__name__:
+            return ArgoBackend
+    raise BackendNotFound(f"Backend {backend} not supported. choose from DvcBackend or ArgoBackend")
 
 
 def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str) -> TypedStep:
@@ -204,10 +210,6 @@ def generate(
             callback=pipeline_callback,
         ),
     ],
-    data_dir: Annotated[
-        Path,
-        typer.Option("-d", "--data-dir", file_okay=False, help="Target folder for pipeline"),
-    ] = Path("./data"),
     backend: Annotated[
         str,
         typer.Option(
@@ -216,7 +218,7 @@ def generate(
             callback=backend_callback,
             help="backend to use",
         ),
-    ] = DvcBackend,
+    ] = "DvcBackend",
 ):
     """Run."""
     log.debug(
@@ -224,7 +226,6 @@ def generate(
         extra={
             "parsed_args": {
                 "pipeline": pipeline,
-                "data_dir": data_dir,
                 "backend": backend,
             }
         },
@@ -232,7 +233,6 @@ def generate(
     return print(  # noqa: T201
         cmd_generate(
             pipeline,
-            data_dir,
             backend=backend,
         )
     )

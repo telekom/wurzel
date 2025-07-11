@@ -7,9 +7,11 @@ from pathlib import Path
 from typing import Any, TypedDict
 
 import yaml
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 import wurzel
 import wurzel.cli
+from wurzel.backend.backend import Backend
 from wurzel.step import TypedStep
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 
@@ -23,16 +25,12 @@ class DvcDict(TypedDict):
     always_changed: bool
 
 
-class Backend:
-    """Abstract class to specify the Backend."""
+class DvcBackendSettings(BaseSettings):
+    """Settings object which is infusable through ENV variables like DVCBACKEND__ENCAPSULATE_ENV."""
 
-    def generate_dict(self, step: TypedStep):
-        """Generate the dict."""
-        raise NotImplementedError()
-
-    def generate_yaml(self, step: TypedStep):
-        """Generate the dict and saves it."""
-        raise NotImplementedError()
+    model_config = SettingsConfigDict(env_prefix="DVCBACKEND__")
+    DATA_DIR: Path = Path("./data")
+    ENCAPSULATE_ENV: bool = True
 
 
 class DvcBackend(Backend):
@@ -40,15 +38,11 @@ class DvcBackend(Backend):
 
     def __init__(
         self,
-        data_dir: Path = Path("./data"),
+        settings: DvcBackendSettings | None = None,
         executer: BaseStepExecutor = PrometheusStepExecutor,
-        encapsulate_env: bool = True,
     ) -> None:
-        if not isinstance(data_dir, Path):
-            data_dir = Path(data_dir)
         self.executor: type[BaseStepExecutor] = executer
-        self.data_dir = data_dir
-        self.encapsulate_env = encapsulate_env
+        self.settings = settings if settings else DvcBackendSettings()
         super().__init__()
 
     def generate_dict(
@@ -70,13 +64,13 @@ class DvcBackend(Backend):
             dep_result = self.generate_dict(o_step)
             result |= dep_result
             outputs_of_deps += dep_result[o_step.__class__.__name__]["outs"]
-        output_path = self.data_dir / step.__class__.__name__
+        output_path = self.settings.DATA_DIR / step.__class__.__name__
         cmd = wurzel.cli.generate_cli_call(
             step.__class__,
             inputs=outputs_of_deps,
             output=output_path,
             executor=self.executor,
-            encapsulate_env=self.encapsulate_env,
+            encapsulate_env=self.settings.ENCAPSULATE_ENV,
         )
         return result | {
             step.__class__.__name__: {
@@ -97,9 +91,3 @@ class DvcBackend(Backend):
             for key in ["outs", "deps"]:
                 data[k][key] = [str(p) for p in data[k][key]]
         return yaml.dump({"stages": data})
-
-    @classmethod
-    def save_yaml(cls, yml: str, file: Path):
-        """Saves given yml string int file."""
-        with open(file, "w", encoding="utf-8") as f:
-            yaml.dump(yml, f)

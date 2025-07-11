@@ -93,3 +93,7 @@ class MarkdownConvertFailed(LoggedCustomException):
 
 class InvalidPlatform(LoggedCustomException):
     """raised when Platform is not supported."""
+
+
+class BackendNotFound(LoggedCustomException):
+    """raised when Backend is not supported."""
