@@ -7,9 +7,7 @@ from pathlib import Path
 
 from hera.workflows import DAG, ConfigMapEnvFrom, Container, CronWorkflow, S3Artifact, SecretEnvFrom, Task, Workflow
 from hera.workflows.archive import NoneArchiveStrategy
-
 from hera.workflows.models import SecurityContext
-from pydantic import Field, field_validator
 from pydantic_settings import SettingsConfigDict
 
 from wurzel.backend.backend import Backend
@@ -20,8 +18,10 @@ from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 
 
 class S3ArtifactTemplate(SettingsLeaf):
-    bucket:str = "wurzel-bucket",
-    endpoint:str ="s3.amazonaws.com",
+    """LeafSettings of the S3 Artifacts."""
+
+    bucket: str = "wurzel-bucket"
+    endpoint: str = "s3.amazonaws.com"
 
 
 class ArgoBackendSettings(SettingsBase):
@@ -39,16 +39,6 @@ class ArgoBackendSettings(SettingsBase):
     ANNOTATIONS: dict = {"sidecar.istio.io/inject": "false"}
     NAMESPACE: str = "argo-workflows"
     PIPELINE_SUFFIX: str = ""
-
-    @field_validator("S3_ARTIFACT_TEMPLATE", mode="plain")
-    @classmethod
-    def validate_s3_artifact_template(cls, value) -> S3ArtifactTemplate:
-        """Spetial validator  is needed because hera is based on pytantic v1."""
-        if isinstance(value, S3ArtifactTemplate):
-            return value
-        if isinstance(value, dict):
-            return S3ArtifactTemplate(**value)
-        raise TypeError("S3_ARTIFACT_TEMPLATE must be a dict or S3ArtifactTemplate instance")
 
 
 class ArgoBackend(Backend):
