@@ -7,7 +7,7 @@ from pathlib import Path
 
 from hera.workflows import DAG, ConfigMapEnvFrom, Container, CronWorkflow, S3Artifact, SecretEnvFrom, Task, Workflow
 from hera.workflows.archive import NoneArchiveStrategy
-from hera.workflows.models import S3Artifact as S3ArtifactTemplate
+
 from hera.workflows.models import SecurityContext
 from pydantic import Field, field_validator
 from pydantic_settings import SettingsConfigDict
@@ -15,8 +15,13 @@ from pydantic_settings import SettingsConfigDict
 from wurzel.backend.backend import Backend
 from wurzel.cli import generate_cli_call
 from wurzel.step import TypedStep
-from wurzel.step.settings import SettingsBase
+from wurzel.step.settings import SettingsBase, SettingsLeaf
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
+
+
+class S3ArtifactTemplate(SettingsLeaf):
+    bucket:str = "wurzel-bucket",
+    endpoint:str ="s3.amazonaws.com",
 
 
 class ArgoBackendSettings(SettingsBase):
@@ -27,12 +32,7 @@ class ArgoBackendSettings(SettingsBase):
     SCHEDULE: str = "0 4 * * *"
     DATA_DIR: Path = Path("/usr/app")
     ENCAPSULATE_ENV: bool = True
-    S3_ARTIFACT_TEMPLATE: S3ArtifactTemplate = Field(
-        S3ArtifactTemplate(
-            bucket="wurzel-bucket",  # "oneai-nonprod-pipelines",
-            endpoint="s3.amazonaws.com",
-        )
-    )
+    S3_ARTIFACT_TEMPLATE: S3ArtifactTemplate = S3ArtifactTemplate()
     SERVICE_ACCOUNT_NAME: str = "wurzel-service-account"
     SECRET_NAME: str = "wurzel-secret"
     CONFIG_MAP: str = "wurzel-config"
