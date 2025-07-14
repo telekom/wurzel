@@ -8,7 +8,7 @@ from pathlib import Path
 
 from hera.workflows import DAG, ConfigMapEnvFrom, Container, CronWorkflow, S3Artifact, SecretEnvFrom, Task, Workflow
 from hera.workflows.archive import NoneArchiveStrategy
-from hera.workflows.models import SecurityContext
+from hera.workflows.models import EnvVar, SecurityContext
 from pydantic import Field, field_validator
 from pydantic_settings import SettingsConfigDict
 
@@ -57,6 +57,7 @@ class ArgoBackendSettings(SettingsBase):
     """
 
     model_config = SettingsConfigDict(env_prefix="ARGOWORKFLOWBACKEND__")
+    INLINE_STEP_SETTINGS: bool = False
     IMAGE: str = "ghcr.io/telekom/wurzel"
     SCHEDULE: str = "0 4 * * *"
     DATA_DIR: Path = Path("/usr/app")
@@ -96,6 +97,25 @@ class ArgoBackend(Backend):
         self.executor: type[BaseStepExecutor] = executer
         self.settings = settings if settings else ArgoBackendSettings()
         super().__init__()
+
+    def _create_envs_from_step_settings(self, step: type[TypedStep]) -> list[EnvVar]:
+        if not self.settings.INLINE_STEP_SETTINGS:
+            return None
+
+        sensitive_keywords = {"password", "secret", "token", "key", "passwd", "apikey"}
+        env_vars = []
+
+        for field_name, field_value in step.settings.dict().items():
+            # Skip fields with sensitive keywords in their names
+            if any(keyword in field_name.lower() for keyword in sensitive_keywords):
+                continue
+            # Add as Env object with uppercase name and stringified value
+            if self.settings.ENCAPSULATE_ENV:
+                env_vars.append(EnvVar(name=f"{step.__class__.__name__.upper()}__{field_name.upper()}", value=str(field_value)))
+            else:
+                env_vars.append(EnvVar(name=field_name.upper(), value=str(field_value)))
+
+        return env_vars if env_vars else []
 
     def generate_dict(self, step: TypedStep):
         """Returns the workflow as a Python dictionary representation.
@@ -189,7 +209,7 @@ class ArgoBackend(Backend):
         ]
 
         dag.__exit__()
-
+        env_vars = self._create_envs_from_step_settings(step)
         wurzel_call = Container(
             name=f"wurzel-run-template-{step.__class__.__name__.lower()}",
             image=self.settings.IMAGE,
@@ -197,6 +217,7 @@ class ArgoBackend(Backend):
             command=commands,
             annotations=self.settings.ANNOTATIONS,
             inputs=inputs,
+            env=env_vars,
             env_from=[
                 SecretEnvFrom(prefix="", name=self.settings.SECRET_NAME, optional=True),
                 ConfigMapEnvFrom(prefix="", name=self.settings.CONFIG_MAP, optional=True),
