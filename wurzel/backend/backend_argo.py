@@ -43,6 +43,7 @@ class ArgoBackendSettings(SettingsBase):
 
     Attributes:
         IMAGE (str): Docker image used to run pipeline steps.
+        INLINE_STEP_SETTINGS (bool): if STEP environment variables have to get loaded based on settings and passed directly to it's step.
         SCHEDULE (str): Cron expression for scheduling the workflow.
         DATA_DIR (Path): Base directory inside the container where step data is written.
         ENCAPSULATE_ENV (bool): Whether to encapsulate step execution with environment variables.
