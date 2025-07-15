@@ -4,8 +4,6 @@
 
 from pathlib import Path
 
-import yaml
-
 from wurzel.step.typed_step import TypedStep
 
 
@@ -66,4 +64,4 @@ class Backend:
             This method uses UTF-8 encoding and dumps the string using PyYAML.
 
         """
-        file.write_text(yaml.dump(yml), encoding="utf-8")
+        file.write_text(yml, encoding="utf-8")

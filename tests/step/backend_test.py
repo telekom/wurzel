@@ -22,15 +22,11 @@ class DummySettings(Settings):
 
 
 class DummyStep(TypedStep[DummySettings, None, MarkdownDataContract]):
-    settings = DummySettings()
-
     def run(self, inpt: None) -> MarkdownDataContract:
         return super().run(inpt)
 
 
 class DummyFollowStep(TypedStep[DummySettings, MarkdownDataContract, MarkdownDataContract]):
-    settings = DummySettings()
-
     def run(self, inpt: MarkdownDataContract) -> MarkdownDataContract:
         return super().run(inpt)
 

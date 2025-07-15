@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import logging
 import re
 from functools import cache
 from pathlib import Path
@@ -17,6 +18,9 @@ from wurzel.cli import generate_cli_call
 from wurzel.step import TypedStep
 from wurzel.step.settings import SettingsBase, SettingsLeaf
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
+from wurzel.utils.logging import SECRET_WORDS
+
+log = logging.getLogger(__name__)
 
 
 class S3ArtifactTemplate(SettingsLeaf):
@@ -101,14 +105,14 @@ class ArgoBackend(Backend):
 
     def _create_envs_from_step_settings(self, step: type[TypedStep]) -> list[EnvVar]:
         if not self.settings.INLINE_STEP_SETTINGS:
-            return None
+            return []
 
-        sensitive_keywords = {"password", "secret", "token", "key", "passwd", "apikey"}
         env_vars = []
 
-        for field_name, field_value in step.settings.dict().items():
+        for field_name, field_value in step.settings_class().model_dump().items():
             # Skip fields with sensitive keywords in their names
-            if any(keyword in field_name.lower() for keyword in sensitive_keywords):
+            if any(keyword in field_name.lower() for keyword in SECRET_WORDS):
+                log.info(f"skipped config {field_name} due to secret detection")
                 continue
             # Add as Env object with uppercase name and stringified value
             if self.settings.ENCAPSULATE_ENV:
