@@ -18,6 +18,7 @@ from typing import Annotated
 import typer
 import typer.core
 
+from wurzel.backend.backend import Backend
 from wurzel.backend.backend_argo import ArgoBackend
 from wurzel.backend.backend_dvc import DvcBackend
 from wurzel.cli.cmd_generate import main as cmd_generate
@@ -179,7 +180,7 @@ def inspekt(
     return cmd_inspect(step, gen_env)
 
 
-def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str):
+def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str) -> type[Backend]:
     """Validates input and returns fitting backend. Currently always DVCBackend."""
     match backend:
         case DvcBackend.__name__:
@@ -211,14 +212,14 @@ def generate(
         ),
     ],
     backend: Annotated[
-        str,
+        type[Backend],
         typer.Option(
             "-b",
             "--backend",
             callback=backend_callback,
             help="backend to use",
         ),
-    ] = "DvcBackend",
+    ] = DvcBackend,
 ):
     """Run."""
     log.debug(
