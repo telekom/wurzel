@@ -3,14 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import logging
-import re
 from functools import cache
 from pathlib import Path
 
 from hera.workflows import DAG, ConfigMapEnvFrom, Container, CronWorkflow, S3Artifact, SecretEnvFrom, Task, Workflow
 from hera.workflows.archive import NoneArchiveStrategy
 from hera.workflows.models import EnvVar, SecurityContext
-from pydantic import Field, field_validator
+from pydantic import Field
 from pydantic_settings import SettingsConfigDict
 
 from wurzel.backend.backend import Backend
@@ -77,9 +76,8 @@ class ArgoBackendSettings(SettingsBase):
         default="wurzel",
         max_length=63,
         description="Kubernetes-compliant name: lowercase alphanumeric, '-' allowed, must start and end with alphanumeric.",
-        pattern=DNS_LABEL_REGEX
+        pattern=DNS_LABEL_REGEX,
     )
-
 
 
 class ArgoBackend(Backend):
@@ -199,7 +197,9 @@ class ArgoBackend(Backend):
         commands: list[str] = [
             entry
             for entry in generate_cli_call(
-                step.__class__, inputs=[Path(inpt.path) for inpt in inputs if inpt.path], output=self.settings.DATA_DIR / step.__class__.__name__
+                step.__class__,
+                inputs=[Path(inpt.path) for inpt in inputs if inpt.path],
+                output=self.settings.DATA_DIR / step.__class__.__name__,
             ).split(" ")
             if entry.strip()
         ]
