@@ -18,4 +18,4 @@ def main(step: TypedStep, backend: Backend) -> str:
         allow_extra_fields=BaseStepExecutor.is_allow_extra_settings(),
     )()
 
-    return adapter.generate_yaml(step)
+    return adapter.generate_artifact(step)

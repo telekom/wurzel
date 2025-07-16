@@ -74,7 +74,7 @@ class DvcBackend(Backend):
         self.settings = settings if settings else DvcBackendSettings()
         super().__init__()
 
-    def generate_dict(
+    def _generate_dict(
         self,
         step: TypedStep,
     ) -> dict[str, DvcDict]:
@@ -95,7 +95,7 @@ class DvcBackend(Backend):
         outputs_of_deps: list[Path] = []
 
         for o_step in step.required_steps:
-            dep_result = self.generate_dict(o_step)
+            dep_result = self._generate_dict(o_step)
             result |= dep_result
             outputs_of_deps += dep_result[o_step.__class__.__name__]["outs"]
 
@@ -118,7 +118,7 @@ class DvcBackend(Backend):
             }
         }
 
-    def generate_yaml(
+    def generate_artifact(
         self,
         step: TypedStep,
     ) -> str:
@@ -133,7 +133,7 @@ class DvcBackend(Backend):
             str: A YAML string containing the full DVC pipeline definition.
 
         """
-        data = self.generate_dict(step)
+        data = self._generate_dict(step)
 
         # Convert all Path objects to strings for YAML compatibility
         for k in data:
