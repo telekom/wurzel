@@ -225,10 +225,15 @@ class ArgoBackend(Backend):
         dag.__enter__()  # pylint: disable=unnecessary-dunder-call
 
         input_refs = [self._create_artifact_from_step(req) for req in step.required_steps]
-        return wurzel_call(
+        task = wurzel_call(
             name=step.__class__.__name__.lower(),
             arguments=input_refs,
         )
+
+        if not isinstance(task, Task):
+            raise RuntimeError(f"Expected Task from Container call, got {type(task)}")
+
+        return task
 
     def __generate_dag(self, step: "TypedStep[Any, Any, Any]") -> DAG:
         """Recursively builds a DAG from a step and its dependencies using Hera's DAG API.
