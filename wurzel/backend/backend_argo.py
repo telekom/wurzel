@@ -77,18 +77,9 @@ class ArgoBackendSettings(SettingsBase):
         default="wurzel",
         max_length=63,
         description="Kubernetes-compliant name: lowercase alphanumeric, '-' allowed, must start and end with alphanumeric.",
+        pattern=DNS_LABEL_REGEX
     )
 
-    @field_validator("PIPELINE_NAME")
-    @classmethod
-    def _validate_pipeline_name(cls, value: str) -> str:
-        pattern = r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
-        if not re.fullmatch(pattern, value):
-            raise ValueError(
-                "PIPELINE_NAME must consist of lower-case letters, numbers, and '-', "
-                "start and end with a letter or number, and be <= 63 characters."
-            )
-        return value
 
 
 class ArgoBackend(Backend):
@@ -98,7 +89,7 @@ class ArgoBackend(Backend):
     with DAG-structured task execution and artifact-based I/O between steps.
     """
 
-    def __init__(self, settings: ArgoBackendSettings | None = None, executer: BaseStepExecutor = PrometheusStepExecutor) -> None:
+    def __init__(self, settings: ArgoBackendSettings | None = None, executer: type[BaseStepExecutor] = PrometheusStepExecutor) -> None:
         self.executor: type[BaseStepExecutor] = executer
         self.settings = settings if settings else ArgoBackendSettings()
         super().__init__()
@@ -120,7 +111,7 @@ class ArgoBackend(Backend):
             else:
                 env_vars.append(EnvVar(name=field_name.upper(), value=str(field_value)))
 
-        return env_vars if env_vars else []
+        return env_vars
 
     def generate_dict(self, step: TypedStep):
         """Returns the workflow as a Python dictionary representation.
@@ -184,7 +175,7 @@ class ArgoBackend(Backend):
             recurse_mode=True,
             archive=NoneArchiveStrategy(),
             key=step.__class__.__name__.lower(),
-            path=(self.settings.DATA_DIR / step.__class__.__name__).as_posix(),
+            path=str((self.settings.DATA_DIR / step.__class__.__name__).absolute()),
             bucket=self.settings.S3_ARTIFACT_TEMPLATE.bucket,
             endpoint=self.settings.S3_ARTIFACT_TEMPLATE.endpoint,
         )
@@ -208,7 +199,7 @@ class ArgoBackend(Backend):
         commands: list[str] = [
             entry
             for entry in generate_cli_call(
-                step.__class__, inputs=[inpt.path for inpt in inputs], output=self.settings.DATA_DIR / step.__class__.__name__
+                step.__class__, inputs=[Path(inpt.path) for inpt in inputs if inpt.path], output=self.settings.DATA_DIR / step.__class__.__name__
             ).split(" ")
             if entry.strip()
         ]

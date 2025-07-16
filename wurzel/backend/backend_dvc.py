@@ -68,7 +68,7 @@ class DvcBackend(Backend):
     def __init__(
         self,
         settings: DvcBackendSettings | None = None,
-        executer: BaseStepExecutor = PrometheusStepExecutor,
+        executer: type[BaseStepExecutor] = PrometheusStepExecutor,
     ) -> None:
         self.executor: type[BaseStepExecutor] = executer
         self.settings = settings if settings else DvcBackendSettings()

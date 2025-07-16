@@ -146,7 +146,7 @@ def run(
     encapsulate_env: Annotated[bool, typer.Option()] = True,
 ):
     """Run."""
-    output_path = Path(output_path.as_posix().replace("<step-name>", step.__name__))
+    output_path = Path(str(output_path.absolute()).replace("<step-name>", step.__name__))
     log.debug(
         "executing run",
         extra={
