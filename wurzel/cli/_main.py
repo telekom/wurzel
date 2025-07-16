@@ -13,7 +13,7 @@ import pkgutil
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 import typer.core
@@ -187,8 +187,8 @@ def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: 
             return DvcBackend
         case ArgoBackend.__name__:
             return ArgoBackend
-
-    raise typer.BadParameter(f"Backend {backend} not supported. choose from DvcBackend or ArgoBackend")
+        case _:
+            raise typer.BadParameter(f"Backend {backend} not supported. choose from DvcBackend or ArgoBackend")
 
 
 def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str) -> TypedStep:
@@ -212,14 +212,14 @@ def generate(
         ),
     ],
     backend: Annotated[
-        type[Backend],
+        str,
         typer.Option(
             "-b",
             "--backend",
             callback=backend_callback,
             help="backend to use",
         ),
-    ] = DvcBackend,
+    ] = "DvcBackend",
 ):
     """Run."""
     log.debug(
@@ -234,7 +234,7 @@ def generate(
     return print(  # noqa: T201
         cmd_generate(
             pipeline,
-            backend=backend,
+            backend=cast(type[Backend], backend),
         )
     )
 
