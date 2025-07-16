@@ -35,7 +35,7 @@ To specify a different backend or output file:
 
     wurzel generate --backend ArgoBackend --output cronworkflow.yaml examples.pipeline.pipelinedemo:pipeline
 
-Replace `pipeline:pipeline` with your actual module path and step name.
+Replace `examples.pipeline.pipelinedemo:pipeline` with your actual module path and step name.
 
 ---
 
