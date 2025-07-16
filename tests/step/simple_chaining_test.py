@@ -48,7 +48,7 @@ def test_dict(backend):
     a = WZ(A)
     b = WZ(B)
     a >> b
-    dic = backend().generate_dict(b)
+    dic = backend()._generate_dict(b)
     assert dic
 
 
