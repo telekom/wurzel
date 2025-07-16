@@ -5,8 +5,10 @@
 import os
 import shutil
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 import requests_mock
 
 from wurzel.step_executor.base_executor import BaseStepExecutor
@@ -50,3 +52,23 @@ def test_scraper_api(tmp_path: Path, mock_scraper_api, url_items):
 
     assert list(output.iterdir())
     assert len(result[0][0]) == 3
+
+
+def test_scraper_api_errors(tmp_path: Path, env, url_items):
+    env.set("SCRAPERAPISTEP__TOKEN", "dummy token")
+    output = tmp_path / f"{ScraperAPIStep.__name__}"
+    os.mkdir(tmp_path / "input")
+    shutil.copy("tests/data/markdown.json", tmp_path / "input/")
+    output.mkdir(parents=True, exist_ok=True)
+    side_effects = []
+    for _url, path in url_items:
+        successful_response = MagicMock()
+        successful_response.status_code = 200
+        successful_response.text = open(path, encoding="utf8").read()
+        side_effects.append(successful_response)
+
+    side_effects += [requests.exceptions.HTTPError, requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError]
+
+    with patch("requests.Session.get", side_effect=side_effects):
+        with BaseStepExecutor() as ex:
+            ex(ScraperAPIStep, [[url for url, _path in url_items + url_items]], output)

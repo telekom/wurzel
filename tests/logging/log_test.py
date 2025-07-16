@@ -7,21 +7,23 @@ import logging
 
 import pytest
 
-from wurzel.utils.logging import JsonFormatter
+from wurzel.utils.logging import JsonFormatter, JsonStringFormatter
 
 FOR_EACH_LOG_LEVEL = pytest.mark.parametrize(
     "level",
     [pytest.param(v, id=k) for k, v in logging.getLevelNamesMapping().items() if k != "NOTSET"],
 )
 FOR_EACH_LOGGER = pytest.mark.parametrize("loggername", ["root", "new_one", ""])
+FOR_EACH_FORMATTER = pytest.mark.parametrize("formatter", [JsonFormatter(), JsonStringFormatter()])
 
 
 @FOR_EACH_LOG_LEVEL
 @FOR_EACH_LOGGER
-def test_logging(capsys, level, loggername):
+@FOR_EACH_FORMATTER
+def test_logging(capsys, level, loggername, formatter):
     handler = logging.StreamHandler()
     handler.setLevel("DEBUG")
-    handler.setFormatter(JsonFormatter())
+    handler.setFormatter(formatter)
 
     logging.basicConfig(level=logging.DEBUG, handlers=[handler], force=True)
     logging.getLogger("root").log(level, "hi")
@@ -33,19 +35,26 @@ def test_logging(capsys, level, loggername):
 
 @FOR_EACH_LOG_LEVEL
 @FOR_EACH_LOGGER
-def test_logging_extra_data(capsys, level, loggername):
+@FOR_EACH_FORMATTER
+def test_logging_extra_data(capsys, level, loggername, formatter):
     handler = logging.StreamHandler()
     handler.setLevel("DEBUG")
-    handler.setFormatter(JsonFormatter())
-
+    handler.setFormatter(formatter)
     logging.basicConfig(level=logging.DEBUG, handlers=[handler], force=True)
-    logging.getLogger("root").log(level, "hi", extra={"a": 1, "b": logging})
+    logging.getLogger(loggername).log(level, "hi", extra={"a": 1, "b": logging})
     out = capsys.readouterr().err.splitlines()[0]
     assert "hi" in out
     assert logging.getLevelName(level) in out
     data = json.loads(out)
+    data_extra = {}
     assert "extra" in data
-    assert data["extra"]["a"] == 1
+    if isinstance(formatter, JsonStringFormatter):
+        # Since JsonStringFormatter changes all extra field to json string
+        assert isinstance(data["extra"], str)
+        data_extra = json.loads(data["extra"])
+    elif isinstance(formatter, JsonFormatter):
+        data_extra = data["extra"]
+    assert data_extra["a"] == 1
 
 
 @FOR_EACH_LOG_LEVEL

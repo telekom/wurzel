@@ -86,5 +86,5 @@ class SimpleSplitterStep(TypedStep[SplitterSettings, list[MarkdownDataContract],
         if skipped == len(markdowns):
             raise SplittException("all Documents got skipped during splitting")
         if skipped:
-            log.error(f"{(skipped / len(markdowns)) * 100}% got skipped")
+            log.warning(f"{(skipped / len(markdowns)) * 100}% got skipped")
         return rows
