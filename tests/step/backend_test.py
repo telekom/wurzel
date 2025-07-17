@@ -6,6 +6,7 @@
 import pytest
 import yaml
 
+from pydantic import SecretStr
 from wurzel.backend.backend_argo import ArgoBackend, ArgoBackendSettings, EnvVar
 from wurzel.datacontract.common import MarkdownDataContract
 from wurzel.step import Settings, TypedStep
@@ -14,10 +15,10 @@ from wurzel.utils.meta_settings import WZ
 
 class DummySettings(Settings):
     username: str = "user1"
-    password: str = "topsecret"
-    api_key: str = "apikey123"
+    password: SecretStr = "topsecret"
+    api_key: SecretStr = "apikey123"
     retries: int = 3
-    token: str = "tok"
+    token: SecretStr = "tok"
     non_secret_value: str = "safe_value"
 
 
@@ -90,10 +91,10 @@ def test_env_vars_in_task_container(argo_backend: ArgoBackend):
     # Check that non-secret settings are present with correct prefix and value
     assert templates[1]["container"]["env"][0]["value"] == "user1"
     assert templates[1]["container"]["env"][0]["name"] == "DUMMYSTEP__USERNAME"
-    assert len(templates[1]["container"]["env"]) == 2
+    assert len(templates[1]["container"]["env"]) == 3
     assert templates[2]["container"]["env"][0]["value"] == "user1"
     assert templates[2]["container"]["env"][0]["name"] == "DUMMYFOLLOWSTEP__USERNAME"
-    assert len(templates[2]["container"]["env"]) == 2
+    assert len(templates[2]["container"]["env"]) == 3
 
 
 def test_argo_settings(env):

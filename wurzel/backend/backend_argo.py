@@ -9,7 +9,7 @@ from pathlib import Path
 from hera.workflows import DAG, ConfigMapEnvFrom, Container, CronWorkflow, S3Artifact, SecretEnvFrom, Task, Workflow
 from hera.workflows.archive import NoneArchiveStrategy
 from hera.workflows.models import EnvVar, SecurityContext
-from pydantic import Field
+from pydantic import Field, SecretStr
 from pydantic_settings import SettingsConfigDict
 
 from wurzel.backend.backend import Backend
@@ -17,7 +17,7 @@ from wurzel.cli import generate_cli_call
 from wurzel.step import TypedStep
 from wurzel.step.settings import SettingsBase, SettingsLeaf
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
-from wurzel.utils.logging import SECRET_WORDS
+
 
 log = logging.getLogger(__name__)
 
@@ -100,7 +100,7 @@ class ArgoBackend(Backend):
 
         for field_name, field_value in step.settings_class().model_dump().items():
             # Skip fields with sensitive keywords in their names
-            if any(keyword in field_name.lower() for keyword in SECRET_WORDS):
+            if isinstance(field_value,SecretStr):
                 log.info(f"skipped config {field_name} due to secret detection")
                 continue
             # Add as Env object with uppercase name and stringified value
