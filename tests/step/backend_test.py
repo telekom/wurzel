@@ -15,10 +15,10 @@ from wurzel.utils.meta_settings import WZ
 
 class DummySettings(Settings):
     username: str = "user1"
-    password: SecretStr = "topsecret" #pragma: allowlist secret
-    api_key: SecretStr = "apikey123" #pragma: allowlist secret
+    password: SecretStr = "topsecret"  # pragma: allowlist secret
+    api_key: SecretStr = "apikey123"  # pragma: allowlist secret
     retries: int = 3
-    token: SecretStr = "tok" #pragma: allowlist secret
+    token: SecretStr = "tok"  # pragma: allowlist secret
     non_secret_value: str = "safe_value"
 
 
