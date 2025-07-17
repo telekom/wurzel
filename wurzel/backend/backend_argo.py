@@ -18,7 +18,6 @@ from wurzel.step import TypedStep
 from wurzel.step.settings import SettingsBase, SettingsLeaf
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 
-
 log = logging.getLogger(__name__)
 
 
@@ -100,7 +99,7 @@ class ArgoBackend(Backend):
 
         for field_name, field_value in step.settings_class().model_dump().items():
             # Skip fields with sensitive keywords in their names
-            if isinstance(field_value,SecretStr):
+            if isinstance(field_value, SecretStr):
                 log.info(f"skipped config {field_name} due to secret detection")
                 continue
             # Add as Env object with uppercase name and stringified value

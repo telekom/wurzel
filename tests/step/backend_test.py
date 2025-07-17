@@ -5,8 +5,8 @@
 
 import pytest
 import yaml
-
 from pydantic import SecretStr
+
 from wurzel.backend.backend_argo import ArgoBackend, ArgoBackendSettings, EnvVar
 from wurzel.datacontract.common import MarkdownDataContract
 from wurzel.step import Settings, TypedStep

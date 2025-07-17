@@ -46,8 +46,6 @@ def warnings_to_logger(message: str, category: str, filename: str, lineno: str, 
     logger.warning(message, extra=extra)
 
 
-
-
 def _make_dict_serializable(item: Any):
     match item:
         case dict():
