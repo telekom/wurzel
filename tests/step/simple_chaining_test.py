@@ -44,11 +44,11 @@ class D(TypedStep[None, MarkdownDataContract, MarkdownDataContract]):
         pytest.param(ArgoBackend, id="ArGo Backend"),
     ],
 )
-def test_dict(backend: type[Backend]):
+def test_dict(backend):
     a = WZ(A)
     b = WZ(B)
     a >> b
-    dic = backend().generate_dict(b)
+    dic = backend()._generate_dict(b)
     assert dic
 
 
@@ -75,16 +75,16 @@ def test_yaml(backend: type[Backend], keys):
     d = WZ(D)
     a >> b >> c
     d >> c
-    y = backend().generate_yaml(b)
+    y = backend().generate_artifact(b)
     y_dict = yaml.safe_load(y)
     assert len(safeget(y_dict, *keys)) == 2
-    y = backend().generate_yaml(c)
+    y = backend().generate_artifact(c)
     y_dict = yaml.safe_load(y)
     assert len(safeget(y_dict, *keys)) == 4
-    y = backend().generate_yaml(d)
+    y = backend().generate_artifact(d)
     y_dict = yaml.safe_load(y)
     assert len(safeget(y_dict, *keys)) == 1
-    y = backend().generate_yaml(a)
+    y = backend().generate_artifact(a)
     y_dict = yaml.safe_load(y)
     assert len(safeget(y_dict, *keys)) == 1
 
@@ -104,6 +104,6 @@ def test_minimal_pipeline(backend: type[Backend], keys, params):
     duplication = WZ(DropDuplicationStep)
     agb >> splitter >> duplication
 
-    y = backend(**params).generate_yaml(duplication)
+    y = backend(**params).generate_artifact(duplication)
     y_dict = yaml.safe_load(y)
     assert len(safeget(y_dict, *keys)) == 3

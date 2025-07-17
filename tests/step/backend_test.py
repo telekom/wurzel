@@ -69,7 +69,7 @@ def test_env_vars_in_task_container(argo_backend: ArgoBackend):
     step = WZ(DummyStep)
     follow = WZ(DummyFollowStep)
     step >> follow
-    yaml_output = argo_backend.generate_yaml(step)
+    yaml_output = argo_backend.generate_artifact(step)
     parsed = yaml.safe_load(yaml_output)
 
     # Navigate to the templates where containers are defined
@@ -80,7 +80,7 @@ def test_env_vars_in_task_container(argo_backend: ArgoBackend):
     # Check that non-secret settings are present with correct prefix and value
     assert templates[1]["container"]["env"][0]["value"] == "user1"
     assert templates[1]["container"]["env"][0]["name"] == "DUMMYSTEP__USERNAME"
-    yaml_output = argo_backend.generate_yaml(follow)
+    yaml_output = argo_backend.generate_artifact(follow)
     parsed = yaml.safe_load(yaml_output)
 
     # Navigate to the templates where containers are defined

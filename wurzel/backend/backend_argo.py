@@ -111,7 +111,7 @@ class ArgoBackend(Backend):
 
         return env_vars
 
-    def generate_dict(self, step: TypedStep):
+    def _generate_dict(self, step: TypedStep):
         """Returns the workflow as a Python dictionary representation.
 
         Args:
@@ -123,7 +123,7 @@ class ArgoBackend(Backend):
         """
         return self._generate_workflow(step).to_dict()
 
-    def generate_yaml(self, step: TypedStep):
+    def generate_artifact(self, step: TypedStep):
         """Returns the workflow serialized to a valid Argo YAML definition.
 
         Args:
