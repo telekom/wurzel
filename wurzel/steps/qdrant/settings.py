@@ -52,6 +52,9 @@ class QdrantSettings(Settings):
     APIKEY: Optional[str] = ""
     REPLICATION_FACTOR: int = Field(default=3, gt=0)
     BATCH_SIZE: int = Field(default=1024, gt=0)
+    TELEMETRY_DETAILS_LEVEL: int = 3
+    COLLECTION_USAGE_RETENTION_DAYS: int = 2
+    REQUEST_TIMEOUT: int = 20
 
     @field_validator("SEARCH_PARAMS", "INDEX_PARAMS", mode="before")
     @classmethod

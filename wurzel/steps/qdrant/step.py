@@ -6,11 +6,16 @@
 
 # pylint: disable=duplicate-code
 import itertools
+from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from logging import getLogger
+from typing import Optional
 
+import requests
+from dateutil.parser import isoparse
 from pandera.typing import DataFrame
 from qdrant_client import QdrantClient, models
+from qdrant_client.http.models.models import CollectionTelemetry, InlineResponse2002
 
 from wurzel.exceptions import CustomQdrantException, StepFailed
 from wurzel.step import TypedStep, step_history
@@ -71,6 +76,18 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         while True:
             i += 1
             yield i
+
+    def _get_telemetry(self, details_level: int) -> InlineResponse2002:
+        """Get Qdrant Collection Telemetry."""
+        url = f"{self.settings.URI}/telemetry?details_level={details_level}"
+        headers = {"api-key": self.settings.APIKEY}
+        try:
+            response = requests.get(url, headers=headers, timeout=self.settings.REQUEST_TIMEOUT)
+            response.raise_for_status()
+            data = InlineResponse2002(**response.json())
+            return data
+        except requests.RequestException as e:
+            raise RuntimeError(f"Failed to fetch telemetry from Qdrant: {e}") from e
 
     def run(self, inpt: DataFrame[EmbeddingResult]) -> DataFrame[QdrantResult]:
         if not self.client.collection_exists(self.collection_name):
@@ -206,16 +223,77 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             field_schema=models.TextIndexParams(type=models.TextIndexType.TEXT, tokenizer=models.TokenizerType.WORD),
         )
 
-    def _retire_collections(self):
+    def _retire_collections(self) -> None:
+        """Retire (delete) historical Qdrant collections that.
+
+        - Are older than the configured history length, AND
+        - Are not currently targeted by an alias, AND
+        - Have not been recently used (per telemetry).
+
+        """
         collections_versioned: dict[int, str] = self._get_collection_versions()
-        to_delete = list(collections_versioned.keys())[: -self.settings.COLLECTION_HISTORY_LEN]
-        if not to_delete:
+        if not collections_versioned:
             return
 
-        for col_v in to_delete:
-            col = collections_versioned[col_v]
-            log.info(f"deleting {col} collection caused by retirement")
-            self.client.delete_collection(col)
+        latest_version = max(collections_versioned)
+        retirement_threshold = latest_version - self.settings.COLLECTION_HISTORY_LEN
+
+        alias_pointed = {alias.collection_name for alias in self.client.get_aliases().aliases}
+        # pylint: disable-next=no-member
+        telemetry_collections: InlineResponse2002 = self._get_telemetry(
+            details_level=self.settings.TELEMETRY_DETAILS_LEVEL
+        ).result.collections.collections
+
+        for version, collection_name in collections_versioned.items():
+            if version > retirement_threshold:
+                continue
+
+            if self._should_skip_collection(collection_name, alias_pointed, telemetry_collections):
+                continue
+
+            log.info("Deleting retired collection", extra={"collection": collection_name})
+            self.client.delete_collection(collection_name)
+
+    def _should_skip_collection(self, name: str, alias_pointed: set[str], telemetry_collections: list) -> bool:
+        """Check if a collection should not be deleted."""
+        if name in alias_pointed:
+            log.warning("Skipping deletion: still aliased", extra={"collection": name})
+            return True
+
+        usage_info = next((col for col in telemetry_collections if col.id == name), None)
+        if usage_info and self._was_recently_used_via_shards(usage_info):
+            log.warning("Skipping deletion: recently accessed", extra={"collection": name})
+            return True
+
+        return False
+
+    def _was_recently_used_via_shards(self, collection_info: CollectionTelemetry) -> bool:
+        threshold = datetime.now(timezone.utc) - timedelta(days=self.settings.COLLECTION_USAGE_RETENTION_DAYS)
+        latest_usage = self._get_latest_usage_timestamp(collection_info)
+        return latest_usage is not None and latest_usage > threshold
+
+    def _get_latest_usage_timestamp(self, collection_info: CollectionTelemetry) -> Optional[datetime]:
+        timestamps = []
+
+        for shard in collection_info.shards:
+            timestamps.append(self._parse_local_timestamp(shard))
+            timestamps.extend(self._parse_remote_timestamps(shard))
+
+        return max(filter(None, timestamps), default=None)
+
+    def _parse_local_timestamp(self, shard) -> Optional[datetime]:
+        ts = shard.local.optimizations.optimizations.last_responded
+        return self._safe_parse_iso(ts)
+
+    def _parse_remote_timestamps(self, shard) -> list[datetime]:
+        return [
+            self._safe_parse_iso(remote.searches.last_responded)
+            for remote in shard.remote
+            if self._safe_parse_iso(remote.searches.last_responded) is not None
+        ]
+
+    def _safe_parse_iso(self, timestamp: Optional[str]) -> Optional[datetime]:
+        return isoparse(timestamp) if timestamp else None
 
     def _update_alias(self):
         success = self.client.update_collection_aliases(
