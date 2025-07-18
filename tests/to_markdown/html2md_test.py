@@ -2,7 +2,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 import lxml.html
+import pytest
+from pydantic import TypeAdapter
 
+from wurzel.utils import MarkdownConverterSettings
 from wurzel.utils.to_markdown.html2md import clean_tree, html2str, normalize_urls, normalize_urls_in_tree, to_markdown
 
 
@@ -241,7 +244,22 @@ def test_normalize_urls_handles_multiple_elements():
     assert 'src="https://site.com/baz.png"' in result
 
 
-def test_to_markdown_converts_html_table_to_markdown_table():
+@pytest.fixture
+def to_markdown_settings_dict():
+    """Fixture to provide a default MarkdownConverterSettings for tests."""
+    return MarkdownConverterSettings(HTML2MD_BINARY_FLAGS="-T")
+
+
+def test_to_markdown_settings(to_markdown_settings_dict):
+    type_adapter = TypeAdapter(MarkdownConverterSettings)
+    # Validate a dict input
+    _ = type_adapter.validate_python({"HTML2MD_BINARY_FLAGS": ""})
+
+    # Validate an instance input
+    _ = type_adapter.validate_python(to_markdown_settings_dict)
+
+
+def test_to_markdown_converts_html_table_to_markdown_table(to_markdown_settings_dict: MarkdownConverterSettings):
     """Test that HTML tables are properly converted to markdown table format."""
     html_with_table = """
     <html>
@@ -273,7 +291,7 @@ def test_to_markdown_converts_html_table_to_markdown_table():
     </html>
     """
 
-    result = to_markdown(html_with_table)
+    result = to_markdown(html_with_table, settings=to_markdown_settings_dict)
 
     # Check that the result contains markdown table syntax
     assert "| Name | Age | City |" in result
@@ -286,7 +304,7 @@ def test_to_markdown_converts_html_table_to_markdown_table():
     assert "This is a paragraph after the table." in result
 
 
-def test_to_markdown_converts_simple_html_table():
+def test_to_markdown_converts_simple_html_table(to_markdown_settings_dict: MarkdownConverterSettings):
     """Test conversion of a simple HTML table without thead/tbody."""
     html_simple_table = """
     <table>
@@ -305,7 +323,7 @@ def test_to_markdown_converts_simple_html_table():
     </table>
     """
 
-    result = to_markdown(html_simple_table)
+    result = to_markdown(html_simple_table, settings=to_markdown_settings_dict)
 
     # Check that the result contains markdown table syntax
     assert "| Product | Price |" in result
@@ -314,7 +332,7 @@ def test_to_markdown_converts_simple_html_table():
     assert "| Orange | $1.50 |" in result
 
 
-def test_to_markdown_handles_single_row_table():
+def test_to_markdown_handles_single_row_table(to_markdown_settings_dict: MarkdownConverterSettings):
     """Test conversion of a table with only one row."""
     html_single_row = """
     <table>
@@ -326,7 +344,7 @@ def test_to_markdown_handles_single_row_table():
     </table>
     """
 
-    result = to_markdown(html_single_row)
+    result = to_markdown(html_single_row, settings=to_markdown_settings_dict)
 
     # For a single row without headers, it should still create a table
     assert "| Only | One | Row |" in result
