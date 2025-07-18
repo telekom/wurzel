@@ -238,7 +238,8 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
 
         alias_pointed = {alias.collection_name for alias in self.client.get_aliases().aliases}
         telemetry_collections = (
-            self._get_telemetry(details_level=self.settings.TELEMETRY_DETAILS_LEVEL).result.collections.collections  # pylint: disable=no-member
+            self._get_telemetry(details_level=self.settings.TELEMETRY_DETAILS_LEVEL).result.collections.collections
+        # pylint: disable=no-member
         )
 
         for version, collection_name in collections_versioned.items():
@@ -279,24 +280,18 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         return max(filter(None, timestamps), default=None)
 
     def _parse_local_timestamp(self, shard) -> Optional[datetime]:
-        try:
-            ts = shard.local.optimizations.optimizations.last_responded
-            return self._safe_parse_iso(ts)
-        except AttributeError:
-            return None
+        ts = shard.local.optimizations.optimizations.last_responded
+        return self._safe_parse_iso(ts)
 
     def _parse_remote_timestamps(self, shard) -> list[datetime]:
         return [
             self._safe_parse_iso(remote.searches.last_responded)
-            for remote in (shard.remote or [])
+            for remote in shard.remote
             if self._safe_parse_iso(remote.searches.last_responded) is not None
         ]
 
     def _safe_parse_iso(self, timestamp: Optional[str]) -> Optional[datetime]:
-        try:
-            return isoparse(timestamp) if timestamp else None
-        except (ValueError, TypeError):
-            return None
+        return isoparse(timestamp) if timestamp else None
 
     def _update_alias(self):
         success = self.client.update_collection_aliases(
