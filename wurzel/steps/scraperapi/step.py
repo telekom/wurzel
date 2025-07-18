@@ -38,7 +38,7 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
             )
             session.mount("https://", HTTPAdapter(max_retries=retries))
             payload = {
-                "api_key": self.settings.TOKEN,
+                "api_key": self.settings.TOKEN.get_secret_value(),
                 "url": url_item.url,
                 "device_type": self.settings.DEVICE_TYPE,
                 "follow_redirect": str(self.settings.FOLLOW_REDIRECT).lower(),

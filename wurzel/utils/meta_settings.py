@@ -21,7 +21,7 @@ def WZ(typ: type[TypedStep]):
 def create_model(
     fields: Union[list[Union[TypedStep, type[TypedStep]]], TypedStep],
     allow_extra_fields=False,
-) -> SettingsBase:
+) -> type[SettingsBase]:
     """Takes all fields.setting_class and creates a pydantic_settings Model.
 
     - If input is a list:
