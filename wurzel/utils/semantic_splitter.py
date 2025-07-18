@@ -16,6 +16,7 @@ from mistletoe.token import Token
 
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import MarkdownException
+from wurzel.steps.markdown_table_splitter import split_markdown_table_safe
 from wurzel.utils.to_markdown.html2md import MD_RENDER_LOCK
 
 if TYPE_CHECKING:
@@ -545,11 +546,15 @@ class SemanticSplitter:
             )
             return [self._md_data_from_dict_cut(doc)]
         if self._is_table(doc):
-            log.warning(
-                "found table, that should have been split, cutting off",
-                extra=doc["metadata"],
-            )
-            return [self._md_data_from_dict_cut(doc)]
+            # split table into chunks depending on token length (re-emit table header)
+            return [
+                MarkdownDataContract(
+                    md=chunk_md,
+                    url=doc["metadata"]["url"],
+                    keywords=doc["metadata"]["keywords"],
+                )
+                for chunk_md in split_markdown_table_safe(md=doc["text"], token_limit=self.token_limit, enc=OPENAI_ENCODING)
+            ]
         if len(doc["children"]) == 0:
             log.warning(
                 "no remaining children. still to big -> Cut by tokenlen",
