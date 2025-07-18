@@ -66,6 +66,7 @@ class EmbeddingStep(
             token_limit=self.settings.TOKEN_COUNT_MAX,
             token_limit_buffer=self.settings.TOKEN_COUNT_BUFFER,
             token_limit_min=self.settings.TOKEN_COUNT_MIN,
+            tokenizer_model=self.settings.TOKENIZER_MODEL,
         )
 
     def _load_stopwords(self) -> list[str]:

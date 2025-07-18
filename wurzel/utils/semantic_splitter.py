@@ -176,7 +176,7 @@ class SemanticSplitter:
         self.token_limit = token_limit
         self.token_limit_buffer = token_limit_buffer
         self.token_limit_min = token_limit_min
-        self.tokenizer_model = tiktoken.encoding_for_model(tokenizer_model)
+        self.tokenizer_model_encoding = tiktoken.encoding_for_model(tokenizer_model)
 
     def _get_token_len(self, text: str) -> int:
         """Get Token length.
