@@ -5,6 +5,7 @@
 import logging
 from functools import cache
 from pathlib import Path
+from typing import Any
 
 from hera.workflows import DAG, ConfigMapEnvFrom, Container, CronWorkflow, S3Artifact, SecretEnvFrom, Task, Workflow
 from hera.workflows.archive import NoneArchiveStrategy
@@ -69,7 +70,7 @@ class ArgoBackendSettings(SettingsBase):
     SERVICE_ACCOUNT_NAME: str = "wurzel-service-account"
     SECRET_NAME: str = "wurzel-secret"
     CONFIG_MAP: str = "wurzel-config"
-    ANNOTATIONS: dict = {"sidecar.istio.io/inject": "false"}
+    ANNOTATIONS: dict[str, str] = {"sidecar.istio.io/inject": "false"}
     NAMESPACE: str = "argo-workflows"
     PIPELINE_NAME: str = Field(
         default="wurzel",
@@ -91,7 +92,7 @@ class ArgoBackend(Backend):
         self.settings = settings if settings else ArgoBackendSettings()
         super().__init__()
 
-    def _create_envs_from_step_settings(self, step: type[TypedStep]) -> list[EnvVar]:
+    def _create_envs_from_step_settings(self, step: "TypedStep[Any, Any, Any]") -> list[EnvVar]:
         if not self.settings.INLINE_STEP_SETTINGS:
             return []
 
@@ -110,7 +111,7 @@ class ArgoBackend(Backend):
 
         return env_vars
 
-    def _generate_dict(self, step: TypedStep):
+    def _generate_dict(self, step: "TypedStep[Any, Any, Any]"):
         """Returns the workflow as a Python dictionary representation.
 
         Args:
@@ -122,7 +123,7 @@ class ArgoBackend(Backend):
         """
         return self._generate_workflow(step).to_dict()
 
-    def generate_artifact(self, step: TypedStep):
+    def generate_artifact(self, step: "TypedStep[Any, Any, Any]"):
         """Returns the workflow serialized to a valid Argo YAML definition.
 
         Args:
@@ -134,7 +135,7 @@ class ArgoBackend(Backend):
         """
         return self._generate_workflow(step).to_yaml()
 
-    def _generate_workflow(self, step: type[TypedStep]) -> Workflow:
+    def _generate_workflow(self, step: "TypedStep[Any, Any, Any]") -> Workflow:
         """Creates a CronWorkflow with the full pipeline DAG constructed from the root step.
 
         Args:
@@ -156,7 +157,7 @@ class ArgoBackend(Backend):
         return w
 
     @cache  # pylint: disable=method-cache-max-size-none
-    def _create_artifact_from_step(self, step: type[TypedStep]) -> S3Artifact:
+    def _create_artifact_from_step(self, step: "TypedStep[Any, Any, Any]") -> S3Artifact:
         """Generates an S3Artifact reference for the step output.
 
         Args:
@@ -177,7 +178,7 @@ class ArgoBackend(Backend):
             endpoint=self.settings.S3_ARTIFACT_TEMPLATE.endpoint,
         )
 
-    def _create_task(self, dag: DAG, step: type[TypedStep]) -> Task:
+    def _create_task(self, dag: DAG, step: "TypedStep[Any, Any, Any]") -> Task:
         """Creates an Argo task for a Wurzel step, linking input/output artifacts and environment.
 
         Args:
@@ -223,12 +224,17 @@ class ArgoBackend(Backend):
         dag.__enter__()  # pylint: disable=unnecessary-dunder-call
 
         input_refs = [self._create_artifact_from_step(req) for req in step.required_steps]
-        return wurzel_call(
+        task = wurzel_call(
             name=step.__class__.__name__.lower(),
             arguments=input_refs,
         )
 
-    def __generate_dag(self, step: type[TypedStep]) -> DAG:
+        if not isinstance(task, Task):
+            raise RuntimeError(f"Expected Task from Container call, got {type(task)}")
+
+        return task
+
+    def __generate_dag(self, step: "TypedStep[Any, Any, Any]") -> DAG:
         """Recursively builds a DAG from a step and its dependencies using Hera's DAG API.
 
         Args:
@@ -239,15 +245,15 @@ class ArgoBackend(Backend):
 
         """
 
-        def resolve_requirements(step: type[TypedStep]) -> Task:
+        def resolve_requirements(step: "TypedStep[Any, Any, Any]") -> Task:
             artifacts = []
             argo_reqs: list[Task] = []
 
             for req in step.required_steps:
                 if req.required_steps:
-                    req_argo = resolve_requirements(req)
+                    req_argo = resolve_requirements(req)  # type: ignore[arg-type]
                 else:
-                    req_argo = self._create_task(dag, req)
+                    req_argo = self._create_task(dag, req)  # type: ignore[arg-type]
                 artifacts.append(req_argo.result)
                 argo_reqs.append(req_argo)
 

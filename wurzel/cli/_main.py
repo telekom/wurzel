@@ -13,11 +13,12 @@ import pkgutil
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 import typer.core
 
+from wurzel.backend.backend import Backend
 from wurzel.backend.backend_argo import ArgoBackend
 from wurzel.backend.backend_dvc import DvcBackend
 from wurzel.cli.cmd_generate import main as cmd_generate
@@ -179,15 +180,15 @@ def inspekt(
     return cmd_inspect(step, gen_env)
 
 
-def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str):
+def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str) -> type[Backend]:
     """Validates input and returns fitting backend. Currently always DVCBackend."""
     match backend:
         case DvcBackend.__name__:
             return DvcBackend
         case ArgoBackend.__name__:
             return ArgoBackend
-
-    raise typer.BadParameter(f"Backend {backend} not supported. choose from DvcBackend or ArgoBackend")
+        case _:
+            raise typer.BadParameter(f"Backend {backend} not supported. choose from DvcBackend or ArgoBackend")
 
 
 def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str) -> TypedStep:
@@ -233,7 +234,7 @@ def generate(
     return print(  # noqa: T201
         cmd_generate(
             pipeline,
-            backend=backend,
+            backend=cast(type[Backend], backend),
         )
     )
 
