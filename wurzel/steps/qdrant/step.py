@@ -9,8 +9,10 @@ import itertools
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from logging import getLogger
+from typing import Optional
 
 import requests
+from dateutil.parser import isoparse
 from pandera.typing import DataFrame
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.models.models import CollectionTelemetry, InlineResponse2002
@@ -221,66 +223,80 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             field_schema=models.TextIndexParams(type=models.TextIndexType.TEXT, tokenizer=models.TokenizerType.WORD),
         )
 
-    def _retire_collections(self):
+    def _retire_collections(self) -> None:
+        """Retire (delete) historical Qdrant collections that.
+        * Are older than the configured history length, AND
+        * Are not currently targeted by an alias, AND
+        * Have not been recently used (per telemetry).
+        """
         collections_versioned: dict[int, str] = self._get_collection_versions()
         if not collections_versioned:
             return
 
-        latest_version = max(collections_versioned.keys())
+        latest_version = max(collections_versioned)
         retirement_threshold = latest_version - self.settings.COLLECTION_HISTORY_LEN
 
-        aliases_resp = self.client.get_aliases()
-        alias_pointed_collections = {alias.collection_name for alias in aliases_resp.aliases}
-
-        telemetry_raw = self._get_telemetry(details_level=self.settings.TELEMETRY_DETAILS_LEVEL)
-        collection_infos = telemetry_raw.result.collections.collections  # pylint: disable=no-member
+        alias_pointed = {alias.collection_name for alias in self.client.get_aliases().aliases}
+        telemetry_collections = (
+            self._get_telemetry(details_level=self.settings.TELEMETRY_DETAILS_LEVEL).result.collections.collections  # pylint: disable=no-member
+        )
 
         for version, collection_name in collections_versioned.items():
             if version > retirement_threshold:
                 continue
 
-            if collection_name in alias_pointed_collections:
-                log.warning(
-                    "Skipping deletion: still aliased",
-                    extra={"collection": collection_name},
-                )
+            if self._should_skip_collection(collection_name, alias_pointed, telemetry_collections):
                 continue
 
-            usage_info = next((col for col in collection_infos if col.id == collection_name), None)
-            if usage_info and self._was_recently_used_via_shards(usage_info):
-                log.warning(
-                    "Skipping deletion: recently accessed",
-                    extra={"collection": collection_name},
-                )
-                continue
-
-            log.info(
-                "Deleting retired collection",
-                extra={"collection": collection_name},
-            )
+            log.info("Deleting retired collection", extra={"collection": collection_name})
             self.client.delete_collection(collection_name)
+
+    def _should_skip_collection(self, name: str, alias_pointed: set[str], telemetry_collections: list) -> bool:
+        """Check if a collection should not be deleted."""
+        if name in alias_pointed:
+            log.warning("Skipping deletion: still aliased", extra={"collection": name})
+            return True
+
+        usage_info = next((col for col in telemetry_collections if col.id == name), None)
+        if usage_info and self._was_recently_used_via_shards(usage_info):
+            log.warning("Skipping deletion: recently accessed", extra={"collection": name})
+            return True
+
+        return False
 
     def _was_recently_used_via_shards(self, collection_info: CollectionTelemetry) -> bool:
         threshold = datetime.now(timezone.utc) - timedelta(days=self.settings.COLLECTION_USAGE_RETENTION_DAYS)
-        latest_usage = None
+        latest_usage = self._get_latest_usage_timestamp(collection_info)
+        return latest_usage is not None and latest_usage > threshold
+
+    def _get_latest_usage_timestamp(self, collection_info: CollectionTelemetry) -> Optional[datetime]:
+        timestamps = []
 
         for shard in collection_info.shards:
-            local = shard.local
-            if local:
-                responded = local.optimizations.optimizations.last_responded
-                if responded:
-                    dt = datetime.strptime(responded, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
-                    if not latest_usage or dt > latest_usage:
-                        latest_usage = dt
+            timestamps.append(self._parse_local_timestamp(shard))
+            timestamps.extend(self._parse_remote_timestamps(shard))
 
-            for remote in shard.remote:
-                responded = remote.searches.last_responded
-                if responded:
-                    dt = datetime.strptime(responded, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
-                    if not latest_usage or dt > latest_usage:
-                        latest_usage = dt
+        return max(filter(None, timestamps), default=None)
 
-        return latest_usage is not None and latest_usage > threshold
+    def _parse_local_timestamp(self, shard) -> Optional[datetime]:
+        try:
+            ts = shard.local.optimizations.optimizations.last_responded
+            return self._safe_parse_iso(ts)
+        except AttributeError:
+            return None
+
+    def _parse_remote_timestamps(self, shard) -> list[datetime]:
+        return [
+            self._safe_parse_iso(remote.searches.last_responded)
+            for remote in (shard.remote or [])
+            if self._safe_parse_iso(remote.searches.last_responded) is not None
+        ]
+
+    def _safe_parse_iso(self, timestamp: Optional[str]) -> Optional[datetime]:
+        try:
+            return isoparse(timestamp) if timestamp else None
+        except (ValueError, TypeError):
+            return None
 
     def _update_alias(self):
         success = self.client.update_collection_aliases(
