@@ -90,7 +90,7 @@ def to_markdown(
         cleaned_html = clean_html(html)
         file.write(cleaned_html)
         file.close()
-        convert_cmd = f'"{binary_path.absolute().as_posix()}" {settings.get("HTML2MD_BINARY_FLAGS", "")} -i "{file.name}"'
+        convert_cmd = f'"{binary_path.absolute().absolute()}" {settings.get("HTML2MD_BINARY_FLAGS", "")} -i "{file.name}"'
         status_code, markdown = subprocess.getstatusoutput(convert_cmd, encoding="utf8")
         Path(file.name).unlink()
     if status_code != 0:
