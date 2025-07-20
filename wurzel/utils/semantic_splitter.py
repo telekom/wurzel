@@ -182,7 +182,7 @@ class SemanticSplitter:
         """Get Token length.
 
         Args:
-            text (str): Test to encode
+            text (str): Text to encode
 
         Returns:
             int: count of tokens

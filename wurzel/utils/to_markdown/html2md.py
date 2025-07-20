@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import threading
 from pathlib import Path
+from typing import Optional
 
 # Related third-party imports
 import lxml.etree
@@ -50,9 +51,7 @@ class MarkdownConverterSettings(TypedDict, total=True):
     HTML2MD_BINARY_FLAGS: str
 
 
-def to_markdown(
-    html: str, settings: MarkdownConverterSettings = MarkdownConverterSettings({"HTML2MD_BINARY_FLAGS": ""}), binary_path: Path = __HTML2MD
-) -> str:
+def to_markdown(html: str, settings: Optional[MarkdownConverterSettings] = None, binary_path: Path = __HTML2MD) -> str:
     """Convert HTML XML string to Markdown using an external binary or a Python library.
 
     In acknowledge to https://github.com/suntong/html2md.
@@ -61,6 +60,8 @@ def to_markdown(
     ----------
     html : str
         The input HTML/XML string to be converted to Markdown.
+    settings : MarkdownConverterSettings, optional
+        Settings for the Markdown converter, including binary flags.
     binary_path : Path, optional
         The path to the html2md binary (default is './html2md').
 
@@ -86,6 +87,9 @@ def to_markdown(
     Hello, world!
 
     """
+    if not settings:
+        settings = MarkdownConverterSettings({"HTML2MD_BINARY_FLAGS": ""})
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=".html", mode="w+") as file:
         cleaned_html = clean_html(html)
         file.write(cleaned_html)

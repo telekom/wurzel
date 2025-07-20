@@ -33,5 +33,5 @@ class ScraperAPISettings(Settings):
     SCREENSHOT: bool = False
     MAX_COST: int = Field(gt=0, default=30)
     HTML2MD_SETTINGS: MarkdownConverterSettings = Field(
-        MarkdownConverterSettings({"HTML2MD_BINARY_FLAGS": ""}), description="Settings for the Markdown converter."
+        default_factory=lambda: MarkdownConverterSettings({"HTML2MD_BINARY_FLAGS": ""}), description="Settings for the Markdown converter."
     )
