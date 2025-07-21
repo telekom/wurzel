@@ -32,4 +32,6 @@ class ScraperAPISettings(Settings):
     ULTRA_PREMIUM: bool = False
     SCREENSHOT: bool = False
     MAX_COST: int = Field(gt=0, default=30)
-    HTML2MD_SETTINGS: MarkdownConverterSettings = Field(MarkdownConverterSettings(), description="Settings for the Markdown converter.")
+    HTML2MD_SETTINGS: MarkdownConverterSettings = Field(
+        default_factory=MarkdownConverterSettings, description="Settings for the Markdown converter."
+    )
