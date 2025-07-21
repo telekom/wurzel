@@ -68,7 +68,7 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
                 return None
 
             try:
-                md = to_markdown(self._filter_body(r.text))
+                md = to_markdown(self._filter_body(r.text), self.settings.HTML2MD_SETTINGS)
             except (KeyError, IndexError):
                 if recursion_depth > self.settings.RETRY:
                     log.warning("xpath retry failed", extra={"filter": self.settings.XPATH, "url": url_item.url})

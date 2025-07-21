@@ -5,9 +5,11 @@
 """interacts with the scraperAPI service and converts the retrieved Documents to Markdown."""
 
 # Standard library imports
+
 from pydantic import Field, SecretStr
 
 from wurzel.step.settings import Settings
+from wurzel.utils import MarkdownConverterSettings
 
 # Local application/library specific imports
 
@@ -30,3 +32,6 @@ class ScraperAPISettings(Settings):
     ULTRA_PREMIUM: bool = False
     SCREENSHOT: bool = False
     MAX_COST: int = Field(gt=0, default=30)
+    HTML2MD_SETTINGS: MarkdownConverterSettings = Field(
+        default_factory=MarkdownConverterSettings, description="Settings for the Markdown converter."
+    )
