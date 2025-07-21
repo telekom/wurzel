@@ -6,8 +6,8 @@
 
 # syntax=docker/dockerfile:1
 
-ARG PYTHON_VERSION=3.11-slim@sha256:974cb5b34070dd2f5358ca1de1257887bec76ba87f6e727091669035e5f3484d
-FROM python:${PYTHON_VERSION} AS base
+ARG PYTHON_VERSION=3.11
+FROM python:${PYTHON_VERSION}-slim AS base
 
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
@@ -45,7 +45,6 @@ RUN adduser \
 
 # Install dependencies
 RUN --mount=type=cache,target=/root/.cache/uv \
-    #--mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --no-install-project
 
