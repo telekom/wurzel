@@ -6,7 +6,7 @@
 Utility functions for splitting large Markdown strings into **token‑bounded**
 chunks while preserving table structure.  Tables are never broken in the middle
 of a row; if a *single* row exceeds the budget, it is split at column
-boundaries instead.
+boundaries instead and full-header is repeated.
 
 Usage example
 -------------
