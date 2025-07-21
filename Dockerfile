@@ -1,48 +1,79 @@
 # SPDX-FileCopyrightText: 2025 Deutsche Telekom AG
 #
 # SPDX-License-Identifier: CC0-1.0
-#
-# https://github.com/github/gitignore/blob/main/Python.gitignore
-#
-# Byte-compiled / optimized / DLL files
-# to reduce the CI pipeline drastical
-FROM python:3.11-slim@sha256:974cb5b34070dd2f5358ca1de1257887bec76ba87f6e727091669035e5f3484d AS dependencies
+
+
+
+# syntax=docker/dockerfile:1
+
+ARG PYTHON_VERSION=3.11-slim@sha256:974cb5b34070dd2f5358ca1de1257887bec76ba87f6e727091669035e5f3484d
+FROM python:${PYTHON_VERSION} AS base
+
+# Install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+
 RUN apt update && apt install -y --no-install-recommends build-essential gcc git curl g++
 
 RUN curl -L -o /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64 \
     && chmod +x /usr/bin/jq
-ENV VENV=/usr/app/venv
-COPY pyproject.toml .
-COPY wurzel wurzel
-RUN python -m venv ${VENV}
-
-RUN . ${VENV}/bin/activate
-# against CVE-2024-6345 of baseimage
-RUN . ${VENV}/bin/activate && pip install setuptools==78.1.0
 
 
-
-RUN . ${VENV}/bin/activate &&  pip install uv
-
-RUN . ${VENV}/bin/activate && uv pip install --upgrade pip && \
-                               uv pip install "."
 # Prevents Python from writing pyc files.
 ENV PYTHONDONTWRITEBYTECODE=1
 
 # Keeps Python from buffering stdout and stderr to avoid situations where
 # the application crashes without emitting any logs due to buffering.
 ENV PYTHONUNBUFFERED=1
+
+
+WORKDIR /app
+
+# Create a non-privileged user that the app will run under.
+# See https://docs.docker.com/go/dockerfile-user-best-practices/
+ARG UID=10001
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --home "/nonexistent" \
+    --shell "/sbin/nologin" \
+    --no-create-home \
+    --uid "${UID}" \
+    appuser
+
+
+
+# Install dependencies
+RUN --mount=type=cache,target=/root/.cache/uv \
+    #--mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --no-install-project
+
+
+
+# Copy the source code into the container.
+COPY wurzel wurzel
+COPY DIRECT_REQUIREMENTS.txt DIRECT_REQUIREMENTS.txt
+COPY pyproject.toml pyproject.toml
+COPY entrypoint.sh entrypoint.sh
+
+# Sync the project
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --inexact && \
+    uv pip install -r DIRECT_REQUIREMENTS.txt
+
+
+
+
+# Switch to the non-privileged user to run the application.
+USER appuser
+
 ENV GIT_USER=wurzel
 ENV GIT_MAIL=wurzel@example.com
-ENV DVC_DATA_PATH=/usr/app/dvc-data
-ENV DVC_FILE=/usr/app/dvc.yaml
-RUN groupadd -g 999 python && \
-    useradd -r -u 999 -m -g python python
-RUN chown python:python /usr/app
-WORKDIR /usr/app
-USER 999
-COPY entrypoint.sh .
-COPY examples/pipeline/pipelinedemo.py .
-ENV WURZEL_PIPELINE=pipelinedemo:pipeline
-ENV PATH="/usr/app/venv/bin:$PATH"
-CMD ["sh", "-c", ". ${VENV}/bin/activate && /bin/bash ./entrypoint.sh"]
+ENV DVC_DATA_PATH=/app/dvc-data
+ENV DVC_FILE=/app/dvc.yaml
+
+
+# Run the application.
+ARG WURZEL_PIPELINE=pipelinedemo:pipeline
+CMD ["sh", "-c", " /bin/bash ./entrypoint.sh"]
