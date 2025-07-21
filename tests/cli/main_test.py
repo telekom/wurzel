@@ -70,7 +70,7 @@ def test_run(tmp_path, env):
     inp = tmp_path / "in"  #
     inp.mkdir()
     (inp / "file.md").write_text("#Hello\n world")
-    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", inp.as_posix())
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
     main.run(
         step=ManualMarkdownStep,
         executor=BaseStepExecutor,

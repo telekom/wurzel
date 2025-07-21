@@ -26,6 +26,7 @@ class SplitterSettings(Settings):
     TOKEN_COUNT_MIN: int = Field(64, gt=0)
     TOKEN_COUNT_MAX: int = Field(1024, gt=1)
     TOKEN_COUNT_BUFFER: int = Field(32, gt=0)
+    TOKENIZER_MODEL: str = Field("gpt-3.5-turbo", description="The tokenizer model to use for splitting documents.")
 
 
 log = getLogger(__name__)
@@ -40,6 +41,7 @@ class SimpleSplitterStep(TypedStep[SplitterSettings, list[MarkdownDataContract],
             token_limit=self.settings.TOKEN_COUNT_MAX,
             token_limit_buffer=self.settings.TOKEN_COUNT_BUFFER,
             token_limit_min=self.settings.TOKEN_COUNT_MIN,
+            tokenizer_model=self.settings.TOKENIZER_MODEL,
         )
 
     def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:

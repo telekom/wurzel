@@ -2,8 +2,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 import lxml.html
+import pytest
 
-from wurzel.utils.to_markdown.html2md import clean_tree, html2str, normalize_urls, normalize_urls_in_tree
+from wurzel.utils import MarkdownConverterSettings
+from wurzel.utils.to_markdown.html2md import clean_tree, html2str, normalize_urls, normalize_urls_in_tree, to_markdown
 
 
 def test_clean_tree_removes_script_link_style_svg_footer():
@@ -239,3 +241,100 @@ def test_normalize_urls_handles_multiple_elements():
     assert 'href="https://site.com/foo"' in result
     assert 'href="https://site.com/bar"' in result
     assert 'src="https://site.com/baz.png"' in result
+
+
+@pytest.fixture
+def to_markdown_settings():
+    """Fixture to provide a default MarkdownConverterSettings for tests."""
+    return MarkdownConverterSettings(HTML2MD_BINARY_FLAGS="-T")
+
+
+def test_to_markdown_converts_html_table_to_markdown_table(to_markdown_settings: MarkdownConverterSettings):
+    """Test that HTML tables are properly converted to markdown table format."""
+    html_with_table = """
+    <html>
+    <body>
+        <h1>Sample Table</h1>
+        <table border="1">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Age</th>
+                    <th>City</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>John</td>
+                    <td>25</td>
+                    <td>New York</td>
+                </tr>
+                <tr>
+                    <td>Jane</td>
+                    <td>30</td>
+                    <td>London</td>
+                </tr>
+            </tbody>
+        </table>
+        <p>This is a paragraph after the table.</p>
+    </body>
+    </html>
+    """
+
+    result = to_markdown(html_with_table, settings=to_markdown_settings)
+
+    # Check that the result contains markdown table syntax
+    assert "| Name | Age | City |" in result
+    assert "| --- | --- | --- |" in result
+    assert "| John | 25 | New York |" in result
+    assert "| Jane | 30 | London |" in result
+
+    # Check that other content is preserved
+    assert "# Sample Table" in result
+    assert "This is a paragraph after the table." in result
+
+
+def test_to_markdown_converts_simple_html_table(to_markdown_settings: MarkdownConverterSettings):
+    """Test conversion of a simple HTML table without thead/tbody."""
+    html_simple_table = """
+    <table>
+        <tr>
+            <th>Product</th>
+            <th>Price</th>
+        </tr>
+        <tr>
+            <td>Apple</td>
+            <td>$1.00</td>
+        </tr>
+        <tr>
+            <td>Orange</td>
+            <td>$1.50</td>
+        </tr>
+    </table>
+    """
+
+    result = to_markdown(html_simple_table, settings=to_markdown_settings)
+
+    # Check that the result contains markdown table syntax
+    assert "| Product | Price |" in result
+    assert "| --- | --- |" in result
+    assert "| Apple | $1.00 |" in result
+    assert "| Orange | $1.50 |" in result
+
+
+def test_to_markdown_handles_single_row_table(to_markdown_settings: MarkdownConverterSettings):
+    """Test conversion of a table with only one row."""
+    html_single_row = """
+    <table>
+        <tr>
+            <td>Only</td>
+            <td>One</td>
+            <td>Row</td>
+        </tr>
+    </table>
+    """
+
+    result = to_markdown(html_single_row, settings=to_markdown_settings)
+
+    # For a single row without headers, it should still create a table
+    assert "| Only | One | Row |" in result
