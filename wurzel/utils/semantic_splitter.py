@@ -16,7 +16,7 @@ from mistletoe.token import Token
 
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import MarkdownException
-from wurzel.steps.markdown_table_splitter import split_markdown_table_safe
+from wurzel.utils.markdown_table_splitter import split_markdown_table_safe
 from wurzel.utils.to_markdown.html2md import MD_RENDER_LOCK
 
 if TYPE_CHECKING:
@@ -170,13 +170,16 @@ class SemanticSplitter:
     token_limit: int
     token_limit_buffer: int
     token_limit_min: int
+    repeat_table_header_row: bool
 
+    # pylint: disable=too-many-positional-arguments
     def __init__(
         self,
         token_limit: int = 256,
         token_limit_buffer: int = 32,
         token_limit_min: int = 64,
         spacy_model: str = "de_core_news_sm",
+        repeat_table_header_row: bool = True,
     ) -> None:
         """Initializes the SemanticSplitter class with specified token limits and a spaCy language model.
 
@@ -185,6 +188,7 @@ class SemanticSplitter:
             token_limit_buffer (int, optional): The buffer size for token limit to allow flexibility. Defaults to 32.
             token_limit_min (int, optional): The minimum number of tokens required. Defaults to 64.
             spacy_model (str, optional): The name of the spaCy language model to load. Defaults to "de_core_news_sm".
+            repeat_table_header_row (bool, optional): If a table is splitted, the header is repeated. Defaults to True.
 
         Raises:
             OSError: If the specified spaCy model cannot be loaded.
@@ -196,6 +200,7 @@ class SemanticSplitter:
         self.token_limit = token_limit
         self.token_limit_buffer = token_limit_buffer
         self.token_limit_min = token_limit_min
+        self.repeat_table_header_row = repeat_table_header_row
 
     def _is_short(self, text: str) -> bool:
         return _get_token_len(text) <= self.token_limit - self.token_limit_buffer
@@ -553,7 +558,9 @@ class SemanticSplitter:
                     url=doc["metadata"]["url"],
                     keywords=doc["metadata"]["keywords"],
                 )
-                for chunk_md in split_markdown_table_safe(md=doc["text"], token_limit=self.token_limit, enc=OPENAI_ENCODING)
+                for chunk_md in split_markdown_table_safe(
+                    md=doc["text"], token_limit=self.token_limit, enc=OPENAI_ENCODING, repeat_header_row=self.repeat_table_header_row
+                )
             ]
         if len(doc["children"]) == 0:
             log.warning(
