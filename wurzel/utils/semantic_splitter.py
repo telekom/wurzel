@@ -158,7 +158,7 @@ class SemanticSplitter:
         spacy_model: str = "de_core_news_sm",
         repeat_table_header_row: bool = True,
         tokenizer_model: str = "gpt-3.5-turbo",
-    ) -> None:
+    ) -> None:  # pylint: enable=too-many-positional-arguments
         """Initializes the SemanticSplitter class with specified token limits and a spaCy language model.
 
         Args:
