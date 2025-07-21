@@ -17,7 +17,7 @@ from mistletoe import Document
 from mistletoe.block_token import ThematicBreak
 from mistletoe.markdown_renderer import MarkdownRenderer
 from mistletoe.span_token import Image
-from typing_extensions import TypedDict
+from pydantic import BaseModel, Field
 
 from wurzel.exceptions import InvalidPlatform, MarkdownConvertFailed
 
@@ -45,10 +45,10 @@ Wrapper module around html2md binary
 """
 
 
-class MarkdownConverterSettings(TypedDict, total=True):
+class MarkdownConverterSettings(BaseModel):
     """Settings for the Markdown converter."""
 
-    HTML2MD_BINARY_FLAGS: str
+    HTML2MD_BINARY_FLAGS: str = Field(default="", description="Flags for the html2md binary")
 
 
 def to_markdown(html: str, settings: Optional[MarkdownConverterSettings] = None, binary_path: Path = __HTML2MD) -> str:
@@ -88,13 +88,13 @@ def to_markdown(html: str, settings: Optional[MarkdownConverterSettings] = None,
 
     """
     if not settings:
-        settings = MarkdownConverterSettings({"HTML2MD_BINARY_FLAGS": ""})
+        settings = MarkdownConverterSettings()
 
     with tempfile.NamedTemporaryFile(delete=False, suffix=".html", mode="w+") as file:
         cleaned_html = clean_html(html)
         file.write(cleaned_html)
         file.close()
-        convert_cmd = f'"{binary_path.absolute().absolute()}" {settings.get("HTML2MD_BINARY_FLAGS", "")} -i "{file.name}"'
+        convert_cmd = f'"{binary_path.absolute().absolute()}" {settings.HTML2MD_BINARY_FLAGS} -i "{file.name}"'
         status_code, markdown = subprocess.getstatusoutput(convert_cmd, encoding="utf8")
         Path(file.name).unlink()
     if status_code != 0:
