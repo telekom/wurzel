@@ -27,8 +27,9 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 ENV UV_CACHE_DIR=/tmp/.cache/uv
+ENV UV_PROJECT_ENVIRONMENT=/usr/app/.venv
 
-WORKDIR /app
+WORKDIR /usr/app
 
 # Create a non-privileged user that the app will run under.
 # See https://docs.docker.com/go/dockerfile-user-best-practices/
@@ -36,21 +37,16 @@ ARG UID=10001
 RUN adduser \
     --disabled-password \
     --gecos "" \
-    --home "/nonexistent" \
     --shell "/sbin/nologin" \
-    --no-create-home \
     --uid "${UID}" \
     appuser
 
-# Create cache directory and set proper permissions
-RUN mkdir -p /tmp/.cache/uv && chown -R appuser:appuser /tmp/.cache
 
 
-
-# Install dependencies
+# Install dependencies including optional ones
 RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --no-install-project
+    uv sync --no-install-project --extra all
 
 
 
@@ -60,21 +56,36 @@ COPY DIRECT_REQUIREMENTS.txt DIRECT_REQUIREMENTS.txt
 COPY pyproject.toml pyproject.toml
 COPY entrypoint.sh entrypoint.sh
 
-# Sync the project
+
+
+RUN chown -R appuser:appuser /usr/app && \
+    chmod +x /usr/app/entrypoint.sh
+
+# Sync the project (still as root to avoid permission issues with cache)
 RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
     uv sync --inexact && \
-    uv pip install -r DIRECT_REQUIREMENTS.txt
-
-
-
+    uv pip install -r DIRECT_REQUIREMENTS.txt && \
+    chown -R appuser:appuser /usr/app/.venv
 
 # Switch to the non-privileged user to run the application.
 USER appuser
 
+# Activate the virtual environment for the appuser
+ENV PATH="/usr/app/.venv/bin:$PATH"
+
+# Verify installation
+RUN python -c "import wurzel; print('Wurzel installed successfully')"
+
+
+RUN git config --global init.defaultBranch main
+#RUN dvc config core.analytics false
+
+
 ENV GIT_USER=wurzel
 ENV GIT_MAIL=wurzel@example.com
-ENV DVC_DATA_PATH=/app/dvc-data
-ENV DVC_FILE=/app/dvc.yaml
+ENV DVC_DATA_PATH=/usr/app/dvc-data
+ENV DVC_FILE=/usr/app/dvc.yaml
+
 
 
 # Run the application.
