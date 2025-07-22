@@ -74,5 +74,5 @@ ENV DVC_FILE=/app/dvc.yaml
 
 
 # Run the application.
-ARG WURZEL_PIPELINE=pipelinedemo:pipeline
+ENV WURZEL_PIPELINE=pipelinedemo:pipeline
 CMD ["sh", "-c", "/bin/bash ./entrypoint.sh"]
