@@ -23,11 +23,14 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from logging import getLogger
 
 import tiktoken  # pip install tiktoken
 
 # Regex that matches a Markdown table alignment row, e.g.  |---|:---:|---|
 TABLE_SEP_RE = re.compile(r"^\s*\|?(?:\s*:?-+:?\s*\|)+\s*$")
+
+log = getLogger(__name__)
 
 
 @dataclass
@@ -72,6 +75,10 @@ class MarkdownTableSplitter:
     buf: list[str] = field(default_factory=lambda: [])
     buf_tok: int = 0
 
+    def __post_init__(self) -> None:
+        """Validate configuration after initialization."""
+        self.validate_config()
+
     def reset_state(self) -> None:
         """Reset the internal state for a new splitting operation."""
         self.chunks.clear()
@@ -96,6 +103,46 @@ class MarkdownTableSplitter:
             self.chunks.append("".join(self.buf))
             self.buf.clear()
             self.buf_tok = 0
+
+    def _add_line_to_buffer(self, line: str) -> None:
+        """Add a line to the buffer, checking token limits.
+
+        Parameters
+        ----------
+        line : str
+            The line to add to the buffer.
+
+        """
+        line_tok = len(self.enc.encode(line))
+
+        if self.buf_tok + line_tok > self.token_limit:
+            self.flush_buffer()
+
+        self.buf.append(line)
+        self.buf_tok += line_tok
+
+    def _extract_table_header_info(self, lines: list[str], start_idx: int) -> tuple[str, str, list[str], list[str], int]:
+        """Extract table header information.
+
+        Parameters
+        ----------
+        lines : list[str]
+            The lines of the markdown document.
+        start_idx : int
+            Index of the table start line.
+
+        Returns
+        -------
+        tuple[str, str, list[str], list[str], int]
+            header_line, sep_line, header_cells, sep_cells, header_tok
+
+        """
+        header_line, sep_line = lines[start_idx], lines[start_idx + 1]
+        header_cells = [c.strip() for c in header_line.strip().strip("|").split("|")]
+        sep_cells = [c.strip() for c in sep_line.strip().strip("|").split("|")]
+        header_tok = len(self.enc.encode(header_line + sep_line))
+
+        return header_line, sep_line, header_cells, sep_cells, header_tok
 
     def count_row_tokens(self, cells: list[str]) -> int:
         """Return token length of cells rendered as one Markdown row.
@@ -149,29 +196,15 @@ class MarkdownTableSplitter:
             # Grow slice until adding another column would overflow the budget.
             while col_idx < len(row_cells):
                 tentative = slice_cells + [row_cells[col_idx]]
-                next_tok = self.count_row_tokens(tentative)
-                header_slice_tok = 0
-                if self.repeat_header_row:
-                    header_slice_tok = self.count_row_tokens(header_cells[: len(tentative)]) + self.count_row_tokens(
-                        sep_cells[: len(tentative)]
-                    )
-                if header_slice_tok + next_tok > self.token_limit and slice_cells:
+                total_tok = self._calculate_slice_budget(tentative, header_cells, sep_cells)
+
+                if total_tok > self.token_limit and slice_cells:
                     break
                 slice_cells.append(row_cells[col_idx])
                 col_idx += 1
 
             # Render and emit the slice
-            if self.repeat_header_row:
-                self.buf.extend(
-                    [
-                        make_row(header_cells[: len(slice_cells)]),
-                        make_row(sep_cells[: len(slice_cells)]),
-                        make_row(slice_cells),
-                    ]
-                )
-            else:
-                self.buf.append(make_row(slice_cells))
-
+            self._render_table_slice(slice_cells, header_cells, sep_cells)
             self.flush_buffer()
 
             # Prepare for next slice
@@ -182,6 +215,58 @@ class MarkdownTableSplitter:
             else:
                 self.buf.clear()
                 self.buf_tok = 0
+
+    def _calculate_slice_budget(self, tentative_cells: list[str], header_cells: list[str], sep_cells: list[str]) -> int:
+        """Calculate token budget for a table slice.
+
+        Parameters
+        ----------
+        tentative_cells : list[str]
+            The tentative slice cells.
+        header_cells : list[str]
+            The header cells.
+        sep_cells : list[str]
+            The separator cells.
+
+        Returns
+        -------
+        int
+            Total token count for this slice including headers if needed.
+
+        """
+        slice_tok = self.count_row_tokens(tentative_cells)
+        header_slice_tok = 0
+
+        if self.repeat_header_row:
+            header_slice_tok = self.count_row_tokens(header_cells[: len(tentative_cells)]) + self.count_row_tokens(
+                sep_cells[: len(tentative_cells)]
+            )
+
+        return header_slice_tok + slice_tok
+
+    def _render_table_slice(self, slice_cells: list[str], header_cells: list[str], sep_cells: list[str]) -> None:
+        """Render a table slice to the buffer.
+
+        Parameters
+        ----------
+        slice_cells : list[str]
+            The slice cells to render.
+        header_cells : list[str]
+            The header cells.
+        sep_cells : list[str]
+            The separator cells.
+
+        """
+        if self.repeat_header_row:
+            self.buf.extend(
+                [
+                    make_row(header_cells[: len(slice_cells)]),
+                    make_row(sep_cells[: len(slice_cells)]),
+                    make_row(slice_cells),
+                ]
+            )
+        else:
+            self.buf.append(make_row(slice_cells))
 
     def process_table(self, lines: list[str], start_idx: int) -> int:
         """Process a whole Markdown table, returning new index.
@@ -201,11 +286,7 @@ class MarkdownTableSplitter:
             New index after processing the table.
 
         """
-        header_line, sep_line = lines[start_idx], lines[start_idx + 1]
-        header_cells = [c.strip() for c in header_line.strip().strip("|").split("|")]
-        sep_cells = [c.strip() for c in sep_line.strip().strip("|").split("|")]
-
-        header_tok = len(self.enc.encode(header_line + sep_line))
+        header_line, sep_line, header_cells, sep_cells, header_tok = self._extract_table_header_info(lines, start_idx)
 
         if self.buf_tok + header_tok > self.token_limit:
             self.flush_buffer()
@@ -213,7 +294,44 @@ class MarkdownTableSplitter:
         self.buf.extend([header_line, sep_line])
         self.buf_tok += header_tok
 
-        i = start_idx + 2  # First body row
+        return self._process_table_rows(lines, start_idx + 2, header_line, sep_line, header_cells, sep_cells, header_tok)
+
+    def _process_table_rows(
+        self,
+        lines: list[str],
+        start_row_idx: int,
+        header_line: str,
+        sep_line: str,
+        header_cells: list[str],
+        sep_cells: list[str],
+        header_tok: int,
+    ) -> int:
+        """Process table rows starting from start_row_idx.
+
+        Parameters
+        ----------
+        lines : list[str]
+            The lines of the markdown document.
+        start_row_idx : int
+            Index of the first row to process.
+        header_line : str
+            The header line string.
+        sep_line : str
+            The separator line string.
+        header_cells : list[str]
+            The header cells.
+        sep_cells : list[str]
+            The separator cells.
+        header_tok : int
+            Token count of header and separator lines.
+
+        Returns
+        -------
+        int
+            New index after processing all rows.
+
+        """
+        i = start_row_idx
 
         while i < len(lines) and "|" in lines[i]:
             row_line = lines[i]
@@ -269,8 +387,13 @@ class MarkdownTableSplitter:
             If the splitter configuration is invalid.
 
         """
-        self.validate_config()
         self.reset_state()
+
+        # Log input information
+        input_length = len(md)
+        input_tokens = len(self.enc.encode(md))
+        table_count = self._count_tables_in_text(md)
+
         lines = md.splitlines(keepends=True)
         i = 0
 
@@ -280,17 +403,25 @@ class MarkdownTableSplitter:
                 continue
 
             # Non‑table line processing
-            line = lines[i]
-            line_tok = len(self.enc.encode(line))
-
-            if self.buf_tok + line_tok > self.token_limit:
-                self.flush_buffer()
-
-            self.buf.append(line)
-            self.buf_tok += line_tok
+            self._add_line_to_buffer(lines[i])
             i += 1
 
         self.flush_buffer()
+
+        # Get metrics and log the operation
+        metrics = self.get_metrics()
+        log.info(
+            "Markdown table splitting completed",
+            extra={
+                "input_length": input_length,
+                "input_tokens": input_tokens,
+                "input_table_count": table_count,
+                "token_limit": self.token_limit,
+                "repeat_header_row": self.repeat_header_row,
+                **metrics,
+            },
+        )
+
         return self.chunks.copy()
 
     def get_metrics(self) -> dict[str, int]:
@@ -304,19 +435,62 @@ class MarkdownTableSplitter:
             - 'avg_tokens': Average tokens per chunk (approximation)
             - 'max_tokens': Maximum tokens in any chunk (approximation)
             - 'min_tokens': Minimum tokens in any chunk (approximation)
+            - 'total_output_tokens': Total tokens in all chunks
+            - 'total_output_chars': Total characters in all chunks
 
         """
         if not self.chunks:
-            return {"chunk_count": 0, "avg_tokens": 0, "max_tokens": 0, "min_tokens": 0}
+            return {
+                "chunk_count": 0,
+                "avg_tokens": 0,
+                "max_tokens": 0,
+                "min_tokens": 0,
+                "total_output_tokens": 0,
+                "total_output_chars": 0,
+            }
 
         token_counts = [len(self.enc.encode(chunk)) for chunk in self.chunks]
+        total_chars = sum(len(chunk) for chunk in self.chunks)
+        total_tokens = sum(token_counts)
 
         return {
             "chunk_count": len(self.chunks),
-            "avg_tokens": sum(token_counts) // len(token_counts),
+            "avg_tokens": total_tokens // len(self.chunks),
             "max_tokens": max(token_counts),
             "min_tokens": min(token_counts),
+            "total_output_tokens": total_tokens,
+            "total_output_chars": total_chars,
         }
+
+    def _count_tables_in_text(self, md: str) -> int:
+        """Count the number of tables in the markdown text.
+
+        Parameters
+        ----------
+        md : str
+            Markdown document.
+
+        Returns
+        -------
+        int
+            Number of tables found.
+
+        """
+        lines = md.splitlines(keepends=True)
+        table_count = 0
+        i = 0
+
+        while i < len(lines):
+            if is_table_start(lines, i):
+                table_count += 1
+                # Skip to the end of this table
+                i += 2  # Skip header and separator
+                while i < len(lines) and "|" in lines[i]:
+                    i += 1
+            else:
+                i += 1
+
+        return table_count
 
 
 def make_row(cells: list[str]) -> str:
