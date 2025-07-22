@@ -10,10 +10,11 @@ boundaries instead and full-header is repeated.
 
 Usage example
 -------------
->>> import pathlib, tiktoken, markdown_table_splitter as mts
+>>> import pathlib, tiktoken
+>>> from markdown_table_splitter import split_markdown_table
 >>> enc = tiktoken.get_encoding("cl100k_base")
 >>> md_text = pathlib.Path("README.md").read_text()
->>> pieces = mts.split_markdown_table(md_text, 8000, enc)
+>>> pieces = split_markdown_table(md_text, 8000, enc)
 >>> len(pieces)
 3
 """
