@@ -18,8 +18,8 @@ def assert_splitter_outputs(Splitter, fixture_path: Path, save_actual_output: bo
     input_path = fixture_path / "input.md"
     output_paths = sorted(fixture_path.glob("expected_output_*.md"))
 
-    input_text = open(input_path).read()
-    expected_output_texts = [open(output_path).read() for output_path in output_paths]
+    input_text = open(input_path, encoding="utf-8").read()
+    expected_output_texts = [open(output_path, encoding="utf-8").read() for output_path in output_paths]
 
     res = Splitter.split_markdown_document(MarkdownDataContract(md=input_text, url="test", keywords="pytest"))
 

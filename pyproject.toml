@@ -123,9 +123,9 @@ min-public-methods = 0
 disable = "W1203, C0114"
 
 [tool.pylint.MASTER]
-# Skip every *.md file that lives anywhere under test/data/
+# Skip every *.md file that lives anywhere under tests/data/
 ignore-paths = [
-  '^test/data/.*\\.md$',   #  ^  repo‑relative path   .* any sub‑dirs   \.md file‑extension
+  '^tests/data/.*\\.md$',   #  ^  repo‑relative path   .* any sub‑dirs   \.md file‑extension
 ]
 
 [tool.setuptools.dynamic]
