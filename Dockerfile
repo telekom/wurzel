@@ -26,6 +26,7 @@ ENV PYTHONDONTWRITEBYTECODE=1
 # the application crashes without emitting any logs due to buffering.
 ENV PYTHONUNBUFFERED=1
 
+ENV UV_CACHE_DIR=/tmp/.cache/uv
 
 WORKDIR /app
 
@@ -41,10 +42,13 @@ RUN adduser \
     --uid "${UID}" \
     appuser
 
+# Create cache directory and set proper permissions
+RUN mkdir -p /tmp/.cache/uv && chown -R appuser:appuser /tmp/.cache
+
 
 
 # Install dependencies
-RUN --mount=type=cache,target=/root/.cache/uv \
+RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --no-install-project
 
@@ -57,7 +61,7 @@ COPY pyproject.toml pyproject.toml
 COPY entrypoint.sh entrypoint.sh
 
 # Sync the project
-RUN --mount=type=cache,target=/root/.cache/uv \
+RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
     uv sync --inexact && \
     uv pip install -r DIRECT_REQUIREMENTS.txt
 
