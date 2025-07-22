@@ -3,18 +3,18 @@
 # SPDX-License-Identifier: Apache-2.0
 """Markdown Table Splitter.
 
-Utility functions for splitting large markdown tables (given as string) into **token-bounded**
-chunks while preserving table structure.  By default, tables are never broken in the middle
-of a row; if a *single* row exceeds the max. length, it is split at column
-boundaries instead and full-header is repeated.
+Utility for splitting large markdown tables into token-bounded chunks while preserving table structure.
+Tables are never broken in the middle of a row; if a single row exceeds the max length, it is split at
+column boundaries and the full header is repeated.
 
-Usage example
--------------
+Example usage:
+--------------
 >>> import pathlib, tiktoken
->>> from markdown_table_splitter import split_markdown_table
+>>> from markdown_table_splitter import MarkdownTableSplitter
 >>> enc = tiktoken.get_encoding("cl100k_base")
 >>> md_text = pathlib.Path("README.md").read_text()
->>> pieces = split_markdown_table(md_text, 8000, enc)
+>>> splitter = MarkdownTableSplitter(token_limit=8000, enc=enc)
+>>> pieces = splitter.split(md_text)
 >>> len(pieces)
 3
 """
@@ -411,6 +411,7 @@ class MarkdownTableSplitter:
         log.info(
             "Markdown table splitting completed",
             extra={
+                "input_markdown": md,
                 "input_length": input_length,
                 "input_tokens": input_tokens,
                 "input_table_count": table_count,
@@ -515,32 +516,3 @@ def is_table_start(lines: list[str], idx: int) -> bool:
     *next* line matches ``TABLE_SEP_RE``.
     """
     return "|" in lines[idx] and idx + 1 < len(lines) and bool(TABLE_SEP_RE.match(lines[idx + 1]))
-
-
-def split_markdown_table(
-    md: str,
-    token_limit: int,
-    enc: tiktoken.Encoding,
-    repeat_header_row: bool = True,
-) -> list[str]:
-    """Split a markdown document into token-bounded chunks while respecting tables.
-
-    Parameters
-    ----------
-    md : str
-        Markdown document.
-    token_limit : int
-        Maximum tokens per chunk (model tokens, not characters).
-    enc : tiktoken.Encoding
-        Tokenizer used for counting.
-    repeat_header_row : bool, default True
-        Repeat header row in each subsequent table chunk.
-
-    Returns
-    -------
-    list[str]
-        Chunks whose token counts are <= *token_limit*.
-
-    """
-    splitter = MarkdownTableSplitter(token_limit=token_limit, enc=enc, repeat_header_row=repeat_header_row)
-    return splitter.split(md)
