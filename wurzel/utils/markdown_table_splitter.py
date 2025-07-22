@@ -3,9 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """Markdown Table Splitter.
 
-Utility functions for splitting large Markdown strings into **token‑bounded**
-chunks while preserving table structure.  Tables are never broken in the middle
-of a row; if a *single* row exceeds the budget, it is split at column
+Utility functions for splitting large markdown tables (given as string) into **token-bounded**
+chunks while preserving table structure.  By default, tables are never broken in the middle
+of a row; if a *single* row exceeds the max. length, it is split at column
 boundaries instead and full-header is repeated.
 
 Usage example
@@ -13,7 +13,7 @@ Usage example
 >>> import pathlib, tiktoken, markdown_table_splitter as mts
 >>> enc = tiktoken.get_encoding("cl100k_base")
 >>> md_text = pathlib.Path("README.md").read_text()
->>> pieces = mts.split_markdown_table_safe(md_text, 8000, enc)
+>>> pieces = mts.split_markdown_table(md_text, 8000, enc)
 >>> len(pieces)
 3
 """
@@ -222,13 +222,13 @@ def process_table(
     return i, buf_tok
 
 
-def split_markdown_table_safe(
+def split_markdown_table(
     md: str,
     token_limit: int,
     enc: tiktoken.Encoding,
     repeat_header_row: bool = True,
 ) -> list[str]:
-    """Split *md* into token-bounded chunks while respecting tables.
+    """Split a markdown document into token-bounded chunks while respecting tables.
 
     Parameters
     ----------

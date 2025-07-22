@@ -16,7 +16,7 @@ from mistletoe.token import Token
 
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import MarkdownException
-from wurzel.utils.markdown_table_splitter import split_markdown_table_safe
+from wurzel.utils.markdown_table_splitter import split_markdown_table
 from wurzel.utils.to_markdown.html2md import MD_RENDER_LOCK
 
 if TYPE_CHECKING:
@@ -559,7 +559,7 @@ class SemanticSplitter:
                     url=doc["metadata"]["url"],
                     keywords=doc["metadata"]["keywords"],
                 )
-                for chunk_md in split_markdown_table_safe(
+                for chunk_md in split_markdown_table(
                     md=doc["text"],
                     token_limit=self.token_limit,
                     enc=self.tokenizer_model_encoding,
