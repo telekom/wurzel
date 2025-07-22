@@ -190,16 +190,16 @@ class SemanticSplitter:
         """
         return len(self.tokenizer_model_encoding.encode(text))
 
-    def _cut_to_tokenlen(self, text: str, token_len: int, return_cutted_text: bool = False) -> str | tuple[str, str]:
+    def _cut_to_tokenlen(self, text: str, token_len: int, return_discarded_text: bool = False) -> str | tuple[str, str]:
         """Cut text to max. token length using OpenAI tokenizer.
 
         Args:
             text (str): Input text
             token_len (int): Max. number of tokens for output text
-            return_cutted_text: (bool): If enabled, the function returns also the cutted text (beyond token limit). Defaults to False.
+            return_discarded_text: (bool): If enabled, the function returns also the discarded text (beyond token limit). Defaults to False.
 
         Returns:
-            str | tuple[str, str]: Text limited to max. token count (and the cutted text, depending on `return_cutted_text`)
+            str | tuple[str, str]: Text limited to max. token count (and the discarded text, depending on `return_discarded_text`)
 
         """
         input_tokens = self.tokenizer_model_encoding.encode(text)
@@ -207,11 +207,11 @@ class SemanticSplitter:
         output_tokens = input_tokens[:token_len]  # ensure token length
         output_text = self.tokenizer_model_encoding.decode(output_tokens)  # convert back to text
 
-        if return_cutted_text:
-            cutted_tokens = input_tokens[token_len:]  # beyond token length
-            cutted_text = self.tokenizer_model_encoding.decode(cutted_tokens)  # convert back to text
+        if return_discarded_text:
+            discarded_tokens = input_tokens[token_len:]  # beyond token length
+            discarded_text = self.tokenizer_model_encoding.decode(discarded_tokens)  # convert back to text
 
-            return output_text, cutted_text
+            return output_text, discarded_text
 
         return output_text
 
@@ -540,11 +540,11 @@ class SemanticSplitter:
 
     def _md_data_from_dict_cut(self, doc: DocumentNode) -> MarkdownDataContract:
         """Cut text of Markdown document to fit token limit."""
-        text, cutted_text = self._cut_to_tokenlen(doc["text"], self.token_limit, return_cutted_text=True)
+        text, discarded_text = self._cut_to_tokenlen(doc["text"], self.token_limit, return_discarded_text=True)
 
-        if len(cutted_text) > 0:
-            # Log document and cutted text
-            log.warning("Splitter cutted text from source", extra={"cutted_text": cutted_text, **doc})
+        if len(discarded_text) > 0:
+            # Log document and discarded text
+            log.warning("Splitter cut off text from source document", extra={"discarded_text": discarded_text, **doc})
 
         return MarkdownDataContract(
             md=text,
