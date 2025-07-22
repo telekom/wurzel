@@ -147,6 +147,7 @@ class SemanticSplitter:
     token_limit: int
     token_limit_buffer: int
     token_limit_min: int
+    tokenizer_model_encoding: tiktoken.Encoding
     repeat_table_header_row: bool
 
     # pylint: disable=too-many-positional-arguments
