@@ -82,7 +82,7 @@ def flush_buffer(buf: list[str], out: list[str]) -> None:
 
 
 def is_table_start(lines: list[str], idx: int) -> bool:
-    """Return ``True`` iff ``lines[idx]`` begins a pipe table.
+    """Return ``True`` if ``lines[idx]`` begins a pipe table.
 
     A table start is defined as a row line containing at least one ``|`` whose
     *next* line matches ``TABLE_SEP_RE``.
