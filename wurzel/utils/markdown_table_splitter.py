@@ -77,15 +77,15 @@ class MarkdownTableSplitter:
 
     def __post_init__(self) -> None:
         """Validate configuration after initialization."""
-        self.validate_config()
+        self._validate_config()
 
-    def reset_state(self) -> None:
+    def _reset_state(self) -> None:
         """Reset the internal state for a new splitting operation."""
         self.chunks.clear()
         self.buf.clear()
         self.buf_tok = 0
 
-    def validate_config(self) -> None:
+    def _validate_config(self) -> None:
         """Validate the splitter configuration.
 
         Raises
@@ -97,7 +97,7 @@ class MarkdownTableSplitter:
         if self.token_limit < 10:
             raise ValueError("token_limit must be at least 10 tokens")
 
-    def flush_buffer(self) -> None:
+    def _flush_buffer(self) -> None:
         """Append joined buffer to chunks and clear buffer."""
         if self.buf:
             self.chunks.append("".join(self.buf))
@@ -116,7 +116,7 @@ class MarkdownTableSplitter:
         line_tok = len(self.enc.encode(line))
 
         if self.buf_tok + line_tok > self.token_limit:
-            self.flush_buffer()
+            self._flush_buffer()
 
         self.buf.append(line)
         self.buf_tok += line_tok
@@ -144,7 +144,7 @@ class MarkdownTableSplitter:
 
         return header_line, sep_line, header_cells, sep_cells, header_tok
 
-    def count_row_tokens(self, cells: list[str]) -> int:
+    def _count_row_tokens(self, cells: list[str]) -> int:
         """Return token length of cells rendered as one Markdown row.
 
         Parameters
@@ -161,7 +161,7 @@ class MarkdownTableSplitter:
         return len(self.enc.encode(make_row(cells)))
 
     # pylint: disable=too-many-positional-arguments
-    def slice_long_row(
+    def _slice_long_row(
         self,
         row_cells: list[str],
         header_cells: list[str],
@@ -205,7 +205,7 @@ class MarkdownTableSplitter:
 
             # Render and emit the slice
             self._render_table_slice(slice_cells, header_cells, sep_cells)
-            self.flush_buffer()
+            self._flush_buffer()
 
             # Prepare for next slice
             if col_idx < len(row_cells) and self.repeat_header_row:
@@ -234,11 +234,11 @@ class MarkdownTableSplitter:
             Total token count for this slice including headers if needed.
 
         """
-        slice_tok = self.count_row_tokens(tentative_cells)
+        slice_tok = self._count_row_tokens(tentative_cells)
         header_slice_tok = 0
 
         if self.repeat_header_row:
-            header_slice_tok = self.count_row_tokens(header_cells[: len(tentative_cells)]) + self.count_row_tokens(
+            header_slice_tok = self._count_row_tokens(header_cells[: len(tentative_cells)]) + self._count_row_tokens(
                 sep_cells[: len(tentative_cells)]
             )
 
@@ -268,7 +268,7 @@ class MarkdownTableSplitter:
         else:
             self.buf.append(make_row(slice_cells))
 
-    def process_table(self, lines: list[str], start_idx: int) -> int:
+    def _process_table(self, lines: list[str], start_idx: int) -> int:
         """Process a whole Markdown table, returning new index.
 
         The function mutates internal buffer and chunks in place.
@@ -289,7 +289,7 @@ class MarkdownTableSplitter:
         header_line, sep_line, header_cells, sep_cells, header_tok = self._extract_table_header_info(lines, start_idx)
 
         if self.buf_tok + header_tok > self.token_limit:
-            self.flush_buffer()
+            self._flush_buffer()
 
         self.buf.extend([header_line, sep_line])
         self.buf_tok += header_tok
@@ -336,7 +336,7 @@ class MarkdownTableSplitter:
         while i < len(lines) and "|" in lines[i]:
             row_line = lines[i]
             row_cells = [c.strip() for c in row_line.strip().strip("|").split("|")]
-            row_tok = self.count_row_tokens(row_cells)
+            row_tok = self._count_row_tokens(row_cells)
 
             # Row fits current buffer
             if self.buf_tok + row_tok <= self.token_limit:
@@ -346,14 +346,14 @@ class MarkdownTableSplitter:
                 continue
 
             # Row does not fit
-            self.flush_buffer()
+            self._flush_buffer()
             if self.repeat_header_row:
                 self.buf.extend([header_line, sep_line])
                 self.buf_tok = header_tok
 
             # Oversized row: slice into columns.
             if row_tok > self.token_limit:
-                self.slice_long_row(
+                self._slice_long_row(
                     row_cells,
                     header_cells,
                     sep_cells,
@@ -387,9 +387,8 @@ class MarkdownTableSplitter:
             If the splitter configuration is invalid.
 
         """
-        self.reset_state()
+        self._reset_state()
 
-        # Log input information
         input_length = len(md)
         input_tokens = len(self.enc.encode(md))
         table_count = self._count_tables_in_text(md)
@@ -399,17 +398,16 @@ class MarkdownTableSplitter:
 
         while i < len(lines):
             if is_table_start(lines, i):
-                i = self.process_table(lines, i)
+                i = self._process_table(lines, i)
                 continue
 
             # Non‑table line processing
             self._add_line_to_buffer(lines[i])
             i += 1
 
-        self.flush_buffer()
+        self._flush_buffer()
 
-        # Get metrics and log the operation
-        metrics = self.get_metrics()
+        metrics = self._get_metrics()
         log.info(
             "Markdown table splitting completed",
             extra={
@@ -424,7 +422,7 @@ class MarkdownTableSplitter:
 
         return self.chunks.copy()
 
-    def get_metrics(self) -> dict[str, int]:
+    def _get_metrics(self) -> dict[str, int]:
         """Get metrics about the last splitting operation.
 
         Returns
