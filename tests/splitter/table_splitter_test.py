@@ -30,7 +30,7 @@ def assert_splitter_outputs(Splitter, fixture_path: Path, save_actual_output: bo
                 p.unlink()
 
         for i, output_text in enumerate(res):
-            with open(fixture_path / f"actual_output_{i:03d}.md", "w") as f:
+            with open(fixture_path / f"actual_output_{i:03d}.md", "w", encoding="utf-8") as f:
                 f.write(output_text.md)
 
     # number of splits is correct
