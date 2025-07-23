@@ -28,6 +28,7 @@ ENV PYTHONUNBUFFERED=1
 
 ENV UV_CACHE_DIR=/tmp/.cache/uv
 ENV UV_PROJECT_ENVIRONMENT=/usr/app/.venv
+ENV UV_LINK_MODE=copy
 
 WORKDIR /usr/app
 
@@ -67,6 +68,10 @@ RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
     uv pip install -r DIRECT_REQUIREMENTS.txt && \
     chown -R appuser:appuser /usr/app/.venv
 
+# Set system-level DVC configuration while running as root
+RUN /usr/app/.venv/bin/dvc config core.autostage true --system && \
+    /usr/app/.venv/bin/dvc config core.analytics false --system
+
 # Switch to the non-privileged user to run the application.
 USER appuser
 
@@ -76,7 +81,6 @@ ENV PATH="/usr/app/.venv/bin:$PATH"
 # Verify installation
 RUN python -c "import wurzel; print('Wurzel installed successfully')"
 
-
 RUN git config --global init.defaultBranch main
 #RUN dvc config core.analytics false
 
@@ -85,6 +89,7 @@ ENV GIT_USER=wurzel
 ENV GIT_MAIL=wurzel@example.com
 ENV DVC_DATA_PATH=/usr/app/dvc-data
 ENV DVC_FILE=/usr/app/dvc.yaml
+ENV DVC_CACHE_HISTORY_NUMBER=30
 
 
 

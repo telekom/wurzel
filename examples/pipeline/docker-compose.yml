@@ -5,7 +5,8 @@
 version: '3.8'
 
 services:
-  wurzel-pipeline:
+  wurzel-pipeline: # this is the main Dockerfile for the Wurzel pipeline
+   # ghcr.io/telekom/wurzel:latest
     build:
       context: ../../
       dockerfile: Dockerfile
