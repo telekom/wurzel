@@ -196,7 +196,7 @@ class SemanticSplitter:
         Args:
             text (str): Input text
             token_len (int): Max. number of tokens for output text
-            return_discarded_text: (bool): If enabled, the function returns also the discarded text (beyond token limit). Defaults to False.
+            return_discarded_text (bool): If enabled, the function returns also the discarded text (beyond token limit). Defaults to False.
 
         Returns:
             str | tuple[str, str]: Text limited to max. token count (and the discarded text, depending on `return_discarded_text`)
