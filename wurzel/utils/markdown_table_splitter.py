@@ -381,11 +381,6 @@ class MarkdownTableSplitter:
         list[str]
             Chunks whose token counts are <= token_limit.
 
-        Raises
-        ------
-        ValueError
-            If the splitter configuration is invalid.
-
         """
         self._reset_state()
 
