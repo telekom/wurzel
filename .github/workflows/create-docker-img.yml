@@ -71,8 +71,9 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=${{ env.version }}
-            type=raw,value=${{ env.major }}.${{ env.minor }}
+            type=raw,value=${{ env.version }},enable={{is_default_branch}}
+            type=raw,value=${{ env.major }}.${{ env.minor }},enable={{is_default_branch}}
+            type=raw,value=${{ env.version }},enable=${{ github.event_name == 'pull_request' }}
 
       - name: Build and push Docker image (${{ matrix.platform }})
         id: push
