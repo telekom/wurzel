@@ -65,22 +65,22 @@ def to_markdown(html: str, settings: Optional[MarkdownConverterSettings] = None,
     binary_path : Path, optional
         The path to the html2md binary (default is './html2md').
 
-    Returns
+    Returns:
     -------
     str
         The resulting Markdown string.
 
-    Notes
+    Notes:
     -----
     This function first checks if the html2md binary is available. If not, it raises an error.
     The binary path can be specified in the environment variable 'HTML2MD_BINARY_PATH'.
 
     The html2md binary can be found at: https://github.com/suntong/html2md
 
-    Examples
+    Examples:
     --------
     >>> from pathlib import Path
-    >>> html = '<h1>Title</h1><p>Hello, world!</p>'
+    >>> html = "<h1>Title</h1><p>Hello, world!</p>"
     >>> markdown = to_markdown(html)
     >>> print(markdown)
     # Title

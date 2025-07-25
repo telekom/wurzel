@@ -70,7 +70,7 @@ class EmbeddingStep(
     def _select_embedding(self) -> HuggingFaceInferenceAPIEmbeddings:
         """Selects the embedding model to be used for generating embeddings.
 
-        Returns
+        Returns:
         -------
         Embeddings
             An instance of the Embeddings class.
@@ -111,7 +111,7 @@ class EmbeddingStep(
         doc : MarkdownDataContract
             The document containing the page content in Markdown format.
 
-        Returns
+        Returns:
         -------
         str
             Cleaned text that can be used as input to the embedding model.
@@ -130,7 +130,7 @@ class EmbeddingStep(
         d : dict
             A dictionary containing the text and context for which to generate the embedding.
 
-        Returns
+        Returns:
         -------
         dict
             A dictionary containing the original text, its embedding, and the source URL.
@@ -167,7 +167,7 @@ class EmbeddingStep(
         stream : StringIO, optional
             The stream to which the plain text is written. If None, a new stream is created.
 
-        Returns
+        Returns:
         -------
         str
             The plain text representation of the markdown element.
@@ -192,7 +192,7 @@ class EmbeddingStep(
         text : str
             The text in which URLs will be replaced.
 
-        Returns
+        Returns:
         -------
         str
             The text with URLs replaced by 'LINK'.

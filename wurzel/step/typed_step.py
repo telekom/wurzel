@@ -67,24 +67,25 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     ### Input
     ## Example:
     ```python
-    from wurzel.step import (
-        PanderaDataFrameModel,
-        TypedStep,
-        PydanticModel,
-        NoSettings
-        )
+    from wurzel.step import PanderaDataFrameModel, TypedStep, PydanticModel, NoSettings
     from pandera.typing import Series
+
 
     # Data Model definitions
     class MyData(PydanticModel):
         key: str = "Value"
+
+
     class MyTable(PanderaDataFrameModel):
         col1: Series[int]
+
 
     # Step definition
     class MyStep(TypedStep[NoSettings, None, list[MyData]]):
         def run(self, inpt: None) -> list[MyData]:
             return ...
+
+
     class MyOtherStep(TypedStep[None, list[MyData], MyTable]):
         def run(self, inpt: list[MyData]) -> MyTable:
             return ...

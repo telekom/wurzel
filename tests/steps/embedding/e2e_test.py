@@ -26,7 +26,7 @@ def mock_embedding():
     to return an instance of the mock embedding class, which generates
     a fixed-size random vector upon calling `embed_query`.
 
-    Returns
+    Returns:
     -------
     MockEmbedding
         An instance of the mock embedding class.
@@ -42,7 +42,7 @@ def mock_embedding():
             _ : str
                 The input query string (ignored in this mock implementation).
 
-            Returns
+            Returns:
             -------
             np.ndarray
                 A random vector of size 768.
