@@ -42,7 +42,7 @@ class MockResponse_faq_entries:
     status : int
         The HTTP status code to return.
 
-    Methods
+    Methods:
     -------
     async json():
         Returns the JSON data.
