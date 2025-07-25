@@ -16,7 +16,7 @@ from mistletoe.token import Token
 
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import MarkdownException
-from wurzel.utils.markdown_table_splitter import MarkdownTableSplitter
+from wurzel.utils.markdown_table_splitter import MarkdownTableSplitterUtil
 from wurzel.utils.to_markdown.html2md import MD_RENDER_LOCK
 
 if TYPE_CHECKING:
@@ -553,7 +553,7 @@ class SemanticSplitter:
             return [self._md_data_from_dict_cut(doc)]
         if self._is_table(doc):
             # split table into chunks depending on token length (re-emit table header)
-            table_splitter = MarkdownTableSplitter(
+            table_splitter = MarkdownTableSplitterUtil(
                 token_limit=self.token_limit,
                 enc=self.tokenizer_model_encoding,
                 repeat_header_row=self.repeat_table_header_row,

@@ -57,9 +57,10 @@ def SplitterDontRepeatHeader(env):
         pytest.param("short_table", id="Short table that should not be split"),
         pytest.param("standalone_table", id="Split a markdown file that contains only a table and nothing else"),
         pytest.param("table_and_text", id="Table and text"),
-        # pytest.param("long_table_and_long_text", id="Table and long text"),  # TODO expected output is wrong!
         pytest.param("many_rows_table", id="Long table with multiple row splits"),
         pytest.param("many_columns_table", id="Table with multiple column splits"),
+        # TODO Expected output is wrong (not related to table)! See https://github.com/telekom/wurzel/issues/103
+        # pytest.param("long_table_and_long_text", id="Table and long text"),
     ],
 )
 def test_from_fixtures(fixture_path, Splitter):
