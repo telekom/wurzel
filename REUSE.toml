@@ -25,6 +25,7 @@ path = [
     "DIRECT_REQUIREMENTS.txt",
     "tests/data/scraperapi/*.html",
     "docs/**/*.md",
+    "tests/data/**/*",
     ]
 precedence = "override"
 SPDX-FileCopyrightText = "NONE"

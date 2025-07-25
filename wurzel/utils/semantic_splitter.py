@@ -13,10 +13,10 @@ import tiktoken
 from mistletoe import Document as MisDocument
 from mistletoe import block_token, markdown_renderer, span_token
 from mistletoe.token import Token
-from tiktoken import Encoding as TikEncoding
 
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import MarkdownException
+from wurzel.utils.markdown_table_splitter import MarkdownTableSplitterUtil
 from wurzel.utils.to_markdown.html2md import MD_RENDER_LOCK
 
 if TYPE_CHECKING:
@@ -147,14 +147,17 @@ class SemanticSplitter:
     token_limit: int
     token_limit_buffer: int
     token_limit_min: int
-    tokenizer_model_encoding: TikEncoding
+    tokenizer_model_encoding: tiktoken.Encoding
+    repeat_table_header_row: bool
 
-    def __init__(  # pylint: disable=too-many-positional-arguments
+    # pylint: disable=too-many-positional-arguments
+    def __init__(
         self,
         token_limit: int = 256,
         token_limit_buffer: int = 32,
         token_limit_min: int = 64,
         spacy_model: str = "de_core_news_sm",
+        repeat_table_header_row: bool = True,
         tokenizer_model: str = "gpt-3.5-turbo",
     ) -> None:  # pylint: enable=too-many-positional-arguments
         """Initializes the SemanticSplitter class with specified token limits and a spaCy language model.
@@ -164,6 +167,7 @@ class SemanticSplitter:
             token_limit_buffer (int, optional): The buffer size for token limit to allow flexibility. Defaults to 32.
             token_limit_min (int, optional): The minimum number of tokens required. Defaults to 64.
             spacy_model (str, optional): The name of the spaCy language model to load. Defaults to "de_core_news_sm".
+            repeat_table_header_row (bool, optional): If a table is splitted, the header is repeated. Defaults to True.
             tokenizer_model (str, optional): The name of the tokenizer model to use for encoding. Defaults to "gpt-3.5-turbo".
 
         Raises:
@@ -176,6 +180,7 @@ class SemanticSplitter:
         self.token_limit = token_limit
         self.token_limit_buffer = token_limit_buffer
         self.token_limit_min = token_limit_min
+        self.repeat_table_header_row = repeat_table_header_row
         self.tokenizer_model_encoding = tiktoken.encoding_for_model(tokenizer_model)
 
     def _get_token_len(self, text: str) -> int:
@@ -571,11 +576,20 @@ class SemanticSplitter:
             )
             return [self._md_data_from_dict_cut(doc)]
         if self._is_table(doc):
-            log.warning(
-                "found table, that should have been split, cutting off",
-                extra=doc["metadata"],
+            # split table into chunks depending on token length (re-emit table header)
+            table_splitter = MarkdownTableSplitterUtil(
+                token_limit=self.token_limit,
+                enc=self.tokenizer_model_encoding,
+                repeat_header_row=self.repeat_table_header_row,
             )
-            return [self._md_data_from_dict_cut(doc)]
+            return [
+                MarkdownDataContract(
+                    md=chunk_md,
+                    url=doc["metadata"]["url"],
+                    keywords=doc["metadata"]["keywords"],
+                )
+                for chunk_md in table_splitter.split(doc["text"])
+            ]
         if len(doc["children"]) == 0:
             log.warning(
                 "no remaining children. still to big -> Cut by tokenlen",
