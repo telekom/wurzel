@@ -1,4 +1,64 @@
-# I am your tutorial to deploy Wurzel!
+# Wurzel Pipeline Demo
+
+This demo showcases a complete Wurzel pipeline that processes markdown documents for RAG applications.
+
+## Quick Start
+
+1. **Build and run with Docker Compose:**
+   ```bash
+   docker-compose up wurzel-pipeline
+   ```
+
+2. **Or build manually with platform flag:**
+   ```bash
+   docker build --platform linux/amd64 -f ../../Dockerfile -t test_wurzel ../../
+   docker-compose up wurzel-pipeline
+   ```
+
+## What This Demo Does
+
+The pipeline performs the following steps:
+
+1. **Document Loading**: Reads all `.md` files from the `demo-data/` directory
+2. **Text Processing**: Processes and prepares the markdown content
+3. **Pipeline Execution**: Runs the complete Wurzel pipeline using DVC
+
+## Demo Files
+
+- `demo-data/`: Contains example markdown files
+  - `introduction.md`: Overview of Wurzel framework
+  - `setup-guide.md`: Guide for setting up RAG pipelines
+  - `architecture.md`: Technical architecture documentation
+- `output/`: Directory for pipeline outputs
+- `docker-compose.yml`: Container orchestration configuration
+- `pipelinedemo.py`: Simple pipeline definition
+
+## Environment Variables
+
+The demo is configured with:
+
+- `MANUALMARKDOWNSTEP__FOLDER_PATH=/usr/app/demo-data`: Points to the demo documents
+- `WURZEL_PIPELINE=pipelinedemo:pipeline`: Specifies which pipeline to run
+
+## Extending the Demo
+
+To add more documents:
+1. Place additional `.md` files in the `demo-data/` directory
+2. Restart the pipeline: `docker-compose restart wurzel-pipeline`
+
+To modify the pipeline:
+1. Edit `pipelinedemo.py` to add more steps
+2. Rebuild the image: `docker-compose build wurzel-pipeline`
+
+## Troubleshooting
+
+- Check container logs: `docker-compose logs wurzel-pipeline`
+- Verify file permissions on `demo-data/` and `output/` directories
+- Ensure Docker has enough resources allocated for the build process
+
+---
+
+# Original Tutorial: Deploying Wurzel
 
 Let's go through the process of how to get a Wurzel pipeline deployed locally.
 

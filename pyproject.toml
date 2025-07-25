@@ -48,14 +48,12 @@ dependencies= [
     "joblib>=1.4.0",
     "lxml==5.2.*",
     "marshmallow<4.0.0",
+    "hera >=5.20.1",
 ]
 
 [project.optional-dependencies]
 qdrant = [
     "qdrant-client==1.10.1"
-]
-argo = [
-    "hera >=5.20.1",
 ]
 docling = [
     "docling==2.30.0"
