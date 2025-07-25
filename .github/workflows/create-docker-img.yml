@@ -10,9 +10,6 @@ on:
       - pypi.org Release
     types:
       - completed
-  push:
-    branches-ignore:
-      - main
   pull_request:
     branches:
       - main

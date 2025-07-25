@@ -15,7 +15,12 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 RUN apt update && apt install -y --no-install-recommends build-essential gcc git curl g++
 
-RUN curl -L -o /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64 \
+# Install jq depending on the platform
+RUN case "$(uname -m)" in \
+    x86_64) curl -L -o /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64 ;; \
+    aarch64) curl -L -o /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-arm64 ;; \
+    *) echo "Unsupported architecture"; exit 1 ;; \
+    esac \
     && chmod +x /usr/bin/jq
 
 
