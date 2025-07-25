@@ -10,6 +10,12 @@ on:
       - pypi.org Release
     types:
       - completed
+  push:
+    branches-ignore:
+      - main
+  pull_request:
+    branches:
+      - main
 
 
 
@@ -40,9 +46,15 @@ jobs:
         id: get_version
         run: |
           version=$(grep -Po '(?<=^version = ")[^"]*' pyproject.toml)
-          echo "version=$version" >> $GITHUB_ENV
-          echo "major=$(echo $version | cut -d '.' -f 1)" >> $GITHUB_ENV
-          echo "minor=$(echo $version | cut -d '.' -f 2)" >> $GITHUB_ENV
+          major=$(echo $version | cut -d '.' -f 1)
+          minor=$(echo $version | cut -d '.' -f 2)
+          if [[ "${GITHUB_REF##*/}" != "main" ]]; then
+            sha=$(echo "${GITHUB_SHA}" | cut -c1-7)
+            version="${version}.dev${sha}"
+              fi
+              echo "version=$version" >> $GITHUB_ENV
+              echo "major=$major" >> $GITHUB_ENV
+              echo "minor=$minor" >> $GITHUB_ENV
 
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
