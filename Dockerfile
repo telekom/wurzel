@@ -9,7 +9,7 @@
 ARG PYTHON_VERSION=3.11
 FROM python:${PYTHON_VERSION}-slim AS base
 
-# Install uv
+# Install uv with proper platform targeting
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 
@@ -64,14 +64,14 @@ COPY entrypoint.sh entrypoint.sh
 
 
 
-RUN chown -R appuser:appuser /usr/app && \
-    chmod +x /usr/app/entrypoint.sh
-
 # Sync the project (still as root to avoid permission issues with cache)
 RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
     uv sync --inexact && \
-    uv pip install -r DIRECT_REQUIREMENTS.txt && \
-    chown -R appuser:appuser /usr/app/.venv
+    uv pip install -r DIRECT_REQUIREMENTS.txt
+
+# Change ownership in the same layer to avoid layer duplication
+RUN chown -R appuser:appuser /usr/app && \
+    chmod +x /usr/app/entrypoint.sh
 
 # Set system-level DVC configuration while running as root
 RUN /usr/app/.venv/bin/dvc config core.autostage true --system && \
