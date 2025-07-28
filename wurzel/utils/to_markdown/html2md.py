@@ -28,6 +28,7 @@ MD_RENDER_LOCK = threading.Lock()
 def __get_html2md() -> Path:
     default_path = {
         "Linux_x86_64": Path(__file__).parent / "html2md",
+        "Linux_aarch64": Path(__file__).parent / "html2md",
         "Darwin_arm64": Path(__file__).parent / "html2md_darwin_arm",
         "Darwin_x86_64": Path(__file__).parent / "html2md_darwin_amd64",
         "Windows_AMD64": Path(__file__).parent / "html2md_win_amd64",

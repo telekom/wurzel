@@ -2,40 +2,34 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 
-version: '3.8'
-
 services:
   wurzel-pipeline: # this is the main Dockerfile for the Wurzel pipeline
    # ghcr.io/telekom/wurzel:latest
     build:
       context: ../../
       dockerfile: Dockerfile
-      platforms:
-        - linux/amd64
       args:
         - PYTHON_VERSION=3.11
     image: test_wurzel
     container_name: wurzel-demo
     environment:
-      - MANUALMARKDOWNSTEP__FOLDER_PATH=/usr/app/demo-data
-      - WURZEL_PIPELINE=pipelinedemo:pipeline
       - GIT_USER=wurzel-demo
       - GIT_MAIL=demo@example.com
-      - DVC_DATA_PATH=/usr/app/dvc-data
-      - DVC_FILE=/usr/app/dvc.yaml
-    volumes:
-      - ./demo-data:/usr/app/demo-data:ro
-      - ./pipelinedemo.py:/usr/app/pipelinedemo.py:ro
-      - ./output:/usr/app/output
-    working_dir: /usr/app
-    command: ["sh", "-c", "/bin/bash ./entrypoint.sh"]
+      - DVC_DATA_PATH=/app/data
+      - DVC_FILE=/app/dvc.yaml
+    working_dir: /app
+    command: ["./entrypoint.sh"]
 
-  # Optional: Example service for extending the pipeline
   wurzel-pipeline-extended:
     extends: wurzel-pipeline
     container_name: wurzel-demo-extended
     environment:
-      - MANUALMARKDOWNSTEP__FOLDER_PATH=/usr/app/demo-data
+      - MANUALMARKDOWNSTEP__FOLDER_PATH=/app/demo-data
       - WURZEL_PIPELINE=pipelinedemo:pipeline
+    volumes:
+      - ./demo-data:/app/demo-data:ro
+      - ./pipelinedemo.py:/app/pipelinedemo.py:ro
+      - ./output:/app/data
     profiles:
       - extended
+# run with `docker-compose --profile extended up`

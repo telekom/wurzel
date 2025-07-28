@@ -91,6 +91,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Set working directory
 WORKDIR /app
+RUN chown appuser:appgroup /app
 
 # Copy the virtual environment from builder stage
 COPY --from=builder --chown=appuser:appgroup /app/.venv /app/.venv
