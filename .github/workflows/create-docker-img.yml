@@ -107,7 +107,7 @@ jobs:
           platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           cache-from: type=gha,scope=${{ github.workflow }}-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ github.workflow }}-${{ matrix.platform }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
