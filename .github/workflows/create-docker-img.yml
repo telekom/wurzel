@@ -109,7 +109,7 @@ jobs:
           annotations: ${{ steps.meta.outputs.annotations }}
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           cache-from: type=gha,scope=${{ github.workflow }}-${{ matrix.platform }}
-          cache-to: type=gha,mode=max,scope=${{ github.workflow }}-${{ matrix.platform }}
+          cache-to: type=gha,mode=${{ matrix.platform == 'linux/amd64' && 'min' || 'max' }},scope=${{ github.workflow }}-${{ matrix.platform }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
           provenance: false
           sbom: false
@@ -205,6 +205,7 @@ jobs:
     permissions:
       contents: read
       packages: read
+
     container:
       image: ghcr.io/${{ github.repository }}:${{ needs.merge.outputs.version }}
       credentials:
@@ -213,15 +214,10 @@ jobs:
       env:
         MANUALMARKDOWNSTEP__FOLDER_PATH: /github/workspace/examples/pipeline/demo-data
         WURZEL_PIPELINE: pipelinedemo:pipeline
-        PYTHONPATH: /app
         GIT_USER: ci-test
         GIT_MAIL: ci@example.com
         DVC_DATA_PATH: /github/workspace/output
         DVC_FILE: /app/dvc.yaml
-      volumes:
-        - /github/workspace/examples/pipeline/demo-data:/github/workspace/examples/pipeline/demo-data:ro
-        - /github/workspace/examples/pipeline/pipelinedemo.py:/app/pipelinedemo.py:ro
-        - /github/workspace/output:/github/workspace/output
 
     steps:
       - name: Checkout repository
@@ -235,7 +231,7 @@ jobs:
 
       - name: Run demo pipeline
         working-directory: /app
-        run: python -m wurzel.cli
+        run: ./entrypoint.sh
 
       - name: Verify pipeline output
         run: |
