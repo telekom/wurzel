@@ -213,11 +213,11 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
       options: --user root
       env:
-        MANUALMARKDOWNSTEP__FOLDER_PATH: $GITHUB_WORKSPACE/examples/pipeline/demo-data
+        MANUALMARKDOWNSTEP__FOLDER_PATH: /app/examples/pipeline/demo-data
         WURZEL_PIPELINE: pipelinedemo:pipeline
         GIT_USER: ci-test
         GIT_MAIL: ci@example.com
-        DVC_DATA_PATH: $GITHUB_WORKSPACE/output
+        DVC_DATA_PATH: /app/output
         DVC_FILE: /app/dvc.yaml
 
     steps:
