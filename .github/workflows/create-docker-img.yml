@@ -77,7 +77,12 @@ jobs:
         uses: reproducible-containers/buildkit-cache-dance@v3.3.0
         with:
           cache-dir: cache-mount
-          dockerfile: Dockerfile
+          cache-map: |
+            {
+              "var-cache-apt": "/var/cache/apt",
+              "var-lib-apt": "/var/lib/apt",
+              "uv-cache": "/tmp/.cache/uv"
+            }
           skip-extraction: ${{ steps.cache.outputs.cache-hit }}
 
       - name: Extract metadata (tags, labels) for Docker

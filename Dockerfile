@@ -13,7 +13,11 @@ FROM python:${PYTHON_VERSION}-slim AS base
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 
-RUN apt update && apt install -y --no-install-recommends build-essential gcc git curl g++
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    rm -f /etc/apt/apt.conf.d/docker-clean && \
+    echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache && \
+    apt update && apt install -y --no-install-recommends build-essential gcc git curl g++
 
 # Install jq depending on the platform
 RUN case "$(uname -m)" in \
