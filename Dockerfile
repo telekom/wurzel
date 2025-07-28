@@ -4,15 +4,23 @@
 
 # syntax=docker/dockerfile:1
 
+# Build arguments
 ARG PYTHON_VERSION=3.11
 
 # Build stage - includes build tools and compilers
 FROM python:${PYTHON_VERSION}-slim AS builder
 
+# Labels for metadata and security scanning
+LABEL org.opencontainers.image.title="wurzel"
+LABEL org.opencontainers.image.description="ETL framework for Retrieval-Augmented Generation (RAG) systems"
+LABEL org.opencontainers.image.vendor="Deutsche Telekom AG"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.source="https://github.com/telekom/wurzel"
+
 # Install uv with proper platform targeting
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Install build dependencies
+# Install build dependencies and clean up in one layer
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
@@ -24,9 +32,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         g++=4:12.2.0-3 \
         git=1:2.39.5-0+deb12u2 \
         curl=7.88.1-10+deb12u12 \
-        ca-certificates=20230311+deb12u1 && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+        ca-certificates=20230311+deb12u1
 
 # Set Python environment variables for build
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -38,29 +44,24 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Set working directory
 WORKDIR /app
 
-# Copy dependency files first (for better layer caching)
-COPY pyproject.toml ./
-COPY DIRECT_REQUIREMENTS.txt ./
-
-# Install Python dependencies
+# Copy dependency files and install all Python dependencies in one layer
+COPY pyproject.toml DIRECT_REQUIREMENTS.txt ./
 RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
-    uv sync --no-install-project --extra all
-
-# Install additional requirements
-RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
+    uv sync --no-install-project --extra all && \
     uv pip install -r DIRECT_REQUIREMENTS.txt
 
-# Copy application code
+# Copy application code and install the project itself
 COPY wurzel ./wurzel
-
-# Install the project itself
 RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
     uv sync --inexact
 
 # Production stage - minimal runtime environment
+# Note: For even smaller images, consider using gcr.io/distroless/python3:latest
+# but this would require static compilation of all dependencies
 FROM python:${PYTHON_VERSION}-slim AS production
 
-# Install only runtime dependencies and jq
+# Create a non-privileged user and install runtime dependencies in one layer
+ARG UID=10001
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
@@ -70,18 +71,17 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         git=1:2.39.5-0+deb12u2 \
         curl=7.88.1-10+deb12u12 \
         ca-certificates=20230311+deb12u1 && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
     case "$(uname -m)" in \
         x86_64) curl -L -o /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64 ;; \
         aarch64) curl -L -o /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-arm64 ;; \
         *) echo "Unsupported architecture"; exit 1 ;; \
     esac && \
-    chmod +x /usr/bin/jq
-
-# Create a non-privileged user
-ARG UID=10001
-RUN groupadd --gid $UID appgroup && \
+    chmod +x /usr/bin/jq && \
+    apt-get purge -y curl && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* && \
+    groupadd --gid $UID appgroup && \
     useradd --uid $UID --gid appgroup --shell /bin/bash --create-home appuser
 
 # Set Python environment variables
@@ -100,12 +100,10 @@ COPY --chown=appuser:appgroup wurzel ./wurzel
 COPY --chown=appuser:appgroup entrypoint.sh ./
 COPY --chown=appuser:appgroup pyproject.toml ./
 
-# Make entrypoint executable
-RUN chmod +x ./entrypoint.sh
-
-# Set system-level DVC configuration
+# Set system-level DVC configuration and make entrypoint executable
 RUN /app/.venv/bin/dvc config core.autostage true --system && \
-    /app/.venv/bin/dvc config core.analytics false --system
+    /app/.venv/bin/dvc config core.analytics false --system && \
+    chmod +x ./entrypoint.sh
 
 # Switch to non-privileged user
 USER appuser
