@@ -213,7 +213,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
       options: --user root
       env:
-        MANUALMARKDOWNSTEP__FOLDER_PATH: /app/examples/pipeline/demo-data
+        MANUALMARKDOWNSTEP__FOLDER_PATH: /app/demo-data
         WURZEL_PIPELINE: pipelinedemo:pipeline
         GIT_USER: ci-test
         GIT_MAIL: ci@example.com
@@ -236,7 +236,22 @@ jobs:
           echo "GROUP_ID=$(id -g appuser)" >> $GITHUB_ENV
 
       - name: Copy pipeline configuration
-        run: su -c "cp $GITHUB_WORKSPACE/examples/pipeline/pipelinedemo.py /app/" appuser
+        run: |
+          if [ -f "$GITHUB_WORKSPACE/examples/pipeline/pipelinedemo.py" ]; then
+            su -c "cp $GITHUB_WORKSPACE/examples/pipeline/pipelinedemo.py /app/" appuser
+          else
+            echo "ERROR: pipelinedemo.py not found!"
+            exit 1
+          fi
+          if [ -d "$GITHUB_WORKSPACE/examples/pipeline/demo-data" ]; then
+            su -c "cp -r $GITHUB_WORKSPACE/examples/pipeline/demo-data /app/demo-data" appuser
+          else
+            echo "ERROR: demo-data directory not found!"
+            exit 1
+          fi
+          echo "Files in /app after copy:"
+          su -c "pwd && ls -l /app" appuser
+
 
       - name: Run demo pipeline
         working-directory: /app
