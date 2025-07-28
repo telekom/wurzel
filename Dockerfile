@@ -19,12 +19,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-        build-essential \
-        gcc \
-        g++ \
-        git \
-        curl \
-        ca-certificates && \
+        build-essential=12.9 \
+        gcc=4:12.2.0-3 \
+        g++=4:12.2.0-3 \
+        git=1:2.39.5-0+deb12u2 \
+        curl=7.88.1-10+deb12u12 \
+        ca-certificates=20230311+deb12u1 && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -60,24 +60,22 @@ RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
 # Production stage - minimal runtime environment
 FROM python:${PYTHON_VERSION}-slim AS production
 
-# Install only runtime dependencies
+# Install only runtime dependencies and jq
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
     echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-        git \
-        curl \
-        ca-certificates && \
+        git=1:2.39.5-0+deb12u2 \
+        curl=7.88.1-10+deb12u12 \
+        ca-certificates=20230311+deb12u1 && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install jq depending on the platform
-RUN case "$(uname -m)" in \
-    x86_64) curl -L -o /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64 ;; \
-    aarch64) curl -L -o /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-arm64 ;; \
-    *) echo "Unsupported architecture"; exit 1 ;; \
+    rm -rf /var/lib/apt/lists/* && \
+    case "$(uname -m)" in \
+        x86_64) curl -L -o /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64 ;; \
+        aarch64) curl -L -o /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-arm64 ;; \
+        *) echo "Unsupported architecture"; exit 1 ;; \
     esac && \
     chmod +x /usr/bin/jq
 
