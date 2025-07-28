@@ -229,8 +229,8 @@ jobs:
           # Change ownership of the workspace to appuser
           chown -R appuser:appgroup $GITHUB_WORKSPACE
           # Ensure appuser has read/write access to output directory
-          mkdir -p $GITHUB_WORKSPACE/output
-          chown -R appuser:appgroup $GITHUB_WORKSPACE/output
+          mkdir -p /app/output
+          chown -R appuser:appgroup /app/output
           # Switch to appuser for remaining steps
           echo "USER_ID=$(id -u appuser)" >> $GITHUB_ENV
           echo "GROUP_ID=$(id -g appuser)" >> $GITHUB_ENV
@@ -255,7 +255,7 @@ jobs:
 
       - name: Run demo pipeline
         working-directory: /app
-        run: su -c "./entrypoint.sh" appuser
+        run: su -c "/app/entrypoint.sh" appuser
 
       - name: Verify pipeline output
         run: |
