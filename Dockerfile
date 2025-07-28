@@ -2,25 +2,22 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 
-# syntax=docker/dockerfile:1
-
-# Build arguments
 ARG PYTHON_VERSION=3.11
 
-# Build stage - includes build tools and compilers
+
 FROM python:${PYTHON_VERSION}-slim AS builder
 
-# Labels for metadata and security scanning
+
 LABEL org.opencontainers.image.title="wurzel"
 LABEL org.opencontainers.image.description="ETL framework for Retrieval-Augmented Generation (RAG) systems"
 LABEL org.opencontainers.image.vendor="Deutsche Telekom AG"
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 LABEL org.opencontainers.image.source="https://github.com/telekom/wurzel"
 
-# Install uv with proper platform targeting
+
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Install build dependencies and clean up in one layer
+
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
@@ -34,33 +31,30 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         curl=7.88.1-10+deb12u12 \
         ca-certificates=20230311+deb12u1
 
-# Set Python environment variables for build
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_CACHE_DIR=/tmp/.cache/uv \
     UV_PROJECT_ENVIRONMENT=/app/.venv \
     UV_LINK_MODE=copy
 
-# Set working directory
+
 WORKDIR /app
 
-# Copy dependency files and install all Python dependencies in one layer
+
 COPY pyproject.toml DIRECT_REQUIREMENTS.txt ./
 RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
     uv sync --no-install-project --extra all && \
     uv pip install -r DIRECT_REQUIREMENTS.txt
 
-# Copy application code and install the project itself
+
 COPY wurzel ./wurzel
 RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
     uv sync --inexact
 
-# Production stage - minimal runtime environment
-# Note: For even smaller images, consider using gcr.io/distroless/python3:latest
-# but this would require static compilation of all dependencies
 FROM python:${PYTHON_VERSION}-slim AS production
 
-# Create a non-privileged user and install runtime dependencies in one layer
+
 ARG UID=10001
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -84,46 +78,46 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     groupadd --gid $UID appgroup && \
     useradd --uid $UID --gid appgroup --shell /bin/bash --create-home appuser
 
-# Set Python environment variables
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/app/.venv/bin:$PATH"
 
-# Set working directory
+
 WORKDIR /app
 RUN chown appuser:appgroup /app
 
-# Copy the virtual environment from builder stage
+
 COPY --from=builder --chown=appuser:appgroup /app/.venv /app/.venv
 
-# Copy application code and entrypoint
+
 COPY --chown=appuser:appgroup wurzel ./wurzel
 COPY --chown=appuser:appgroup entrypoint.sh ./
 COPY --chown=appuser:appgroup pyproject.toml ./
 
-# Set system-level DVC configuration and make entrypoint executable
+
 RUN /app/.venv/bin/dvc config core.autostage true --system && \
     /app/.venv/bin/dvc config core.analytics false --system && \
     chmod +x ./entrypoint.sh
 
-# Switch to non-privileged user
+
 USER appuser
 
-# Set git configuration for the user
+
 RUN git config --global user.name "wurzel" && \
     git config --global user.email "wurzel@example.com" && \
     git config --global init.defaultBranch main
 
 
-# Environment variables for runtime
+
 ENV DVC_DATA_PATH=/app/dvc-data \
     DVC_FILE=/app/dvc.yaml \
     DVC_CACHE_HISTORY_NUMBER=30 \
     WURZEL_PIPELINE=pipelinedemo:pipeline
 
-# Health check
+
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import wurzel" || exit 1
 
-# Use exec form for better signal handling
+
 ENTRYPOINT ["./entrypoint.sh"]
