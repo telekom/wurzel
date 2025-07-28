@@ -77,6 +77,8 @@ jobs:
             type=raw,value=${{ env.major }}.${{ env.minor }},enable={{is_default_branch}}
             type=raw,value=${{ env.major }},enable={{is_default_branch}}
             type=raw,value=${{ env.version }},enable=${{ github.ref != 'refs/heads/main' }}
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
 
       - name: Build and push Docker image (${{ matrix.platform }})
         id: push
@@ -87,13 +89,8 @@ jobs:
           platforms: ${{ matrix.platform }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.service }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
-          outputs: type=cacheonly
-
-      - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
-          subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
+          annotations: ${{ steps.meta.outputs.annotations }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+          sbom: false
