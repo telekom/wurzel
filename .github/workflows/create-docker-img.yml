@@ -211,6 +211,7 @@ jobs:
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
+      options: --user root
       env:
         MANUALMARKDOWNSTEP__FOLDER_PATH: /github/workspace/examples/pipeline/demo-data
         WURZEL_PIPELINE: pipelinedemo:pipeline
@@ -223,20 +224,28 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Create output directory
-        run: mkdir -p /github/workspace/output
+      - name: Fix ownership and switch to appuser
+        run: |
+          # Change ownership of the workspace to appuser
+          chown -R appuser:appgroup /github/workspace
+          # Ensure appuser has read/write access to output directory
+          mkdir -p /github/workspace/output
+          chown -R appuser:appgroup /github/workspace/output
+          # Switch to appuser for remaining steps
+          echo "USER_ID=$(id -u appuser)" >> $GITHUB_ENV
+          echo "GROUP_ID=$(id -g appuser)" >> $GITHUB_ENV
 
       - name: Copy pipeline configuration
-        run: cp /github/workspace/examples/pipeline/pipelinedemo.py /app/
+        run: su -c "cp /github/workspace/examples/pipeline/pipelinedemo.py /app/" appuser
 
       - name: Run demo pipeline
         working-directory: /app
-        run: ./entrypoint.sh
+        run: su -c "./entrypoint.sh" appuser
 
       - name: Verify pipeline output
         run: |
           echo "Checking if output was created..."
-          ls -la /github/workspace/output/
+          su -c "ls -la /github/workspace/output/" appuser
 
           # Check if expected output files exist
           if [ ! -d "/github/workspace/output" ] || [ -z "$(ls -A /github/workspace/output/)" ]; then
