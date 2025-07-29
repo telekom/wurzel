@@ -44,8 +44,7 @@ WORKDIR /app
 
 COPY pyproject.toml DIRECT_REQUIREMENTS.txt ./
 RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
-    uv sync --no-install-project --extra all && \
-    uv pip install -r DIRECT_REQUIREMENTS.txt
+    uv sync --no-install-project --extra all
 
 
 COPY wurzel ./wurzel
