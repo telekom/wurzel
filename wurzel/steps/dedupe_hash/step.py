@@ -504,6 +504,3 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
             return "b remove"
         return ""
 
-if __name__ == "__main__":
-    step = QdrantCompareStep()
-    step.run()
