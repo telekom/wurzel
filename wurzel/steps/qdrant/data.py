@@ -17,7 +17,7 @@ class QdrantResult(EmbeddingResult):
     id: Series[int]
 
 
-class QdranttMultiVectorResult(EmbeddingMultiVectorResult):
+class QdrantMultiVectorResult(EmbeddingMultiVectorResult):
     """Data Contract Proxy adding collection name to the PanderaDataframe."""
 
     text_tlsh_hash: Optional[Series[str]]

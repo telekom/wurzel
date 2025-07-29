@@ -169,7 +169,7 @@ class BaseStepExecutor:
 
         """
         if not path.is_dir():
-            path.mkdir()
+            path.mkdir(parents=True, exist_ok=True)
         obj = _try_sort(obj)
         output_model_class: type[datacontract.DataModel] = step.output_model_class
         return output_model_class.save_to_path(path / f"{hist}", obj)
@@ -245,7 +245,7 @@ class BaseStepExecutor:
             # Only yield once
             yield (None, History(step)), 0
         for inpt in inputs:
-            if isinstance(inpt, (datacontract.DataModel, PydanticModel, patyp.DataFrame)):
+            if isinstance(inpt, (datacontract.DataModel, PydanticModel, patyp.DataFrame, list)):
                 yield (inpt, History("[Memory]", step)), 0
             elif isinstance(inpt, (Path, PathToFolderWithBaseModels)):
                 for (inpt, hist), took in self.load(step, inpt):
@@ -285,14 +285,14 @@ class BaseStepExecutor:
                 store_time = 0
                 if output_path:
                     self.store(step, history, res, output_path)
-                    store_time = time.time() - run_start
+                    store_time = time.time() - run_time
                 report = StepReport(
                     time_to_load=load_time,
                     time_to_execute=run_time,
                     time_to_save=store_time,
                     step_name=step_cls.__name__,
                     inputs=try_get_length(inpt),
-                    results=getattr(res, "__len__", lambda: 1)(),
+                    results=try_get_length(res),
                     history=history.get(),
                 )
                 log.info(

@@ -8,7 +8,7 @@ import logging.config
 import os
 import sys
 from collections.abc import Mapping
-from typing import Any, Optional
+from typing import Any, Literal, Optional, Union
 
 from asgi_correlation_id import correlation_id
 
@@ -47,7 +47,6 @@ def warnings_to_logger(message: str, category: str, filename: str, lineno: str, 
 
 
 def _make_dict_serializable(item: Any):
-    secret_words = ["password", "key", "secret"]
     match item:
         case dict():
             new_dict = {}
@@ -55,12 +54,9 @@ def _make_dict_serializable(item: Any):
                 # If value is None remove item
                 if v is None:
                     continue
+
                 key = k if isinstance(k, str) else repr(k)
-                # Could also use SecretStr but changes usage of Settings object
-                if any(keyword in key.lower() for keyword in secret_words):
-                    new_dict[key] = "****"
-                else:
-                    new_dict[key] = _make_dict_serializable(v)
+                new_dict[key] = _make_dict_serializable(v)
             return new_dict
         case str() | int() | float():
             return item
@@ -106,6 +102,10 @@ class JsonFormatter(logging.Formatter):
         self.indent = indent
         self.reduced_levels = [logging.getLevelNamesMapping().get(level) for level in reduced or []]
 
+    def serialize_item(self, item: Any):
+        """Serialize any data into something that can be json.dumped."""
+        return _make_dict_serializable(item)
+
     def _get_output_dict(self, record: logging.LogRecord) -> dict[str, Any]:
         data = {k: v for k, v in record.__dict__.items() if k not in self.key_blacklist and v is not None}
         logger_name = f"{data.pop('module')}.{data.pop('name')}"
@@ -125,7 +125,7 @@ class JsonFormatter(logging.Formatter):
         if all(key in data for key in ["warnings.category", "warnings.filename", "warnings.lineno"]):
             output["file"] = f"{data.pop('warnings.filename')}:{data.pop('warnings.lineno')}"
         if data:
-            output["extra"] = _make_dict_serializable(data)
+            output["extra"] = self.serialize_item(data)
         cor_id = correlation_id.get()
         if cor_id is not None:
             output["correlationId"] = cor_id
@@ -143,7 +143,21 @@ class JsonFormatter(logging.Formatter):
         return json.dumps(output, default=repr, indent=self.indent)
 
 
-def get_logging_dict_config(level) -> dict[str, str]:
+class JsonStringFormatter(JsonFormatter):
+    """Instead of Formatting all extra objects into nested objects
+    this will serialize everything under the extra key into a string containing json.
+    """
+
+    def serialize_item(self, item: Any):
+        return json.dumps(super().serialize_item(item))
+
+
+def get_logging_dict_config(
+    level: Union[int, str],
+    formatter: Literal[
+        "wurzel.utils.logging.JsonFormatter", "wurzel.utils.logging.JsonStringFormatter"
+    ] = "wurzel.utils.logging.JsonFormatter",
+) -> dict[str, str]:
     """Generate a logging.config.dictConfig compatible dict.
 
     Returns:
@@ -152,7 +166,7 @@ def get_logging_dict_config(level) -> dict[str, str]:
     """
     default_formatter = {
         "json_formatter": {
-            "()": "wurzel.utils.logging.JsonFormatter",
+            "()": formatter,
             "reduced": ["INFO"],
         }
     }

@@ -4,7 +4,7 @@
 [project]
 name = "wurzel"
 
-version = "1.0.0-dev.2"
+version = "2.0.0"
 
 description = "Pick, choose and chain your RAG tools in a pythonic way"
 authors = [
@@ -56,6 +56,9 @@ dependencies= [
 qdrant = [
     "qdrant-client==1.10.1"
 ]
+argo = [
+    "hera >=5.20.1",
+]
 docling = [
     "docling==2.30.0"
 ]
@@ -94,7 +97,7 @@ docs = [
     "mkdocstrings[python]"
 ]
 
-all = ["wurzel[qdrant,milvus,tlsh,docling]"]
+all = ["wurzel[qdrant,milvus,tlsh,docling,argo]"]
 dev = ["wurzel[lint,test,all]"]
 
 [build-system]
@@ -164,6 +167,7 @@ select = [
     "D",  # formatting for docs (disabled)
     "UP", # upgrade to latest syntax if possible
     "C4", # cleaner comprehensions
+    "T201", # bad function print
 ]
 
 ignore = [

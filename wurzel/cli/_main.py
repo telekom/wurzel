@@ -13,12 +13,14 @@ import pkgutil
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, cast
 
 import typer
 import typer.core
 
-from wurzel.adapters.dvc_adapter import DvcBackend
+from wurzel.backend.backend import Backend
+from wurzel.backend.backend_argo import ArgoBackend
+from wurzel.backend.backend_dvc import DvcBackend
 from wurzel.cli.cmd_generate import main as cmd_generate
 from wurzel.cli.cmd_inspect import main as cmd_inspect
 from wurzel.cli.cmd_run import main as cmd_run
@@ -145,7 +147,7 @@ def run(
     encapsulate_env: Annotated[bool, typer.Option()] = True,
 ):
     """Run."""
-    output_path = Path(output_path.as_posix().replace("<step-name>", step.__name__))
+    output_path = Path(str(output_path.absolute()).replace("<step-name>", step.__name__))
     log.debug(
         "executing run",
         extra={
@@ -178,10 +180,15 @@ def inspekt(
     return cmd_inspect(step, gen_env)
 
 
-def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, _backend: str):
+def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str) -> type[Backend]:
     """Validates input and returns fitting backend. Currently always DVCBackend."""
-    logging.warning("only DVCBackend is supported currently")
-    return DvcBackend
+    match backend:
+        case DvcBackend.__name__:
+            return DvcBackend
+        case ArgoBackend.__name__:
+            return ArgoBackend
+        case _:
+            raise typer.BadParameter(f"Backend {backend} not supported. choose from DvcBackend or ArgoBackend")
 
 
 def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str) -> TypedStep:
@@ -204,10 +211,6 @@ def generate(
             callback=pipeline_callback,
         ),
     ],
-    data_dir: Annotated[
-        Path,
-        typer.Option("-d", "--data-dir", file_okay=False, help="Target folder for pipeline"),
-    ] = Path("./data"),
     backend: Annotated[
         str,
         typer.Option(
@@ -216,7 +219,7 @@ def generate(
             callback=backend_callback,
             help="backend to use",
         ),
-    ] = DvcBackend,
+    ] = "DvcBackend",
 ):
     """Run."""
     log.debug(
@@ -224,16 +227,14 @@ def generate(
         extra={
             "parsed_args": {
                 "pipeline": pipeline,
-                "data_dir": data_dir,
                 "backend": backend,
             }
         },
     )
-    return print(
+    return print(  # noqa: T201
         cmd_generate(
             pipeline,
-            data_dir,
-            backend=backend,
+            backend=cast(type[Backend], backend),
         )
     )
 
@@ -266,10 +267,11 @@ def main_args(
     """Global settings, main."""
     if not os.isatty(1):
         typer.core.rich = None
-        logging.config.dictConfig(get_logging_dict_config(log_level))
+        logging.config.dictConfig(get_logging_dict_config(log_level, "wurzel.utils.logging.JsonStringFormatter"))
         app.pretty_exceptions_enable = False
         app.pretty_exceptions_show_locals = False
     else:
+        # Interactive Session
         update_log_level(log_level)
         app.pretty_exceptions_enable = True
         app.pretty_exceptions_show_locals = True

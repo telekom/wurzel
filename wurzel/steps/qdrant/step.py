@@ -36,6 +36,8 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
     s: QdrantSettings
     client: QdrantClient
     collection_name: str
+    result_class = QdrantResult
+    vector_key = "vector"
 
     def __init__(self) -> None:
         super().__init__()
@@ -84,44 +86,93 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             replication_factor=self.settings.REPLICATION_FACTOR,
         )
 
-    def _insert_embeddings(self, data: DataFrame[EmbeddingResult]):
-        log.info(
-            "Inserting embeddings",
-            extra={"count": len(data), "collection": self.collection_name},
+    def _get_entry_payload(self, row: dict[str, object]) -> dict[str, object]:
+        """Create the payload for the entry."""
+        payload = {
+            "url": row["url"],
+            "text": row["text"],
+            **self.get_available_hashes(row["text"]),
+            "keywords": row["keywords"],
+            "history": str(step_history.get()),
+        }
+        return payload
+
+    def _create_point(self, row: dict) -> models.PointStruct:
+        """Creates a Qdrant PointStruct object from a given row dictionary.
+
+        Args:
+            row (dict): A dictionary representing a data entry, expected to contain at least the vector data under `self.vector_key`.
+
+        Returns:
+            models.PointStruct: An instance of PointStruct with a unique id, vector, and payload extracted from the row.
+
+        Raises:
+            KeyError: If the required vector key is not present in the row.
+
+        """
+        payload = self._get_entry_payload(row)
+
+        return models.PointStruct(
+            id=next(self.id_iter),  # type: ignore[arg-type]
+            vector=row[self.vector_key],
+            payload=payload,
         )
-        points = [
-            models.PointStruct(
-                id=next(self.id_iter),  # type: ignore[arg-type] # No MultiIndex, so always int.
-                vector=row["vector"],
-                payload={
-                    "url": row["url"],
-                    "text": row["text"],
-                    **self.get_available_hashes(row["text"]),
-                    "keywords": row["keywords"],
-                    "history": str(step_history.get()),
-                },
-            )
-            for _, row in data.iterrows()
-        ]
+
+    def _upsert_points(self, points: list[models.PointStruct]):
+        """Inserts a list of points into the Qdrant collection in batches.
+
+        Args:
+            points (list[models.PointStruct]): The list of point structures to upsert into the collection.
+
+        Raises:
+            StepFailed: If any batch fails to be inserted into the collection.
+
+        Logs:
+            Logs a message for each successfully inserted batch, including the collection name and number of points.
+
+        """
         for point_chunk in _batch(points, self.settings.BATCH_SIZE):
-            operation_info = self.client.upsert(collection_name=self.collection_name, wait=True, points=point_chunk)
+            operation_info = self.client.upsert(
+                collection_name=self.collection_name,
+                wait=True,
+                points=point_chunk,
+            )
             if operation_info.status != "completed":
                 raise StepFailed(f"Failed to insert df chunk into collection '{self.collection_name}' {operation_info}")
             log.info(
                 "Successfully inserted vector_chunk",
                 extra={"collection": self.collection_name, "count": len(point_chunk)},
             )
-        data = [
+
+    def _build_result_dataframe(self, points: list[models.PointStruct]):
+        """Constructs a DataFrame from a list of PointStruct objects.
+
+        Each PointStruct's payload is unpacked into the resulting dictionary, along with its vector, collection name, and ID.
+        The resulting list of dictionaries is used to create a DataFrame of the specified result_class.
+
+        Args:
+            points (list[models.PointStruct]): A list of PointStruct objects containing payload, vector, and id information.
+
+        """
+        result_data = [
             {
                 **entry.payload,
-                "vector": entry.vector,
+                self.vector_key: entry.vector,
                 "collection": self.collection_name,
                 "id": entry.id,
             }
             for entry in points
         ]
-        result = DataFrame[QdrantResult](data)
-        return result
+        return DataFrame[self.result_class](result_data)
+
+    def _insert_embeddings(self, data: DataFrame[EmbeddingResult]):
+        log.info("Inserting embeddings", extra={"count": len(data), "collection": self.collection_name})
+
+        points = [self._create_point(row) for _, row in data.iterrows()]
+
+        self._upsert_points(points)
+
+        return self._build_result_dataframe(points)
 
     def _create_indices(self):
         self.client.create_payload_index(
