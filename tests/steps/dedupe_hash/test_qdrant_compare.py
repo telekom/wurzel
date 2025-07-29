@@ -50,7 +50,7 @@ def test_diff_snippet():
 
 def test_suspicious_cases_analysis():
     step = make_step()
-    df = pd.DataFrame([{"text": "Hallo Welt", "tlsh": "A" * 70}, {"text": "Hallo Erde", "tlsh": "B" * 70}])
+    df = pd.DataFrame([{"text": "Hallo Welten", "tlsh": "A" * 70}, {"text": "Hallo Erde", "tlsh": "B" * 70}])
     matches = [(0, 1, 5)]
     suspicious = step._suspicious_cases_analysis(df, matches, "text")
     assert isinstance(suspicious, list)
