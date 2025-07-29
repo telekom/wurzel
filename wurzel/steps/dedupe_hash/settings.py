@@ -65,6 +65,7 @@ class QdrantCompareSettings(Settings):
         "",
         description="Prefix for Qdrant collection names to extract versions.",
     )
+    IDENTICAL_WARNING_THRESHOLD: float = Field(0.8, description="Warn if identical documents are below this fraction")  # z.B. 0.9 für 90%
 
     class Config:
         """Compares two Qdrant collections and analyzes differences, redundancies, and contradictions."""

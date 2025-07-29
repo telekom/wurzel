@@ -6,11 +6,14 @@
 
 # Standard library imports
 
+import atexit
 import difflib
+import json
 import logging
+import os
 import re
 import socket
-from logging import getLogger
+from datetime import datetime
 
 import httpx
 import openai
@@ -24,18 +27,42 @@ from wurzel.step import TypedStep
 from wurzel.steps.dedupe_hash.settings import QdrantCompareSettings
 from wurzel.steps.qdrant.step import QdrantConnectorStep
 
-log = getLogger(__name__)
+
+class JsonArrayLogHandler(logging.Handler):
+    """ arranges all logs to one json file"""
+
+    def __init__(self, filepath):
+        super().__init__()
+        self.filepath = filepath
+        self.messages = []
+        self.timestamp = None
+        atexit.register(self._flush_logs)
+
+    def emit(self, record):
+        if self.timestamp is None:
+            self.timestamp = self.formatter.formatTime(record)
+        self.messages.append(record.getMessage())
+
+    def _flush_logs(self):
+        if self.timestamp is None:
+            return
+        log_output = {"timestamp": self.timestamp, "messages": self.messages}
+        with open(self.filepath, "w", encoding="utf-8") as f:
+            json.dump(log_output, f, indent=2)
 
 
-# Logging configuration: Write everything from INFO level to the desired file
-logging.basicConfig(
-    level=logging.INFO,
-    filename="/Users/A1167082/Desktop/your_file.log",  # <--- Enter the desired path/filename here
-    filemode="a",  # 'a' for append, 'w' for overwrite on each start
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
+# Setup Logger
+LOG_DIR = "/Users/A1167082/Desktop/qdrant_compare_logs"
+os.makedirs(LOG_DIR, exist_ok=True)
+timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+log_path = os.path.join(LOG_DIR, f"compare_log_{timestamp}.json")
 
-log = logging.getLogger(__name__)
+log = logging.getLogger("simple_json_logger")
+log.setLevel(logging.INFO)
+
+handler = JsonArrayLogHandler(log_path)
+handler.setFormatter(logging.Formatter(fmt="%(asctime)s", datefmt="%Y-%m-%d %H:%M:%S"))
+log.addHandler(handler)
 
 
 class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, dict]):
@@ -53,10 +80,11 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
     Workflow steps:
     1. Load the two latest Qdrant collections using the provided prefix.
     2. Identify identical documents using TLSH hashes.
-    3. Analyze extra documents in the larger collection.
-    4. Detect suspiciously similar documents using fuzzy matching.
-    5. Use GPT to semantically evaluate whether pairs are redundant, contradictory, or unclear.
-    6. Output a summary of results via logging and return values.
+    3. Check percentage of identical documents and warn, if it falls below a certain threshold
+    4. Analyze extra documents in the larger collection.
+    5. Detect suspiciously similar documents using fuzzy matching.
+    6. Use GPT to semantically evaluate whether pairs are redundant, contradictory, or unclear.
+    7. Output a summary of results via logging and return values.
 
     Returns:
         dict: A dictionary containing:
@@ -79,7 +107,6 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
             api_key=self.settings.OPAI_API_KEY, api_version="2024-02-01", azure_endpoint=self.settings.AZURE_ENDPOINT
         )
 
-
     def run(self, inpt=QdrantConnectorStep):
         # 1. Load data
 
@@ -87,6 +114,22 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
             self.settings.QDRANT_URL, headers=self.headers, prefix=self.settings.QDRANT_COLLECTION_PREFIX, top_n=2
         )
         log.info(last_2_collections)
+
+        # Check if predecessor collection exists and if number is 1 less
+        if len(last_2_collections) == 2:
+            pattern = re.compile(rf"^{re.escape(self.settings.QDRANT_COLLECTION_PREFIX)}(\d+)$")
+            match_latest = pattern.match(last_2_collections[0])
+            match_prev = pattern.match(last_2_collections[1])
+            if match_latest and match_prev:
+                latest_num = int(match_latest.group(1))
+                prev_num = int(match_prev.group(1))
+                if latest_num - prev_num != 1:
+                    log.info(f"Predecessor collection with number {latest_num - 1} does not exist. Found collections: {last_2_collections}")
+            else:
+                log.info("Collection names do not match the expected pattern.")
+        else:
+            log.info(f"Less than 2 collections found: {last_2_collections}")
+
         df1 = self._get_all_points_as_df(last_2_collections[0])  # Use the first collection from the list
         df2 = self._get_all_points_as_df(last_2_collections[1])  # Use the second collection from the list
 
@@ -116,8 +159,7 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
 
         # 5. Detailed analysis of extra documents
         extra_analysis = self._analyze_extra_docs_detail(df_small, extra_docs, text_col="text", threshold=self.settings.FUZZY_THRESHOLD)
-        extra_analysis_df = pd.DataFrame(extra_analysis)
-        log.info(len(extra_analysis_df))
+        log.info(extra_analysis)
 
         # 6. Redundancies and contradictions in the large collection
         fuzzy_matches = self._fuzzy_tlsh_matches(df_large, "tlsh", self.settings.TLSH_MAX_DIFF)
@@ -144,6 +186,18 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
         # 10. Summary (as log output)
         log.info(f"Comparison between '{name_small}' and '{name_large}'")
         log.info(f"Identical: {identical_count}, Extra: {len(extra_docs)}, Suspicious: {len(suspicious)}")
+        # Warning if percentage of identical documents falls below allowed threshold
+        total_compared = min(n1, n2)  # Compare based on smaller collection
+        log.info(f"Total comparison: {total_compared}")
+        if total_compared > 0:
+            identical_ratio = identical_count / total_compared
+            if identical_ratio < self.settings.IDENTICAL_WARNING_THRESHOLD:
+                log.info(
+                    f"Identical document count: {identical_count}"
+                    f"⚠️ Only {identical_ratio:.2%} identical documents between '{name_small}' and '{name_large}' "
+                    f"(Threshold: {self.settings.IDENTICAL_WARNING_THRESHOLD:.0%})"
+                )
+
         if not suspicious_df.empty:
             log.info("GPT recommendations summary:")
             log.info(
@@ -165,7 +219,6 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
             "tslh_differing_docs": len(extra_docs),
             "duplicates_with_contradictions": len(suspicious),
         }
-
 
     def list_top_collections(self, qdrant_url, headers=None, prefix="germany_v", top_n=2):
         """Returns the names of the `top_n` collections with the highest numeric suffix for a given prefix.
@@ -450,3 +503,7 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
         if "remove document 2" in content:
             return "b remove"
         return ""
+
+if __name__ == "__main__":
+    step = QdrantCompareStep()
+    step.run()
