@@ -42,7 +42,6 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 
-COPY pyproject.toml DIRECT_REQUIREMENTS.txt ./
 RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
     uv sync --no-install-project --extra all
 
