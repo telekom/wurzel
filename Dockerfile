@@ -44,7 +44,7 @@ WORKDIR /app
 COPY pyproject.toml ./
 
 RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
-    uv sync --no-install-project --extra all
+    uv sync --no-install-project
 
 
 COPY wurzel ./wurzel
