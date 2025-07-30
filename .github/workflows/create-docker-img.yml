@@ -37,6 +37,12 @@ jobs:
       attestations: write
       id-token: write
 
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      major: ${{ steps.get_version.outputs.major }}
+      minor: ${{ steps.get_version.outputs.minor }}
+      patch: ${{ steps.get_version.outputs.patch }}
+
     steps:
       - name: Prepare
         run: |
@@ -55,12 +61,16 @@ jobs:
           patch=$(echo $version | cut -d '.' -f 3)
           if [[ "${GITHUB_REF##*/}" != "main" ]]; then
             sha=$(echo "${GITHUB_SHA}" | cut -c1-6)
-            version="${version}.dev.${sha}"
+            version="${version}.dev${sha}"
           fi
           echo "version=$version" >> $GITHUB_ENV
           echo "major=$major" >> $GITHUB_ENV
           echo "minor=$minor" >> $GITHUB_ENV
           echo "patch=$patch" >> $GITHUB_ENV
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "major=$major" >> $GITHUB_OUTPUT
+          echo "minor=$minor" >> $GITHUB_OUTPUT
+          echo "patch=$patch" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -136,7 +146,7 @@ jobs:
       contents: read
       packages: write
     outputs:
-      version: ${{ steps.get_version.outputs.version }}
+      version: ${{ needs.build.outputs.version }}
 
     steps:
       - name: Download digests
@@ -145,26 +155,6 @@ jobs:
           path: ${{ runner.temp }}/digests
           pattern: digests-*
           merge-multiple: true
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Get the version
-        id: get_version
-        run: |
-          version=$(grep -Po '(?<=^version = ")[^"]*' pyproject.toml)
-          major=$(echo $version | cut -d '.' -f 1)
-          minor=$(echo $version | cut -d '.' -f 2)
-          patch=$(echo $version | cut -d '.' -f 3)
-          if [[ "${GITHUB_REF##*/}" != "main" ]]; then
-            sha=$(echo "${GITHUB_SHA}" | cut -c1-6)
-            version="${version}.dev.${sha}"
-          fi
-          echo "version=$version" >> $GITHUB_ENV
-          echo "major=$major" >> $GITHUB_ENV
-          echo "minor=$minor" >> $GITHUB_ENV
-          echo "patch=$patch" >> $GITHUB_ENV
-          echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -183,10 +173,10 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=${{ env.version }},enable={{is_default_branch}}
-            type=raw,value=${{ env.major }}.${{ env.minor }},enable={{is_default_branch}}
-            type=raw,value=${{ env.major }},enable={{is_default_branch}}
-            type=raw,value=${{ env.version }},enable=${{ github.ref != 'refs/heads/main' }}
+            type=raw,value=${{ needs.build.outputs.version }},enable={{is_default_branch}}
+            type=raw,value=${{ needs.build.outputs.major }}.${{ needs.build.outputs.minor }},enable={{is_default_branch}}
+            type=raw,value=${{ needs.build.outputs.major }},enable={{is_default_branch}}
+            type=raw,value=${{ needs.build.outputs.version }},enable=${{ github.ref != 'refs/heads/main' }}
 
       - name: Create manifest list and push
         working-directory: ${{ runner.temp }}/digests
