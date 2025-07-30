@@ -35,11 +35,11 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_CACHE_DIR=/tmp/.cache/uv \
-    UV_PROJECT_ENVIRONMENT=/app/.venv \
+    UV_PROJECT_ENVIRONMENT=/usr/app/.venv \
     UV_LINK_MODE=copy
 
 
-WORKDIR /app
+WORKDIR /usr/app
 
 COPY pyproject.toml ./
 
@@ -80,14 +80,14 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/app/.venv/bin:$PATH"
+    PATH="/usr/app/.venv/bin:$PATH"
 
 
-WORKDIR /app
-RUN chown appuser:appgroup /app
+WORKDIR /usr/app
+RUN chown appuser:appgroup /usr/app
 
 
-COPY --from=builder --chown=appuser:appgroup /app/.venv /app/.venv
+COPY --from=builder --chown=appuser:appgroup /usr/app/.venv /usr/app/.venv
 
 
 COPY --chown=appuser:appgroup wurzel ./wurzel
@@ -95,8 +95,8 @@ COPY --chown=appuser:appgroup entrypoint.sh ./
 COPY --chown=appuser:appgroup pyproject.toml ./
 
 
-RUN /app/.venv/bin/dvc config core.autostage true --system && \
-    /app/.venv/bin/dvc config core.analytics false --system && \
+RUN /usr/app/.venv/bin/dvc config core.autostage true --system && \
+    /usr/app/.venv/bin/dvc config core.analytics false --system && \
     chmod +x ./entrypoint.sh
 
 
@@ -109,8 +109,8 @@ RUN git config --global user.name "wurzel" && \
 
 
 
-ENV DVC_DATA_PATH=/app/dvc-data \
-    DVC_FILE=/app/dvc.yaml \
+ENV DVC_DATA_PATH=/usr/app/dvc-data \
+    DVC_FILE=/usr/app/dvc.yaml \
     DVC_CACHE_HISTORY_NUMBER=30 \
     WURZEL_PIPELINE=pipelinedemo:pipeline
 

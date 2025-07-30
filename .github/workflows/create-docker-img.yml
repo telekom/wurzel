@@ -213,12 +213,12 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
       options: --user root
       env:
-        MANUALMARKDOWNSTEP__FOLDER_PATH: /app/demo-data
+        MANUALMARKDOWNSTEP__FOLDER_PATH: /usr/app/demo-data
         WURZEL_PIPELINE: pipelinedemo:pipeline
         GIT_USER: ci-test
         GIT_MAIL: ci@example.com
-        DVC_DATA_PATH: /app/output
-        DVC_FILE: /app/dvc.yaml
+        DVC_DATA_PATH: /usr/app/output
+        DVC_FILE: /usr/app/dvc.yaml
 
     steps:
       - name: Checkout repository
@@ -229,8 +229,8 @@ jobs:
           # Change ownership of the workspace to appuser
           chown -R appuser:appgroup $GITHUB_WORKSPACE
           # Ensure appuser has read/write access to output directory
-          mkdir -p /app/data
-          chown -R appuser:appgroup /app/data
+          mkdir -p /usr/app/data
+          chown -R appuser:appgroup /usr/app/data
           # Switch to appuser for remaining steps
           echo "USER_ID=$(id -u appuser)" >> $GITHUB_ENV
           echo "GROUP_ID=$(id -g appuser)" >> $GITHUB_ENV
@@ -238,24 +238,24 @@ jobs:
       - name: Copy pipeline configuration
         run: |
           if [ -f "$GITHUB_WORKSPACE/examples/pipeline/pipelinedemo.py" ]; then
-            su -c "cp $GITHUB_WORKSPACE/examples/pipeline/pipelinedemo.py /app/" appuser
+            su -c "cp $GITHUB_WORKSPACE/examples/pipeline/pipelinedemo.py /usr/app/" appuser
           else
             echo "ERROR: pipelinedemo.py not found!"
             exit 1
           fi
           if [ -d "$GITHUB_WORKSPACE/examples/pipeline/demo-data" ]; then
-            su -c "cp -r $GITHUB_WORKSPACE/examples/pipeline/demo-data /app/demo-data" appuser
+            su -c "cp -r $GITHUB_WORKSPACE/examples/pipeline/demo-data /usr/app/demo-data" appuser
           else
             echo "ERROR: demo-data directory not found!"
             exit 1
           fi
-          echo "Files in /app after copy:"
-          su -c "pwd && ls -l /app" appuser
+          echo "Files in /usr/app after copy:"
+          su -c "pwd && ls -l /usr/app" appuser
 
 
       - name: Run demo pipeline
-        working-directory: /app
-        run: su -c "/app/entrypoint.sh" appuser
+        working-directory: /usr/app
+        run: su -c "/usr/app/entrypoint.sh" appuser
 
       - name: Verify pipeline output
         run: |
@@ -266,5 +266,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pipeline-outputs
-          path: /app/data/
+          path: /usr/app/data/
           retention-days: 7
