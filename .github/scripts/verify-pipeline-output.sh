@@ -2,6 +2,9 @@
 # SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
 #
 # SPDX-License-Identifier: Apache-2.0
+# This script is used in GitHub Actions to verify the output of the pipeline in the Docker container.
+# It is executed as part of the end-to-end integration test process.
+# For more details, see: ../create-docker-img.yml
 
 set -e
 
