@@ -93,7 +93,7 @@ docs = [
     "mkdocstrings[python]"
 ]
 
-all = ["wurzel[qdrant,milvus,tlsh,docling,spacy]"]
+all = ["wurzel[qdrant,milvus,tlsh,docling,argo]"]
 dev = ["wurzel[lint,test,all]"]
 
 [build-system]
