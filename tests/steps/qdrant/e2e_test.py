@@ -116,8 +116,7 @@ def test_qdrant_collection_retirement(
                             ReplicaSetTelemetry.model_construct(
                                 local=LocalShardTelemetry.model_construct(
                                     optimizations=OptimizerTelemetry.model_construct(
-                                        optimizations=OperationDurationStatistics.model_construct(
-                                            last_responded=last_used)
+                                        optimizations=OperationDurationStatistics.model_construct(last_responded=last_used)
                                     )
                                 ),
                                 remote=[],
@@ -129,7 +128,6 @@ def test_qdrant_collection_retirement(
             )
         )
     )
-
 
     mock_aliases = CollectionsAliasesResponse(aliases=[AliasDescription(alias_name=aliased_collection, collection_name=aliased_collection)])
     with unittest.mock.patch("wurzel.steps.qdrant.step.QdrantConnectorStep._get_telemetry", return_value=mock_telemetry):
