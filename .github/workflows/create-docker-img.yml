@@ -20,7 +20,7 @@ on:
 env:
   REGISTRY: ghcr.io
   # Use the actual repository owner (handles forks)
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: ${{ github.repository_owner }}/wurzel
 
 jobs:
   build:
@@ -198,7 +198,7 @@ jobs:
       packages: read
 
     container:
-      image: ghcr.io/${{ github.repository }}:${{ needs.merge.outputs.version }}
+      image: ghcr.io/${{ github.repository_owner }}/wurzel:${{ needs.merge.outputs.version }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
