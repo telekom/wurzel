@@ -20,13 +20,11 @@ on:
 env:
   REGISTRY: ghcr.io
   # Use the actual repository owner (handles forks)
-  IMAGE_NAME: ${{ github.repository_owner }}/wurzel
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Only run on the main repository, not forks
-    if: github.repository_owner == 'telekom' && github.repository == 'telekom/wurzel'
     strategy:
       fail-fast: false
       matrix:
