@@ -20,7 +20,7 @@ class Step(abc.ABC):
     def is_leaf(self) -> bool:
         """Returns if the node is a leaf in the pipeline tree.
 
-        Returns
+        Returns:
         -------
         bool
             _description_

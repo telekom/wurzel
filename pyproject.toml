@@ -186,9 +186,10 @@ ignore = [
 
 [tool.ruff.format]
 quote-style = "double"
-
 indent-style = "space"
-
 skip-magic-trailing-comma = false
-
+docstring-code-format = true
 line-ending = "auto"
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"

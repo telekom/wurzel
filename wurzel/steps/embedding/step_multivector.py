@@ -95,7 +95,7 @@ class EmbeddingMultiVectorStep(
         d : dict
             A dictionary containing the text and context for which to generate the embedding.
 
-        Returns
+        Returns:
         -------
         dict
             A dictionary containing the original text, its embedding, and the source URL.
