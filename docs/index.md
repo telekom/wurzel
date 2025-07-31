@@ -5,6 +5,7 @@ Wurzel is an open-source Python library built to address advanced Extract, Trans
 
 The repository includes initial implementations for widely-used frameworks in the RAG ecosystem, such as Qdrant, Milvus, and Hugging Face, providing users with a strong starting point for building scalable and efficient RAG pipelines.
 
+![Sample Pipeline](./sample-pipeline.excalidraw.svg)
 ## Features
 
 - **Advanced ETL Pipelines**: Tailored for the specific needs of RAG systems.

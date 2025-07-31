@@ -4,7 +4,7 @@
 [project]
 name = "wurzel"
 
-version = "2.0.0"
+version = "2.1.1"
 
 description = "Pick, choose and chain your RAG tools in a pythonic way"
 authors = [
@@ -48,20 +48,18 @@ dependencies= [
     "joblib>=1.4.0",
     "lxml==5.2.*",
     "marshmallow<4.0.0",
+    "hera >=5.20.1",
 ]
 
 [project.optional-dependencies]
 qdrant = [
     "qdrant-client==1.10.1"
 ]
-argo = [
-    "hera >=5.20.1",
-]
 docling = [
     "docling==2.30.0"
 ]
 milvus = [
-    "pymilvus==2.4.4",
+    "pymilvus==2.5.14",
 ]
 
 # TLSH (Trend Micro Locality Sensitive Hash)
@@ -193,9 +191,10 @@ ignore = [
 
 [tool.ruff.format]
 quote-style = "double"
-
 indent-style = "space"
-
 skip-magic-trailing-comma = false
-
+docstring-code-format = true
 line-ending = "auto"
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"

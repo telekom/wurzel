@@ -1,0 +1,35 @@
+#!/bin/bash
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+#
+# SPDX-License-Identifier: Apache-2.0
+# This script is used in GitHub Actions to verify the output of the pipeline in the Docker container.
+# It is executed as part of the end-to-end integration test process.
+# For more details, see: ../create-docker-img.yml
+
+set -e
+
+echo "Checking if output was created..."
+su -c "ls -la /usr/app/data/" appuser
+
+# Check if expected output directories exist
+if [ ! -d "/usr/app/data/ManualMarkdownStep" ] || [ ! -d "/usr/app/data/SimpleSplitterStep" ]; then
+    echo "ERROR: Expected output directories not found"
+    exit 1
+fi
+
+# Check for specific expected outputs
+if [ ! -f "/usr/app/data/ManualMarkdownStep/ManualMarkdown.json" ]; then
+    echo "WARNING: ManualMarkdown.json not found"
+else
+    echo "✓ Found ManualMarkdown.json"
+    echo "File size: $(stat -c%s '/usr/app/data/ManualMarkdownStep/ManualMarkdown.json') bytes"
+fi
+
+if [ ! -f "/usr/app/data/SimpleSplitterStep/SimpleSplitter.json" ]; then
+    echo "WARNING: SimpleSplitter.json not found"
+else
+    echo "✓ Found SimpleSplitter.json"
+    echo "File size: $(stat -c%s '/usr/app/data/SimpleSplitterStep/SimpleSplitter.json') bytes"
+fi
+
+echo "Pipeline test completed successfully!"

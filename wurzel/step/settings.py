@@ -147,8 +147,7 @@ class Settings(SettingsLeaf):
             ],
             description="List of bootstrap servers")
         SASL_USER: str = "<USER_NAME>"
-        SASL_PASSWORD: str
-        # variables with password, key or secret won't usually be printed to terminals.
+        SASL_PASSWORD: SecretStr
         SSL_CA_FILE: str = Field("./kafka_ca.pem", description="Path to ca file")
         TOPIC: str = "cc_mm_coupon_meta_bot"
         CONSUMER_TIMEOUT: int = Field(5*1000, description="timeout for kafka consumer in ms")

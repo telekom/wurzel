@@ -28,6 +28,7 @@ MD_RENDER_LOCK = threading.Lock()
 def __get_html2md() -> Path:
     default_path = {
         "Linux_x86_64": Path(__file__).parent / "html2md",
+        "Linux_aarch64": Path(__file__).parent / "html2md",
         "Darwin_arm64": Path(__file__).parent / "html2md_darwin_arm",
         "Darwin_x86_64": Path(__file__).parent / "html2md_darwin_amd64",
         "Windows_AMD64": Path(__file__).parent / "html2md_win_amd64",
@@ -65,22 +66,22 @@ def to_markdown(html: str, settings: Optional[MarkdownConverterSettings] = None,
     binary_path : Path, optional
         The path to the html2md binary (default is './html2md').
 
-    Returns
+    Returns:
     -------
     str
         The resulting Markdown string.
 
-    Notes
+    Notes:
     -----
     This function first checks if the html2md binary is available. If not, it raises an error.
     The binary path can be specified in the environment variable 'HTML2MD_BINARY_PATH'.
 
     The html2md binary can be found at: https://github.com/suntong/html2md
 
-    Examples
+    Examples:
     --------
     >>> from pathlib import Path
-    >>> html = '<h1>Title</h1><p>Hello, world!</p>'
+    >>> html = "<h1>Title</h1><p>Hello, world!</p>"
     >>> markdown = to_markdown(html)
     >>> print(markdown)
     # Title
