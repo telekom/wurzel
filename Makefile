@@ -25,7 +25,6 @@ build: install
 
 $(VENV)/touchfile: pyproject.toml $(UV)
 	$(UV) --no-progress pip install -r pyproject.toml --all-extras
-	$(UV) --no-progress pip install -r DIRECT_REQUIREMENTS.txt
 	@$(shell if [ "$(OS)" = "Windows_NT" ]; then echo type nul > $(VENV)\\touchfile; else echo touch $(VENV)/touchfile; fi)
 $(PY):
 	$(SYSTEM_PYTHON) -m venv $(VENV)

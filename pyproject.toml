@@ -48,20 +48,19 @@ dependencies= [
     "joblib>=1.4.0",
     "lxml==5.2.*",
     "marshmallow<4.0.0",
+    "hera >=5.20.1",
+    "de-core-news-sm @ https://github.com/explosion/spacy-models/releases/download/de_core_news_sm-3.7.0/de_core_news_sm-3.7.0-py3-none-any.whl",
 ]
 
 [project.optional-dependencies]
 qdrant = [
     "qdrant-client==1.10.1"
 ]
-argo = [
-    "hera >=5.20.1",
-]
 docling = [
     "docling==2.30.0"
 ]
 milvus = [
-    "pymilvus==2.4.4",
+    "pymilvus==2.5.14",
 ]
 
 # TLSH (Trend Micro Locality Sensitive Hash)

@@ -39,7 +39,7 @@ class MilvusConnectorStep(TypedStep[MilvusSettings, DataFrame[EmbeddingResult], 
         self.client: MilvusClient = MilvusClient(
             uri=uri,
             user=self.settings.USER,
-            password=self.settings.PASSWORD,
+            password=self.settings.PASSWORD.get_secret_value(),
             timeout=self.milvus_timeout,
         )
         self.collection_index: IndexParams = IndexParams(**self.settings.INDEX_PARAMS)

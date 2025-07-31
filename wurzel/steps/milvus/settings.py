@@ -4,7 +4,7 @@
 
 import json
 
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr, field_validator
 
 from wurzel.step.settings import Settings
 
@@ -22,7 +22,7 @@ class MilvusSettings(Settings):
         INDEX_PARAMS (dict): Parameters for indexing operations in MilvusDB. Defaults to {"index_type": "FLAT",
                                 "field_name": "vector", "metric_type": "IP", "params": {}}.
         USER (str): The username for authentication with MilvusDB.
-        PASSWORD (str): The password for authentication with MilvusDB.
+        PASSWORD (SecretStr): The password for authentication with MilvusDB.
         SECURED (bool): Indicates whether the connection to MilvusDB is secured. Defaults to False.
 
     Methods:
@@ -48,7 +48,7 @@ class MilvusSettings(Settings):
         "params": {},
     }
     USER: str
-    PASSWORD: str
+    PASSWORD: SecretStr
     SECURED: bool = False
 
     @field_validator("SEARCH_PARAMS", "INDEX_PARAMS", mode="before")

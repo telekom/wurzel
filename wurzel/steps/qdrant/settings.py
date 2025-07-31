@@ -3,9 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
-from typing import Optional
 
-from pydantic import Field, field_validator
+from pydantic import Field, SecretStr, field_validator
 from qdrant_client.models import Distance
 
 from wurzel.step.settings import Settings
@@ -22,7 +21,7 @@ class QdrantSettings(Settings):
         COLLECTION_HISTORY_LEN (int): The length of the collection history, default is 10.
         SEARCH_PARAMS (dict): Parameters for search operations, default is {"metric_type": "IP", "params": {}}.
         INDEX_PARAMS (dict): Parameters for index creation, default includes "index_type", "field_name", "distance", and "params".
-        APIKEY (Optional[str]): The API key for authentication, default is an empty string.
+        APIKEY (SecretStr): The API key for authentication, default is an empty SecretStr.
         REPLICATION_FACTOR (int): The replication factor for the database, default is 3, must be greater than 0.
         BATCH_SIZE (int): The batch size for operations, default is 1024, must be greater than 0.
 
@@ -49,7 +48,7 @@ class QdrantSettings(Settings):
         "distance": "Dot",
         "params": {},
     }
-    APIKEY: Optional[str] = ""
+    APIKEY: SecretStr = SecretStr("")
     REPLICATION_FACTOR: int = Field(default=3, gt=0)
     BATCH_SIZE: int = Field(default=1024, gt=0)
 
