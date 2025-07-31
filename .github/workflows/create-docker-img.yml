@@ -26,7 +26,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     # Only run on the main repository, not forks
-    if: github.repository == 'telekom/wurzel'
+    if: github.repository_owner == 'telekom' && github.repository == 'telekom/wurzel'
     strategy:
       fail-fast: false
       matrix:
