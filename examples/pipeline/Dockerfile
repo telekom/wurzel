@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: CC0-1.0
 
 
-FROM test_wurzel
+FROM ghcr.io/telekom/wurzel:latest
 
 # -------------------------- if your steps are located in other dependencies
 COPY requirements.txt requirements.txt
