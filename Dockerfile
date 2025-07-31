@@ -42,6 +42,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /usr/app
 
 COPY pyproject.toml ./
+COPY DIRECT_REQUIREMENTS.txt ./
 
 RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
     uv sync --no-install-project
@@ -49,7 +50,8 @@ RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
 
 COPY wurzel ./wurzel
 RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
-    uv sync --inexact
+    uv sync --inexact && \
+    uv pip install -r DIRECT_REQUIREMENTS.txt
 
 FROM python:${PYTHON_VERSION}-slim AS production
 

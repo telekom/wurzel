@@ -49,7 +49,6 @@ dependencies= [
     "lxml==5.2.*",
     "marshmallow<4.0.0",
     "hera >=5.20.1",
-    "de-core-news-sm @ https://github.com/explosion/spacy-models/releases/download/de_core_news_sm-3.7.0/de_core_news_sm-3.7.0-py3-none-any.whl",
 ]
 
 [project.optional-dependencies]
@@ -94,7 +93,7 @@ docs = [
     "mkdocstrings[python]"
 ]
 
-all = ["wurzel[qdrant,milvus,tlsh,docling,argo]"]
+all = ["wurzel[qdrant,milvus,tlsh,docling,spacy]"]
 dev = ["wurzel[lint,test,all]"]
 
 [build-system]
