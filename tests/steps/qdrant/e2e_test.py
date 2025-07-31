@@ -130,6 +130,7 @@ def test_qdrant_collection_retirement(
         )
     )
 
+
     mock_aliases = CollectionsAliasesResponse(aliases=[AliasDescription(alias_name=aliased_collection, collection_name=aliased_collection)])
     with unittest.mock.patch("wurzel.steps.qdrant.step.QdrantConnectorStep._get_telemetry", return_value=mock_telemetry):
         with unittest.mock.patch("wurzel.steps.qdrant.step.QdrantClient.get_aliases", return_value=mock_aliases):
