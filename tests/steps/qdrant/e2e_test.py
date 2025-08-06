@@ -53,8 +53,12 @@ def test_qdrant_connector_has_previous(input_output_folder: tuple[Path, Path], d
     mock_telemetry = InlineResponse2002(result=TelemetryData.model_construct(collections=CollectionsTelemetry.model_construct()))
 
     with unittest.mock.patch("wurzel.steps.qdrant.step.QdrantConnectorStep._get_telemetry", return_value=mock_telemetry):
-        BaseStepExecutor().execute_step(QdrantConnectorStep, {input_path}, output_file)
-        BaseStepExecutor().execute_step(QdrantConnectorStep, {input_path}, output_file)
+        all_outputs = []
+        for _ in range(3):
+            result = BaseStepExecutor().execute_step(QdrantConnectorStep, {input_path}, output_file)
+            outputs, _ = zip(*result)
+            all_outputs.extend(outputs)
+        assert len(all_outputs) == 3
 
 
 def test_qdrant_connector_no_csv(input_output_folder: tuple[Path, Path]):
