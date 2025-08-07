@@ -25,6 +25,7 @@ path = [
     "DIRECT_REQUIREMENTS.txt",
     "tests/data/scraperapi/*.html",
     "docs/**/*.md",
+    "tests/data/**/*",
     "examples/**/*.md",
     "**/requirements.txt",
     ]

@@ -10,15 +10,17 @@ on:
       - pypi.org Release
     types:
       - completed
-  pull_request:
+  push:
     branches:
-      - main
+      - "!main"
+
 
 
 
 
 env:
   REGISTRY: ghcr.io
+  # Use the actual repository owner (handles forks)
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:

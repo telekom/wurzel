@@ -119,6 +119,13 @@ max-returns = 10
 max-args = 10
 min-public-methods = 0
 disable = "W1203, C0114"
+
+[tool.pylint.MASTER]
+# Skip every *.md file that lives anywhere under tests/data/
+ignore-paths = [
+  '^tests/data/.*\\.md$',   #  ^  repo‑relative path   .* any sub‑dirs   \.md file‑extension
+]
+
 [tool.setuptools.dynamic]
 version = {file = "VERSION"}
 [project.scripts]
