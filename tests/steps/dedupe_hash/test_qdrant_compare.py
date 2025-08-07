@@ -1,3 +1,12 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG
+
+# Standard library imports
+
+
 import os
 import sys
 
@@ -83,7 +92,6 @@ def test_extract_gpt_shortform(make_step):
 def test_previous_version_exists(make_step, monkeypatch):
     step = make_step
 
-    # Dummy-Response für Qdrant API simulieren
     dummy_collections_response = {
         "result": {
             "collections": [
@@ -94,8 +102,7 @@ def test_previous_version_exists(make_step, monkeypatch):
         }
     }
 
-    # Monkeypatch für requests.get
-    def mock_get(url, headers=None):
+    def mock_get(url, headers=None, *args, **kwargs):
         class DummyResponse:
             def raise_for_status(self):
                 pass
@@ -105,10 +112,14 @@ def test_previous_version_exists(make_step, monkeypatch):
 
         return DummyResponse()
 
+    # monkeypatch requests.get auf deinen mock_get
     monkeypatch.setattr("requests.get", mock_get)
 
     collections = step.list_top_collections(
-        qdrant_url=step.settings.QDRANT_URL, headers=step.headers, prefix=step.settings.QDRANT_COLLECTION_PREFIX, top_n=2
+        qdrant_url=step.settings.QDRANT_URL,
+        headers=step.headers,
+        prefix=step.settings.QDRANT_COLLECTION_PREFIX,
+        top_n=2,
     )
 
     assert isinstance(collections, list)

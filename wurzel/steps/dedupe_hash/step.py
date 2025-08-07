@@ -4,8 +4,9 @@
 
 # SPDX-FileCopyrightText: 2025 Deutsche Telekom AG
 
-# Standard library imports
+# pylint: disable=c-extension-no-member
 
+# Standard library imports
 import atexit
 import difflib
 import json
@@ -29,7 +30,7 @@ from wurzel.steps.qdrant.step import QdrantConnectorStep
 
 
 class JsonArrayLogHandler(logging.Handler):
-    """ arranges all logs to one json file"""
+    """Arranges all logs to one JSON file."""
 
     def __init__(self, filepath):
         super().__init__()
@@ -108,117 +109,161 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
         )
 
     def run(self, inpt=QdrantConnectorStep):
-        # 1. Load data
+        """Main execution method - refactored into smaller functions."""
+        collections = self._load_and_validate_collections()
+        df_small, df_large, name_small, name_large = self._prepare_dataframes(collections)
 
+        # Perform analysis
+        identical_set, identical_count = self._identical_tlsh_analysis(df_small, df_large, "tlsh")
+        log.info(identical_set)
+        extra_docs = self._find_extra_documents(df_small, df_large)
+
+        suspicious_df = self._find_suspicious_matches(df_large)
+
+        # Generate results and summary
+        return self._generate_comparison_summary(
+            collections, identical_count, extra_docs, suspicious_df, name_small, name_large, len(df_small), len(df_large)
+        )
+
+    def _load_and_validate_collections(self):
+        """Load collections and validate sequence."""
         last_2_collections = self.list_top_collections(
             self.settings.QDRANT_URL, headers=self.headers, prefix=self.settings.QDRANT_COLLECTION_PREFIX, top_n=2
         )
         log.info(last_2_collections)
 
-        # Check if predecessor collection exists and if number is 1 less
-        if len(last_2_collections) == 2:
+        self._validate_collection_sequence(last_2_collections)
+        return last_2_collections
+
+    def _validate_collection_sequence(self, collections):
+        """Validate that collections follow expected numbering sequence."""
+        if len(collections) == 2:
             pattern = re.compile(rf"^{re.escape(self.settings.QDRANT_COLLECTION_PREFIX)}(\d+)$")
-            match_latest = pattern.match(last_2_collections[0])
-            match_prev = pattern.match(last_2_collections[1])
+            match_latest = pattern.match(collections[0])
+            match_prev = pattern.match(collections[1])
+
             if match_latest and match_prev:
                 latest_num = int(match_latest.group(1))
                 prev_num = int(match_prev.group(1))
                 if latest_num - prev_num != 1:
-                    log.info(f"Predecessor collection with number {latest_num - 1} does not exist. Found collections: {last_2_collections}")
+                    log.info(f"Predecessor collection with number {latest_num - 1} does not exist. Found collections: {collections}")
             else:
                 log.info("Collection names do not match the expected pattern.")
         else:
-            log.info(f"Less than 2 collections found: {last_2_collections}")
+            log.info(f"Less than 2 collections found: {collections}")
 
-        df1 = self._get_all_points_as_df(last_2_collections[0])  # Use the first collection from the list
-        df2 = self._get_all_points_as_df(last_2_collections[1])  # Use the second collection from the list
+    def _prepare_dataframes(self, collections):
+        """Load dataframes and determine which is smaller/larger."""
+        df1 = self._get_all_points_as_df(collections[0])
+        df2 = self._get_all_points_as_df(collections[1])
 
-        n1 = len(df1)
-        n2 = len(df2)
-
-        # 2. Determine which collection is smaller
+        # Determine which collection is smaller
         if len(df1) <= len(df2):
             df_small, df_large = df1, df2
-            name_small, name_large = last_2_collections[0], last_2_collections[1]
+            name_small, name_large = collections[0], collections[1]
         else:
             df_small, df_large = df2, df1
-            name_small, name_large = last_2_collections[1], last_2_collections[0]
+            name_small, name_large = collections[1], collections[0]
 
         log.info(f"Smaller collection: {name_small} ({len(df_small)})")
         log.info(f"Larger collection: {name_large} ({len(df_large)})")
 
-        # 3. Identical documents
+        return df_small, df_large, name_small, name_large
 
-        identical_set, identical_count = self._identical_tlsh_analysis(df_small, df_large, "tlsh")
+    def _identical_tlsh_analysis(self, df_a, df_b, tlsh_col):
+        """Find identical documents based on TLSH hashes and return set and count."""
+        tlsh_a = set(df_a[tlsh_col].dropna())
+        tlsh_b = set(df_b[tlsh_col].dropna())
+        intersection = tlsh_a & tlsh_b
+        return intersection, len(intersection)
 
-        # 4. Extra documents
+    def _find_extra_documents(self, df_small, df_large):
+        """Find documents that exist in large collection but not in small one."""
         tlsh_small = set(df_small["tlsh"].dropna())
         tlsh_large = set(df_large["tlsh"].dropna())
         extra_tlsh = tlsh_large - tlsh_small
-        extra_docs = df_large[df_large["tlsh"].isin(extra_tlsh)]
+        return df_large[df_large["tlsh"].isin(extra_tlsh)]
 
-        # 5. Detailed analysis of extra documents
-        extra_analysis = self._analyze_extra_docs_detail(df_small, extra_docs, text_col="text", threshold=self.settings.FUZZY_THRESHOLD)
-        log.info(extra_analysis)
-
-        # 6. Redundancies and contradictions in the large collection
+    def _find_suspicious_matches(self, df_large):
+        """Find and analyze suspicious matches using GPT."""
         fuzzy_matches = self._fuzzy_tlsh_matches(df_large, "tlsh", self.settings.TLSH_MAX_DIFF)
         suspicious = self._suspicious_cases_analysis(df_large, fuzzy_matches, "text")
         suspicious_df = pd.DataFrame(suspicious)
 
-        # 7. GPT analysis for suspicious pairs
-        gpt_results, gpt_shortforms = [], []
+        # GPT analysis for suspicious pairs
         if not suspicious_df.empty:
             log.info(f"Starting GPT analysis for {len(suspicious_df)} pairs...")
-            for i, row in tqdm(suspicious_df.iterrows(), total=len(suspicious_df)):
-                gpt_result = self._gpt_contradict_check(row["text_a"], row["text_b"], row["index_a"], row["index_b"])
-                gpt_results.append(gpt_result)
-                gpt_shortforms.append(self._extract_gpt_shortform(gpt_result))
+            gpt_results, gpt_shortforms = self._analyze_suspicious_pairs_with_gpt(suspicious_df)
             suspicious_df["gpt_recommendation"] = gpt_results
             suspicious_df["gpt_shortform"] = gpt_shortforms
 
-        # 8. Results as DataFrames
-        identical_docs_df = df_large[df_large["tlsh"].isin(identical_set)].copy()
-        identical_docs_df["point_index"] = identical_docs_df.index + 1
+        return suspicious_df
+
+    def _analyze_suspicious_pairs_with_gpt(self, suspicious_df):
+        """Analyze suspicious pairs using GPT."""
+        gpt_results, gpt_shortforms = [], []
+
+        for _, row in tqdm(suspicious_df.iterrows(), total=len(suspicious_df)):
+            gpt_result = self._gpt_contradict_check(row["text_a"], row["text_b"], row["index_a"], row["index_b"])
+            gpt_results.append(gpt_result)
+            gpt_shortforms.append(self._extract_gpt_shortform(gpt_result))
+
+        return gpt_results, gpt_shortforms
+
+    def _generate_comparison_summary(self, collections, identical_count, extra_docs, suspicious_df, name_small, name_large, n1, n2):
+        """Generate final comparison summary and logs."""
+        # Create result DataFrames
+        self._create_result_dataframes(extra_docs)
+
+        # Log summary
+        self._log_comparison_summary(name_small, name_large, identical_count, extra_docs, suspicious_df, n1, n2)
+
+        # Return results dictionary
+        return {
+            "comparison between": [collections[0], n1, collections[1], n2],
+            "tslh_identical_documents": identical_count,
+            "tslh_differing_docs": len(extra_docs),
+            "duplicates_with_contradictions": len(suspicious_df),
+        }
+
+    def _create_result_dataframes(self, extra_docs):
+        """Create result DataFrames with point indices."""
         extra_docs_with_idx = extra_docs.copy()
         extra_docs_with_idx["point_index"] = extra_docs_with_idx.index + 1
 
-        # 10. Summary (as log output)
+    def _log_comparison_summary(self, name_small, name_large, identical_count, extra_docs, suspicious_df, n1, n2):
+        """Log the comparison summary."""
         log.info(f"Comparison between '{name_small}' and '{name_large}'")
-        log.info(f"Identical: {identical_count}, Extra: {len(extra_docs)}, Suspicious: {len(suspicious)}")
+        log.info(f"Identical: {identical_count}, Extra: {len(extra_docs)}, Suspicious: {len(suspicious_df)}")
+
         # Warning if percentage of identical documents falls below allowed threshold
-        total_compared = min(n1, n2)  # Compare based on smaller collection
+        total_compared = min(n1, n2)
         log.info(f"Total comparison: {total_compared}")
+
         if total_compared > 0:
             identical_ratio = identical_count / total_compared
             if identical_ratio < self.settings.IDENTICAL_WARNING_THRESHOLD:
                 log.info(
                     f"Identical document count: {identical_count}"
-                    f"⚠️ Only {identical_ratio:.2%} identical documents between '{name_small}' and '{name_large}' "
+                    f"⚠️ Only {identical_ratio:.2%} identical documents between "
+                    f"'{name_small}' and '{name_large}' "
                     f"(Threshold: {self.settings.IDENTICAL_WARNING_THRESHOLD:.0%})"
                 )
 
         if not suspicious_df.empty:
-            log.info("GPT recommendations summary:")
-            log.info(
-                "Keep both (Redundancy): %s",
-                sum(
-                    (s == "both") or ("Redundancy" in str(s)) or (str(s).strip() == "") or pd.isna(s)
-                    for s in suspicious_df["gpt_shortform"]
-                ),
-            )
+            self._log_gpt_recommendations_summary(suspicious_df)
 
-            log.info(f"Keep only document 1: {sum(s == 'b remove' for s in suspicious_df['gpt_shortform'])}")
-            log.info(f"Keep only document 2: {sum(s == 'a remove' for s in suspicious_df['gpt_shortform'])}")
-            log.info(f"Contradiction, clarification needed: {sum(s == 'contradiction' for s in suspicious_df['gpt_shortform'])}")
+    def _log_gpt_recommendations_summary(self, suspicious_df):
+        """Log GPT recommendations summary."""
+        log.info("GPT recommendations summary:")
 
-        # Return the most important results as dict
-        return {
-            "comparison between": [last_2_collections[0], n1, last_2_collections[1], n2],
-            "tslh_identical_documents": identical_count,
-            "tslh_differing_docs": len(extra_docs),
-            "duplicates_with_contradictions": len(suspicious),
-        }
+        shortforms = suspicious_df["gpt_shortform"]
+        keep_both_count = sum((s == "both") or ("redundancy" in str(s).lower()) or (str(s).strip() == "") or pd.isna(s) for s in shortforms)
+
+        log.info("Keep both (Redundancy): %s", keep_both_count)
+        log.info(f"Keep only document 1: {sum(s == 'a remove' for s in shortforms)}")
+        log.info(f"Keep only document 2: {sum(s == 'b remove' for s in shortforms)}")
+        log.info(f"Contradiction, clarification needed: {sum(s == 'contradiction' for s in shortforms)}")
 
     def list_top_collections(self, qdrant_url, headers=None, prefix="germany_v", top_n=2):
         """Returns the names of the `top_n` collections with the highest numeric suffix for a given prefix.
@@ -228,7 +273,6 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
             headers (dict, optional): HTTP headers with optional API key.
             prefix (str): The prefix of the collections, e.g. "germany_v".
             top_n (int): How many collections with highest number should be returned.
-            verbose (bool): Whether results should be printed.
 
         Returns:
             list: List of `top_n` collection names with highest index, or empty list on error.
@@ -236,7 +280,7 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
         """
         url = f"{qdrant_url}/collections"
         try:
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, timeout=30)
             print(response)
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
@@ -262,8 +306,8 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
         return top_collections
 
     def _get_collection_info(self, collection_name):
-        response = requests.get(f"{self.settings.QDRANT_URL}/collections/{collection_name}", headers=self.headers)
-
+        """Get collection information with timeout handling."""
+        response = requests.get(f"{self.settings.QDRANT_URL}/collections/{collection_name}", headers=self.headers, timeout=30)
         return response.json() if response.status_code == 200 else None
 
     def _calc_tlsh(self, text):
@@ -298,12 +342,12 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
         return None
 
     def _get_all_points_as_df(self, collection_name):
+        """Fetch all points from a collection as DataFrame."""
         all_rows = []
         offset = None
         limit = 100
 
         collection_info = self._get_collection_info(collection_name)
-
         total_points = collection_info.get("result", {}).get("vectors_count") if collection_info else 0
 
         with tqdm(total=total_points, desc=f"Fetching {collection_name}") as pbar:
@@ -313,7 +357,10 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
                     payload["offset"] = offset
 
                 response = requests.post(
-                    f"{self.settings.QDRANT_URL}/collections/{collection_name}/points/scroll", headers=self.headers, json=payload
+                    f"{self.settings.QDRANT_URL}/collections/{collection_name}/points/scroll",
+                    headers=self.headers,
+                    json=payload,
+                    timeout=60,
                 )
 
                 if not response.ok:
@@ -337,28 +384,25 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
 
         return pd.DataFrame(all_rows)
 
-    def _identical_tlsh_analysis(self, df_a, df_b, tlsh_col):
-        tlsh_a = set(df_a[tlsh_col].dropna())
-        tlsh_b = set(df_b[tlsh_col].dropna())
-        return tlsh_a & tlsh_b, len(tlsh_a & tlsh_b)
-
     def _fuzzy_tlsh_matches(self, df, tlsh_col, max_diff):
+        """Find fuzzy TLSH matches using enumerate for better performance."""
         matches = []
         hashes = df[tlsh_col].dropna()
         idx_hash = list(hashes.items())
-        for i in range(len(idx_hash)):
-            idx_a, hash_a = idx_hash[i]
+
+        for i, (idx_a, hash_a) in enumerate(idx_hash):
             for j in range(i + 1, len(idx_hash)):
                 idx_b, hash_b = idx_hash[j]
                 try:
                     diff = tlsh.diff(hash_a, hash_b)
                     if diff is not None and diff <= max_diff:
                         matches.append((idx_a, idx_b, diff))
-                except Exception:
+                except tlsh.TlshException:
                     continue
         return matches
 
     def _diff_snippet(self, a, b, context=20):
+        """Generate a diff snippet between two texts."""
         sm = difflib.SequenceMatcher(None, a, b)
         for tag, i1, i2, j1, j2 in sm.get_opcodes():
             if tag != "equal":
@@ -372,6 +416,7 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
         return ""
 
     def _suspicious_cases_analysis(self, df, matches, text_col):
+        """Analyze suspicious cases from fuzzy matches."""
         suspicious = []
         for idx_a, idx_b, diff in matches:
             text_a = str(df.loc[idx_a, text_col])
@@ -394,14 +439,15 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
         return suspicious
 
     def _analyze_extra_docs_detail(self, df_base, df_extra, text_col, threshold):
+        """Analyze extra documents with optimized ratio calculation."""
         results = []
         for idx, extra_row in df_extra.iterrows():
             extra_text = str(extra_row[text_col])
-            best_ratio = 0
-            for base_text in df_base[text_col]:
-                ratio = fuzz.ratio(extra_text, str(base_text))
-                if ratio > best_ratio:
-                    best_ratio = ratio
+
+            # Use max() for better performance
+            ratios = [fuzz.ratio(extra_text, str(base_text)) for base_text in df_base[text_col]]
+            best_ratio = max(ratios) if ratios else 0
+
             is_truly_new = best_ratio < threshold
             results.append(
                 {
@@ -415,6 +461,7 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
         return results
 
     def _gpt_contradict_check(self, doc1, doc2, idx1=None, idx2=None):
+        """Check for contradictions between two documents using GPT."""
         doc1_header = f"[Index {idx1} (Point {idx1 + 1})]" if idx1 is not None else ""
         doc2_header = f"[Index {idx2} (Point {idx2 + 1})]" if idx2 is not None else ""
 
@@ -490,17 +537,17 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
             return {"index_a": idx1, "index_b": idx2, "gpt_analysis": f"Value error: {e}", "contradiction_found": False}
 
     def _extract_gpt_shortform(self, gpt_result):
-        # Dummy implementation, adjust as needed!
-        content = gpt_result.get("gpt_analysis", "").lower()
+        """Extract short form recommendation from GPT result."""
+        content = gpt_result.get("gpt_analysis", "")
         if not isinstance(content, str):
             return ""
-        if "contradiction" in content:
+        content_lower = content.lower()
+        if "contradiction" in content_lower:
             return "contradiction"
-        if "keep both" in content or "redundancy" in content:
+        if "keep both" in content_lower or "redundancy" in content_lower:
             return "both"
-        if "remove document 1" in content:
+        if "remove document 1" in content_lower:
             return "a remove"
-        if "remove document 2" in content:
+        if "remove document 2" in content_lower:
             return "b remove"
         return ""
-
