@@ -16,12 +16,14 @@ SPDX-FileCopyrightText = "2024 Deutsche Telekom AG"
 SPDX-License-Identifier = "CC0-1.0"
 [[annotations]]
 path = [
+    "**/*/*.excalidraw*",
     "**/*/README.md",
     ".github/workflows/*.yaml",
     ".github/**/*.md",
     "VERSION",
     ".vscode/settings.json",
     "DIRECT_REQUIREMENTS.txt",
+    "tests/data/scraperapi/*.html",
     "docs/**/*.md",
     ]
 precedence = "override"

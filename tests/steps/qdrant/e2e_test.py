@@ -17,7 +17,7 @@ from qdrant_client import QdrantClient, models
 from wurzel.exceptions import StepFailed
 from wurzel.step_executor import BaseStepExecutor
 from wurzel.steps.qdrant import QdrantConnectorMultiVectorStep, QdrantConnectorStep
-from wurzel.steps.qdrant.data import QdrantResult, QdranttMultiVectorResult
+from wurzel.steps.qdrant.data import QdrantMultiVectorResult, QdrantResult
 from wurzel.utils import HAS_TLSH
 
 
@@ -134,7 +134,7 @@ def test_qdrant_connector_csv_partially_not_same_shape(
     [
         pytest.param(
             QdrantConnectorMultiVectorStep,
-            QdranttMultiVectorResult,
+            QdrantMultiVectorResult,
             "./tests/data/embedding_multi.csv",
             id="MultiVector",
         ),
@@ -151,7 +151,7 @@ def test_qdrant_connector_true_csv(
     input_output_folder: tuple[Path, Path],
     dummy_collection,
     step: type[Union[QdrantConnectorStep, QdrantConnectorMultiVectorStep]],
-    result_type: Union[QdrantResult, QdranttMultiVectorResult],
+    result_type: Union[QdrantResult, QdrantMultiVectorResult],
     inpt_file: str,
     tlsh: bool,
 ):

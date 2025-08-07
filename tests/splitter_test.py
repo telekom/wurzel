@@ -9,7 +9,6 @@ from wurzel.datacontract import MarkdownDataContract
 from wurzel.steps.splitter import SimpleSplitterStep
 from wurzel.utils.semantic_splitter import (
     SemanticSplitter,
-    _get_token_len,
 )
 
 
@@ -96,24 +95,25 @@ TV HD Recorder Fehlerbehebung](https://www.lorem-ipsum.com/faq/entry/%7Elorem-tv
     assert "TV HD Recorder Fehlerbehebun" in result[-1].md
 
 
-def test_sentence_splitter(Splitter):
+def test_sentence_splitter(Splitter: SemanticSplitter):
     # @Thomas inkonsitenz mit token_limit, buffer
     text = "Mein Name ist Manfred. Ich bin am rande der Welt angekommen. Wir sind mit Mr. Bean unterwegs. Dabei haben wir Heute ein Kanninchen adoptiert und sind damit zum Mond geflogen. Auf dessen Rückseite haben wir dann Karotten geerntet und sind damit auf dem Rücken eines Schweins zurück zum Mars gefolgen. "  # noqa: E501
-    chunks = SemanticSplitter(token_limit=20, token_limit_buffer=3)._split_by_sentence(text)
+    sem_splitter = SemanticSplitter(token_limit=20, token_limit_buffer=3)
+    chunks = sem_splitter._split_by_sentence(text)
     assert len(chunks) == 3
     assert "Mein Name ist Manfred." in chunks[0]
     assert all(chunk for chunk in chunks)
     assert "auf dem Rück" in chunks[-1]
-    assert abs(_get_token_len(text) - sum(_get_token_len(chunk) for chunk in chunks)) < 19
+    assert abs(sem_splitter._get_token_len(text) - sum(sem_splitter._get_token_len(chunk) for chunk in chunks)) < 19
 
 
-def test_sentence_splitter2(Splitter):
+def test_sentence_splitter2(Splitter: SemanticSplitter):
     text = '* [Öffnet in neuem Fenster\n  Wlan optimieren](https://www.lorem-ipsum.com/wlan-optimieren#konfiguriert)\n* [Öffnet in neuem Fenster\n  Hardware Support](https://www.lorem-ipsum.com/hilfe-service/services/hardwaresupport)\n  Überlagerte WLAN Kanäle\n  Damit Ihre drahtlosen Geräte mit Highspeed unterwegs sind, empfehlen wir Ihnen, den verwendeten WLAN Kanal regelmäßig zu ändern. Wie das geht, zeigt Ihnen unser\xa0[Hardware Support](https://www.lorem-ipsum.com/hilfe-service/services/hardwaresupport/).\n  Standardmäßig können die meisten Modem/Router den optimalen Kanal selbständig feststellen und konfigurieren.\n  In manchen Fällen ist es allerdings ratsam, den Kanal manuell zu optimieren.\n  Nachfolgend finden Sie eine Schritt-für-Schritt Anleitung für die Internet Fiber Box. Weitere Anleitungen finden Sie in unserem\xa0Hardwaresupport.\n  Wie ändere ich den WLAN Kanal auf meiner Internet Fiber Box?\n  Schritt 1:  \n  Öffnen Sie Ihren Browser und öffnen Sie die Seite 192.168.0.1.\n  Sie werden nun nach dem Passwort des Modems gefragt. Falls Sie dieses nicht geändert haben, finden Sie es auf der Unterseite des Modems. Geben Sie dieses in das dafür vorgesehene Feld ein und klicken Sie auf "Weiter".\n  ![Fiber_Box_Anmeldung]( "Fiber Box - Anmeldung Web Interface")\n  Schritt 2:  \n  Wählen Sie links im Menü\xa0"Erweiterte Einstellungen" -> "WLAN"\xa0und danach\xa0"WLAN Signal".\n  Sollten Sie WLAN Kanal-Optimierung aktiviert haben, schalten Sie diese bitte aus.\n  Setzen Sie nun ein Häkchen bei "Manuell" – das können Sie sowohl bei 2,4 GHz als auch bei 5 GHz getrennt konfigurieren.\n  Klicken Sie anschließend rechts auf den aktuellen Kanal und wählen Sie aus der Liste den gewünschten Kanal aus und bestätigen Sie die Einstellungen mit\xa0"Änderungen übernehmen".\n  Wenn Sie nicht wissen, welcher der optimale Kanal für Ihren Standort ist, testen Sie einfach einen Kanal nach dem anderen aus.  \n  Prüfen Sie dann mit welchem Kanal der Empfang am besten bzw. am stabilsten ist.\n  ![Erweiterte Einstellungen]( "Fiber Box - WLAN optimieren")\n  Frequenzband 2,4 GHz oder 5 GHz\n  Ein Frequenzband bezeichnet einen bestimmten Frequenzbereich, auf dem Signale gesendet werden können.\n  WLAN Wellen können über die beiden Frequenzbänder 2.4 GHz (GHz = Gigahertz) und 5 GHz übertragen werden.\n  Diese unterscheiden sich in der Geschwindigkeit und Distanz. Das 2.4 GHz Netz strahlt weiter, ist dafür aber langsamer.\n  Das 5 GHz Netz hingegen ist schneller, funkt aber nicht so weit.\n  In der Regel ist das 5 GHz Netz weniger belegt und bietet deshalb eine bessere Verbindung.\n  2,4 GHz bzw. 5 GHz umbenennen auf der Internet Fiber Box\n  Schritt 1:  \n  Öffnen Sie Ihren Browser und öffnen Sie die Seite **192.168.0.1**.\n  Sie werden nun nach dem Passwort des Modems gefragt. Falls Sie dieses nicht geändert haben, finden Sie es auf der Unterseite des Modems.   \n  Geben Sie dieses in das dafür vorgesehene Feld ein und klicken Sie auf "Weiter".\n  ![Login]( "Fiber Box - Anmeldung Web Interface")\n  Schritt 2:  \n  Sie sehen nun die Startseite der Internet Fiber Box.\n  Wählen Sie links im Menü "Erweiterte Einstellungen".\n  Öffnen Sie dann "WLAN" und danach "Sicherheit".\n  Ändern Sie den Namen des 2,4 GHz bzw. des 5 GHz Netzes und bestätigen Sie die Eingabe mit "Änderungen übernehmen".\n  ![Erweiterte Einstellungen]( "Fiber Box - SSID/WLAN Namen ändern")\n  Standort des Modems/Routers\n  Platzieren Sie ihr WLAN Modem/ihren WLAN Router idealerweise leicht erhöht, damit es über Möbel und andere Hindernisse hinwegkommt.  \n  Das Gerät funktioniert am besten, wenn es frei steht und nicht in einer Schublade oder hinter einem Wandverbau versteckt wird.\n  Bei größeren Wohnungen bzw. Häusern, sowie der Nutzung von WLAN über mehrere Stockwerke, kann der Einsatz von zusätzlicher WLAN Hardware notwendig sein.  \n  Nähere Informationen entnehmen Sie der FAQ zu [WLAN Empfang erweitern](https://www.lorem-ipsum.com/faq/entry/%7Etechnische-anfrage%7Emobiles-internet%7Ewlan/%7EWlan_Empfang_erweitern%7Emaster).\n  Beachten Sie bei der Platzierung Ihrer Internet Flex Box/Ihres Internet Flex Routers auch die [Platzierung für einen optimalen LTE Empfang](https://www.lorem-ipsum.com/faq/entry/%7Etechnische-anfrage%7Emobiles-internet%7Eerste-hilfe/%7EInternetFlex_Empfang_Position_Box_Router%7Emaster).\n  Alte Geräte im WLAN\n  Wenn Sie ältere Geräte in Ihr WLAN einbinden, die den sogenannten N-Standard nicht unterstützen (wie z.B. das iPhone 3, das Samsung Galaxy GT-i7500, die PlayStation 3 sowie alle Geräte, die vor 2009 auf den Markt kamen), behindern diese die Leistung aller Geräte im gleichen Netz.\n  Vermeiden von Störquellen\n  Ihr Modem/Router ist gerne für sich. Folgende Geräte sollten ihm nicht zu nahe kommen, denn sie können die Qualität Ihrer drahtlosen Internetverbindung beeinträchtigen.\n* Basisstation des Schnurlos Telefons\n* Babyphone\n* Mikrowelle\n* Bluetooth-Geräte\n* Fernsehgerät\n* A/V Receiver\n* HiFi Lautsprecher\n'  # noqa: E501
     chunks = Splitter._split_by_sentence(text)
     assert "Überlagerte WLAN Kanäle" in chunks[0]
     assert all(chunk for chunk in chunks)
     assert "HiFi Lautsprecher" in chunks[-1]
-    assert abs(_get_token_len(text) - sum(_get_token_len(chunk) for chunk in chunks)) > 3
+    assert abs(Splitter._get_token_len(text) - sum(Splitter._get_token_len(chunk) for chunk in chunks)) > 3
 
 
 def test_splitter_header_breadcrum(Splitter):

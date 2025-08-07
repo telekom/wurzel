@@ -21,7 +21,6 @@ from wurzel.exceptions import EmbeddingAPIException, StepFailed
 from wurzel.step import TypedStep
 from wurzel.steps.embedding.huggingface import HuggingFaceInferenceAPIEmbeddings, PrefixedAPIEmbeddings
 from wurzel.steps.splitter import SimpleSplitterStep
-from wurzel.utils.semantic_splitter import SemanticSplitter
 
 from .data import EmbeddingResult
 
@@ -55,7 +54,6 @@ class EmbeddingStep(
 
     def __init__(self) -> None:
         super().__init__()
-        self.settings = EmbeddingSettings()
         self.embedding = self._select_embedding()
         self.n_jobs = max(1, (os.cpu_count() or 0) - 1)
         # Inject net output_format into 3rd party library Markdown
@@ -63,11 +61,6 @@ class EmbeddingStep(
         self.markdown = Markdown(output_format="plain")  # type: ignore[arg-type]
         self.markdown.stripTopLevelTags = False
         self.settingstopwords = self._load_stopwords()
-        self.splitter = SemanticSplitter(
-            token_limit=self.settings.TOKEN_COUNT_MAX,
-            token_limit_buffer=self.settings.TOKEN_COUNT_BUFFER,
-            token_limit_min=self.settings.TOKEN_COUNT_MIN,
-        )
 
     def _load_stopwords(self) -> list[str]:
         path = self.settings.STEPWORDS_PATH
@@ -145,8 +138,8 @@ class EmbeddingStep(
 
         """
         context = self.get_simple_context(doc.keywords)
-        plain_text = self.get_embedding_input_from_document(doc)
-        vector = self.embedding.embed_query(plain_text)
+        text = self.get_embedding_input_from_document(doc) if self.settings.CLEAN_MD_BEFORE_EMBEDDING else doc.md
+        vector = self.embedding.embed_query(text)
         return {"text": doc.md, "vector": vector, "url": doc.url, "keywords": context}
 
     def is_stopword(self, word: str) -> bool:
