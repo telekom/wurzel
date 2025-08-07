@@ -14,4 +14,4 @@ Semantic document elements (e.g., headings) are repeated.
 For Markdown tables, a custom logic is implemented that preserves the table structure by repeating the header row if a split occurs within a table. So subsequent chunks maintain the semantic table information from the header row.
 By default, tables are never broken in the middle of a row; if a *single* row exceeds the budget, it is split at column boundaries instead and full-header is repeated.
 
-::: wurzel.utils.markdown_table_splitter.split_markdown_table
+::: wurzel.utils.markdown_table_splitter.MarkdownTableSplitterUtil
