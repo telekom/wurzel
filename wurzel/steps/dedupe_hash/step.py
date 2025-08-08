@@ -16,6 +16,7 @@ import re
 import socket
 from datetime import datetime
 from pathlib import Path
+
 import httpx
 import openai
 import pandas as pd
@@ -53,7 +54,7 @@ class JsonArrayLogHandler(logging.Handler):
 
 
 # Setup Logger
-#LOG_DIR = "/Users/A1167082/Desktop/qdrant_compare_logs"
+# LOG_DIR = "/Users/A1167082/Desktop/qdrant_compare_logs"
 REPO_ROOT = Path(__file__).resolve().parent.parent  # ggf. anpassen
 LOG_DIR = REPO_ROOT / "qdrant_compare_logs"
 
@@ -285,7 +286,7 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
         url = f"{qdrant_url}/collections"
         try:
             response = requests.get(url, headers=headers, timeout=30)
-            print(response)
+            log.info(response)
             response.raise_for_status()
         except requests.exceptions.RequestException as e:
             log.info(f"Error retrieving collections: {e}")
@@ -520,7 +521,7 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
                 ],
             )
             result_text = response.choices[0].message.content.strip()
-            print(result_text)
+            log.info(result_text)
             return {
                 "index_a": idx1,
                 "index_b": idx2,
@@ -555,3 +556,19 @@ class QdrantCompareStep(TypedStep[QdrantCompareSettings, QdrantConnectorStep, di
         if "remove document 2" in content_lower:
             return "b remove"
         return ""
+
+
+if __name__ == "__main__":
+    from settings import QdrantCompareSettings
+
+    # Settings aus .env laden
+    settings = QdrantCompareSettings()
+
+    # Schritt instanziieren und Settings setzen
+    step = QdrantCompareStep()
+    step.settings = settings
+
+    # Ausführen und Ergebnis anzeigen
+    result = step.run()
+    print("\n=== Vergleichsergebnis ===")
+    print(result)
