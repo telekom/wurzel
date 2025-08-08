@@ -14,8 +14,21 @@ import pandas as pd
 import pytest
 
 # Pfad zur wurzel-Bibliothek hinzufügen
-sys.path.append(os.path.abspath("/Users/A1167082/Desktop/wurzel"))
 
+import os
+import sys
+
+# aktueller Dateipfad → Repo-Root ermitteln
+repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+# relativen Unterordner anhängen
+wurzel_path = os.path.join(repo_root, "wurzel")
+
+sys.path.append(wurzel_path)
+
+"""
+sys.path.append(os.path.abspath("/Users/A1167082/Desktop/wurzel"))
+"""
 from wurzel.steps.dedupe_hash.settings import QdrantCompareSettings
 from wurzel.steps.dedupe_hash.step import QdrantCompareStep
 
