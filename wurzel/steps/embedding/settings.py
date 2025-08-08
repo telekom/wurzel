@@ -56,3 +56,4 @@ class EmbeddingSettings(SplitterSettings):
         default={"e5-": "query: ", "DPR|dpr": ""}
     )
     CLEAN_MD_BEFORE_EMBEDDING: bool = True
+    TOKENIZER_MODEL: str = Field("gpt-3.5-turbo", description="The tokenizer model to use for splitting documents.")

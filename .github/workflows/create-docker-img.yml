@@ -10,21 +10,28 @@ on:
       - pypi.org Release
     types:
       - completed
+  push:
+    branches:
+      - "!main"
+
 
 
 
 
 env:
   REGISTRY: ghcr.io
+  # Use the actual repository owner (handles forks)
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-push-image:
+  build:
     runs-on: ubuntu-latest
-
     strategy:
+      fail-fast: false
       matrix:
-        platform: [linux/amd64, linux/arm64]
+        platform:
+          - linux/amd64
+          - linux/arm64
 
     permissions:
       contents: read
@@ -32,7 +39,18 @@ jobs:
       attestations: write
       id-token: write
 
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+      major: ${{ steps.get_version.outputs.major }}
+      minor: ${{ steps.get_version.outputs.minor }}
+      patch: ${{ steps.get_version.outputs.patch }}
+
     steps:
+      - name: Prepare
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -40,9 +58,108 @@ jobs:
         id: get_version
         run: |
           version=$(grep -Po '(?<=^version = ")[^"]*' pyproject.toml)
+          major=$(echo $version | cut -d '.' -f 1)
+          minor=$(echo $version | cut -d '.' -f 2)
+          patch=$(echo $version | cut -d '.' -f 3)
+          if [[ "${GITHUB_REF##*/}" != "main" ]]; then
+            sha=$(echo "${GITHUB_SHA}" | cut -c1-6)
+            version="${version}.dev${sha}"
+          fi
           echo "version=$version" >> $GITHUB_ENV
-          echo "major=$(echo $version | cut -d '.' -f 1)" >> $GITHUB_ENV
-          echo "minor=$(echo $version | cut -d '.' -f 2)" >> $GITHUB_ENV
+          echo "major=$major" >> $GITHUB_ENV
+          echo "minor=$minor" >> $GITHUB_ENV
+          echo "patch=$patch" >> $GITHUB_ENV
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "major=$major" >> $GITHUB_OUTPUT
+          echo "minor=$minor" >> $GITHUB_OUTPUT
+          echo "patch=$patch" >> $GITHUB_OUTPUT
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Cache
+        uses: actions/cache@v4
+        id: cache
+        with:
+          path: cache-mount
+          key: cache-mount-${{ matrix.platform }}-${{ hashFiles('Dockerfile') }}
+
+      - name: Restore Docker cache mounts
+        uses: reproducible-containers/buildkit-cache-dance@v3.3.0
+        with:
+          cache-dir: cache-mount
+          cache-map: |
+            {
+              "var-cache-apt": "/var/cache/apt",
+              "var-lib-apt": "/var/lib/apt",
+              "uv-cache": "/tmp/.cache/uv"
+            }
+          skip-extraction: ${{ steps.cache.outputs.cache-hit }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
+
+      - name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          cache-from: type=gha,scope=${{ github.workflow }}-${{ matrix.platform }}
+          cache-to: type=gha,mode=${{ matrix.platform == 'linux/amd64' && 'min' || 'max' }},scope=${{ github.workflow }}-${{ matrix.platform }}
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
+          provenance: false
+          sbom: false
+
+      - name: Export digest
+        run: |
+          mkdir -p ${{ runner.temp }}/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ env.PLATFORM_PAIR }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version: ${{ needs.build.outputs.version }}
+
+    steps:
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
@@ -58,24 +175,88 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=${{ env.version }}
-            type=raw,value=${{ env.major }}.${{ env.minor }}
+            type=raw,value=${{ needs.build.outputs.version }},enable={{is_default_branch}}
+            type=raw,value=${{ needs.build.outputs.major }}.${{ needs.build.outputs.minor }},enable={{is_default_branch}}
+            type=raw,value=${{ needs.build.outputs.major }},enable={{is_default_branch}}
+            type=raw,value=${{ needs.build.outputs.version }},enable=${{ github.ref != 'refs/heads/main' }}
+
+      - name: Create manifest list and push
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+
+  test-demo-pipeline:
+    runs-on: ubuntu-latest
+    needs:
+      - merge
+    permissions:
+      contents: read
+      packages: read
+
+    container:
+      image: ghcr.io/${{ github.repository }}:${{ needs.merge.outputs.version }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+      options: --user root
+      env:
+        MANUALMARKDOWNSTEP__FOLDER_PATH: /usr/app/demo-data
+        WURZEL_PIPELINE: pipelinedemo:pipeline
+        GIT_USER: ci-test
+        GIT_MAIL: ci@example.com
+        DVC_DATA_PATH: /usr/app/output
+        DVC_FILE: /usr/app/dvc.yaml
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Fix ownership and switch to appuser
+        run: |
+          # Change ownership of the workspace to appuser
+          chown -R appuser:appgroup $GITHUB_WORKSPACE
+          # Ensure appuser has read/write access to output directory
+          mkdir -p /usr/app/data
+          chown -R appuser:appgroup /usr/app/data
+          # Switch to appuser for remaining steps
+          echo "USER_ID=$(id -u appuser)" >> $GITHUB_ENV
+          echo "GROUP_ID=$(id -g appuser)" >> $GITHUB_ENV
+
+      - name: Copy pipeline configuration
+        run: |
+          if [ -f "$GITHUB_WORKSPACE/examples/pipeline/pipelinedemo.py" ]; then
+            su -c "cp $GITHUB_WORKSPACE/examples/pipeline/pipelinedemo.py /usr/app/" appuser
+          else
+            echo "ERROR: pipelinedemo.py not found!"
+            exit 1
+          fi
+          if [ -d "$GITHUB_WORKSPACE/examples/pipeline/demo-data" ]; then
+            su -c "cp -r $GITHUB_WORKSPACE/examples/pipeline/demo-data /usr/app/demo-data" appuser
+          else
+            echo "ERROR: demo-data directory not found!"
+            exit 1
+          fi
+          echo "Files in /usr/app after copy:"
+          su -c "pwd && ls -l /usr/app" appuser
 
 
+      - name: Run demo pipeline
+        working-directory: /usr/app
+        run: su -c "/usr/app/entrypoint.sh" appuser
 
-      - name: Build and push Docker image ${{ matrix.platform}}
-        id: push
-        uses: docker/build-push-action@v6
+      - name: Verify pipeline output
+        run: |
+          chmod +x $GITHUB_WORKSPACE/.github/scripts/verify-pipeline-output.sh
+          $GITHUB_WORKSPACE/.github/scripts/verify-pipeline-output.sh
+
+      - name: Upload pipeline outputs as artifacts
+        uses: actions/upload-artifact@v4
         with:
-          context: .
-          push: true
-          platforms: ${{ matrix.platform}}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-
-      - name: Generate artifact attestation
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
-          subject-digest: ${{ steps.push.outputs.digest }}
-          push-to-registry: true
+          name: pipeline-outputs
+          path: /usr/app/data/
+          retention-days: 7

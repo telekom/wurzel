@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import threading
 from pathlib import Path
+from typing import Optional
 
 # Related third-party imports
 import lxml.etree
@@ -16,6 +17,7 @@ from mistletoe import Document
 from mistletoe.block_token import ThematicBreak
 from mistletoe.markdown_renderer import MarkdownRenderer
 from mistletoe.span_token import Image
+from pydantic import BaseModel, Field
 
 from wurzel.exceptions import InvalidPlatform, MarkdownConvertFailed
 
@@ -26,6 +28,7 @@ MD_RENDER_LOCK = threading.Lock()
 def __get_html2md() -> Path:
     default_path = {
         "Linux_x86_64": Path(__file__).parent / "html2md",
+        "Linux_aarch64": Path(__file__).parent / "html2md",
         "Darwin_arm64": Path(__file__).parent / "html2md_darwin_arm",
         "Darwin_x86_64": Path(__file__).parent / "html2md_darwin_amd64",
         "Windows_AMD64": Path(__file__).parent / "html2md_win_amd64",
@@ -38,16 +41,18 @@ def __get_html2md() -> Path:
 
 __HTML2MD: Path = __get_html2md()
 
-
 """
 Wrapper module around html2md binary
 """
 
 
-# mypy: ignore-errors
+class MarkdownConverterSettings(BaseModel):
+    """Settings for the Markdown converter."""
+
+    HTML2MD_BINARY_FLAGS: str = Field(default="", description="Flags for the html2md binary")
 
 
-def to_markdown(html: str, binary_path: Path = __HTML2MD) -> str:
+def to_markdown(html: str, settings: Optional[MarkdownConverterSettings] = None, binary_path: Path = __HTML2MD) -> str:
     """Convert HTML XML string to Markdown using an external binary or a Python library.
 
     In acknowledge to https://github.com/suntong/html2md.
@@ -56,36 +61,41 @@ def to_markdown(html: str, binary_path: Path = __HTML2MD) -> str:
     ----------
     html : str
         The input HTML/XML string to be converted to Markdown.
+    settings : MarkdownConverterSettings, optional
+        Settings for the Markdown converter, including binary flags.
     binary_path : Path, optional
         The path to the html2md binary (default is './html2md').
 
-    Returns
+    Returns:
     -------
     str
         The resulting Markdown string.
 
-    Notes
+    Notes:
     -----
     This function first checks if the html2md binary is available. If not, it raises an error.
     The binary path can be specified in the environment variable 'HTML2MD_BINARY_PATH'.
 
     The html2md binary can be found at: https://github.com/suntong/html2md
 
-    Examples
+    Examples:
     --------
     >>> from pathlib import Path
-    >>> html = '<h1>Title</h1><p>Hello, world!</p>'
+    >>> html = "<h1>Title</h1><p>Hello, world!</p>"
     >>> markdown = to_markdown(html)
     >>> print(markdown)
     # Title
     Hello, world!
 
     """
+    if not settings:
+        settings = MarkdownConverterSettings()
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=".html", mode="w+") as file:
         cleaned_html = clean_html(html)
         file.write(cleaned_html)
         file.close()
-        convert_cmd = f'"{binary_path.absolute().as_posix()}" -i "{file.name}"'
+        convert_cmd = f'"{binary_path.absolute()}" {settings.HTML2MD_BINARY_FLAGS} -i "{file.name}"'
         status_code, markdown = subprocess.getstatusoutput(convert_cmd, encoding="utf8")
         Path(file.name).unlink()
     if status_code != 0:

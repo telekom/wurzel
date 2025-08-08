@@ -20,7 +20,6 @@ from wurzel.exceptions import EmbeddingAPIException, StepFailed
 from wurzel.step import TypedStep
 from wurzel.steps.embedding.huggingface import HuggingFaceInferenceAPIEmbeddings, PrefixedAPIEmbeddings
 from wurzel.steps.splitter import SimpleSplitterStep
-from wurzel.utils.semantic_splitter import SemanticSplitter
 
 from .data import EmbeddingResult
 
@@ -54,7 +53,6 @@ class EmbeddingStep(
 
     def __init__(self) -> None:
         super().__init__()
-        self.settings = EmbeddingSettings()
         self.embedding = self._select_embedding()
         self.n_jobs = max(1, (os.cpu_count() or 0) - 1)
         # Inject net output_format into 3rd party library Markdown
@@ -62,11 +60,6 @@ class EmbeddingStep(
         self.markdown = Markdown(output_format="plain")  # type: ignore[arg-type]
         self.markdown.stripTopLevelTags = False
         self.settingstopwords = self._load_stopwords()
-        self.splitter = SemanticSplitter(
-            token_limit=self.settings.TOKEN_COUNT_MAX,
-            token_limit_buffer=self.settings.TOKEN_COUNT_BUFFER,
-            token_limit_min=self.settings.TOKEN_COUNT_MIN,
-        )
 
     def _load_stopwords(self) -> list[str]:
         path = self.settings.STEPWORDS_PATH
@@ -77,7 +70,7 @@ class EmbeddingStep(
     def _select_embedding(self) -> HuggingFaceInferenceAPIEmbeddings:
         """Selects the embedding model to be used for generating embeddings.
 
-        Returns
+        Returns:
         -------
         Embeddings
             An instance of the Embeddings class.
@@ -118,7 +111,7 @@ class EmbeddingStep(
         doc : MarkdownDataContract
             The document containing the page content in Markdown format.
 
-        Returns
+        Returns:
         -------
         str
             Cleaned text that can be used as input to the embedding model.
@@ -137,7 +130,7 @@ class EmbeddingStep(
         d : dict
             A dictionary containing the text and context for which to generate the embedding.
 
-        Returns
+        Returns:
         -------
         dict
             A dictionary containing the original text, its embedding, and the source URL.
@@ -174,7 +167,7 @@ class EmbeddingStep(
         stream : StringIO, optional
             The stream to which the plain text is written. If None, a new stream is created.
 
-        Returns
+        Returns:
         -------
         str
             The plain text representation of the markdown element.
@@ -199,7 +192,7 @@ class EmbeddingStep(
         text : str
             The text in which URLs will be replaced.
 
-        Returns
+        Returns:
         -------
         str
             The text with URLs replaced by 'LINK'.

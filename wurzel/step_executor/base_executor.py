@@ -19,6 +19,7 @@ import pandas
 import pandera.typing as patyp
 import pydantic
 from asgi_correlation_id import correlation_id
+from pydantic import SecretStr
 from pydantic_core import ValidationError
 
 from wurzel.datacontract import PanderaDataFrameModel, PydanticModel, datacontract
@@ -96,7 +97,16 @@ def step_env_encapsulation(step_cls: type[TypedStep]):
             raise e from err
         settings_dict = pydantic.BaseModel.model_dump(inner_settings, mode="json", exclude_none=True, exclude_unset=True)
         for field_name, value in settings_dict.items():
-            if isinstance(value, (list, dict, set, tuple)):
+            # Handle SecretStr fields by getting the actual secret value
+            field_info = inner_settings.__class__.model_fields.get(field_name)
+            if field_info and hasattr(field_info, "annotation") and field_info.annotation == SecretStr:
+                # Get the actual SecretStr instance and extract its value
+                secret_value = getattr(inner_settings, field_name)
+                if secret_value is not None:
+                    value = secret_value.get_secret_value()
+                else:
+                    value = ""
+            elif isinstance(value, (list, dict, set, tuple)):
                 value = json.dumps(value)
             else:
                 value = str(value)
@@ -169,7 +179,7 @@ class BaseStepExecutor:
 
         """
         if not path.is_dir():
-            path.mkdir()
+            path.mkdir(parents=True, exist_ok=True)
         obj = _try_sort(obj)
         output_model_class: type[datacontract.DataModel] = step.output_model_class
         return output_model_class.save_to_path(path / f"{hist}", obj)

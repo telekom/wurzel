@@ -55,7 +55,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             log.warning("QDRANT__APIKEY for Qdrant not provided. Thus running in non-credential Mode")
         self.client = QdrantClient(
             location=self.settings.URI,
-            api_key=self.settings.APIKEY,
+            api_key=self.settings.APIKEY.get_secret_value(),
             timeout=self._timeout,
         )
         self.collection_name = self.__construct_next_collection_name()

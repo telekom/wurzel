@@ -16,6 +16,7 @@ from mistletoe.token import Token
 
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import MarkdownException
+from wurzel.utils.markdown_table_splitter import MarkdownTableSplitterUtil
 from wurzel.utils.to_markdown.html2md import MD_RENDER_LOCK
 
 if TYPE_CHECKING:
@@ -32,7 +33,6 @@ LEVEL_MAPPING = {
     block_token.ThematicBreak: 14,
 }
 LEVEL_UNDEFINED = 15
-OPENAI_ENCODING = tiktoken.encoding_for_model("gpt-3.5-turbo")
 
 log = getLogger(__name__)
 
@@ -52,19 +52,6 @@ class DocumentNode(TypedDict):
     text: str
     children: list["DocumentNode"]
     metadata: MetaDataDict
-
-
-def _get_token_len(text: str) -> int:
-    """Get OpenAI Token length.
-
-    Args:
-        text (str): Test to encode
-
-    Returns:
-        int: count of tokens
-
-    """
-    return len(OPENAI_ENCODING.encode(text))
 
 
 def _is_all_children_same_level(children: list[DocumentNode]) -> bool:
@@ -106,15 +93,6 @@ def _is_standalone_a_heading(text):
     if len(childs) != 1:
         return False
     return isinstance(childs[0], block_token.Heading)
-
-
-def _cut_to_tokenlen(text: str, token_len: int) -> str:
-    """Cut Text to token length using OpenAI."""
-    tokens_old = OPENAI_ENCODING.encode(text)
-    if len(tokens_old) > token_len:
-        tokens = tokens_old[:token_len]
-        return OPENAI_ENCODING.decode(tokens)
-    return OPENAI_ENCODING.decode(tokens_old)
 
 
 def _format_markdown_docs(
@@ -169,14 +147,19 @@ class SemanticSplitter:
     token_limit: int
     token_limit_buffer: int
     token_limit_min: int
+    tokenizer_model_encoding: tiktoken.Encoding
+    repeat_table_header_row: bool
 
+    # pylint: disable=too-many-positional-arguments
     def __init__(
         self,
         token_limit: int = 256,
         token_limit_buffer: int = 32,
         token_limit_min: int = 64,
         spacy_model: str = "de_core_news_sm",
-    ) -> None:
+        repeat_table_header_row: bool = True,
+        tokenizer_model: str = "gpt-3.5-turbo",
+    ) -> None:  # pylint: enable=too-many-positional-arguments
         """Initializes the SemanticSplitter class with specified token limits and a spaCy language model.
 
         Args:
@@ -184,6 +167,8 @@ class SemanticSplitter:
             token_limit_buffer (int, optional): The buffer size for token limit to allow flexibility. Defaults to 32.
             token_limit_min (int, optional): The minimum number of tokens required. Defaults to 64.
             spacy_model (str, optional): The name of the spaCy language model to load. Defaults to "de_core_news_sm".
+            repeat_table_header_row (bool, optional): If a table is splitted, the header is repeated. Defaults to True.
+            tokenizer_model (str, optional): The name of the tokenizer model to use for encoding. Defaults to "gpt-3.5-turbo".
 
         Raises:
             OSError: If the specified spaCy model cannot be loaded.
@@ -195,15 +180,54 @@ class SemanticSplitter:
         self.token_limit = token_limit
         self.token_limit_buffer = token_limit_buffer
         self.token_limit_min = token_limit_min
+        self.repeat_table_header_row = repeat_table_header_row
+        self.tokenizer_model_encoding = tiktoken.encoding_for_model(tokenizer_model)
+
+    def _get_token_len(self, text: str) -> int:
+        """Get Token length.
+
+        Args:
+            text (str): Text to encode
+
+        Returns:
+            int: count of tokens
+
+        """
+        return len(self.tokenizer_model_encoding.encode(text))
+
+    def _cut_to_tokenlen(self, text: str, token_len: int, return_discarded_text: bool = False) -> str | tuple[str, str]:
+        """Cut text to max. token length using OpenAI tokenizer.
+
+        Args:
+            text (str): Input text
+            token_len (int): Max. number of tokens for output text
+            return_discarded_text (bool): If enabled, the function returns also the discarded text (beyond token limit). Defaults to False.
+
+        Returns:
+            str | tuple[str, str]: Text limited to max. token count (and the discarded text, depending on `return_discarded_text`)
+
+        """
+        input_tokens = self.tokenizer_model_encoding.encode(text)
+
+        output_tokens = input_tokens[:token_len]  # ensure token length
+        output_text = self.tokenizer_model_encoding.decode(output_tokens)  # convert back to text
+
+        if return_discarded_text:
+            discarded_tokens = input_tokens[token_len:]  # beyond token length
+            discarded_text = self.tokenizer_model_encoding.decode(discarded_tokens)  # convert back to text
+
+            return output_text, discarded_text
+
+        return output_text
 
     def _is_short(self, text: str) -> bool:
-        return _get_token_len(text) <= self.token_limit - self.token_limit_buffer
+        return self._get_token_len(text) <= self.token_limit - self.token_limit_buffer
 
     def _is_table(self, doc: DocumentNode) -> bool:
         return doc["highest_level"] == LEVEL_MAPPING[block_token.Table]
 
     def _is_within_targetlen_w_buffer(self, text: str) -> bool:
-        length = _get_token_len(text)
+        length = self._get_token_len(text)
         return self.token_limit + self.token_limit_buffer >= length >= self.token_limit - self.token_limit_buffer
 
     def _render_doc(self, doc: MisDocument) -> str:
@@ -340,7 +364,7 @@ class SemanticSplitter:
         """
         md_doc = MisDocument(text)
         highest_level, _, _ = self._find_highest_level(md_doc.children)
-        token_len = _get_token_len(text)
+        token_len = self._get_token_len(text)
 
         # Reached max recursion depth
         if max_depth == 0:
@@ -370,7 +394,7 @@ class SemanticSplitter:
                 children=[
                     DocumentNode(
                         highest_level=highest_level,
-                        token_len=_get_token_len(sent),
+                        token_len=self._get_token_len(sent),
                         text=sent,
                         metadata=metadata,
                         children=[],
@@ -390,7 +414,7 @@ class SemanticSplitter:
                 DocumentNode(
                     highest_level=highest_level_child,
                     text=md_child,
-                    token_len=_get_token_len(md_child),
+                    token_len=self._get_token_len(md_child),
                     children=[self._markdown_hierarchy_parser(md_child, metadata, max_depth - 1)],
                     metadata=metadata,
                 )
@@ -411,11 +435,11 @@ class SemanticSplitter:
         """
         token_limit = self.token_limit
         token_buffer = self.token_limit_buffer
-        lenth = _get_token_len(text)
+        lenth = self._get_token_len(text)
         needed_splits = lenth // token_limit
         if not needed_splits:
             return [text]
-        sentences = [(_get_token_len(sent), f"{sent}. ") for sent in re.split(r"\.(?=\s|\\n)", text) if sent.strip()]
+        sentences = [(self._get_token_len(sent), f"{sent}. ") for sent in re.split(r"\.(?=\s|\\n)", text) if sent.strip()]
         chunks: list[str] = []
         chunk = ""
         chunk_len = 0
@@ -425,7 +449,7 @@ class SemanticSplitter:
                     chunks.append(chunk)
                     chunk = ""
                     chunk_len = 0
-                chunks.append(_cut_to_tokenlen(sent, token_limit))  # cut this
+                chunks.append(self._cut_to_tokenlen(sent, token_limit))  # cut this
                 # Last piece of sentence is discarded
                 continue
             if chunk_len + size > token_limit + token_buffer:  # with next to big
@@ -440,12 +464,12 @@ class SemanticSplitter:
                 chunk = ""
                 chunk_len = 0
         if chunk:
-            chunks.append(_cut_to_tokenlen(chunk, token_limit))
+            chunks.append(self._cut_to_tokenlen(chunk, token_limit))
         # chunks = [
         #    (chunk.replace("\n").strip() if not "#" else chunk.strip()) for chunk in chunks
         # ] This was broken
         chunks = [
-            (_cut_to_tokenlen(chunk, token_limit) if not self._is_within_targetlen_w_buffer(chunk) or self._is_short(chunk) else chunk)
+            (self._cut_to_tokenlen(chunk, token_limit) if not self._is_within_targetlen_w_buffer(chunk) or self._is_short(chunk) else chunk)
             for chunk in chunks
         ]
         for chunk in chunks:
@@ -486,7 +510,7 @@ class SemanticSplitter:
             child["text"] = text_w_prev_child
             return_doc += [
                 MarkdownDataContract(
-                    md=_cut_to_tokenlen(child["text"], self.token_limit),
+                    md=self._cut_to_tokenlen(child["text"], self.token_limit),
                     url=child["metadata"]["url"],
                     keywords=child["metadata"]["keywords"],
                 )
@@ -494,7 +518,7 @@ class SemanticSplitter:
             remaining_snipped = ""
         else:
             if not _is_standalone_a_heading(remaining_snipped):
-                if _get_token_len(remaining_snipped) >= self.token_limit_min:
+                if self._get_token_len(remaining_snipped) >= self.token_limit_min:
                     return_doc.append(
                         MarkdownDataContract(
                             md=remaining_snipped,
@@ -519,9 +543,16 @@ class SemanticSplitter:
                 ]
         return remaining_snipped, return_doc
 
-    def _md_data_from_dict_cut(self, doc):
+    def _md_data_from_dict_cut(self, doc: DocumentNode) -> MarkdownDataContract:
+        """Cut text of Markdown document to fit token limit."""
+        text, discarded_text = self._cut_to_tokenlen(doc["text"], self.token_limit, return_discarded_text=True)
+
+        if len(discarded_text) > 0:
+            # Log document and discarded text
+            log.warning("Splitter cut off text from source document", extra={"discarded_text": discarded_text, **doc})
+
         return MarkdownDataContract(
-            md=_cut_to_tokenlen(doc["text"], self.token_limit),
+            md=text,
             url=doc["metadata"]["url"],
             keywords=doc["metadata"]["keywords"],
         )
@@ -531,7 +562,7 @@ class SemanticSplitter:
         doc: DocumentNode,
         recursive_depth: int = 1,
     ) -> list[MarkdownDataContract]:
-        if _get_token_len(doc["text"]) <= self.token_limit_min:
+        if self._get_token_len(doc["text"]) <= self.token_limit_min:
             if recursive_depth == 1:
                 return [self._md_data_from_dict_cut(doc)]
             log.warning("document to short", extra=doc)
@@ -545,11 +576,20 @@ class SemanticSplitter:
             )
             return [self._md_data_from_dict_cut(doc)]
         if self._is_table(doc):
-            log.warning(
-                "found table, that should have been split, cutting off",
-                extra=doc["metadata"],
+            # split table into chunks depending on token length (re-emit table header)
+            table_splitter = MarkdownTableSplitterUtil(
+                token_limit=self.token_limit,
+                enc=self.tokenizer_model_encoding,
+                repeat_header_row=self.repeat_table_header_row,
             )
-            return [self._md_data_from_dict_cut(doc)]
+            return [
+                MarkdownDataContract(
+                    md=chunk_md,
+                    url=doc["metadata"]["url"],
+                    keywords=doc["metadata"]["keywords"],
+                )
+                for chunk_md in table_splitter.split(doc["text"])
+            ]
         if len(doc["children"]) == 0:
             log.warning(
                 "no remaining children. still to big -> Cut by tokenlen",
@@ -569,7 +609,7 @@ class SemanticSplitter:
             first_child_is_highest = idx_highest == 0
             if not first_child_is_highest and highest_child_is_heading:
                 text_until_highest_child = "\n".join([c["text"] for c in children[:idx_highest]])
-                token_len = _get_token_len(text_until_highest_child)
+                token_len = self._get_token_len(text_until_highest_child)
                 max_level = max(c["highest_level"] for c in children[:idx_highest])
                 new_doc = DocumentNode(
                     highest_level=max_level,
@@ -591,10 +631,10 @@ class SemanticSplitter:
             return_doc += returned_docs
 
         # add potential short remaining spillovers
-        if _get_token_len(remaining_snipped) >= self.token_limit_min:
+        if self._get_token_len(remaining_snipped) >= self.token_limit_min:
             return_doc += [
                 MarkdownDataContract(
-                    md=_cut_to_tokenlen(remaining_snipped, self.token_limit),
+                    md=self._cut_to_tokenlen(remaining_snipped, self.token_limit),
                     url=doc["metadata"]["url"],
                     keywords=doc["metadata"]["keywords"],
                 )

@@ -38,7 +38,7 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
             )
             session.mount("https://", HTTPAdapter(max_retries=retries))
             payload = {
-                "api_key": self.settings.TOKEN,
+                "api_key": self.settings.TOKEN.get_secret_value(),
                 "url": url_item.url,
                 "device_type": self.settings.DEVICE_TYPE,
                 "follow_redirect": str(self.settings.FOLLOW_REDIRECT).lower(),
@@ -68,7 +68,7 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
                 return None
 
             try:
-                md = to_markdown(self._filter_body(r.text))
+                md = to_markdown(self._filter_body(r.text), self.settings.HTML2MD_SETTINGS)
             except (KeyError, IndexError):
                 if recursion_depth > self.settings.RETRY:
                     log.warning("xpath retry failed", extra={"filter": self.settings.XPATH, "url": url_item.url})
