@@ -15,7 +15,7 @@ import os
 import re
 import socket
 from datetime import datetime
-
+from pathlib import Path
 import httpx
 import openai
 import pandas as pd
@@ -53,7 +53,11 @@ class JsonArrayLogHandler(logging.Handler):
 
 
 # Setup Logger
-LOG_DIR = "/Users/A1167082/Desktop/qdrant_compare_logs"
+#LOG_DIR = "/Users/A1167082/Desktop/qdrant_compare_logs"
+REPO_ROOT = Path(__file__).resolve().parent.parent  # ggf. anpassen
+LOG_DIR = REPO_ROOT / "qdrant_compare_logs"
+
+
 os.makedirs(LOG_DIR, exist_ok=True)
 timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 log_path = os.path.join(LOG_DIR, f"compare_log_{timestamp}.json")
