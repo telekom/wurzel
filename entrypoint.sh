@@ -33,7 +33,7 @@ jq_run "git config --global user.name '${GIT_USER:-wurzel}'"
 if [ -d ".dvc" ]; then
     echo "DVC already initialized" | jq -MRcs "{message: ., level: \"INFO\",logger:\"$0/dvc\", args: \"init\"}"
 else
-    jq_run "dvc init" noexit
+    jq_run "dvc init"
 fi
 wurzel generate $WURZEL_PIPELINE > $DVC_FILE || exit 1
 mkdir -p $DVC_DATA_PATH
