@@ -10,26 +10,16 @@ services:
       dockerfile: Dockerfile
       args:
         - PYTHON_VERSION=3.11
-    image: test_wurzel
     container_name: wurzel-demo
-    environment:
-      - GIT_USER=wurzel-demo
-      - GIT_MAIL=demo@example.com
-      - DVC_DATA_PATH=/usr/app/data
-      - DVC_FILE=/usr/app/dvc.yaml
-    working_dir: /usr/app
-    command: ["./entrypoint.sh"]
-
-  wurzel-pipeline-extended:
-    extends: wurzel-pipeline
-    container_name: wurzel-demo-extended
     environment:
       - MANUALMARKDOWNSTEP__FOLDER_PATH=/usr/app/demo-data
       - WURZEL_PIPELINE=pipelinedemo:pipeline
+    working_dir: /usr/app
     volumes:
       - ./demo-data:/usr/app/demo-data:ro
       - ./pipelinedemo.py:/usr/app/pipelinedemo.py:ro
       - ./output:/usr/app/data
-    profiles:
-      - extended
-# run with `docker-compose --profile extended up`
+    command: ["./entrypoint.sh"]
+
+
+# run with `docker-compose up --build`

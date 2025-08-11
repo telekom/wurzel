@@ -28,9 +28,13 @@ jq_run () { # Usage: jq_run "cmd with args" (noexit)
 }
 jq_run "git init"
 jq_run "git config --global --add safe.directory /usr/app"
-jq_run "git config --global user.email '$GIT_MAIL'"
-jq_run "git config --global user.name '$GIT_USER'"
-jq_run "dvc init" noexit
+jq_run "git config --global user.email '${GIT_MAIL:-wurzel@example.com}'"
+jq_run "git config --global user.name '${GIT_USER:-wurzel}'"
+if [ -d ".dvc" ]; then
+    echo "DVC already initialized" | jq -MRcs "{message: ., level: \"INFO\",logger:\"$0/dvc\", args: \"init\"}"
+else
+    jq_run "dvc init"
+fi
 wurzel generate $WURZEL_PIPELINE > $DVC_FILE || exit 1
 mkdir -p $DVC_DATA_PATH
 dvc repro -q || exit 1

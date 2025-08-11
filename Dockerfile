@@ -107,7 +107,10 @@ USER appuser
 
 RUN git config --global user.name "wurzel" && \
     git config --global user.email "wurzel@example.com" && \
-    git config --global init.defaultBranch main
+    git config --global init.defaultBranch main && \
+    git config --global init.templatedir ''
+# init.templatedir ''  to avoid using the default template directory
+
 
 
 
