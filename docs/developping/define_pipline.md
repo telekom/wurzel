@@ -12,9 +12,11 @@ Wurzel optimizes the execution of these pipelines automatically based on depende
 
 To define a pipeline:
 
-1. Instantiate your steps using the helper WZ(...).
-2. Chain them together using >>.
+1. Use step classes directly without any wrapper.
+2. Chain them together using `>>`.
 3. Return the final step (which implicitly carries the full chain).
+
+> **Note**: As of version 2.x, you can use step classes directly without the `WZ()` wrapper. The old syntax using `WZ(StepClass)` is still supported for backwards compatibility, but the new direct syntax `StepClass` is recommended for cleaner code.
 
 ### 📦 Example
 
@@ -23,32 +25,19 @@ from wurzel.steps import (
     EmbeddingStep,
     QdrantConnectorStep,
 )
-from wurzel.utils import WZ
 from wurzel.steps.manual_markdown import ManualMarkdownStep
-from wurzel.step import TypedStep
 
-def pipeline() -> TypedStep:
-    """Defines a Wurzel pipeline that embeds manual markdown and stores it in Qdrant."""
-
-    # Step 1: Load markdown input manually
-    md = WZ(ManualMarkdownStep)
-
-    # Step 2: Generate embeddings from markdown content
-    embed = WZ(EmbeddingStep)
-
-    # Step 3: Store embeddings in a Qdrant vector database
-    db = WZ(QdrantConnectorStep)
-
-    # Chain the steps
-    md >> embed >> db
-
-    # Return the final step in the chain
-    return db
+# Define the pipeline using direct class chaining
+# Steps will be executed in dependency order:
+# 1. ManualMarkdownStep loads markdown input
+# 2. EmbeddingStep generates embeddings from markdown content
+# 3. QdrantConnectorStep stores embeddings in vector database
+pipeline = ManualMarkdownStep >> EmbeddingStep >> QdrantConnectorStep
 ```
 
 ## 🔄 Execution Order
 
-Even though the function returns only the last step (db), Wurzel automatically resolves and runs all upstream dependencies in the correct order:
+Wurzel automatically resolves and runs all upstream dependencies in the correct order:
 
 1. ManualMarkdownStep runs first to provide data.
 2. EmbeddingStep transforms that data into vectors.
