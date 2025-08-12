@@ -23,6 +23,11 @@ class StepC(TypedStep[NoSettings, PydanticModel, PydanticModel]):
         return PydanticModel()
 
 
+class StepError:
+    def run(self):
+        return "hello"
+
+
 @pytest.fixture(autouse=True)
 def reset_class_dependencies():
     """Reset class-level dependencies before each test."""
@@ -65,6 +70,12 @@ def test_class_chain():
     # Test chaining classes
     result = StepC >> StepB >> StepA
     assert len(result.traverse()) == 3
+
+
+def test_class_chain_with_error():
+    # Test chaining with a class that raises an error
+    with pytest.raises(TypeError):
+        StepError >> StepA
 
 
 def test_single_wrapper():

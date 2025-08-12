@@ -29,7 +29,6 @@ class StepMeta(abc.ABCMeta):
 
     def __rshift__(cls, other):  # type: ignore
         """Allow Class >> Class syntax."""
-        # Handle class-level dependencies
         if isinstance(other, type):
             # Add this class as a dependency to the other class
             if not hasattr(other, "_class_required_steps"):
@@ -38,8 +37,6 @@ class StepMeta(abc.ABCMeta):
 
             # Return the target class (other) with dependency relationship established
             return other
-        # For instances, we can't handle this at the metaclass level
-        # This should not normally happen in practice
         raise TypeError("Cannot use class >> instance syntax")
 
     @property
