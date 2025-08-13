@@ -57,3 +57,9 @@ def test_hf_adapter_known_ids_gpt2():
     text = "Hello world"
     ids = tok.encode(text)
     assert ids == [0, 35378, 8999, 2]  # E5 tokens
+
+
+@pytest.mark.skipif(transformers_missing or tiktoken_missing, reason="transformers and tiktoken not installed")
+def test_expection_on_unsupported_tokenizer_name():
+    with pytest.raises(OSError):  # hub not found error
+        Tokenizer.from_name("this-tokenizer-does-not-exist-in-hf-and-tiktoken")

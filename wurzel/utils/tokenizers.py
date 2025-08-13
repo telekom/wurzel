@@ -1,12 +1,15 @@
 # SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
 #
 # SPDX-License-Identifier: Apache-2.0
+import logging
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     import tiktoken
     import transformers
+
+logger = logging.getLogger(__name__)
 
 
 class Tokenizer(ABC):
@@ -66,20 +69,36 @@ class Tokenizer(ABC):
         try:
             import tiktoken  # pylint: disable=import-outside-toplevel
 
-            # First try by model name
-            encoding = tiktoken.encoding_for_model(name)
-            return TiktokenTokenizer(encoding)
-        except (KeyError, ValueError):
+            tiktoken_installed = True
+        except ImportError:
+            tiktoken_installed = False
+
+        if tiktoken_installed:
+            try:
+                # Try name as model name, like "gpt-4o"
+                encoding_name = tiktoken.encoding_name_for_model(name)
+            except (ValueError, KeyError):
+                # Try name as encoding name, like "cl100k_base"
+                encoding_name = name
+
             try:
                 # If it's a raw encoding name like "cl100k_base"
-                encoding = tiktoken.get_encoding(name)
+                encoding = tiktoken.get_encoding(encoding_name)
                 return TiktokenTokenizer(encoding)
-            except (KeyError, ValueError):
-                # Default to HF tokenizer
-                from transformers import AutoTokenizer  # pylint: disable=import-outside-toplevel
+            except (ValueError, KeyError):
+                logger.warning(f"Tokenizer name '{encoding_name}' is not available with tiktoken, defaulting to HF")
+        else:
+            logger.warning("Tiktoken is not installed, defaulting to HF")
 
-                hf_tok = AutoTokenizer.from_pretrained(name)
-                return HFTokenizer(hf_tok)
+        # Defaulting to HF tokenizer
+        try:
+            from transformers import AutoTokenizer  # pylint: disable=import-outside-toplevel
+
+            hf_tok = AutoTokenizer.from_pretrained(name)
+            return HFTokenizer(hf_tok)
+
+        except ImportError as e:
+            raise RuntimeError(f"Could not load tokenizer '{name}': tiktoken or transformers is not installed.") from e
 
 
 class TiktokenTokenizer(Tokenizer):
@@ -93,13 +112,13 @@ class TiktokenTokenizer(Tokenizer):
         """
         self._enc = encoding
 
-    def encode(self, text: str, **kwargs) -> list[int]:
+    def encode(self, text: str) -> list[int]:
         """Tokenize text into token IDs."""
-        return self._enc.encode(text, **kwargs)
+        return self._enc.encode(text)
 
-    def decode(self, tokens: list[int], **kwargs) -> str:
+    def decode(self, tokens: list[int]) -> str:
         """Convert token IDs back into text."""
-        return self._enc.decode(tokens, **kwargs)
+        return self._enc.decode(tokens)
 
 
 class HFTokenizer(Tokenizer):
@@ -110,14 +129,13 @@ class HFTokenizer(Tokenizer):
 
         Args:
             tokenizer: A Hugging Face tokenizer instance.
-            skip_special_tokens: Whether to remove special tokens during decoding.
         """
         self._tok = tokenizer
 
-    def encode(self, text: str, **kwargs) -> list[int]:
+    def encode(self, text: str) -> list[int]:
         """Tokenize text into token IDs."""
-        return self._tok.encode(text, **kwargs)
+        return self._tok.encode(text)
 
-    def decode(self, tokens: list[int], **kwargs) -> str:
+    def decode(self, tokens: list[int]) -> str:
         """Convert token IDs back into text."""
-        return self._tok.decode(tokens, **kwargs)
+        return self._tok.decode(tokens)
