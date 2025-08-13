@@ -196,7 +196,7 @@ class SemanticSplitter:
         return len(self.tokenizer.encode(text))
 
     def _cut_to_tokenlen(self, text: str, token_len: int, return_discarded_text: bool = False) -> str | tuple[str, str]:
-        """Cut text to max. token length using OpenAI tokenizer.
+        """Cut text to max. token length using the current tokenizer.
 
         Args:
             text (str): Input text
