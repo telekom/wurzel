@@ -123,5 +123,5 @@ def test_spacy_sentence_splitter_basic(spacy_splitter, test_cases: list[dict]):
         pytest.param(REGEX_TEST_CASES, id="Regex test cases (less challenging than Spacy test cases)"),
     ],
 )
-def test_sentence_splitter(regex_splitter, test_cases: list[dict]):
+def test_regex_sentence_splitter(regex_splitter, test_cases: list[dict]):
     assert_splitter_test_cases(splitter=regex_splitter, test_cases=test_cases)

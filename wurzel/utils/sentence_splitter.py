@@ -61,11 +61,9 @@ class SentenceSplitter(ABC):
             nlp = spacy.load(name)
 
             return SpacySentenceSplitter(nlp)
-        except (ValueError, KeyError) as e:
-            raise ValueError(f"Sentence splitter '{name}' is not available with SpaCy") from e
 
-        except ImportError as e:
-            raise RuntimeError(f"Could not load sentence splitter '{name}': spacy is not installed.") from e
+        except (ValueError, KeyError, OSError) as e:
+            raise OSError(f"Sentence splitter '{name}' is not available with SpaCy") from e
 
 
 class SpacySentenceSplitter(SentenceSplitter):
@@ -178,9 +176,6 @@ class RegexSentenceSplitter(SentenceSplitter):
 
     def get_sentences(self, text: str) -> list[str]:
         """Split text into sentences."""
-        if not text:
-            return []
-
         normalized = re.sub(r"[ \t]*\n[ \t]*", " ", text.strip())
         parts = self._split_re.split(normalized)
 

@@ -211,4 +211,5 @@ REGEX_TEST_CASES = [
         "input_text": "She left in Sept. 2020. Then, in Oct., she returned.",
         "output_sentences": ["She left in Sept. 2020.", "Then, in Oct., she returned."],
     },
+    {"input_text": "Hello..!   World.", "output_sentences": ["Hello..!", "World."]},
 ]
