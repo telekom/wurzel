@@ -49,6 +49,7 @@ dependencies= [
     "lxml==5.2.*",
     "marshmallow<4.0.0",
     "hera >=5.20.1",
+    "PyYAML",
 ]
 
 [project.optional-dependencies]
