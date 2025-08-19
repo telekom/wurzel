@@ -8,7 +8,7 @@ import pytest
 from wurzel.steps.splitter import SimpleSplitterStep
 from wurzel.utils.sentence_splitter import RegexSentenceSplitter, SentenceSplitter, SpacySentenceSplitter
 
-from .sentence_splitter_test_cases import BASIC_TEST_CASES, REGEX_TEST_CASES
+from .sentence_splitter_test_cases import BASIC_TEST_CASES, DE_TEST_CASES, EL_TEST_CASES, HR_TEST_CASES, PL_TEST_CASES, REGEX_TEST_CASES
 
 # Helpers for skip conditions
 spacy_missing = importlib.util.find_spec("spacy") is None
@@ -98,19 +98,15 @@ def test_simple_splitter_step_settings(env):
     assert step.settings.SENTENCE_SPLITTER_MODEL == "regex"
 
 
-# TODO
-# def test_embedding_splitter_step_settings(env):
-#     env.set("SENTENCE_SPLITTER_MODEL", "regex")
-
-#     step = EmbeddingStep()
-#     assert step.settings.SENTENCE_SPLITTER_MODEL == "regex"
-
-
 @pytest.mark.skipif(spacy_missing or spacy_default_model_missing, reason="spacy or model not installed")
 @pytest.mark.parametrize(
     "test_cases",
     [
         pytest.param(BASIC_TEST_CASES, id="Basic test cases (mostly English)"),
+        pytest.param(DE_TEST_CASES, id="German test cases"),
+        pytest.param(HR_TEST_CASES, id="Croatian test cases"),
+        pytest.param(PL_TEST_CASES, id="Polish test cases"),
+        pytest.param(EL_TEST_CASES, id="Greek test cases"),
     ],
 )
 def test_spacy_sentence_splitter_basic(spacy_splitter, test_cases: list[dict]):

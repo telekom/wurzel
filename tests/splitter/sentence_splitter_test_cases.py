@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
 #
 # SPDX-License-Identifier: Apache-2.0
+# -*- coding: utf-8 -*-
 
 BASIC_TEST_CASES = [
     {"input_text": "Hello world.", "output_sentences": ["Hello world."]},
@@ -189,6 +190,7 @@ REGEX_TEST_CASES = [
         "input_text": "Dr. Smith went to Washington. He arrived at 3.14 p.m. Amazing!",
         "output_sentences": ["Dr. Smith went to Washington.", "He arrived at 3.14 p.m.", "Amazing!"],
     },
+    # TODO fails with current default splitter
     # {
     #     "input_text": "He said, \"It's done.\" But was it?",
     #     "output_sentences": [
@@ -212,4 +214,124 @@ REGEX_TEST_CASES = [
         "output_sentences": ["She left in Sept. 2020.", "Then, in Oct., she returned."],
     },
     {"input_text": "Hello..!   World.", "output_sentences": ["Hello..!", "World."]},
+]
+
+DE_TEST_CASES = [
+    {"input_text": "Hallo Welt.", "output_sentences": ["Hallo Welt."]},
+    {
+        "input_text": (
+            "Besuchen Sie https://example.com/docs/v1.2?lang=en oder schreiben Sie an support@example.co.uk. "
+            "In URLs oder E-Mails sollte nicht getrennt werden."
+        ),
+        "output_sentences": [
+            "Besuchen Sie https://example.com/docs/v1.2?lang=en oder schreiben Sie an support@example.co.uk.",
+            "In URLs oder E-Mails sollte nicht getrennt werden.",
+        ],
+    },
+    {
+        "input_text": "„Das ist ein Zitat“, sagte sie. „Ist es klar?“, fragte er.",
+        "output_sentences": ["„Das ist ein Zitat“, sagte sie.", "„Ist es klar?“, fragte er."],
+    },
+    {
+        "input_text": "Warte... meinst du das ernst? Ja... völlig ernst.",
+        "output_sentences": ["Warte... meinst du das ernst?", "Ja... völlig ernst."],
+    },
+    {
+        "input_text": "Emojis sind okay 🙂. Auch Emoticons ;-). Gemischt? Klar!",
+        "output_sentences": [
+            "Emojis sind okay 🙂.",
+            "Auch Emoticons ;-).",
+            "Gemischt?",
+            "Klar!",
+        ],
+    },
+]
+
+HR_TEST_CASES = [
+    {"input_text": "Pozdrav svijete.", "output_sentences": ["Pozdrav svijete."]},
+    # TODO fails with current default splitter
+    # {
+    #     "input_text": (
+    #         "Posjetite https://example.com/docs/v1.2?lang=en ili pišite na support@example.co.uk. "
+    #         "U URL-ovima ili e-mail adresama ne bi trebalo dijeliti."
+    #     ),
+    #     "output_sentences": [
+    #         "Posjetite https://example.com/docs/v1.2?lang=en ili pišite na support@example.co.uk.",
+    #         "U URL-ovima ili e-mail adresama ne bi trebalo dijeliti.",
+    #     ],
+    # },
+    {
+        "input_text": "„Ovo je citat“, rekla je. „Je li jasno?“, upitao je.",
+        "output_sentences": ["„Ovo je citat“, rekla je.", "„Je li jasno?“, upitao je."],
+    },
+    # TODO fails with current default splitter
+    #   {
+    #     "input_text": "Čekaj... misliš li ozbiljno? Da... potpuno ozbiljno.",
+    #     "output_sentences": [
+    #       "Čekaj... misliš li ozbiljno?",
+    #       "Da... potpuno ozbiljno."
+    #     ]
+    #   },
+    {
+        "input_text": "Emojiji su u redu 🙂. Isto vrijedi i za emotikone ;-). Pomiješano? Naravno!",
+        "output_sentences": ["Emojiji su u redu 🙂.", "Isto vrijedi i za emotikone ;-).", "Pomiješano?", "Naravno!"],
+    },
+]
+
+PL_TEST_CASES = [
+    {"input_text": "Witaj świecie.", "output_sentences": ["Witaj świecie."]},
+    # TODO fails with current default splitter
+    # {
+    #     "input_text": (
+    #         "Odwiedź https://example.com/docs/v1.2?lang=en lub napisz na support@example.co.uk. "
+    #         "W adresach URL ani e-mailach nie należy dzielić zdań."
+    #     ),
+    #     "output_sentences": [
+    #         "Odwiedź https://example.com/docs/v1.2?lang=en lub napisz na support@example.co.uk.",
+    #         "W adresach URL ani e-mailach nie należy dzielić zdań.",
+    #     ],
+    # },
+    {
+        "input_text": "„To jest cytat”, powiedziała. „Czy to jasne?”, zapytał.",
+        "output_sentences": ["„To jest cytat”, powiedziała.", "„Czy to jasne?”, zapytał."],
+    },
+    {
+        "input_text": "Czekaj... mówisz poważnie? Tak... całkiem poważnie.",
+        "output_sentences": ["Czekaj... mówisz poważnie?", "Tak... całkiem poważnie."],
+    },
+    {
+        "input_text": "Emoji są w porządku 🙂. Podobnie emotikony ;-). Mieszane? Oczywiście!",
+        "output_sentences": ["Emoji są w porządku 🙂.", "Podobnie emotikony ;-).", "Mieszane?", "Oczywiście!"],
+    },
+]
+
+EL_TEST_CASES = [
+    {"input_text": "Γειά σου κόσμε.", "output_sentences": ["Γειά σου κόσμε."]},
+    # TODO fails with current default splitter
+    #   {
+    #     "input_text": ("Επισκεφθείτε https://example.com/docs/v1.2?lang=en ή γράψτε στο support@example.co.uk. "
+    #                    "Δεν πρέπει να γίνεται διαχωρισμός μέσα σε URL ή e-mail."),
+    #     "output_sentences": [
+    #       "Επισκεφθείτε https://example.com/docs/v1.2?lang=en ή γράψτε στο support@example.co.uk.",
+    #       "Δεν πρέπει να γίνεται διαχωρισμός μέσα σε URL ή e-mail."
+    #     ]
+    #   },
+    {
+        "input_text": "«Αυτό είναι ένα απόσπασμα», είπε. «Είναι σαφές;», ρώτησε.",
+        "output_sentences": ["«Αυτό είναι ένα απόσπασμα», είπε.", "«Είναι σαφές;», ρώτησε."],
+    },
+    {
+        "input_text": "Περίμενε... μιλάς σοβαρά; Ναι... απολύτως σοβαρά.",
+        "output_sentences": ["Περίμενε... μιλάς σοβαρά;", "Ναι... απολύτως σοβαρά."],
+    },
+    # TODO fails with current default splitter
+    #   {
+    #     "input_text": "Τα emoji είναι εντάξει 🙂. Το ίδιο και τα emoticons ;-). Μικτά; Φυσικά!",
+    #     "output_sentences": [
+    #       "Τα emoji είναι εντάξει 🙂.",
+    #       "Το ίδιο και τα emoticons ;-).",
+    #       "Μικτά;",
+    #       "Φυσικά!"
+    #     ]
+    #   }
 ]
