@@ -18,7 +18,10 @@ logger = logging.getLogger(__name__)
 
 
 class MarkdownDataContract(PydanticModel):
-    """contract of the input of the EmbeddingStep."""
+    """A data contract of the input of the EmbeddingStep representing a document in Markdown format.
+
+    The document consists have the Markdown body (document content) and additional metadata (keywords, url).
+    """
 
     md: str
     keywords: str
@@ -36,10 +39,10 @@ class MarkdownDataContract(PydanticModel):
 
     @classmethod
     def from_file(cls, path: Path, url_prefix: str = "") -> Self:
-        """Load MdContract from .md file.
+        """Load MdContract from .md file and parse YAML metadata from header.
 
         Args:
-            path (Path): Path to file
+            path (Path): Path to a Markdown file.
 
         Returns:
             MarkdownDataContract: The file that was loaded
