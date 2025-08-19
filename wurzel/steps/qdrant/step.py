@@ -257,12 +257,12 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
     def _should_skip_collection(self, name: str, alias_pointed: set[str], telemetry_collections: list) -> bool:
         """Check if a collection should not be deleted."""
         if name in alias_pointed:
-            log.warning("Skipping deletion: still aliased", extra={"collection": name})
+            log.info("Skipping deletion: still aliased", extra={"collection": name})
             return True
 
         usage_info = next((col for col in telemetry_collections if col.id == name), None)
         if usage_info and self._was_recently_used_via_shards(usage_info):
-            log.warning("Skipping deletion: recently accessed", extra={"collection": name})
+            log.info("Skipping deletion: recently accessed", extra={"collection": name})
             return True
 
         return False

@@ -49,11 +49,13 @@ class QdrantSettings(Settings):
         "params": {},
     }
     APIKEY: SecretStr = SecretStr("")
-    REPLICATION_FACTOR: int = Field(default=3, gt=0)
-    BATCH_SIZE: int = Field(default=1024, gt=0)
-    TELEMETRY_DETAILS_LEVEL: int = 3
-    COLLECTION_USAGE_RETENTION_DAYS: int = 2
-    REQUEST_TIMEOUT: int = 20
+    REPLICATION_FACTOR: int = Field(default=3, gt=0, description="Number of replicas for each Qdrant collection.")
+    BATCH_SIZE: int = Field(default=1024, gt=0, description="Number of vector points to upsert into Qdrant in a single batch.")
+    TELEMETRY_DETAILS_LEVEL: int = Field(
+        default=3, description="Level of detail for telemetry data requested from Qdrant. Higher values may include more metrics."
+    )
+    COLLECTION_USAGE_RETENTION_DAYS: int = Field(default=2, description="Number of days to consider a collection as recently used.")
+    REQUEST_TIMEOUT: int = Field(default=20, description="Timeout (in seconds) for requests sent to Qdrant (e.g., telemetry).")
 
     @field_validator("SEARCH_PARAMS", "INDEX_PARAMS", mode="before")
     @classmethod

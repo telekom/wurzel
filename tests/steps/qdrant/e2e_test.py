@@ -82,32 +82,42 @@ def test_qdrant_connector_one_no_csv(input_output_folder: tuple[Path, Path]):
 
 
 @pytest.mark.parametrize(
-    "hist_len, step_run, aliased_collection,count_remaining_collection",
+    "hist_len, step_run, aliased_collections,recently_used ,count_remaining_collection, collections",
     [
-        (3, 5, "dummy_v1", 5),
-        (1, 4, "dummy_v2", 2),
+        (3, 5, ["dummy_v1"],["dummy_v1"], 4, ["dummy_v1", "dummy_v3", "dummy_v4", "dummy_v5"]),
+        (1, 4, ["dummy_v2"],["dummy_v2"], 2, ["dummy_v1", "dummy_v2"]),
+        (2, 5, ["dummy_v2"],["dummy_v1"],4, ["dummy_v1", "dummy_v2", "dummy_v4", "dummy_v5"]),
+        (2, 5, ["dummy_v2"],["dummy_v4"],3, ["dummy_v1", "dummy_v2", "dummy_v4", "dummy_v5"]),
+        (1, 5, ["dummy_v1", "dummy_v4"], [], 3, ["dummy_v1","dummy_v2","dummy_v3","dummy_v4","dummy_v5"]),
     ],
 )
-def test_qdrant_collection_retirement(
-    input_output_folder: tuple[Path, Path], env, dummy_collection, hist_len, step_run, aliased_collection, count_remaining_collection
+def test_qdrant_collection_retirement_with_missing_versions(
+    input_output_folder: tuple[Path, Path],
+    env,
+    dummy_collection,
+    hist_len,
+    step_run,
+    aliased_collections,
+    recently_used,
+    count_remaining_collection,
+    collections,
 ):
     input_path, output_path = input_output_folder
     env.set("COLLECTION_HISTORY_LEN", str(hist_len))
     input_file = input_path / "qdrant_at.csv"
     output_file = output_path / "QdrantConnectorStep"
     shutil.copy("./tests/data/embedded.csv", input_file)
+
     client = QdrantClient(location=":memory:")
     old_close = client.close
     client.close = print
+
     old_time = (datetime.now(timezone.utc) - timedelta(days=10)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
     recent_time = (datetime.now(timezone.utc) - timedelta(hours=6)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
     collection_data = [
-        ("dummy_v1", old_time),
-        ("dummy_v2", recent_time),
-        ("dummy_v3", old_time),
-        ("dummy_v4", old_time),
-        ("dummy_v5", old_time),
+        (col_id, recent_time if col_id in recently_used else old_time)
+        for col_id in collections
     ]
 
     mock_telemetry = InlineResponse2002(
@@ -133,7 +143,13 @@ def test_qdrant_collection_retirement(
         )
     )
 
-    mock_aliases = CollectionsAliasesResponse(aliases=[AliasDescription(alias_name=aliased_collection, collection_name=aliased_collection)])
+    mock_aliases = CollectionsAliasesResponse(
+        aliases=[
+            AliasDescription(alias_name=col, collection_name=col) for col in aliased_collections
+        ]
+    )
+
+
     with unittest.mock.patch("wurzel.steps.qdrant.step.QdrantConnectorStep._get_telemetry", return_value=mock_telemetry):
         with unittest.mock.patch("wurzel.steps.qdrant.step.QdrantClient.get_aliases", return_value=mock_aliases):
             with unittest.mock.patch("wurzel.steps.qdrant.step.QdrantClient") as mock:
@@ -145,7 +161,8 @@ def test_qdrant_collection_retirement(
                 client.close = old_close
                 remaining = [col.name for col in client.get_collections().collections]
                 assert len(remaining) == count_remaining_collection
-                assert aliased_collection in remaining
+                for aliased in aliased_collections:
+                    assert aliased in remaining
 
 
 def test_qdrant_get_collections_with_ephemerals(input_output_folder: tuple[Path, Path], env, dummy_collection):
