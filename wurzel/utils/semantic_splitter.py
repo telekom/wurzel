@@ -563,9 +563,8 @@ class SemanticSplitter:
         recursive_depth: int = 1,
     ) -> list[MarkdownDataContract]:
         if self._get_token_len(doc["text"]) <= self.token_limit_min:
-            if recursive_depth == 1:
-                return [self._md_data_from_dict_cut(doc)]
-            log.warning("document to short", extra=doc)
+            # Skipping document since it is below token minium
+            log.warning("document to short", extra={"token_limit_min": self.token_limit_min, **doc})
             return []
         if self._is_within_targetlen_w_buffer(doc["text"]):
             return [self._md_data_from_dict_cut(doc)]

@@ -14,7 +14,9 @@ from wurzel.utils.semantic_splitter import (
 
 @pytest.fixture(scope="function")
 def Splitter(env):
-    yield SemanticSplitter()
+    yield SemanticSplitter(
+        token_limit_min=16,  # we use a non-default minimum to have shorter test cases
+    )
 
 
 def test_splitter(Splitter):
@@ -514,3 +516,27 @@ Duis consectetur ex elementum arcu volutpat, vitae rutrum risus vehicula. Donec 
     result = step.run(test_data)
     assert len(result) > 2
     assert isinstance(result[0], MarkdownDataContract)
+
+
+def test_splitter_empty_text(Splitter):
+    contract = MarkdownDataContract(
+        md="",
+        keywords="PurpureusTV Fehlercode F30102",
+        url="https://www.lorem-ipsum.com/aviar/geraete-zubehoer/lorem-tv-geraete/fehlercodes",
+    )
+
+    results = Splitter.split_markdown_document(contract)
+
+    assert len(results) == 0, "Splitter should not return empty docs"
+
+
+def test_splitter_too_short_text(Splitter):
+    contract = MarkdownDataContract(
+        md="This is non empty but too short.",
+        keywords="PurpureusTV Fehlercode F30102",
+        url="https://www.lorem-ipsum.com/aviar/geraete-zubehoer/lorem-tv-geraete/fehlercodes",
+    )
+
+    results = Splitter.split_markdown_document(contract)
+
+    assert len(results) == 0, "Splitter should not return too short docs"
