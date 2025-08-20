@@ -71,7 +71,7 @@ class MarkdownDataContract(PydanticModel):
         else:
             # No YAML metadata, whole markdown string as body
             md_body = md
-            logger.warning(f"MarkdownDataContract has no YAML metadata: {path}", extra={"path": path, "md": md})
+            logger.info(f"MarkdownDataContract has no YAML metadata: {path}", extra={"path": path, "md": md})
 
         return MarkdownDataContract(
             md=md_body,
