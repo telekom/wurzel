@@ -226,26 +226,25 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
     def _retire_collections(self) -> None:
         """Retire (delete) historical Qdrant collections that.
 
-        - Are older than the configured history length, AND
-        - Are not currently targeted by an alias, AND
+        - Are not among the last N (per COLLECTION_HISTORY_LEN),
+        - Are not currently targeted by an alias,
         - Have not been recently used (per telemetry).
-
         """
         collections_versioned: dict[int, str] = self._get_collection_versions()
         if not collections_versioned:
             return
 
-        latest_version = max(collections_versioned)
-        retirement_threshold = latest_version - self.settings.COLLECTION_HISTORY_LEN
+        # Determine the N latest versions to retain (even if versions have gaps)
+        sorted_versions = sorted(collections_versioned.keys())  # e.g., [1, 3, 6, 7, 8]
+        versions_to_keep = set(sorted_versions[-self.settings.COLLECTION_HISTORY_LEN :])  # e.g., {3, 6, 7, 8}
 
         alias_pointed = {alias.collection_name for alias in self.client.get_aliases().aliases}
+
         # pylint: disable-next=no-member
-        telemetry_collections: InlineResponse2002 = self._get_telemetry(
-            details_level=self.settings.TELEMETRY_DETAILS_LEVEL
-        ).result.collections.collections
+        telemetry_collections = self._get_telemetry(details_level=self.settings.TELEMETRY_DETAILS_LEVEL).result.collections.collections
 
         for version, collection_name in collections_versioned.items():
-            if version > retirement_threshold:
+            if version in versions_to_keep:
                 continue
 
             if self._should_skip_collection(collection_name, alias_pointed, telemetry_collections):
