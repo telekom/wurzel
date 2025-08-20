@@ -85,6 +85,8 @@ class SpacySentenceSplitter(SentenceSplitter):
 class RegexSentenceSplitter(SentenceSplitter):
     """A sentence splitter based on regular expressions.
 
+    NOTE: Using the regex splitter is not recommended since it based on very simple heuristics.
+
     Heuristics:
     - Split after sentence-ending punctuation (. ! ? …) and any closing quotes/brackets.
     - Only split if the next non-space token *looks* like a sentence start

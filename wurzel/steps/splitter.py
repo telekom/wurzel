@@ -13,7 +13,7 @@ from pydantic import Field
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import MarkdownException, SplittException
 from wurzel.step import Settings, TypedStep
-from wurzel.utils.semantic_splitter import SemanticSplitter
+from wurzel.utils.splitters.semantic_splitter import SemanticSplitter
 
 # Local application/library specific imports
 

@@ -6,7 +6,7 @@ import importlib.util
 import pytest
 
 from wurzel.steps.splitter import SimpleSplitterStep
-from wurzel.utils.sentence_splitter import RegexSentenceSplitter, SentenceSplitter, SpacySentenceSplitter
+from wurzel.utils.splitters.sentence_splitter import RegexSentenceSplitter, SentenceSplitter, SpacySentenceSplitter
 
 from .sentence_splitter_test_cases import BASIC_TEST_CASES, DE_TEST_CASES, EL_TEST_CASES, HR_TEST_CASES, PL_TEST_CASES, REGEX_TEST_CASES
 
