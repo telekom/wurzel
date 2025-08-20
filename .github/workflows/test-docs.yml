@@ -1,0 +1,43 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: CC0-1.0
+name: Test Documentation Build
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'docs/**'
+      - 'mkdocs.yml'
+      - 'wurzel/**'
+      - 'pyproject.toml'
+      - '.github/workflows/test-docs.yml'
+
+jobs:
+  test-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install the latest version of uv and set the python version
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: UV=$(which uv) PIP=$(which pip) make install
+
+      - name: Build documentation (without strict mode due to known warnings)
+        run: |
+          uv run mkdocs build
+
+      - name: Upload documentation artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: site/
+          retention-days: 7
