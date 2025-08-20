@@ -86,7 +86,7 @@ def test_qdrant_connector_one_no_csv(input_output_folder: tuple[Path, Path]):
     [
         (3, 5, ["dummy_v1"], ["dummy_v1"], 4, ["dummy_v1", "dummy_v3", "dummy_v4", "dummy_v5"]),
         (1, 4, ["dummy_v2"], ["dummy_v2"], 2, ["dummy_v2", "dummy_v4"]),
-        (2, 5, [], ["dummy_v1"], 4, ["dummy_v1", "dummy_v4", "dummy_v5"]),
+        (2, 5, [], ["dummy_v1"], 3, ["dummy_v1", "dummy_v4", "dummy_v5"]),
         (2, 5, ["dummy_v2"], ["dummy_v4"], 3, ["dummy_v2", "dummy_v4", "dummy_v5"]),
         (1, 4, ["dummy_v1", "dummy_v2"], [], 3, ["dummy_v1", "dummy_v2", "dummy_v4"]),
     ],

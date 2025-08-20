@@ -234,9 +234,9 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         if not collections_versioned:
             return
 
-        # Determine the N latest versions to retain (even if versions have gaps)
-        sorted_versions = sorted(collections_versioned.keys())  # e.g., [1, 3, 6, 7, 8]
-        versions_to_keep = set(sorted_versions[-self.settings.COLLECTION_HISTORY_LEN :])  # e.g., {3, 6, 7, 8}
+        # Determine the N latest versions to retain
+        sorted_versions = sorted(collections_versioned.keys())
+        versions_to_keep = set(sorted_versions[-self.settings.COLLECTION_HISTORY_LEN :])
 
         alias_pointed = {alias.collection_name for alias in self.client.get_aliases().aliases}
 
