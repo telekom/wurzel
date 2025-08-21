@@ -6,9 +6,9 @@ from importlib.util import find_spec as _find_spec
 from logging import getLogger
 from typing import Any
 
-from . import semantic_splitter
 from .meta_settings import WZ, create_model
 from .meta_steps import find_typed_steps_in_package
+from .splitters import semantic_splitter
 from .to_markdown.html2md import MarkdownConverterSettings, to_markdown
 
 log = getLogger(__name__)
