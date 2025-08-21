@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://telekom.github.io/wurzel/installation/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Installation Guide - Wurzel</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Installation Guide";
+        var mkdocs_page_input_path = "installation.md";
+        var mkdocs_page_url = "/wurzel/installation/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Wurzel
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Wurzel</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../backends/">Wurzel: Using DVC and Argo Workflows Backends</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Installation Guide</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#basic-installation">Basic Installation</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#direct-dependencies-spacy-model">Direct Dependencies (spaCy Model)</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#manual-installation">Manual Installation</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#using-direct_requirementstxt">Using DIRECT_REQUIREMENTS.txt</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#optional-dependencies">Optional Dependencies</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#vector-database-support">Vector Database Support</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#document-processing">Document Processing</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#development-tools">Development Tools</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#install-everything">Install Everything</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#development-installation">Development Installation</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#docker-installation">Docker Installation</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#environment-variables">Environment Variables</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#git-configuration">Git Configuration</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#dvc-configuration">DVC Configuration</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#pipeline-configuration">Pipeline Configuration</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#monitoring-optional">Monitoring (Optional)</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#example-usage">Example Usage</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#spacy-model-issues">spaCy Model Issues</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#environment-issues">Environment Issues</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#why-direct-dependencies">Why Direct Dependencies?</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developping</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../developping/Building_your_one_step/">📚 How to Build Your Own Step</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../developping/define_pipline/">🔗 Defining a Pipeline in Wurzel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../developping/docs/">📖 Documentation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../developping/getting_started/">👩‍💻 Developer Guide</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Steps</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/docling/">Docling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/embedding/">Embedding</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/milvus/">Milvus</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/qdrant/">Qdrant</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/splitter/">Splitter</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Wurzel</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Installation Guide</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/telekom/wurzel/edit/master/docs/installation.md">Edit on telekom/wurzel</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="installation-guide">Installation Guide</h1>
+<p>This guide covers installing Wurzel and its dependencies, including handling the special case of direct dependencies that cannot be installed through PyPI.</p>
+<h2 id="basic-installation">Basic Installation</h2>
+<p>To get started with Wurzel, install the library using pip:</p>
+<pre><code class="language-bash">pip install wurzel
+</code></pre>
+<h2 id="direct-dependencies-spacy-model">Direct Dependencies (spaCy Model)</h2>
+<p>Due to PyPI restrictions on direct dependencies, some components require manual installation. This primarily affects the German spaCy model used for semantic text splitting.</p>
+<h3 id="manual-installation">Manual Installation</h3>
+<p>If you plan to use the semantic text splitting functionality (e.g., <code>SemanticSplitter</code>), you'll need to manually install the German spaCy model:</p>
+<pre><code class="language-bash">pip install https://github.com/explosion/spacy-models/releases/download/de_core_news_sm-3.7.0/de_core_news_sm-3.7.0-py3-none-any.whl
+</code></pre>
+<h3 id="using-direct_requirementstxt">Using DIRECT_REQUIREMENTS.txt</h3>
+<p>If you're working with the source code, you can install from the provided requirements file:</p>
+<pre><code class="language-bash">pip install -r DIRECT_REQUIREMENTS.txt
+</code></pre>
+<h2 id="optional-dependencies">Optional Dependencies</h2>
+<p>Wurzel supports various optional features through extras:</p>
+<h3 id="vector-database-support">Vector Database Support</h3>
+<pre><code class="language-bash"># For Qdrant vector database
+pip install wurzel[qdrant]
+
+# For Milvus vector database
+pip install wurzel[milvus]
+</code></pre>
+<h3 id="document-processing">Document Processing</h3>
+<pre><code class="language-bash"># For PDF document processing with Docling
+pip install wurzel[docling]
+</code></pre>
+<h3 id="development-tools">Development Tools</h3>
+<pre><code class="language-bash"># For linting and code quality tools
+pip install wurzel[lint]
+
+# For testing framework and tools
+pip install wurzel[test]
+
+# For documentation generation
+pip install wurzel[docs]
+</code></pre>
+<h3 id="install-everything">Install Everything</h3>
+<pre><code class="language-bash"># Install all optional dependencies
+pip install wurzel[all]
+
+# Don't forget the direct dependencies!
+pip install -r DIRECT_REQUIREMENTS.txt
+</code></pre>
+<h2 id="development-installation">Development Installation</h2>
+<p>For development work, use the provided Makefile:</p>
+<pre><code class="language-bash"># Install all dependencies including development tools
+make install
+
+# Run tests
+make test
+
+# Run linting
+make lint
+
+# Generate documentation
+make documentation
+</code></pre>
+<h2 id="docker-installation">Docker Installation</h2>
+<p>The Docker image includes all dependencies automatically:</p>
+<pre><code class="language-bash"># Pull the latest image
+docker pull ghcr.io/telekom/wurzel:latest
+
+# Or build locally
+docker build -t wurzel .
+</code></pre>
+<h2 id="environment-variables">Environment Variables</h2>
+<p>When running Wurzel in containerized environments, several environment variables can be configured to customize behavior:</p>
+<h3 id="git-configuration">Git Configuration</h3>
+<ul>
+<li><code>GIT_USER</code>: Git username for repository operations (default: <code>wurzel</code>)</li>
+<li><code>GIT_MAIL</code>: Git email for repository operations (default: <code>wurzel@example.com</code>)</li>
+</ul>
+<h3 id="dvc-configuration">DVC Configuration</h3>
+<ul>
+<li><code>DVC_DATA_PATH</code>: Path where DVC stores data files (default: <code>/usr/app/dvc-data</code>)</li>
+<li><code>DVC_FILE</code>: Path to the DVC pipeline definition file (default: <code>/usr/app/dvc.yaml</code>)</li>
+<li><code>DVC_CACHE_HISTORY_NUMBER</code>: Number of cache versions to keep (default: <code>30</code>)</li>
+</ul>
+<h3 id="pipeline-configuration">Pipeline Configuration</h3>
+<ul>
+<li><code>WURZEL_PIPELINE</code>: Specifies which pipeline to execute (e.g., <code>pipelinedemo:pipeline</code>)</li>
+</ul>
+<h3 id="monitoring-optional">Monitoring (Optional)</h3>
+<ul>
+<li><code>PROMETHEUS__GATEWAY</code>: Prometheus pushgateway URL for metrics</li>
+</ul>
+<h3 id="example-usage">Example Usage</h3>
+<pre><code class="language-bash">docker run \
+  -e GIT_USER=wurzel-demo \
+  -e GIT_MAIL=demo@example.com \
+  -e DVC_DATA_PATH=/usr/app/data \
+  -e DVC_FILE=/usr/app/dvc.yaml \
+  -e WURZEL_PIPELINE=pipelinedemo:pipeline \
+  ghcr.io/telekom/wurzel:latest
+</code></pre>
+<h2 id="troubleshooting">Troubleshooting</h2>
+<h3 id="spacy-model-issues">spaCy Model Issues</h3>
+<p>If you encounter issues with the spaCy model:</p>
+<ol>
+<li>
+<p>Verify the model is installed:
+   <code>bash
+   python -c "import spacy; nlp = spacy.load('de_core_news_sm'); print('Model loaded successfully')"</code></p>
+</li>
+<li>
+<p>Reinstall the model if needed:
+   <code>bash
+   pip uninstall de-core-news-sm
+   pip install https://github.com/explosion/spacy-models/releases/download/de_core_news_sm-3.7.0/de_core_news_sm-3.7.0-py3-none-any.whl</code></p>
+</li>
+</ol>
+<h3 id="environment-issues">Environment Issues</h3>
+<ul>
+<li>Ensure you're using Python 3.11 or 3.12</li>
+<li>Consider using a virtual environment:
+  <code>bash
+  python -m venv .venv
+  source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+  pip install wurzel</code></li>
+</ul>
+<h2 id="why-direct-dependencies">Why Direct Dependencies?</h2>
+<p>PyPI has restrictions on packages that include direct dependencies to external URLs for security reasons. The spaCy German model is hosted on GitHub releases rather than PyPI, requiring manual installation.</p>
+<p>This approach ensures:
+- Security compliance with PyPI guidelines
+- Ability to publish to PyPI without restrictions
+- Clear separation of concerns between core functionality and external models
+- Flexibility in model versioning and updates</p>
+<p>For more information about this limitation, see the <a href="https://packaging.python.org/specifications/core-metadata/">PyPI documentation on direct dependencies</a>.</p>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../backends/" class="btn btn-neutral float-left" title="Wurzel: Using DVC and Argo Workflows Backends"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../developping/Building_your_one_step/" class="btn btn-neutral float-right" title="📚 How to Build Your Own Step">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/telekom/wurzel" class="fa fa-code-fork" style="color: #fcfcfc"> telekom/wurzel</a>
+        </span>
+    
+    
+      <span><a href="../backends/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../developping/Building_your_one_step/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>

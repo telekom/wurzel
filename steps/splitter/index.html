@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://telekom.github.io/wurzel/steps/splitter/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Splitter - Wurzel</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Splitter";
+        var mkdocs_page_input_path = "steps/splitter.md";
+        var mkdocs_page_url = "/wurzel/steps/splitter/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Wurzel
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Wurzel</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../backends/">Wurzel: Using DVC and Argo Workflows Backends</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../installation/">Installation Guide</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developping</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developping/Building_your_one_step/">📚 How to Build Your Own Step</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developping/define_pipline/">🔗 Defining a Pipeline in Wurzel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developping/docs/">📖 Documentation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developping/getting_started/">👩‍💻 Developer Guide</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Steps</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../docling/">Docling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../embedding/">Embedding</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../milvus/">Milvus</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../qdrant/">Qdrant</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Splitter</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#semantic-splitter">Semantic Splitter</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#wurzel.utils.splitters.semantic_splitter.SemanticSplitter">SemanticSplitter</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#wurzel.utils.splitters.semantic_splitter.SemanticSplitter.__init__">__init__</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#wurzel.utils.splitters.semantic_splitter.SemanticSplitter.split_markdown_document">split_markdown_document</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#wurzel.utils.splitters.semantic_splitter.SemanticSplitter.text_sentences">text_sentences</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#table-splitter">Table Splitter</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#wurzel.utils.splitters.markdown_table_splitter.MarkdownTableSplitterUtil">MarkdownTableSplitterUtil</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#wurzel.utils.splitters.markdown_table_splitter.MarkdownTableSplitterUtil.__post_init__">__post_init__</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#wurzel.utils.splitters.markdown_table_splitter.MarkdownTableSplitterUtil.split">split</a>
+    </li>
+        </ul>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#sentence-splitter">Sentence Splitter</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#wurzel.utils.splitters.sentence_splitter.RegexSentenceSplitter">RegexSentenceSplitter</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#wurzel.utils.splitters.sentence_splitter.RegexSentenceSplitter.__init__">__init__</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#wurzel.utils.splitters.sentence_splitter.RegexSentenceSplitter.get_sentences">get_sentences</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#wurzel.utils.splitters.sentence_splitter.SpacySentenceSplitter">SpacySentenceSplitter</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#wurzel.utils.splitters.sentence_splitter.SpacySentenceSplitter.__init__">__init__</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#wurzel.utils.splitters.sentence_splitter.SpacySentenceSplitter.get_sentences">get_sentences</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Wurzel</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Steps</li>
+      <li class="breadcrumb-item active">Splitter</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/telekom/wurzel/edit/master/docs/steps/splitter.md">Edit on telekom/wurzel</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="splitter">Splitter</h1>
+<p>The splitter step (also known as chunking) takes a long Markdown document (<code>*.md</code>) as the input and returns smaller splits (or chunks) that can easier processed by an embedding model or language model.
+The splitter keeps the length of the output chunks below a defined threshold (token limit) and tries to split without breaking the document context, e.g., split only at the end of a sentence and not within a sentence.</p>
+<h2 id="semantic-splitter">Semantic Splitter</h2>
+<p>Semantic document elements (e.g., headings) are repeated.</p>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<a id="wurzel.utils.splitters.semantic_splitter.SemanticSplitter"></a>
+    <div class="doc doc-contents first">
+
+
+        <p>Splitter implementation.</p>
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="wurzel.utils.splitters.semantic_splitter.SemanticSplitter.__init__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">token_limit</span><span class="o">=</span><span class="mi">256</span><span class="p">,</span> <span class="n">token_limit_buffer</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">token_limit_min</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">sentence_splitter_model</span><span class="o">=</span><span class="s1">&#39;de_core_news_sm&#39;</span><span class="p">,</span> <span class="n">repeat_table_header_row</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">tokenizer_model</span><span class="o">=</span><span class="s1">&#39;gpt-3.5-turbo&#39;</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Initializes the SemanticSplitter class with specified token limits and a sentence splitter model.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>token_limit</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>256</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>The maximum number of tokens allowed. Defaults to 256.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>token_limit_buffer</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>32</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>The buffer size for token limit to allow flexibility. Defaults to 32.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>token_limit_min</code></b>
+                  (<code><span title="int">int</span></code>, default:
+                      <code>64</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>The minimum number of tokens required. Defaults to 64.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>sentence_splitter_model</code></b>
+                  (<code><span title="str">str</span></code>, default:
+                      <code>&#39;de_core_news_sm&#39;</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>The name of the sentence splitter model. Defaults to "de_core_news_sm".</p>
+              </div>
+            </li>
+            <li>
+              <b><code>repeat_table_header_row</code></b>
+                  (<code><span title="bool">bool</span></code>, default:
+                      <code>True</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>If a table is splitted, the header is repeated. Defaults to True.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>tokenizer_model</code></b>
+                  (<code><span title="str">str</span></code>, default:
+                      <code>&#39;gpt-3.5-turbo&#39;</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>The name of the tokenizer model to use for encoding. Defaults to "gpt-3.5-turbo".</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Raises:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code><span title="OSError">OSError</span></code>
+              –
+              <div class="doc-md-description">
+                <p>If the specified sentence splitter cannot be loaded.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="wurzel.utils.splitters.semantic_splitter.SemanticSplitter.split_markdown_document" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">split_markdown_document</span><span class="p">(</span><span class="n">doc</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Split a Markdown Document into Snippets.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="wurzel.utils.splitters.semantic_splitter.SemanticSplitter.text_sentences" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">text_sentences</span><span class="p">(</span><span class="n">text</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Split a text into sentences using a sentence splitter model.</p>
+<p>This does not use a Regex based approach on purpose as they break with
+punctuation very easily see: https://stackoverflow.com/a/61254146</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div><h2 id="table-splitter">Table Splitter</h2>
+<p>For Markdown tables, a custom logic is implemented that preserves the table structure by repeating the header row if a split occurs within a table. So subsequent chunks maintain the semantic table information from the header row.
+By default, tables are never broken in the middle of a row; if a <em>single</em> row exceeds the budget, it is split at column boundaries instead and full-header is repeated.</p>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<a id="wurzel.utils.splitters.markdown_table_splitter.MarkdownTableSplitterUtil"></a>
+    <div class="doc doc-contents first">
+
+
+        <p>A class to split markdown tables into token-bounded chunks.</p>
+<p>This class encapsulates the logic for splitting large markdown tables while
+preserving table structure. Tables are never broken in the middle of a row;
+if a single row exceeds the max length, it is split at column boundaries
+instead and the full header is repeated.</p>
+<p>Example:</p>
+<pre><code>&gt;&gt;&gt; import tiktoken
+&gt;&gt;&gt; enc = tiktoken.get_encoding(&quot;cl100k_base&quot;)
+&gt;&gt;&gt; splitter = MarkdownTableSplitterUtil(token_limit=8000, enc=enc)
+&gt;&gt;&gt; chunks = splitter.split(markdown_text)
+&gt;&gt;&gt; len(chunks)
+3
+</code></pre>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>token_limit</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Maximum tokens per chunk (model tokens, not characters).</p>
+              </div>
+            </li>
+            <li>
+              <b><code>enc</code></b>
+                  (<code><span title="tiktoken.Encoding">Encoding</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Tokenizer used for counting tokens.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>repeat_header_row</code></b>
+                  (<code><span title="bool">bool</span></code>, default:
+                      <code>True</code>
+)
+              –
+              <div class="doc-md-description">
+                <p>If True, repeat the header row in each chunk. Defaults to True.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Attributes:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>chunks</code></b>
+                  (<code><span title="list">list</span>[<span title="str">str</span>]</code>)
+              –
+              <div class="doc-md-description">
+                <p>Completed chunks of markdown.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>buf</code></b>
+                  (<code><span title="list">list</span>[<span title="str">str</span>]</code>)
+              –
+              <div class="doc-md-description">
+                <p>Current buffer of lines.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>buf_tok</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>Current token count in buffer.</p>
+              </div>
+            </li>
+            <li>
+              <b><code>min_safety_token_limit</code></b>
+                  (<code><span title="int">int</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>A minimum of 10 tokens is a safety threshold to ensure the splitter can
+always fit at least a minimal table structure in a chunk.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="wurzel.utils.splitters.markdown_table_splitter.MarkdownTableSplitterUtil.__post_init__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">__post_init__</span><span class="p">()</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Validate configuration after initialization.</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="wurzel.utils.splitters.markdown_table_splitter.MarkdownTableSplitterUtil.split" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">split</span><span class="p">(</span><span class="n">md</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Split a markdown document into token-bounded chunks while respecting tables.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>md</code></b>
+              –
+              <div class="doc-md-description">
+                <p>str
+Markdown document.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Returns:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+                  <code><span title="list">list</span>[<span title="str">str</span>]</code>
+              –
+              <div class="doc-md-description">
+                <p>list[str]: Chunks whose token counts are &lt;= token_limit.</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div><h2 id="sentence-splitter">Sentence Splitter</h2>
+<p>The semantic splitter avoids splitting within sentences and to achieve this it relies on a sentence splitter. The sentence splitter takes longer text as input and splits the text into individual sentences. There are different implementations available.</p>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<a id="wurzel.utils.splitters.sentence_splitter.RegexSentenceSplitter"></a>
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="wurzel.utils.splitters.sentence_splitter.SentenceSplitter">SentenceSplitter</span></code></p>
+
+
+        <p>A sentence splitter based on regular expressions.</p>
+<p>NOTE: Using the regex splitter is not recommended since it based on very simple heuristics.</p>
+<p>Heuristics:
+- Split after sentence-ending punctuation (. ! ? …) and any closing quotes/brackets.
+- Only split if the next non-space token <em>looks</em> like a sentence start
+  (capital letter or digit, optionally after an opening quote/paren).
+- Merge back false positives caused by common abbreviations, initials,
+  dotted acronyms (e.g., U.S.), decimals (e.g., 3.14), ordinals (No. 5), and ellipses.</p>
+<p>Notes:
+- Tweak <code>self.abbreviations</code> for your domain/corpus.
+- For chatty/poetic text where sentences may start lowercase, relax
+  <code>self._split_re</code>'s lookahead (see comment in <strong>init</strong>).</p>
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="wurzel.utils.splitters.sentence_splitter.RegexSentenceSplitter.__init__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">()</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Initialize a regex sentence splitter (compile regex, set abbreviations).</p>
+
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="wurzel.utils.splitters.sentence_splitter.RegexSentenceSplitter.get_sentences" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get_sentences</span><span class="p">(</span><span class="n">text</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Split text into sentences.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<a id="wurzel.utils.splitters.sentence_splitter.SpacySentenceSplitter"></a>
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="wurzel.utils.splitters.sentence_splitter.SentenceSplitter">SentenceSplitter</span></code></p>
+
+
+        <p>Adapter for Spacy sentence splitter.</p>
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="wurzel.utils.splitters.sentence_splitter.SpacySentenceSplitter.__init__" class="doc doc-heading">
+            <code class="highlight language-python"><span class="fm">__init__</span><span class="p">(</span><span class="n">nlp</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Initialize a SpacySentenceSplitter.</p>
+
+
+<table class="field-list">
+  <colgroup>
+    <col class="field-name" />
+    <col class="field-body" />
+  </colgroup>
+  <tbody valign="top">
+    <tr class="field">
+      <th class="field-name">Parameters:</th>
+      <td class="field-body">
+        <ul class="first simple">
+            <li>
+              <b><code>nlp</code></b>
+                  (<code><span title="spacy.language.Language">Language</span></code>)
+              –
+              <div class="doc-md-description">
+                <p>A Spacy model from spacy.load().</p>
+              </div>
+            </li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="wurzel.utils.splitters.sentence_splitter.SpacySentenceSplitter.get_sentences" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">get_sentences</span><span class="p">(</span><span class="n">text</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Split text into sentences.</p>
+
+
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../qdrant/" class="btn btn-neutral float-left" title="Qdrant"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/telekom/wurzel" class="fa fa-code-fork" style="color: #fcfcfc"> telekom/wurzel</a>
+        </span>
+    
+    
+      <span><a href="../qdrant/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
