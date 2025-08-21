@@ -9,7 +9,6 @@ from logging import getLogger
 from typing import Optional, TypedDict
 
 import mdformat
-import tiktoken
 from mistletoe import Document as MisDocument
 from mistletoe import block_token, markdown_renderer, span_token
 from mistletoe.token import Token
@@ -19,6 +18,7 @@ from wurzel.exceptions import MarkdownException
 from wurzel.utils.splitters.markdown_table_splitter import MarkdownTableSplitterUtil
 from wurzel.utils.splitters.sentence_splitter import SentenceSplitter
 from wurzel.utils.to_markdown.html2md import MD_RENDER_LOCK
+from wurzel.utils.tokenizers import Tokenizer
 
 LEVEL_MAPPING = {
     block_token.Heading: 0,  # actually 1-6
@@ -146,7 +146,7 @@ class SemanticSplitter:
     token_limit: int
     token_limit_buffer: int
     token_limit_min: int
-    tokenizer_model_encoding: tiktoken.Encoding
+    tokenizer: Tokenizer
     repeat_table_header_row: bool
 
     # pylint: disable=too-many-positional-arguments
@@ -178,7 +178,7 @@ class SemanticSplitter:
         self.token_limit_buffer = token_limit_buffer
         self.token_limit_min = token_limit_min
         self.repeat_table_header_row = repeat_table_header_row
-        self.tokenizer_model_encoding = tiktoken.encoding_for_model(tokenizer_model)
+        self.tokenizer = Tokenizer.from_name(tokenizer_model)
 
     def _get_token_len(self, text: str) -> int:
         """Get Token length.
@@ -190,10 +190,10 @@ class SemanticSplitter:
             int: count of tokens
 
         """
-        return len(self.tokenizer_model_encoding.encode(text))
+        return len(self.tokenizer.encode(text))
 
     def _cut_to_tokenlen(self, text: str, token_len: int, return_discarded_text: bool = False) -> str | tuple[str, str]:
-        """Cut text to max. token length using OpenAI tokenizer.
+        """Cut text to max. token length using the current tokenizer.
 
         Args:
             text (str): Input text
@@ -204,14 +204,14 @@ class SemanticSplitter:
             str | tuple[str, str]: Text limited to max. token count (and the discarded text, depending on `return_discarded_text`)
 
         """
-        input_tokens = self.tokenizer_model_encoding.encode(text)
+        input_tokens = self.tokenizer.encode(text)
 
         output_tokens = input_tokens[:token_len]  # ensure token length
-        output_text = self.tokenizer_model_encoding.decode(output_tokens)  # convert back to text
+        output_text = self.tokenizer.decode(output_tokens)  # convert back to text
 
         if return_discarded_text:
             discarded_tokens = input_tokens[token_len:]  # beyond token length
-            discarded_text = self.tokenizer_model_encoding.decode(discarded_tokens)  # convert back to text
+            discarded_text = self.tokenizer.decode(discarded_tokens)  # convert back to text
 
             return output_text, discarded_text
 
@@ -576,7 +576,7 @@ class SemanticSplitter:
             # split table into chunks depending on token length (re-emit table header)
             table_splitter = MarkdownTableSplitterUtil(
                 token_limit=self.token_limit,
-                enc=self.tokenizer_model_encoding,
+                tokenizer=self.tokenizer,
                 repeat_header_row=self.repeat_table_header_row,
             )
             return [
