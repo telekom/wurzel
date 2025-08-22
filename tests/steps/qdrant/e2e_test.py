@@ -82,13 +82,22 @@ def test_qdrant_connector_one_no_csv(input_output_folder: tuple[Path, Path]):
 
 
 @pytest.mark.parametrize(
-    "hist_len, step_run, aliased_collections,recently_used ,count_remaining_collection, collections",
+    "hist_len, step_run, aliased_collections,recently_used ,count_remaining_collection, remaining_collections,untracked_collection,dry_run",
     [
-        (3, 5, ["dummy_v1"], ["dummy_v1"], 4, ["dummy_v1", "dummy_v3", "dummy_v4", "dummy_v5"]),
-        (1, 4, ["dummy_v2"], ["dummy_v2"], 2, ["dummy_v2", "dummy_v4"]),
-        (2, 5, [], ["dummy_v1"], 3, ["dummy_v1", "dummy_v4", "dummy_v5"]),
-        (2, 5, ["dummy_v2"], ["dummy_v4"], 3, ["dummy_v2", "dummy_v4", "dummy_v5"]),
-        (1, 4, ["dummy_v1", "dummy_v2"], [], 3, ["dummy_v1", "dummy_v2", "dummy_v4"]),
+        # Case 1: v1 is aliased + recent, keep v3-v5 by version
+        (3, 5, ["dummy_v1"], ["dummy_v1"], 4, ["dummy_v1", "dummy_v3", "dummy_v4", "dummy_v5"],"",False),
+        # Case 2: Keep only latest v4, v1 is recent, v2 is aliased
+        (1, 4, ["dummy_v2"], ["dummy_v1"], 3, ["dummy_v1","dummy_v2", "dummy_v4"],"",False),
+        # Case 3: Keep top 2 by version: v4, v5; v1 is recent
+        (2, 5, [], ["dummy_v1"], 3, ["dummy_v1", "dummy_v4", "dummy_v5"],"",False),
+        # Case 4: v2 aliased, v4 recent; keep v4,v5
+        (2, 5, ["dummy_v2"], [], 3, ["dummy_v2", "dummy_v4", "dummy_v5"],"",False),
+        # Case 5: Only latest v4; v1,v2 aliased
+        (1, 4, ["dummy_v1", "dummy_v2"], [], 3, ["dummy_v1", "dummy_v2", "dummy_v4"],"",False),
+        # Case 6: Untracked collection (abc_dummy) should not be deleted,latest v4,v5
+        (2, 5, [], [], 3, ["abc_dummy", "dummy_v4", "dummy_v5"], "abc_dummy",False),
+        # Case 7: Same as Case 3 but in dry run mode (no deletions)
+        (2, 5, [], ["dummy_v1"], 5, ["dummy_v1","dummy_v2", "dummy_v3", "dummy_v4", "dummy_v5"], "", True),
     ],
 )
 def test_qdrant_collection_retirement_with_missing_versions(
@@ -100,10 +109,14 @@ def test_qdrant_collection_retirement_with_missing_versions(
     aliased_collections,
     recently_used,
     count_remaining_collection,
-    collections,
+    remaining_collections,
+    untracked_collection,
+    dry_run
 ):
     input_path, output_path = input_output_folder
     env.set("COLLECTION_HISTORY_LEN", str(hist_len))
+    env.set("COLLECTION_RETIRE_DRY_RUN", str(dry_run).lower())
+
     input_file = input_path / "qdrant_at.csv"
     output_file = output_path / "QdrantConnectorStep"
     shutil.copy("./tests/data/embedded.csv", input_file)
@@ -115,7 +128,7 @@ def test_qdrant_collection_retirement_with_missing_versions(
     old_time = (datetime.now(timezone.utc) - timedelta(days=10)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
     recent_time = (datetime.now(timezone.utc) - timedelta(hours=6)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
-    collection_data = [(col_id, recent_time if col_id in recently_used else old_time) for col_id in collections]
+    collection_data = [(col_id, recent_time if col_id in recently_used else old_time) for col_id in remaining_collections]
 
     mock_telemetry = InlineResponse2002(
         result=TelemetryData.model_construct(
@@ -148,6 +161,9 @@ def test_qdrant_collection_retirement_with_missing_versions(
         with unittest.mock.patch("wurzel.steps.qdrant.step.QdrantClient.get_aliases", return_value=mock_aliases):
             with unittest.mock.patch("wurzel.steps.qdrant.step.QdrantClient") as mock:
                 mock.return_value = client
+                if untracked_collection:
+                    client.create_collection(untracked_collection, vectors_config={"size": 1, "distance": "Cosine"})
+
                 with BaseStepExecutor() as ex:
                     for _ in range(step_run):
                         ex(QdrantConnectorStep, {input_path}, output_file)
@@ -155,11 +171,13 @@ def test_qdrant_collection_retirement_with_missing_versions(
                 client.close = old_close
                 remaining = [col.name for col in client.get_collections().collections]
                 assert len(remaining) == count_remaining_collection
-                assert remaining == collections
+                assert remaining == remaining_collections
                 for aliased in aliased_collections:
                     assert aliased in remaining
                 for recent_used in recently_used:
                     assert recent_used in remaining
+                if untracked_collection:
+                    assert untracked_collection in remaining
 
 
 def test_qdrant_get_collections_with_ephemerals(input_output_folder: tuple[Path, Path], env, dummy_collection):

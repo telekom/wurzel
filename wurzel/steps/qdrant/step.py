@@ -250,8 +250,11 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             if self._should_skip_collection(collection_name, alias_pointed, telemetry_collections):
                 continue
 
-            log.info("Deleting retired collection", extra={"collection": collection_name})
-            self.client.delete_collection(collection_name)
+            if self.settings.COLLECTION_RETIRE_DRY_RUN:
+                log.info("[DRY RUN] Would retire collection", extra={"collection": collection_name})
+            else:
+                log.info("Deleting retired collection", extra={"collection": collection_name})
+                self.client.delete_collection(collection_name)
 
     def _should_skip_collection(self, name: str, alias_pointed: set[str], telemetry_collections: list) -> bool:
         """Check if a collection should not be deleted."""
