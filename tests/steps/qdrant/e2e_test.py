@@ -99,7 +99,16 @@ def test_qdrant_connector_one_no_csv(input_output_folder: tuple[Path, Path]):
         # Case 7: Same as Case 3 but in dry run mode (no deletions)
         (2, 5, [], ["dummy_v1"], 5, ["dummy_v1", "dummy_v2", "dummy_v3", "dummy_v4", "dummy_v5"], [], True),
         # Case 8: Collections: dummy_v1 to v5, plus malformed ones: dummy_v, dummy_v_abc, dummy_v23_abc, dummy_vabc
-        (2, 5, [], [], 6, ["dummy_v","dummy_v_abc","dummy_v23_abc","dummy_vabc", "dummy_v4", "dummy_v5"], ["dummy_v","dummy_v_abc","dummy_v23_abc","dummy_vabc"], False),
+        (
+            2,
+            5,
+            [],
+            [],
+            6,
+            ["dummy_v", "dummy_v_abc", "dummy_v23_abc", "dummy_vabc", "dummy_v4", "dummy_v5"],
+            ["dummy_v", "dummy_v_abc", "dummy_v23_abc", "dummy_vabc"],
+            False,
+        ),
     ],
 )
 def test_qdrant_collection_retirement_with_missing_versions(
@@ -180,7 +189,7 @@ def test_qdrant_collection_retirement_with_missing_versions(
                 for recent_used in recently_used:
                     assert recent_used in remaining
                 for untracked in untracked_collection:
-                        assert untracked in remaining
+                    assert untracked in remaining
 
 
 def test_qdrant_get_collections_with_ephemerals(input_output_folder: tuple[Path, Path], env, dummy_collection):
