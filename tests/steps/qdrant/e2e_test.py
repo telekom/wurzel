@@ -85,19 +85,21 @@ def test_qdrant_connector_one_no_csv(input_output_folder: tuple[Path, Path]):
     "hist_len, step_run, aliased_collections,recently_used ,count_remaining_collection, remaining_collections,untracked_collection,dry_run",
     [
         # Case 1: v1 is aliased + recent, keep v3-v5 by version
-        (3, 5, ["dummy_v1"], ["dummy_v1"], 4, ["dummy_v1", "dummy_v3", "dummy_v4", "dummy_v5"], "", False),
+        (3, 5, ["dummy_v1"], ["dummy_v1"], 4, ["dummy_v1", "dummy_v3", "dummy_v4", "dummy_v5"], [], False),
         # Case 2: Keep only latest v4, v1 is recent, v2 is aliased
-        (1, 4, ["dummy_v2"], ["dummy_v1"], 3, ["dummy_v1", "dummy_v2", "dummy_v4"], "", False),
+        (1, 4, ["dummy_v2"], ["dummy_v1"], 3, ["dummy_v1", "dummy_v2", "dummy_v4"], [], False),
         # Case 3: Keep top 2 by version: v4, v5; v1 is recent
-        (2, 5, [], ["dummy_v1"], 3, ["dummy_v1", "dummy_v4", "dummy_v5"], "", False),
+        (2, 5, [], ["dummy_v1"], 3, ["dummy_v1", "dummy_v4", "dummy_v5"], [], False),
         # Case 4: v2 aliased, v4 recent; keep v4,v5
-        (2, 5, ["dummy_v2"], [], 3, ["dummy_v2", "dummy_v4", "dummy_v5"], "", False),
+        (2, 5, ["dummy_v2"], [], 3, ["dummy_v2", "dummy_v4", "dummy_v5"], [], False),
         # Case 5: Only latest v4; v1,v2 aliased
-        (1, 4, ["dummy_v1", "dummy_v2"], [], 3, ["dummy_v1", "dummy_v2", "dummy_v4"], "", False),
+        (1, 4, ["dummy_v1", "dummy_v2"], [], 3, ["dummy_v1", "dummy_v2", "dummy_v4"], [], False),
         # Case 6: Untracked collection (abc_dummy) should not be deleted,latest v4,v5
-        (2, 5, [], [], 3, ["abc_dummy", "dummy_v4", "dummy_v5"], "abc_dummy", False),
+        (2, 5, [], [], 3, ["abc_dummy", "dummy_v4", "dummy_v5"], ["abc_dummy"], False),
         # Case 7: Same as Case 3 but in dry run mode (no deletions)
-        (2, 5, [], ["dummy_v1"], 5, ["dummy_v1", "dummy_v2", "dummy_v3", "dummy_v4", "dummy_v5"], "", True),
+        (2, 5, [], ["dummy_v1"], 5, ["dummy_v1", "dummy_v2", "dummy_v3", "dummy_v4", "dummy_v5"], [], True),
+        # Case 8: Collections: dummy_v1 to v5, plus malformed ones: dummy_v, dummy_v_abc, dummy_v23_abc, dummy_vabc
+        (2, 5, [], [], 6, ["dummy_v","dummy_v_abc","dummy_v23_abc","dummy_vabc", "dummy_v4", "dummy_v5"], ["dummy_v","dummy_v_abc","dummy_v23_abc","dummy_vabc"], False),
     ],
 )
 def test_qdrant_collection_retirement_with_missing_versions(
@@ -162,7 +164,8 @@ def test_qdrant_collection_retirement_with_missing_versions(
             with unittest.mock.patch("wurzel.steps.qdrant.step.QdrantClient") as mock:
                 mock.return_value = client
                 if untracked_collection:
-                    client.create_collection(untracked_collection, vectors_config={"size": 1, "distance": "Cosine"})
+                    for untracked in untracked_collection:
+                        client.create_collection(untracked, vectors_config={"size": 1, "distance": "Cosine"})
 
                 with BaseStepExecutor() as ex:
                     for _ in range(step_run):
@@ -176,8 +179,8 @@ def test_qdrant_collection_retirement_with_missing_versions(
                     assert aliased in remaining
                 for recent_used in recently_used:
                     assert recent_used in remaining
-                if untracked_collection:
-                    assert untracked_collection in remaining
+                for untracked in untracked_collection:
+                        assert untracked in remaining
 
 
 def test_qdrant_get_collections_with_ephemerals(input_output_folder: tuple[Path, Path], env, dummy_collection):

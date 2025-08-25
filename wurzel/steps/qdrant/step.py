@@ -6,6 +6,7 @@
 
 # pylint: disable=duplicate-code
 import itertools
+import re
 from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from logging import getLogger
@@ -324,12 +325,16 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         return f"{self.settings.COLLECTION}_v{previous_version + 1}"
 
     def _get_collection_versions(self) -> dict[int, str]:
+        version_pattern = re.compile(rf"^{self.settings.COLLECTION}_v(\d+)$")
         previous_collections = self.client.get_collections().collections
-        versioned_collections = {
-            int(previous.name.split("_v")[-1]): previous.name
-            for previous in previous_collections
-            if f"{self.settings.COLLECTION}_v" in previous.name
-        }
+        versioned_collections = {}
+
+        for collection in previous_collections:
+            match = version_pattern.match(collection.name)
+            if match:
+                version = int(match.group(1))
+                versioned_collections[version] = collection.name
+
         return dict(sorted(versioned_collections.items()))
 
     @staticmethod
