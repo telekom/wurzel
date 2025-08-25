@@ -52,7 +52,7 @@ from pathlib import Path
 from wurzel.step_executor import BaseStepExecutor
 
 with BaseStepExecutor() as ex:
-    ex(step, Path("./input"), Path("./output"))
+    ex(step, set(Path("./input")), Path("./output"))
 ```
 
 ### Building your one step
