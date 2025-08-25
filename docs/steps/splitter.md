@@ -1,7 +1,6 @@
 # Splitter
 
-The splitter step (also known as chunking) takes a long Markdown document as the input and returns smaller splits (or chunks) that can easier processed by an embedding model or language model.
-The splitter keeps the length of the output chunks below a defined threshold (token limit) and tries to split without breaking the document context, e.g., split only at the end of a sentence and not within a sentence.
+The splitter step (also known as chunking) takes a long Markdown document (*.md) as the input and returns smaller splits (or chunks) that can easier processed by an embedding model or language model. The splitter keeps the length of the output chunks below a defined threshold (token limit) and tries to split without breaking the document context, e.g., split only at the end of a sentence and not within a sentence.
 
 ## Semantic Splitter
 
