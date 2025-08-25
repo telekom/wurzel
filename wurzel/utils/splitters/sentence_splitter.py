@@ -53,6 +53,9 @@ class SentenceSplitter(ABC):
         if name == "regex":
             return RegexSentenceSplitter()
 
+        if name.startswith("sat-"):
+            return SaTSentenceSplitter(name)
+
         # Try to load a Spacy model
         try:
             import spacy  # pylint: disable=import-outside-toplevel
@@ -194,3 +197,27 @@ class RegexSentenceSplitter(SentenceSplitter):
                 sentences.append(part)
 
         return [s.strip() for s in sentences if s.strip()]
+
+
+class SaTSentenceSplitter(SentenceSplitter):
+    """Adapter for wtpsplit's SaT sentence splitter.
+
+    SaT (Segment any Text) is a state-of-the-art sentence splitter. Depending on the
+    selected model you may want to use a GPU for faster inference.
+
+    Available models and benchmark results:  https://github.com/segment-any-text/wtpsplit
+    """
+
+    def __init__(self, model_name_or_model: str):
+        """Initialize a SaTSentenceSplitter.
+
+        Args:
+            model_name_or_model: A string or Path (Hugging Face ID or local directory path)
+        """
+        from wtpsplit import SaT  # pylint: disable=import-outside-toplevel
+
+        self._sat = SaT(model_name_or_model)
+
+    def get_sentences(self, text: str) -> list[str]:
+        """Split text into sentences."""
+        return self._sat.split(text, strip_whitespace=True)
