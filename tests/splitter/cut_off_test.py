@@ -4,7 +4,7 @@
 
 import logging
 
-from wurzel.utils.semantic_splitter import DocumentNode, MetaDataDict, SemanticSplitter
+from wurzel.utils.splitters.semantic_splitter import DocumentNode, MetaDataDict, SemanticSplitter
 
 
 def test_cut_off():

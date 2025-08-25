@@ -105,6 +105,42 @@ docker pull ghcr.io/telekom/wurzel:latest
 docker build -t wurzel .
 ```
 
+## Environment Variables
+
+When running Wurzel in containerized environments, several environment variables can be configured to customize behavior:
+
+### Git Configuration
+
+- `GIT_USER`: Git username for repository operations (default: `wurzel`)
+- `GIT_MAIL`: Git email for repository operations (default: `wurzel@example.com`)
+
+### DVC Configuration
+
+- `DVC_DATA_PATH`: Path where DVC stores data files (default: `/usr/app/dvc-data`)
+- `DVC_FILE`: Path to the DVC pipeline definition file (default: `/usr/app/dvc.yaml`)
+- `DVC_CACHE_HISTORY_NUMBER`: Number of cache versions to keep (default: `30`)
+
+### Pipeline Configuration
+
+- `WURZEL_PIPELINE`: Specifies which pipeline to execute (e.g., `pipelinedemo:pipeline`)
+
+### Monitoring (Optional)
+
+- `PROMETHEUS__GATEWAY`: Prometheus pushgateway URL for metrics
+
+
+### Example Usage
+
+```bash
+docker run \
+  -e GIT_USER=wurzel-demo \
+  -e GIT_MAIL=demo@example.com \
+  -e DVC_DATA_PATH=/usr/app/data \
+  -e DVC_FILE=/usr/app/dvc.yaml \
+  -e WURZEL_PIPELINE=pipelinedemo:pipeline \
+  ghcr.io/telekom/wurzel:latest
+```
+
 ## Troubleshooting
 
 ### spaCy Model Issues
