@@ -39,3 +39,8 @@ The semantic splitter avoids splitting within sentences and to achieve this it r
     options:
       show_source: false
       heading_level: 3
+
+::: wurzel.utils.splitters.sentence_splitter.SaTSentenceSplitter
+    options:
+      show_source: false
+      heading_level: 3
