@@ -206,6 +206,14 @@ class SaTSentenceSplitter(SentenceSplitter):
     selected model you may want to use a GPU for faster inference.
 
     Available models and benchmark results:  https://github.com/segment-any-text/wtpsplit
+
+    Example usage:
+    ```python
+    splitter = SentenceSplitter.from_name("sat-3l")
+    splitter.get_sentences("This is a test This is another test.")
+    # returns ["This is a test ", "This is another test."]
+    ```
+
     """
 
     def __init__(self, model_name_or_model: str):
