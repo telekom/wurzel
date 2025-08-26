@@ -275,11 +275,13 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         return False
 
     def _was_recently_used_via_shards(self, collection_info: CollectionTelemetry) -> bool:
+        """Checks if the collection was accessed within the retention window based on its shard telemetry timestamps."""
         threshold = datetime.now(timezone.utc) - timedelta(days=self.settings.COLLECTION_USAGE_RETENTION_DAYS)
         latest_usage = self._get_latest_usage_timestamp(collection_info)
         return latest_usage is not None and latest_usage > threshold
 
     def _get_latest_usage_timestamp(self, collection_info: CollectionTelemetry) -> Optional[datetime]:
+        """Returns the most recent usage timestamp across all local and remote shards of a collection."""
         timestamps = []
 
         for shard in collection_info.shards:
@@ -289,10 +291,12 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         return max(filter(None, timestamps), default=None)
 
     def _parse_local_timestamp(self, shard) -> Optional[datetime]:
+        """Parses the local shard’s last responded timestamp into a datetime."""
         ts = shard.local.optimizations.optimizations.last_responded
         return self._safe_parse_iso(ts)
 
     def _parse_remote_timestamps(self, shard) -> list[datetime]:
+        """Extracts and parses all valid remote shard usage timestamps for a collection."""
         return [
             self._safe_parse_iso(remote.searches.last_responded)
             for remote in shard.remote
@@ -300,6 +304,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         ]
 
     def _safe_parse_iso(self, timestamp: Optional[str]) -> Optional[datetime]:
+        """Safely parses an ISO timestamp string into a datetime, or returns None if absent."""
         return isoparse(timestamp) if timestamp else None
 
     def _update_alias(self):
