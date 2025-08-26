@@ -79,7 +79,22 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             yield i
 
     def _get_telemetry(self, details_level: int) -> InlineResponse2002:
-        """Get Qdrant Collection Telemetry."""
+        """Fetch collection-level telemetry data from Qdrant.
+
+        The telemetry includes configuration and runtime metadata for each collection,
+        such as:
+        - Shard-level distribution (local/remote).
+        - Last responded timestamps for shard operations (used for retention logic).
+
+        Used primarily to make decisions regarding collection retirement and to analyze
+        cluster health and usage behavior.
+
+        Args:
+        details_level (int): Level of detail required (as supported by the API).
+
+        Returns:
+        InlineResponse2002: Parsed telemetry response from Qdrant.
+        """
         url = f"{self.settings.URI}/telemetry?details_level={details_level}"
         headers = {"api-key": self.settings.APIKEY}
         try:
