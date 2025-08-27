@@ -12,13 +12,13 @@ To avoid unbounded growth of collections, the `QdrantConnectorStep` implements l
 
 **Configuration Flags:**
 
-| Setting                          | Description                                                             |
-|----------------------------------|-------------------------------------------------------------------------|
-| `COLLECTION_HISTORY_LEN`        | Number of latest versions to retain                                     |
-| `COLLECTION_USAGE_RETENTION_DAYS` | Protects recently accessed collections from deletion                    |
-| `COLLECTION_RETIRE_DRY_RUN`     | When `true`, only logs deletions; doesn’t actually delete anything      |
-| `DISABLE_COLLECTION_RETIREMENT` | When `true`, disables retirement logic entirely (no deletion performed) |
-| `TELEMETRY_DETAILS_LEVEL` | Controls how detailed the telemetry info fetched from Qdrant should be.    |
+| Setting                           | Description                                                              |
+|-----------------------------------|--------------------------------------------------------------------------|
+| `COLLECTION_HISTORY_LEN`          | Number of latest versions to retain                                      |
+| `COLLECTION_USAGE_RETENTION_DAYS` | Protects recently accessed collections from deletion                     |
+| `COLLECTION_RETIRE_DRY_RUN`       | When `true`, only logs deletions; doesn’t actually delete anything       |
+| `ENABLE_COLLECTION_RETIREMENT`    | When `false`, disables retirement logic entirely (no deletion performed) |
+| `TELEMETRY_DETAILS_LEVEL`         | Controls how detailed the telemetry info fetched from Qdrant should be.  |
 
 
 ::: wurzel.steps.qdrant.step_multi_vector

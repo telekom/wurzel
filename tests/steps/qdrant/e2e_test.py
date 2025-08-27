@@ -83,7 +83,7 @@ def test_qdrant_connector_one_no_csv(input_output_folder: tuple[Path, Path]):
 
 @pytest.mark.parametrize(
     "hist_len, step_run, aliased_collections,recently_used ,count_remaining_collection, remaining_collections,"
-    "untracked_collection,dry_run,disable_collection_retirement",
+    "untracked_collection,dry_run,enable_collection_retirement",
     [
         # Case 1: v1 is aliased + recent, keep v3-v5 by version
         pytest.param(
@@ -140,7 +140,7 @@ def test_qdrant_connector_one_no_csv(input_output_folder: tuple[Path, Path]):
             False,
             id="malformed_versions_ignored",
         ),
-        # Case 9: if DISABLE_COLLECTION_RETIREMENT, Collections: dummy_v1 to v6, plus malformed ones: abc_dummy
+        # Case 9: if ENABLE_COLLECTION_RETIREMENT, Collections: dummy_v1 to v4, plus malformed ones: abc_dummy
         pytest.param(
             1,
             4,
@@ -151,7 +151,7 @@ def test_qdrant_connector_one_no_csv(input_output_folder: tuple[Path, Path]):
             ["abc_dummy"],
             False,
             True,
-            id="untracked_collection_retained",
+            id="enable_collection_retirement",
         ),
     ],
 )
@@ -167,12 +167,12 @@ def test_qdrant_collection_retirement_with_missing_versions(
     remaining_collections,
     untracked_collection,
     dry_run,
-    disable_collection_retirement,
+    enable_collection_retirement,
 ):
     input_path, output_path = input_output_folder
     env.set("COLLECTION_HISTORY_LEN", str(hist_len))
     env.set("COLLECTION_RETIRE_DRY_RUN", str(dry_run).lower())
-    env.set("DISABLE_COLLECTION_RETIREMENT", str(disable_collection_retirement).lower())
+    env.set("ENABLE_COLLECTION_RETIREMENT", str(enable_collection_retirement).lower())
 
     input_file = input_path / "qdrant_at.csv"
     output_file = output_path / "QdrantConnectorStep"

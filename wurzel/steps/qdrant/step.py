@@ -246,10 +246,10 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         - Are not currently targeted by an alias,
         - Have not been recently used (per telemetry).
 
-        Skipped entirely if DISABLE_COLLECTION_RETIREMENT is True.
+        Skipped entirely if ENABLE_COLLECTION_RETIREMENT is False.
         """
-        if self.settings.DISABLE_COLLECTION_RETIREMENT:
-            log.info("Skipping Qdrant collection retirement as DISABLE_COLLECTION_RETIREMENT is set.")
+        if self.settings.ENABLE_COLLECTION_RETIREMENT:
+            log.info("Skipping Qdrant collection retirement as ENABLE_COLLECTION_RETIREMENT is set.")
             return
 
         collections_versioned: dict[int, str] = self._get_collection_versions()
