@@ -58,13 +58,14 @@ jobs:
       - name: Install dependencies (minimal)
         if: matrix.test-type == 'minimal'
         run: |
-          uv lock
-          uv --no-progress pip install -e ".[dev]"
+          ${{ env.UV }} lock
+          ${{ env.UV }} --no-progress pip install -e ".[dev]"
+          ${{ env.UV }} --no-progress pip install -r DIRECT_REQUIREMENTS.txt
 
       - name: Install dependencies (full)
         if: matrix.test-type == 'full'
         run: |
-          uv lock
+          ${{ env.UV }} lock
           ${{ env.UV }} lock
           make install UV="${{ env.UV }}" PIP="${{ env.PIP }}" SYSTEM_PYTHON="${{ env.SYSTEM_PYTHON }}"
 
@@ -72,9 +73,10 @@ jobs:
         if: matrix.test-type == 'minimal'
         run: |
           # Run a basic test to ensure the minimal package works
-          uv run python -c "import wurzel; print('Minimal installation successful')"
+          ${{ env.UV }} run python -c "import wurzel; print('Minimal installation successful')"
           # Run only core tests that don't require optional dependencies
           ${{ env.UV }} run pytest tests/ -k "not (qdrant or milvus or docling or openai or transformers or tlsh)" -v
+
 
       - name: Test full installation
         if: matrix.test-type == 'full'
