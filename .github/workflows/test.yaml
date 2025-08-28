@@ -53,3 +53,52 @@ jobs:
 
       - name: Test with python ${{ matrix.python-version }}
         run: make test
+
+  test-minimal:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: [3.11, 3.12]
+        include:
+          - os: windows-latest
+            python-version: "3.11"
+          - os: macos-latest
+            python-version: "3.11"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the latest version of uv and set the python version
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+          python-version: ${{ matrix.python-version }}
+          activate-environment: true
+
+      - name: Set environment variables
+        id: set-env
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            echo "UV=$(where uv)" >> $GITHUB_ENV
+            echo "PIP=$(where pip)" >> $GITHUB_ENV
+          else
+            echo "UV=$(which uv)" >> $GITHUB_ENV
+            echo "PIP=$(which pip)" >> $GITHUB_ENV
+          fi
+          echo "SYSTEM_PYTHON=python${{ matrix.python-version }}" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Install minimal dependencies (no extras)
+        run: |
+          uv lock
+          uv --no-progress pip install -e .
+
+      - name: Test minimal installation with python ${{ matrix.python-version }}
+        run: |
+          # Run a basic test to ensure the minimal package works
+          uv run python -c "import wurzel; print('Minimal installation successful')"
+          # Run only core tests that don't require optional dependencies
+          uv run pytest tests/ -k "not (qdrant or milvus or docling or openai or transformers or tlsh)" -v
