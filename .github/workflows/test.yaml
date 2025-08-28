@@ -42,6 +42,19 @@ jobs:
           python-version: ${{ matrix.python-version }}
           activate-environment: true
 
+      - name: Set environment variables
+        id: set-env
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            echo "UV=$(where uv)" >> $GITHUB_ENV
+            echo "PIP=$(where pip)" >> $GITHUB_ENV
+          else
+            echo "UV=$(which uv)" >> $GITHUB_ENV
+            echo "PIP=$(which pip)" >> $GITHUB_ENV
+          fi
+          echo "SYSTEM_PYTHON=python${{ matrix.python-version }}" >> $GITHUB_ENV
+        shell: bash
+
       - name: Install dependencies (minimal)
         if: matrix.test-type == 'minimal'
         run: |
@@ -52,7 +65,8 @@ jobs:
         if: matrix.test-type == 'full'
         run: |
           uv lock
-          make install UV="uv" PIP="pip" SYSTEM_PYTHON="python${{ matrix.python-version }}"
+          ${{ env.UV }} lock
+          make install UV="${{ env.UV }}" PIP="${{ env.PIP }}" SYSTEM_PYTHON="${{ env.SYSTEM_PYTHON }}"
 
       - name: Test minimal installation
         if: matrix.test-type == 'minimal'
@@ -60,7 +74,7 @@ jobs:
           # Run a basic test to ensure the minimal package works
           uv run python -c "import wurzel; print('Minimal installation successful')"
           # Run only core tests that don't require optional dependencies
-          uv run pytest tests/ -k "not (qdrant or milvus or docling or openai or transformers or tlsh)" -v
+          ${{ env.UV }} run pytest tests/ -k "not (qdrant or milvus or docling or openai or transformers or tlsh)" -v
 
       - name: Test full installation
         if: matrix.test-type == 'full'
