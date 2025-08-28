@@ -90,7 +90,8 @@ test = [
 ]
 
 docs = [
-    "mkdocstrings[python]"
+    "mkdocstrings[python]",
+    "mkdocs-mermaid2-plugin"
 ]
 
 all = ["wurzel[qdrant,milvus,tlsh,docling,argo]"]

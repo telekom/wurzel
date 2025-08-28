@@ -6,10 +6,45 @@ site_url: https://telekom.github.io/wurzel
 
 theme:
   name: readthedocs
+  palette:
+    scheme: default
+    primary: 'blue'
+    accent: 'light'
+
+nav:
+  - Home: index.md
+  - Developer Guide:
+    - Overview: developer-guide/index.md
+    - Installation: developer-guide/installation.md
+    - Getting Started: developer-guide/getting-started.md
+    - Building Pipelines: developer-guide/building-pipelines.md
+    - Creating Custom Steps: developer-guide/creating-steps.md
+    - Data Contracts: developer-guide/data-contracts.md
+  - Backends:
+      - Overview: backends/index.md
+      - Argo Workflows: backends/argoworkflows.md
+      - DVC: backends/dvc.md
+  - Steps:
+    - Docling: steps/docling.md
+    - Deduplication: steps/duplication.md
+    - Embedding: steps/embedding.md
+    - Manual Markdown: steps/manual_markdown.md
+    - Qdrant: steps/qdrant.md
+    - Milvus: steps/milvus.md
+    - ScraperAPI: steps/scraperapi.md
+    - Splitter: steps/splitter.md
+
+
 
 plugins:
 - search
 - mkdocstrings
+- mermaid2
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+
 
 
 
