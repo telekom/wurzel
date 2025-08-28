@@ -307,11 +307,10 @@ Now that you have your development environment set up:
 1. **[Build Your First Pipeline](building-pipelines.md)** - Learn core pipeline concepts
 2. **[Create Custom Steps](creating-steps.md)** - Build your own processing components
 3. **[Understand Data Contracts](data-contracts.md)** - Learn about type-safe data exchange
-4. **[Explore Backends](../backends/introduction.md)** - Understand deployment options
+4. **[Explore Backends](../backends/index.md)** - Understand deployment options
 
 ## Additional Resources
 
-- **[Contributing Guidelines](../CONTRIBUTING.md)** - Detailed contribution workflow
-- **[Code of Conduct](../CODE_OF_CONDUCT.md)** - Community guidelines
+
 - **[API Documentation](https://deepwiki.com/telekom/wurzel/)** - Auto-generated API reference
-- **[Example Pipelines](../examples/)** - Real-world implementation examples
+- **[Example Pipelines](https://github.com/telekom/wurzel/tree/main/examples)** - Real-world implementation examples

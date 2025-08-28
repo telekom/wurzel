@@ -29,10 +29,6 @@ New to Wurzel? Follow this recommended path:
 - **[Creating Custom Steps](creating-steps.md)** - Build your own data sources and processing steps
 - **[Data Contracts](data-contracts.md)** - Type-safe data exchange between pipeline steps
 
-### Advanced Topics
-
-- **[Backend Integration](../backends/introduction.md)** - Understanding and using different execution backends
-- **[Contributing](contributing.md)** - Guidelines for contributing to the Wurzel project
 
 ## 🎯 Common Tasks
 
@@ -48,13 +44,11 @@ New to Wurzel? Follow this recommended path:
 
 ## 🔗 External Resources
 
-- **[Backend Documentation](../backends/)** - Detailed guides for DVC and Argo Workflows backends
+- **[Backend Documentation](../backends/index.md)** - Detailed guides for DVC and Argo Workflows backends
 - **[Wurzel Project Documentation](https://deepwiki.com/telekom/wurzel/)** - Auto-generated API documentation
-- **[Contributing Guidelines](../CONTRIBUTING.md)** - How to contribute to the project
-- **[Code of Conduct](../CODE_OF_CONDUCT.md)** - Community guidelines
 
 ## 💡 Need Help?
 
 - Check the [troubleshooting section](installation.md#troubleshooting) for common issues
-- Review the [examples](../examples/) for real-world usage patterns
+- Review the [examples](https://github.com/telekom/wurzel/tree/main/examples) for real-world usage patterns
 - Consult the [AI documentation](https://deepwiki.com/telekom/wurzel/) for reference

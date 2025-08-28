@@ -51,7 +51,3 @@ Wurzel's extensible architecture supports adding new backends for:
 - **Apache Airflow**: For DAG-based orchestration and scheduling
 - **LocalBackend**: Execute steps locally without an external orchestrator
 - **Kubernetes CronJobs**: Direct Kubernetes-native `CronJob` manifests
-
-## Getting Started
-
-Ready to leverage the power of backends? Check out our [CLI Usage Guide](../backends.md#cli-usage) or dive into the specific backend documentation for your target platform.

@@ -363,10 +363,10 @@ def ml_pipeline() -> TypedStep:
 
 - **[Create Custom Steps](creating-steps.md)** - Learn to build your own processing components
 - **[Understand Data Contracts](data-contracts.md)** - Deep dive into type-safe data exchange
-- **[Explore Backends](../backends/introduction.md)** - Deploy your pipelines to different platforms
+- **[Explore Backends](../backends/index.md)** - Deploy your pipelines to different platforms
 
 ## Additional Resources
 
-- **[Step Examples](../examples/)** - Real-world step implementations
+- **[Step Examples](https://github.com/telekom/wurzel/tree/main/examples)** - Real-world step implementations
 - **[API Documentation](https://deepwiki.com/telekom/wurzel/)** - Complete API reference
-- **[Backend Guides](../backends/)** - Platform-specific deployment instructions
+- **[Backend Guides](../backends/index.md)** - Platform-specific deployment instructions

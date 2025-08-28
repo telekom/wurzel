@@ -596,8 +596,7 @@ class ResourceManagedStep(TypedStep[Settings, list[MarkdownDataContract], list[M
 ## Next Steps
 
 - **[Understand Data Contracts](data-contracts.md)** - Learn about type-safe data exchange
-- **[Explore Backend Integration](../backends/introduction.md)** - Deploy your custom steps
-- **[Review Example Steps](../examples/)** - Study real-world implementations
+- **[Explore Backend Integration](../backends/index.md)** - Deploy your custom steps
 
 ## Additional Resources
 

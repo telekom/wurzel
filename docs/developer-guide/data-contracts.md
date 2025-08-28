@@ -553,8 +553,8 @@ def test_step_with_custom_contract():
 ## Next Steps
 
 - **[Create Custom Steps](creating-steps.md)** - Build steps that use your custom contracts
-- **[Explore Backend Integration](../backends/introduction.md)** - Deploy pipelines with custom contracts
-- **[Review Examples](../examples/)** - See real-world contract implementations
+- **[Explore Backend Integration](../backends/index.md)** - Deploy pipelines with custom contracts
+- **[Review Examples](https://github.com/telekom/wurzel/tree/main/examples)** - See real-world contract implementations
 
 ## Additional Resources
 

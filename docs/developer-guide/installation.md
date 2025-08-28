@@ -257,10 +257,10 @@ If you encounter issues with the spaCy model:
 
 If you encounter issues not covered here:
 
-1. Check the [examples directory](../examples/) for working configurations
+1. Check the [examples directory](https://github.com/telekom/wurzel/tree/main/examples) for working configurations
 2. Review the [API documentation](https://deepwiki.com/telekom/wurzel/)
-3. Consult the [troubleshooting section](../backends/introduction.md) in backend documentation
-4. Open an issue on the [GitHub repository](https://github.com/telekom/wurzel)
+3. Consult the [troubleshooting section](../backends/index.md) in backend documentation
+4. Open an issue on the [GitHub repository](https://github.com/telekom/wurzel/issues/new/choose)
 
 ## Next Steps
 
@@ -268,10 +268,4 @@ Once you have Wurzel installed:
 
 1. **[Get Started with Development](getting-started.md)** - Set up your development workflow
 2. **[Build Your First Pipeline](building-pipelines.md)** - Learn the core concepts
-3. **[Explore Backends](../backends/introduction.md)** - Understand deployment options
-
-## Additional Resources
-
-- **[Backend Configuration](../backends/)** - Platform-specific deployment guides
-- **[Contributing Guidelines](../CONTRIBUTING.md)** - How to contribute to Wurzel
-- **[PyPI Direct Dependencies Documentation](https://packaging.python.org/specifications/core-metadata/)** - Understanding PyPI limitations
+3. **[Explore Backends](../backends/index.md)** - Understand deployment options
