@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://telekom.github.io/wurzel/steps/duplication/" />
+      <link rel="shortcut icon" href="../../img/favicon.ico" />
+    <title>Duplication - Wurzel</title>
+    <link rel="stylesheet" href="../../css/theme.css" />
+    <link rel="stylesheet" href="../../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Duplication";
+        var mkdocs_page_input_path = "steps/duplication.md";
+        var mkdocs_page_url = "/wurzel/steps/duplication/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href="../.." class="icon icon-home"> Wurzel
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../..">Wurzel</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../backends/">Wurzel: Using DVC and Argo Workflows Backends</a>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../../installation/">Installation Guide</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developping</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developping/Building_your_one_step/">📚 How to Build Your Own Step</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developping/define_pipline/">🔗 Defining a Pipeline in Wurzel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developping/docs/">📖 Documentation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../developping/getting_started/">👩‍💻 Developer Guide</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Steps</span></p>
+              <ul class="current">
+                  <li class="toctree-l1"><a class="reference internal" href="../docling/">Docling</a>
+                  </li>
+                  <li class="toctree-l1 current"><a class="reference internal current" href="#">Duplication</a>
+    <ul class="current">
+    </ul>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../embedding/">Embedding</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../manual_markdown/">Manual markdown</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../milvus/">Milvus</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../qdrant/">Qdrant</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../scraperapi/">Scraperapi</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../splitter/">Splitter</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../..">Wurzel</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href="../.." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Steps</li>
+      <li class="breadcrumb-item active">Duplication</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/telekom/wurzel/edit/master/docs/steps/duplication.md">Edit on telekom/wurzel</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <div class="doc doc-object doc-module">
+
+
+
+<a id="wurzel.steps.duplication"></a>
+    <div class="doc doc-contents first">
+
+        <p>consists of DVCSteps to embedd files and save them as for example as csv.</p>
+
+
+
+
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="wurzel.steps.duplication.DropDuplicationStep" class="doc doc-heading">
+            <code>DropDuplicationStep</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="wurzel.step.TypedStep">TypedStep</span>[<a class="autorefs autorefs-internal" title="DropStettings (wurzel.steps.duplication.DropStettings)" href="#wurzel.steps.duplication.DropStettings">DropStettings</a>, <span title="list">list</span>[<span title="wurzel.datacontract.MarkdownDataContract">MarkdownDataContract</span>], <span title="list">list</span>[<span title="wurzel.datacontract.MarkdownDataContract">MarkdownDataContract</span>]]</code></p>
+
+
+        <p>SimpleSplitterStep to split Markdown Documents rundimentory in medium size chunks.</p>
+
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>wurzel/steps/duplication.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">27</span>
+<span class="normal">28</span>
+<span class="normal">29</span>
+<span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">DropDuplicationStep</span><span class="p">(</span><span class="n">TypedStep</span><span class="p">[</span><span class="n">DropStettings</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="n">MarkdownDataContract</span><span class="p">],</span> <span class="nb">list</span><span class="p">[</span><span class="n">MarkdownDataContract</span><span class="p">]]):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;SimpleSplitterStep to split Markdown Documents rundimentory in medium size chunks.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inpt</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">MarkdownDataContract</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">MarkdownDataContract</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Executes the split step by processing input markdown files, generating smaller splitted markdown files,</span>
+<span class="sd">        by preserving the headline.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">DROP_BY_FIELDS</span> <span class="o">==</span> <span class="p">[</span><span class="s2">&quot;*&quot;</span><span class="p">]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">DROP_BY_FIELDS</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">inpt</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">df</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">DROP_BY_FIELDS</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="k">return</span> <span class="n">inpt</span>
+
+        <span class="n">filtered</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">DROP_BY_FIELDS</span><span class="p">)</span>
+        <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+            <span class="s2">&quot;Removed duplicates&quot;</span><span class="p">,</span>
+            <span class="n">extra</span><span class="o">=</span><span class="p">{</span>
+                <span class="s2">&quot;percentage&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">filtered</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">),</span>
+                <span class="s2">&quot;before&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">),</span>
+                <span class="s2">&quot;after&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">filtered</span><span class="p">),</span>
+                <span class="s2">&quot;by&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">DROP_BY_FIELDS</span><span class="p">),</span>
+            <span class="p">},</span>
+        <span class="p">)</span>
+        <span class="n">dumped</span> <span class="o">=</span> <span class="n">filtered</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">orient</span><span class="o">=</span><span class="s2">&quot;records&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="p">[</span><span class="n">MarkdownDataContract</span><span class="o">.</span><span class="n">model_construct</span><span class="p">(</span><span class="o">**</span><span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">dumped</span><span class="p">]</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h3 id="wurzel.steps.duplication.DropDuplicationStep.run" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">run</span><span class="p">(</span><span class="n">inpt</span><span class="p">)</span></code>
+
+</h3>
+
+
+    <div class="doc doc-contents ">
+
+        <p>Executes the split step by processing input markdown files, generating smaller splitted markdown files,
+by preserving the headline.</p>
+
+
+            <details class="quote">
+              <summary>Source code in <code>wurzel/steps/duplication.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">30</span>
+<span class="normal">31</span>
+<span class="normal">32</span>
+<span class="normal">33</span>
+<span class="normal">34</span>
+<span class="normal">35</span>
+<span class="normal">36</span>
+<span class="normal">37</span>
+<span class="normal">38</span>
+<span class="normal">39</span>
+<span class="normal">40</span>
+<span class="normal">41</span>
+<span class="normal">42</span>
+<span class="normal">43</span>
+<span class="normal">44</span>
+<span class="normal">45</span>
+<span class="normal">46</span>
+<span class="normal">47</span>
+<span class="normal">48</span>
+<span class="normal">49</span>
+<span class="normal">50</span>
+<span class="normal">51</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">def</span><span class="w"> </span><span class="nf">run</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inpt</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">MarkdownDataContract</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">MarkdownDataContract</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Executes the split step by processing input markdown files, generating smaller splitted markdown files,</span>
+<span class="sd">    by preserving the headline.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">DROP_BY_FIELDS</span> <span class="o">==</span> <span class="p">[</span><span class="s2">&quot;*&quot;</span><span class="p">]:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">DROP_BY_FIELDS</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">i</span><span class="o">.</span><span class="n">model_dump</span><span class="p">()</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">inpt</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">df</span><span class="o">.</span><span class="n">duplicated</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">DROP_BY_FIELDS</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+        <span class="k">return</span> <span class="n">inpt</span>
+
+    <span class="n">filtered</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">DROP_BY_FIELDS</span><span class="p">)</span>
+    <span class="n">log</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span>
+        <span class="s2">&quot;Removed duplicates&quot;</span><span class="p">,</span>
+        <span class="n">extra</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;percentage&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">filtered</span><span class="p">)</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">),</span>
+            <span class="s2">&quot;before&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">),</span>
+            <span class="s2">&quot;after&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">filtered</span><span class="p">),</span>
+            <span class="s2">&quot;by&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">settings</span><span class="o">.</span><span class="n">DROP_BY_FIELDS</span><span class="p">),</span>
+        <span class="p">},</span>
+    <span class="p">)</span>
+    <span class="n">dumped</span> <span class="o">=</span> <span class="n">filtered</span><span class="o">.</span><span class="n">to_dict</span><span class="p">(</span><span class="n">orient</span><span class="o">=</span><span class="s2">&quot;records&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">MarkdownDataContract</span><span class="o">.</span><span class="n">model_construct</span><span class="p">(</span><span class="o">**</span><span class="n">f</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">dumped</span><span class="p">]</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h2 id="wurzel.steps.duplication.DropStettings" class="doc doc-heading">
+            <code>DropStettings</code>
+
+
+</h2>
+
+
+    <div class="doc doc-contents ">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="wurzel.step.Settings">Settings</span></code></p>
+
+
+        <p>specify DROP_BY_FIELDS to field.</p>
+
+
+
+
+
+
+
+
+              <details class="quote">
+                <summary>Source code in <code>wurzel/steps/duplication.py</code></summary>
+                <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">21</span>
+<span class="normal">22</span>
+<span class="normal">23</span>
+<span class="normal">24</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">class</span><span class="w"> </span><span class="nc">DropStettings</span><span class="p">(</span><span class="n">Settings</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;specify DROP_BY_FIELDS to field.&quot;&quot;&quot;</span>
+
+    <span class="n">DROP_BY_FIELDS</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;md&quot;</span><span class="p">]</span>
+</code></pre></div></td></tr></table></div>
+              </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href="../docling/" class="btn btn-neutral float-left" title="Docling"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../embedding/" class="btn btn-neutral float-right" title="Embedding">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/telekom/wurzel" class="fa fa-code-fork" style="color: #fcfcfc"> telekom/wurzel</a>
+        </span>
+    
+    
+      <span><a href="../docling/" style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../embedding/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "../..";</script>
+    <script src="../../js/theme_extra.js"></script>
+    <script src="../../js/theme.js"></script>
+      <script src="../../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
