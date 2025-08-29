@@ -14,6 +14,3 @@ The repository includes initial implementations for widely-used frameworks in th
 - **Scheduling Capabilities**: Schedule and manage ETL tasks using built-in or external tools.
 - **Framework Integrations**: Pre-built support for popular tools like Qdrant, Milvus, and Hugging Face.
 - **Type Security**: By leveraging capabilities of [pydantic](https://docs.pydantic.dev/latest/) and [pandera](https://pandera.readthedocs.io/en/stable/) we ensure type security
-
-
-## Naming
