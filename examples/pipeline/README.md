@@ -65,19 +65,17 @@ Let's go through the process of how to get a Wurzel pipeline deployed locally.
 For that, we need the following steps:
 
 ## Hello World Wurzel
+
+> **New Syntax**: As of version 2.x, you can chain step classes directly without the `WZ()` wrapper for cleaner, more readable code.
+
 1. Define a `pipeline.py` where you chain your steps:
 ```python
 from wurzel.steps.embedding import EmbeddingStep
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.steps.qdrant.step import QdrantConnectorStep
-from wurzel.utils import WZ
 
-source = WZ(ManualMarkdownStep)
-embedding = WZ(EmbeddingStep)
-step = WZ(QdrantConnectorStep)
-
-source >> embedding >> step
-pipeline = step
+# Create pipeline using direct class chaining
+pipeline = ManualMarkdownStep >> EmbeddingStep >> QdrantConnectorStep
 ```
 2. Build your own Dockerfile based on the [ghcr.io/telekom/wurzel:](https://github.com/telekom/wurzel/pkgs/container/wurzel) image. Here you can add dependencies where your own files are placed, either pass them directly or within the `requirements.txt`:
 ```Dockerfile

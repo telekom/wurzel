@@ -102,6 +102,10 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     _supported_containers: Iterable[type[Iterable]] = (list, set, patyp.DataFrame)
     settings: SETTS
 
+    def __init_subclass__(cls, **kwargs):
+        """Called when a class is subclassed."""
+        super().__init_subclass__(**kwargs)
+
     def output_path(self, folder: Path) -> Path:
         """Used in generate dvc yml. Creates a path."""
         pth = folder / self.__class__.__name__
@@ -282,9 +286,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         return set_of
 
     def traverse(self) -> set["TypedStep"]:
-        """Retrieve a set of all required steps
-        including self.
-        """
+        """Retrieve a set of all required steps including self."""
         return self._traverse(set())
 
     # pylint: disable=method-hidden
