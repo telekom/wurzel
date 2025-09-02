@@ -16,6 +16,7 @@ spacy_default_model_name = "de_core_news_sm"
 spacy_default_model_missing = importlib.util.find_spec(spacy_default_model_name) is None
 spacy_multilingual_model_name = "xx_ent_wiki_sm"
 spacy_multilingual_model_missing = importlib.util.find_spec(spacy_multilingual_model_name) is None
+wtpsplit_missing = importlib.util.find_spec("wtpsplit") is None
 
 
 @pytest.fixture(scope="function")
@@ -26,6 +27,13 @@ def spacy_splitter():
 @pytest.fixture(scope="function")
 def regex_splitter():
     yield SentenceSplitter.from_name("regex")
+
+
+@pytest.fixture(scope="function")
+def sat_splitter():
+    # A "small" SaT model (larger models should not be run as unit tests)
+    # https://huggingface.co/segment-any-text/sat-3l-sm
+    yield SentenceSplitter.from_name("sat-3l-sm")
 
 
 def assert_splitter_test_cases(splitter: SentenceSplitter, test_cases: list[dict]):
@@ -121,3 +129,20 @@ def test_spacy_sentence_splitter_basic(spacy_splitter, test_cases: list[dict]):
 )
 def test_regex_sentence_splitter(regex_splitter, test_cases: list[dict]):
     assert_splitter_test_cases(splitter=regex_splitter, test_cases=test_cases)
+
+
+@pytest.mark.skipif(wtpsplit_missing, reason="wtpsplit not installed")
+@pytest.mark.parametrize(
+    "test_cases",
+    [
+        pytest.param(REGEX_TEST_CASES, id="Regex test cases (less challenging than Spacy test cases)"),
+        pytest.param(DE_TEST_CASES, id="German test cases"),
+        pytest.param(HR_TEST_CASES, id="Croatian test cases"),
+        # TODO the test cases below fail with `sat-3l-sm`
+        # pytest.param(BASIC_TEST_CASES, id="Basic test cases (mostly English)"),
+        # pytest.param(PL_TEST_CASES, id="Polish test cases"),
+        # pytest.param(EL_TEST_CASES, id="Greek test cases"),
+    ],
+)
+def test_sat_sentence_splitter(sat_splitter, test_cases: list[dict]):
+    assert_splitter_test_cases(splitter=sat_splitter, test_cases=test_cases)
