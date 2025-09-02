@@ -13,7 +13,7 @@ from pydantic import Field
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import MarkdownException, SplittException
 from wurzel.step import Settings, TypedStep
-from wurzel.utils.semantic_splitter import SemanticSplitter
+from wurzel.utils.splitters.semantic_splitter import SemanticSplitter
 
 # Local application/library specific imports
 
@@ -26,7 +26,10 @@ class SplitterSettings(Settings):
     TOKEN_COUNT_MIN: int = Field(64, gt=0)
     TOKEN_COUNT_MAX: int = Field(1024, gt=1)
     TOKEN_COUNT_BUFFER: int = Field(32, gt=0)
-    TOKENIZER_MODEL: str = Field("gpt-3.5-turbo", description="The tokenizer model to use for splitting documents.")
+    TOKENIZER_MODEL: str = Field(
+        "gpt-3.5-turbo", description="The tokenizer model to use for splitting documents (supported: tiktoken and HF transformers)."
+    )
+    SENTENCE_SPLITTER_MODEL: str = Field("de_core_news_sm", description="The model splitting text into sentences.")
 
 
 log = getLogger(__name__)
@@ -42,6 +45,7 @@ class SimpleSplitterStep(TypedStep[SplitterSettings, list[MarkdownDataContract],
             token_limit_buffer=self.settings.TOKEN_COUNT_BUFFER,
             token_limit_min=self.settings.TOKEN_COUNT_MIN,
             tokenizer_model=self.settings.TOKENIZER_MODEL,
+            sentence_splitter_model=self.settings.SENTENCE_SPLITTER_MODEL,
         )
 
     def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:

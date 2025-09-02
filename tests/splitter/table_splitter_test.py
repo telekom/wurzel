@@ -7,7 +7,7 @@ import mdformat
 import pytest
 
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.utils.semantic_splitter import (
+from wurzel.utils.splitters.semantic_splitter import (
     SemanticSplitter,
 )
 

@@ -6,21 +6,20 @@
 
 import re
 from logging import getLogger
-from typing import TYPE_CHECKING, Optional, TypedDict
+from typing import Optional, TypedDict
 
 import mdformat
-import tiktoken
 from mistletoe import Document as MisDocument
 from mistletoe import block_token, markdown_renderer, span_token
 from mistletoe.token import Token
 
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import MarkdownException
-from wurzel.utils.markdown_table_splitter import MarkdownTableSplitterUtil
+from wurzel.utils.splitters.markdown_table_splitter import MarkdownTableSplitterUtil
+from wurzel.utils.splitters.sentence_splitter import SentenceSplitter
 from wurzel.utils.to_markdown.html2md import MD_RENDER_LOCK
+from wurzel.utils.tokenizers import Tokenizer
 
-if TYPE_CHECKING:
-    import spacy
 LEVEL_MAPPING = {
     block_token.Heading: 0,  # actually 1-6
     block_token.List: 7,
@@ -143,11 +142,11 @@ class WurzelMarkdownRenderer(markdown_renderer.MarkdownRenderer):
 class SemanticSplitter:
     """Splitter implementation."""
 
-    nlp: "spacy.language.Language"
+    sentence_splitter: SentenceSplitter
     token_limit: int
     token_limit_buffer: int
     token_limit_min: int
-    tokenizer_model_encoding: tiktoken.Encoding
+    tokenizer: Tokenizer
     repeat_table_header_row: bool
 
     # pylint: disable=too-many-positional-arguments
@@ -156,32 +155,30 @@ class SemanticSplitter:
         token_limit: int = 256,
         token_limit_buffer: int = 32,
         token_limit_min: int = 64,
-        spacy_model: str = "de_core_news_sm",
+        sentence_splitter_model: str = "de_core_news_sm",
         repeat_table_header_row: bool = True,
         tokenizer_model: str = "gpt-3.5-turbo",
     ) -> None:  # pylint: enable=too-many-positional-arguments
-        """Initializes the SemanticSplitter class with specified token limits and a spaCy language model.
+        """Initializes the SemanticSplitter class with specified token limits and a sentence splitter model.
 
         Args:
             token_limit (int, optional): The maximum number of tokens allowed. Defaults to 256.
             token_limit_buffer (int, optional): The buffer size for token limit to allow flexibility. Defaults to 32.
             token_limit_min (int, optional): The minimum number of tokens required. Defaults to 64.
-            spacy_model (str, optional): The name of the spaCy language model to load. Defaults to "de_core_news_sm".
+            sentence_splitter_model (str, optional): The name of the sentence splitter model. Defaults to "de_core_news_sm".
             repeat_table_header_row (bool, optional): If a table is splitted, the header is repeated. Defaults to True.
             tokenizer_model (str, optional): The name of the tokenizer model to use for encoding. Defaults to "gpt-3.5-turbo".
 
         Raises:
-            OSError: If the specified spaCy model cannot be loaded.
+            OSError: If the specified sentence splitter cannot be loaded.
 
         """
-        import spacy  # pylint: disable=import-outside-toplevel
-
-        self.nlp = spacy.load(spacy_model)
+        self.sentence_splitter = SentenceSplitter.from_name(sentence_splitter_model)
         self.token_limit = token_limit
         self.token_limit_buffer = token_limit_buffer
         self.token_limit_min = token_limit_min
         self.repeat_table_header_row = repeat_table_header_row
-        self.tokenizer_model_encoding = tiktoken.encoding_for_model(tokenizer_model)
+        self.tokenizer = Tokenizer.from_name(tokenizer_model)
 
     def _get_token_len(self, text: str) -> int:
         """Get Token length.
@@ -193,10 +190,10 @@ class SemanticSplitter:
             int: count of tokens
 
         """
-        return len(self.tokenizer_model_encoding.encode(text))
+        return len(self.tokenizer.encode(text))
 
     def _cut_to_tokenlen(self, text: str, token_len: int, return_discarded_text: bool = False) -> str | tuple[str, str]:
-        """Cut text to max. token length using OpenAI tokenizer.
+        """Cut text to max. token length using the current tokenizer.
 
         Args:
             text (str): Input text
@@ -207,14 +204,14 @@ class SemanticSplitter:
             str | tuple[str, str]: Text limited to max. token count (and the discarded text, depending on `return_discarded_text`)
 
         """
-        input_tokens = self.tokenizer_model_encoding.encode(text)
+        input_tokens = self.tokenizer.encode(text)
 
         output_tokens = input_tokens[:token_len]  # ensure token length
-        output_text = self.tokenizer_model_encoding.decode(output_tokens)  # convert back to text
+        output_text = self.tokenizer.decode(output_tokens)  # convert back to text
 
         if return_discarded_text:
             discarded_tokens = input_tokens[token_len:]  # beyond token length
-            discarded_text = self.tokenizer_model_encoding.decode(discarded_tokens)  # convert back to text
+            discarded_text = self.tokenizer.decode(discarded_tokens)  # convert back to text
 
             return output_text, discarded_text
 
@@ -345,12 +342,12 @@ class SemanticSplitter:
         return return_docs
 
     def text_sentences(self, text):
-        """Split a text into sentences using a NLP model.
+        """Split a text into sentences using a sentence splitter model.
 
         This does not use a Regex based approach on purpose as they break with
         punctuation very easily see: https://stackoverflow.com/a/61254146
         """
-        return [sentence_span.text for sentence_span in self.nlp(text).sents]
+        return self.sentence_splitter.get_sentences(text)
 
     def _markdown_hierarchy_parser(self, text: str, metadata: MetaDataDict, max_depth: int = 30) -> DocumentNode:
         """Splits a Markdown string into a semantic Markdown based hierarchy.
@@ -563,9 +560,8 @@ class SemanticSplitter:
         recursive_depth: int = 1,
     ) -> list[MarkdownDataContract]:
         if self._get_token_len(doc["text"]) <= self.token_limit_min:
-            if recursive_depth == 1:
-                return [self._md_data_from_dict_cut(doc)]
-            log.warning("document to short", extra=doc)
+            # Skipping document since it is below token minium
+            log.warning("document to short", extra={"token_limit_min": self.token_limit_min, **doc})
             return []
         if self._is_within_targetlen_w_buffer(doc["text"]):
             return [self._md_data_from_dict_cut(doc)]
@@ -579,7 +575,7 @@ class SemanticSplitter:
             # split table into chunks depending on token length (re-emit table header)
             table_splitter = MarkdownTableSplitterUtil(
                 token_limit=self.token_limit,
-                enc=self.tokenizer_model_encoding,
+                tokenizer=self.tokenizer,
                 repeat_header_row=self.repeat_table_header_row,
             )
             return [

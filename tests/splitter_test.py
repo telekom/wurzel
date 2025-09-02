@@ -7,14 +7,16 @@ import pytest
 
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.steps.splitter import SimpleSplitterStep
-from wurzel.utils.semantic_splitter import (
+from wurzel.utils.splitters.semantic_splitter import (
     SemanticSplitter,
 )
 
 
 @pytest.fixture(scope="function")
 def Splitter(env):
-    yield SemanticSplitter()
+    yield SemanticSplitter(
+        token_limit_min=16,  # we use a non-default minimum to have shorter test cases
+    )
 
 
 def test_splitter(Splitter):
@@ -116,14 +118,16 @@ def test_sentence_splitter2(Splitter: SemanticSplitter):
     assert abs(Splitter._get_token_len(text) - sum(Splitter._get_token_len(chunk) for chunk in chunks)) > 3
 
 
-def test_splitter_header_breadcrum(Splitter):
+def test_splitter_header_breadcrum():
+    # This test case is adjusted for the default min. token length
+    splitter = SemanticSplitter()
     text = '### Erste Hilfe\n#### Purpureus TV Box/TV HD Recorder auf Werkseinstellungen zurücksetzen\nIn manchen Fällen kann es sinnvoll sein die Box auf die Werkseinstellungen zurück zu setzen.\nWie Sie dies veranlassen können, erklären wir Ihnen hier.\nBitte beachten Sie, dass Sie anschließend die Ersteinrichtung erneut durchlaufen lassen und es erforderlich ist, Funktionen, wie die persönlichen Empfehlungen, wieder einzurichten.\n![Purpureus TV Box]( "Purpureus TV Box - Gerät")\nPurpureus TV Box\n[Öffnet in neuem Fenster\nAnleitung im Hardwaresupport](https://www.lorem-ipsum.com/hilfe-service/services/hardwaresupport/device/lorem-tv/box/topic/einstellungen/lorem-tv-zurucksetzen/1)\nWenn Sie die Werkseinstellungen der Purpureus TV Box wieder herstellen möchten, wechseln Sie über die "**Home**" Taste in das Hauptmenü und öffnen Sie anschließend die Einstellungen.\nWählen Sie nun\xa0**Geräte/Google-Einstellungen – Geräte-Einstellungen – Info – Auf Werkseinstellungen zurücksetzen**.\nUm den Vorgang zu starten wählen Sie erneut "Auf Werkseinstellungen z**urücksetzen**" und anschließend "Alles löschen".\nDie Box startet sich anschließend neu und stellt die werkseitigen Einstellungen wieder her.\n![Purpureus TV Box - Werkseinstellungen]( "TV Box - Werkseinstellungen Android TV 12")\nTV HD Recorder zurücksetzen\n![TV HD Recorder]( "TV HD Recorder - Gerät")\nWenn Sie die Werkseinstellungen des TV HD Recorders wieder herstellen möchten, navigieren Sie über die "**Menü**" Taste Ihrer Fernbedienung zum Einstellungsrad.\nGehen Sie hier über die Pfeiltasten weiter zum Menüpunkt "**System**" und wählen Sie "**Auf Werkseinstellungen zurücksetzen**".\nGeben Sie dann Ihren vierstelligen TV PIN Code ein.\nNun können Sie die Box auf die Werkseinstellungen zurücksetzen.\n**Hinweis**:\xa0Sie im Zuge des Zurücksetzens die Möglichkeit gespeicherte Aufnahmen zu behalten oder zu löschen.\n![TV HD Recorder - Werkseinstellungen]( "TV HD Recorder - Werkseinstellungen")\n'  # noqa: E501
     md = MarkdownDataContract(
         md=text,
         url="https://www.lorem-ipsum.com/hilfe-service/faq/_jcr_content/root/container_750332750/faq.entry.%7Elorem-tv%7Eerste-hilfe.%7EPurpureusTV-Werkseinstellungen%7Emaster.html",
         keywords="Purpureus TV Box/TV HD Recorder auf Werkseinstellungen zurücksetzen",
     )
-    chunks = Splitter.split_markdown_document(md)
+    chunks = splitter.split_markdown_document(md)
     assert len(chunks) == 2, "split into two"
     assert "In manchen Fällen kann es sinnvoll" in chunks[0].md
     # assert "Erste Hilfe" in chunks[0].keywords
@@ -514,3 +518,27 @@ Duis consectetur ex elementum arcu volutpat, vitae rutrum risus vehicula. Donec 
     result = step.run(test_data)
     assert len(result) > 2
     assert isinstance(result[0], MarkdownDataContract)
+
+
+def test_splitter_empty_text(Splitter):
+    contract = MarkdownDataContract(
+        md="",
+        keywords="PurpureusTV Fehlercode F30102",
+        url="https://www.lorem-ipsum.com/aviar/geraete-zubehoer/lorem-tv-geraete/fehlercodes",
+    )
+
+    results = Splitter.split_markdown_document(contract)
+
+    assert len(results) == 0, "Splitter should not return empty docs"
+
+
+def test_splitter_too_short_text(Splitter):
+    contract = MarkdownDataContract(
+        md="This is non empty but too short.",
+        keywords="PurpureusTV Fehlercode F30102",
+        url="https://www.lorem-ipsum.com/aviar/geraete-zubehoer/lorem-tv-geraete/fehlercodes",
+    )
+
+    results = Splitter.split_markdown_document(contract)
+
+    assert len(results) == 0, "Splitter should not return too short docs"
