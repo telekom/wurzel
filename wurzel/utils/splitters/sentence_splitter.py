@@ -18,8 +18,10 @@ class SentenceSplitter(ABC):
     This interface provides a common API (`get_sentences`) for sentence splitters.
 
     Current implementations:
-    - Regex
+    - Regex ("regex")
+    - SaT ("sat-*" https://github.com/segment-any-text/wtpsplit)
     - Spacy (https://spacy.io/usage/models)
+
 
     Subclasses must implement `get_sentences`.
 
@@ -45,7 +47,8 @@ class SentenceSplitter(ABC):
 
         Args:
             name: Model name. Can be an Spacy model (e.g.,
-                "en_core_web_sm", "xx_ent_wiki_sm"), or "regex" ...
+                "en_core_web_sm", "xx_ent_wiki_sm"), a SaT model
+                (with "sat-*" like "sat-3l") or "regex".
 
         Returns:
             An instance of `SentenceSplitter`.
