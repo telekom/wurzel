@@ -21,6 +21,31 @@ class MarkdownDataContract(PydanticModel):
     """A data contract of the input of the EmbeddingStep representing a document in Markdown format.
 
     The document consists have the Markdown body (document content) and additional metadata (keywords, url).
+    The metadata is optional.
+
+    Example 1 (with metadata):
+    ```md
+    ---
+    keywords: "bread,butter"
+    url: "some/file/path.md"
+    ---
+    # Some title
+
+    With some more text.
+
+    ## And
+
+    - Other
+    - [Markdown content](#some-link)
+    ```
+
+    Example 2 (without metadata):
+    ```md
+    # Another title
+
+    Another text.
+    ```
+
     """
 
     md: str
