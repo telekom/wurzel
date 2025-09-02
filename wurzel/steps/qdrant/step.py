@@ -248,7 +248,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
 
         Skipped entirely if ENABLE_COLLECTION_RETIREMENT is False.
         """
-        if self.settings.ENABLE_COLLECTION_RETIREMENT:
+        if not self.settings.ENABLE_COLLECTION_RETIREMENT:
             log.info("Skipping Qdrant collection retirement as ENABLE_COLLECTION_RETIREMENT is set.")
             return
 

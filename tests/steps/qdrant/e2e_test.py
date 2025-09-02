@@ -95,24 +95,24 @@ def test_qdrant_connector_one_no_csv(input_output_folder: tuple[Path, Path]):
             ["dummy_v1", "dummy_v3", "dummy_v4", "dummy_v5"],
             [],
             False,
-            False,
+            True,
             id="aliased_recent_and_latest_versions",
         ),
         # Case 2: Keep only latest v4, v1 is recent, v2 is aliased
         pytest.param(
-            1, 4, ["dummy_v2"], ["dummy_v1"], 3, ["dummy_v1", "dummy_v2", "dummy_v4"], [], False, False, id="latest_plus_alias_recent"
+            1, 4, ["dummy_v2"], ["dummy_v1"], 3, ["dummy_v1", "dummy_v2", "dummy_v4"], [], False, True, id="latest_plus_alias_recent"
         ),
         # Case 3: Keep top 2 by version: v4, v5; v1 is recent
-        pytest.param(2, 5, [], ["dummy_v1"], 3, ["dummy_v1", "dummy_v4", "dummy_v5"], [], False, False, id="recent_plus_top_versions"),
+        pytest.param(2, 5, [], ["dummy_v1"], 3, ["dummy_v1", "dummy_v4", "dummy_v5"], [], False, True, id="recent_plus_top_versions"),
         # Case 4: v2 aliased, v4 recent; keep v4,v5
-        pytest.param(2, 5, ["dummy_v2"], [], 3, ["dummy_v2", "dummy_v4", "dummy_v5"], [], False, False, id="aliased_plus_top_versions"),
+        pytest.param(2, 5, ["dummy_v2"], [], 3, ["dummy_v2", "dummy_v4", "dummy_v5"], [], False, True, id="aliased_plus_top_versions"),
         # Case 5: Only latest v4; v1,v2 aliased
         pytest.param(
-            1, 4, ["dummy_v1", "dummy_v2"], [], 3, ["dummy_v1", "dummy_v2", "dummy_v4"], [], False, False, id="multiple_aliased_and_latest"
+            1, 4, ["dummy_v1", "dummy_v2"], [], 3, ["dummy_v1", "dummy_v2", "dummy_v4"], [], False, True, id="multiple_aliased_and_latest"
         ),
         # Case 6: Untracked collection (abc_dummy) should not be deleted,latest v4,v5
         pytest.param(
-            2, 5, [], [], 3, ["abc_dummy", "dummy_v4", "dummy_v5"], ["abc_dummy"], False, False, id="untracked_collection_retained"
+            2, 5, [], [], 3, ["abc_dummy", "dummy_v4", "dummy_v5"], ["abc_dummy"], False, True, id="untracked_collection_retained"
         ),
         # Case 7: Same as Case 3 but in dry run mode (no deletions)
         pytest.param(
@@ -124,7 +124,7 @@ def test_qdrant_connector_one_no_csv(input_output_folder: tuple[Path, Path]):
             ["dummy_v1", "dummy_v2", "dummy_v3", "dummy_v4", "dummy_v5"],
             [],
             True,
-            False,
+            True,
             id="dry_run_retains_all",
         ),
         # Case 8: Collections: dummy_v1 to v5, plus malformed ones: dummy_v, dummy_v_abc, dummy_v23_abc, dummy_vabc
@@ -137,7 +137,7 @@ def test_qdrant_connector_one_no_csv(input_output_folder: tuple[Path, Path]):
             ["dummy_v", "dummy_v_abc", "dummy_v23_abc", "dummy_vabc", "dummy_v4", "dummy_v5"],
             ["dummy_v", "dummy_v_abc", "dummy_v23_abc", "dummy_vabc"],
             False,
-            False,
+            True,
             id="malformed_versions_ignored",
         ),
         # Case 9: if ENABLE_COLLECTION_RETIREMENT, Collections: dummy_v1 to v4, plus malformed ones: abc_dummy
@@ -150,7 +150,7 @@ def test_qdrant_connector_one_no_csv(input_output_folder: tuple[Path, Path]):
             ["abc_dummy", "dummy_v1", "dummy_v2", "dummy_v3", "dummy_v4"],
             ["abc_dummy"],
             False,
-            True,
+            False,
             id="enable_collection_retirement",
         ),
     ],
