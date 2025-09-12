@@ -20,6 +20,7 @@ nav:
     - Building Pipelines: developer-guide/building-pipelines.md
     - Creating Custom Steps: developer-guide/creating-steps.md
     - Data Contracts: developer-guide/data-contracts.md
+    - Logs Scope: developer-guide/logs_scope.md
   - Backends:
       - Overview: backends/index.md
       - Argo Workflows: backends/argoworkflows.md
