@@ -4,7 +4,7 @@
 [project]
 name = "wurzel"
 
-version = "2.1.3"
+version = "2.2.0-dev.1"
 
 description = "Pick, choose and chain your RAG tools in a pythonic way"
 authors = [
@@ -94,7 +94,8 @@ test = [
 ]
 
 docs = [
-    "mkdocstrings[python]"
+    "mkdocstrings[python]",
+    "mkdocs-mermaid2-plugin"
 ]
 
 all = ["wurzel[qdrant,milvus,tlsh,docling,argo,openai,transformers]"]
