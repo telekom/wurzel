@@ -1,7 +1,7 @@
 # 🧩 Logs Scopes
 
-The following scopes are defined in **Wurzel** and surface in log messages.  
-They help you identify **where in the pipeline an event occurred** and clarify whether it indicates a **pipeline failure** 
+The following scopes are defined in **Wurzel** and surface in log messages.
+They help you identify **where in the pipeline an event occurred** and clarify whether it indicates a **pipeline failure**
 
 ---
 
