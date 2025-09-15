@@ -98,9 +98,15 @@ class MarkdownDataContract(PydanticModel):
             md_body = md
             logger.info(f"MarkdownDataContract has no YAML metadata: {path}", extra={"path": path, "md": md})
 
+        if "topics" in metadata:
+            logger.warning(
+                "`topics` metadata field is deprecated and will be removed in a future release. Use `keywords` instead.",
+                category=DeprecationWarning,
+            )
+
         return MarkdownDataContract(
             md=md_body,
             # Extract metadata fields or use default value
             url=metadata.get("url", url_prefix + str(path.absolute())),
-            keywords=metadata.get("topics", path.name.split(".")[0]),
+            keywords=metadata.get("keywords", path.name.split(".")[0]),
         )

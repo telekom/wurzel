@@ -15,20 +15,20 @@ from wurzel.step import MarkdownDataContract
         ("---\n\n   url: myurl\n---\nText", "myurl", ""),
         ("---\n\n\t url: myurl\n---\nText", "", ""),  # invalid YAML, ignore metadata
         ("---\nurl: myurl\n---\nText", "myurl", ""),
-        ("---\n\nurl: myurl\n\ntopics: bread\n---\nText", "myurl", "bread"),
+        ("---\n\nurl: myurl\n\nkeywords: bread\n---\nText", "myurl", "bread"),
         (
-            "---\n\nurl: myurl\n\ntopics: bread,butter\n---\nText",
+            "---\n\nurl: myurl\n\nkeywords: bread,butter\n---\nText",
             "myurl",
             "bread,butter",
         ),
-        ("---\n\n\ntopics: bread,butter\n---\nText", "", "bread,butter"),
+        ("---\n\n\nkeywords: bread,butter\n---\nText", "", "bread,butter"),
         (
-            "---\n\n\ntopics: bread,butter\n\n---\nText\nurl:url_body",
+            "---\n\n\nkeywords: bread,butter\n\n---\nText\nurl:url_body",
             "",
             "bread,butter",
         ),
         (
-            "---\n\n\ntopics: bread,butter\nurl: url_header\n---\nText",
+            "---\n\n\nkeywords: bread,butter\nurl: url_header\n---\nText",
             "url_header",
             "bread,butter",
         ),
