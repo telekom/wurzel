@@ -75,6 +75,9 @@ transformers = [
 tlsh = [
     "py-tlsh==4.7.2"
 ]
+wtpsplit = [
+    "wtpsplit>=2.1.6",
+]
 lint = [
     "pylint[spelling]==3.3.7",
     "pylint-json2html==0.5.0",
@@ -98,7 +101,7 @@ docs = [
     "mkdocstrings[python]"
 ]
 
-all = ["wurzel[qdrant,milvus,tlsh,docling,argo,openai,transformers]"]
+all = ["wurzel[qdrant,milvus,tlsh,docling,argo,openai,transformers,wtpsplit]"]
 dev = ["wurzel[lint,test,all]"]
 
 [build-system]
