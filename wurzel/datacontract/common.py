@@ -4,6 +4,7 @@
 
 import logging
 import re
+import warnings
 from pathlib import Path
 from typing import Any, Callable, Self
 
@@ -99,7 +100,7 @@ class MarkdownDataContract(PydanticModel):
             logger.info(f"MarkdownDataContract has no YAML metadata: {path}", extra={"path": path, "md": md})
 
         if "topics" in metadata:
-            logger.warning(
+            warnings.warn(
                 "`topics` metadata field is deprecated and will be removed in a future release. Use `keywords` instead.",
                 category=DeprecationWarning,
             )
