@@ -189,3 +189,12 @@ def test_metadata_invalid_yaml_ignore_metadata(tmp_path, header_md, body_md):
     assert s.md == body_md
     assert s.url.startswith("SPACE/")
     assert s.url.endswith("file.md")
+
+
+def test_topics_deprecation_warning(tmp_path):
+    with pytest.warns(DeprecationWarning, match="`topics` metadata field is deprecated "):
+        f = tmp_path / "file.md"
+        f.write_text("---\ntopics: foo\n---\n# Some title\n\nMore text.")
+        s = MarkdownDataContract.from_file(f, url_prefix="SPACE/")
+
+        assert s.md.startswith("# Some title")
