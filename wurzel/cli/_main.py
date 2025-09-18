@@ -9,7 +9,6 @@ import inspect
 import logging
 import logging.config
 import os
-import pkgutil
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -38,7 +37,7 @@ def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: s
         Type[BaseStepExecutor]: {BaseStepExecutor, PrometheusStepExecutor}
 
     """
-    from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
+    from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor  # pylint: disable=import-outside-toplevel
 
     if "BASESTEPEXECUTOR".startswith(value.upper()):
         return BaseStepExecutor
@@ -62,7 +61,7 @@ def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path:
         Type[TypedStep]: <<step>>
 
     """
-    from wurzel.step import TypedStep
+    from wurzel.step import TypedStep  # pylint: disable=import-outside-toplevel
 
     try:
         if ":" in import_path:
@@ -83,22 +82,129 @@ def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path:
     return step
 
 
-def complete_step_import(incomplete: str):
-    """AutoComplete for steps."""
-    from wurzel.step import TypedStep
-    from wurzel.utils.meta_steps import find_sub_classes
+def _process_python_file(py_file: Path, search_path: Path, base_module: str, incomplete: str, hints: list) -> None:
+    """Process a single Python file to find TypedStep classes."""
+    import ast  # pylint: disable=import-outside-toplevel
 
-    packages = [p for p in pkgutil.iter_modules() if p.ispkg and p.name.startswith(incomplete if incomplete else "wurzel")]
-    hints = []
-    for pkg in packages:
-        hints.extend(
-            ".".join([cls.__module__, cls.__qualname__])
-            for cls in find_sub_classes(TypedStep, pkg.name).values()
-            if str(".".join([cls.__module__, cls.__qualname__])).startswith(incomplete)
-        )
+    try:
+        # Fast AST parsing without executing code
+        with open(py_file, encoding="utf-8") as f:
+            content = f.read()
 
-    logging.info("found possible steps:", extra={"packages": packages, "hints": hints})
-    return hints
+        # Quick regex check before AST parsing (even faster)
+        if "TypedStep" not in content:
+            return
+
+        tree = ast.parse(content)
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef) and _check_if_typed_step(node):
+                # Create module path based on file location
+                try:
+                    module_path = _build_module_path(py_file, search_path, base_module)
+                    full_name = f"{module_path}.{node.name}"
+                    if full_name.startswith(incomplete):
+                        hints.append(full_name)
+                except ValueError:
+                    # File is not relative to search_path, skip it
+                    continue
+
+    except (OSError, SyntaxError, UnicodeDecodeError):
+        # Skip files that can't be parsed
+        pass
+
+
+def _check_if_typed_step(node) -> bool:
+    """Check if a class node inherits from TypedStep."""
+    import ast  # pylint: disable=import-outside-toplevel
+
+    for base in node.bases:
+        if isinstance(base, ast.Name) and base.id == "TypedStep":
+            return True
+        if isinstance(base, ast.Subscript):
+            # Handle generic TypedStep like TypedStep[Input, Output, Settings]
+            if isinstance(base.value, ast.Name) and base.value.id == "TypedStep":
+                return True
+            if isinstance(base.value, ast.Attribute) and base.value.attr == "TypedStep":
+                return True
+        if isinstance(base, ast.Attribute):
+            # Handle cases like wurzel.step.TypedStep
+            if base.attr == "TypedStep":
+                return True
+    return False
+
+
+def _build_module_path(py_file: Path, search_path: Path, base_module: str) -> str:
+    """Build module path from file location."""
+    rel_path = py_file.relative_to(search_path)
+    path_parts = list(rel_path.parts[:-1]) + [rel_path.stem]
+    if base_module:
+        # For wurzel built-in steps
+        return f"{base_module}.{'.'.join(path_parts)}"
+    # For user project steps - use relative path as module
+    if path_parts:
+        return ".".join(path_parts)
+    return rel_path.stem
+
+
+def complete_step_import(incomplete: str) -> list[str]:
+    """AutoComplete for steps - discover TypedStep classes from current project and wurzel."""
+    hints: list[str] = []
+
+    def scan_directory_for_typed_steps(search_path: Path, base_module: str = "") -> None:
+        """Scan a directory for TypedStep classes and add them to hints."""
+        if not search_path.exists():
+            return
+
+        # Directories to exclude from scanning (performance optimization)
+        exclude_dirs = {
+            ".venv",
+            "venv",
+            ".env",
+            "env",
+            "__pycache__",
+            ".git",
+            ".svn",
+            ".hg",
+            "node_modules",
+            ".tox",
+            ".pytest_cache",
+            "build",
+            "dist",
+            ".egg-info",
+            "site-packages",
+        }
+
+        for py_file in search_path.rglob("*.py"):
+            # Skip files in excluded directories
+            if any(exclude_dir in py_file.parts for exclude_dir in exclude_dirs):
+                continue
+
+            if py_file.name == "__init__.py":
+                continue
+
+            _process_python_file(py_file, search_path, base_module, incomplete, hints)
+
+    # Scan current Python project for user-defined TypedStep classes
+    try:
+        current_dir = Path.cwd()
+
+        scan_directory_for_typed_steps(current_dir)
+
+    except Exception:  # pylint: disable=broad-except
+        pass
+
+    # Remove duplicates while preserving order
+    seen: set[str] = set()
+    unique_hints: list[str] = []
+    for hint in hints:
+        if hint not in seen:
+            seen.add(hint)
+            unique_hints.append(hint)
+
+    logging.info("found possible steps:", extra={"hints": unique_hints[:10]})  # Log first 10
+
+    # Filter by incomplete prefix
+    return [hint for hint in unique_hints if hint.startswith(incomplete)]
 
 
 @app.command(no_args_is_help=True, help="Run a step")
@@ -141,7 +247,7 @@ def run(
     encapsulate_env: Annotated[bool, typer.Option()] = True,
 ):
     """Run."""
-    from wurzel.cli.cmd_run import main as cmd_run
+    from wurzel.cli.cmd_run import main as cmd_run  # pylint: disable=import-outside-toplevel
 
     output_path = Path(str(output_path.absolute()).replace("<step-name>", step.__name__))
     log.debug(
@@ -173,15 +279,15 @@ def inspekt(
     gen_env: Annotated[bool, typer.Option()] = False,
 ):
     """Inspect."""
-    from wurzel.cli.cmd_inspect import main as cmd_inspect
+    from wurzel.cli.cmd_inspect import main as cmd_inspect  # pylint: disable=import-outside-toplevel
 
     return cmd_inspect(step, gen_env)
 
 
 def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str):
     """Validates input and returns fitting backend. Currently always DVCBackend."""
-    from wurzel.backend.backend_argo import ArgoBackend
-    from wurzel.backend.backend_dvc import DvcBackend
+    from wurzel.backend.backend_argo import ArgoBackend  # pylint: disable=import-outside-toplevel
+    from wurzel.backend.backend_dvc import DvcBackend  # pylint: disable=import-outside-toplevel
 
     match backend:
         case DvcBackend.__name__:
@@ -194,7 +300,7 @@ def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: 
 
 def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str):
     """Based on step_callback transform them to WZ pipeline elements."""
-    from wurzel.utils.meta_settings import WZ
+    from wurzel.utils.meta_settings import WZ  # pylint: disable=import-outside-toplevel
 
     step = step_callback(_ctx, _param, import_path)
     if not hasattr(step, "required_steps"):
@@ -225,8 +331,8 @@ def generate(
     ] = "DvcBackend",
 ):
     """Run."""
-    from wurzel.backend.backend import Backend
-    from wurzel.cli.cmd_generate import main as cmd_generate
+    from wurzel.backend.backend import Backend  # pylint: disable=import-outside-toplevel
+    from wurzel.cli.cmd_generate import main as cmd_generate  # pylint: disable=import-outside-toplevel
 
     log.debug(
         "generate pipeline",
@@ -247,7 +353,7 @@ def generate(
 
 def update_log_level(log_level: str):
     """Fix for typer logs."""
-    from wurzel.utils.logging import get_logging_dict_config
+    from wurzel.utils.logging import get_logging_dict_config  # pylint: disable=import-outside-toplevel
 
     log_config = get_logging_dict_config(log_level)
     log_config["formatters"]["default"] = {
@@ -273,7 +379,7 @@ def main_args(
     ] = "INFO",
 ):
     """Global settings, main."""
-    from wurzel.utils.logging import get_logging_dict_config
+    from wurzel.utils.logging import get_logging_dict_config  # pylint: disable=import-outside-toplevel
 
     if not os.isatty(1):
         # typer.core.rich = None  # This may not be available in all typer versions

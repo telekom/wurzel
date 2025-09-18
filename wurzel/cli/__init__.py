@@ -5,7 +5,13 @@
 """CLI program."""
 
 import importlib.metadata
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from wurzel.step import TypedStep
+    from wurzel.step_executor import BaseStepExecutor
 
 __all__ = ["generate_cli_call"]
 try:
@@ -17,12 +23,12 @@ __version_info__ = __version__.split(".")
 
 
 def generate_cli_call(
-    step_cls,  # type: type[TypedStep]
-    inputs,  # type: list[Path]
-    output,  # type: Path
-    executor=None,  # type: type[BaseStepExecutor] | None
-    encapsulate_env=True,  # type: bool
-):
+    step_cls: "type[TypedStep]",
+    inputs: "list[Path]",
+    output: "Path",
+    executor: "type[BaseStepExecutor] | None" = None,
+    encapsulate_env: bool = True,
+) -> str:
     """Generate the cli call to execute a given step with its
     inputs and output.
 
@@ -36,8 +42,14 @@ def generate_cli_call(
 
     """
     # Lazy import to avoid loading heavy dependencies at package import time
-    from wurzel.step import TypedStep
-    from wurzel.step_executor import BaseStepExecutor
+    from pathlib import Path  # pylint: disable=import-outside-toplevel
+
+    # Ensure we have Path type available at runtime
+    _ = Path
+
+    # These imports are for runtime type checking if needed
+    # from wurzel.step import TypedStep
+    # from wurzel.step_executor import BaseStepExecutor
 
     if inputs:
         inputs_str = "-i " + " -i ".join(str(i) for i in inputs)
