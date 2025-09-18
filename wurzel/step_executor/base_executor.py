@@ -5,12 +5,12 @@
 """Base Executor."""
 
 import json
+import logging
 import os
 import time
 from collections.abc import Generator
 from contextlib import contextmanager
 from contextvars import copy_context
-from logging import getLogger
 from pathlib import Path
 from types import NoneType
 from typing import Any, Callable, Optional, Self, TypeAlias, Union
@@ -39,8 +39,9 @@ from wurzel.step.typed_step import (
     TypedStep,
 )
 from wurzel.utils import WZ, create_model, try_get_length
+from wurzel.utils.logging import CountingHandler
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 StepReturnType: TypeAlias = Union[pandas.DataFrame, PydanticModel, list[PydanticModel]]
 
@@ -50,12 +51,14 @@ class StepReport(pydantic.BaseModel):
 
     model_config = pydantic.ConfigDict(frozen=True)
     inputs: int = 0
-    results: int = 1
+    results: int = 1  # NOTE for consistency this should be renamed to "outputs"
     time_to_load: float
     time_to_execute: float
     time_to_save: float
     step_name: str
     history: list[str]
+    log_warning_counts: int = 0
+    log_error_counts: int = 0
 
 
 def _try_sort(x: StepReturnType) -> StepReturnType:
@@ -280,14 +283,20 @@ class BaseStepExecutor:
             for (inpt, history), load_time in self._load_data(step, inputs, output_path):
                 was_called_once = True
                 log.info(
-                    f"Start: {step_cls.__name__}.run({history[:-1]}) -> {output_path}",
+                    f"Start pipeline step: {step_cls.__name__}.run({history[:-1]}) -> {output_path}",
                 )
                 history: History
                 run_start = time.time()
                 ctx = copy_context()
                 token = step_history.set(history)
                 ctx.run(step_history.set, history)
+
+                # Setup log counting
+                log_counting_handler = CountingHandler()
+                log_counting_handler.attach_to_root_logger()
+
                 try:
+                    # Execute step with inputs
                     res = ctx.run(run, inpt)
                 finally:
                     step_history.reset(token)
@@ -296,6 +305,8 @@ class BaseStepExecutor:
                 if output_path:
                     self.store(step, history, res, output_path)
                     store_time = time.time() - run_time
+
+                # Step report
                 report = StepReport(
                     time_to_load=load_time,
                     time_to_execute=run_time,
@@ -304,9 +315,11 @@ class BaseStepExecutor:
                     inputs=try_get_length(inpt),
                     results=try_get_length(res),
                     history=history.get(),
+                    log_warning_counts=log_counting_handler.counts["WARNING"],
+                    log_error_counts=log_counting_handler.counts["ERROR"],
                 )
                 log.info(
-                    f"Finished: {step_cls.__name__}.run({history[:-1]}) -> {output_path}",
+                    f"Finished pipeline step: {step_cls.__name__}.run({history[:-1]}) -> {output_path}",
                     extra=report.model_dump(),
                 )
                 yield res, report

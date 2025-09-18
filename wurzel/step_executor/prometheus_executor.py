@@ -31,6 +31,8 @@ class PrometheusStepExecutor(BaseStepExecutor):
     counter_failed: Counter
     counter_results: Counter
     counter_inputs: Counter
+    counter_log_warning_counts: Counter
+    counter_log_error_counts: Counter
     histogram_load: Histogram
     histogram_save: Histogram
     histogram_execute: Histogram
@@ -52,17 +54,33 @@ class PrometheusStepExecutor(BaseStepExecutor):
     def __setup_metrics(self):
         if self.s.PROMETHEUS_DISABLE_CREATED_METRIC:
             os.environ["PROMETHEUS_DISABLE_CREATED_SERIES"] = "True"
-        self.counter_started = Counter("steps_started", "Total number of TypedSteps started", ("step_name",))
-        self.counter_failed = Counter("steps_failed", "Total number of TypedSteps failed", ("step_name",))
+
+        base_labels = [
+            "step_name",
+            "history_first_step",
+            "history_last_step",
+        ]
+        self.counter_started = Counter("steps_started", "Total number of TypedSteps started", base_labels)
+        self.counter_failed = Counter("steps_failed", "Total number of TypedSteps failed", base_labels)
         self.counter_results = Counter(
             "step_results",
             "count of result, if its an array, otherwise -1",
-            ("step_name",),
+            base_labels,
         )
-        self.counter_inputs = Counter("step_inputs", "count of inputs", ("step_name",))
-        self.histogram_save = Histogram("step_hist_save", "Time to save results", ("step_name",))
-        self.histogram_load = Histogram("step_hist_load", "Time to load inputs", ("step_name",))
-        self.histogram_execute = Histogram("step_hist_execute", "Time to execute results", ("step_name",))
+        self.counter_log_warning_counts = Counter(
+            "step_log_warning_counts",
+            "count of log warning messages",
+            base_labels,
+        )
+        self.counter_log_error_counts = Counter(
+            "step_log_error_counts",
+            "count of log error messages",
+            base_labels,
+        )
+        self.counter_inputs = Counter("step_inputs", "count of inputs", base_labels)
+        self.histogram_save = Histogram("step_hist_save", "Time to save results", base_labels)
+        self.histogram_load = Histogram("step_hist_load", "Time to load inputs", base_labels)
+        self.histogram_execute = Histogram("step_hist_execute", "Time to execute results", base_labels)
 
     def __enter__(self) -> Self:
         return self
@@ -89,21 +107,42 @@ class PrometheusStepExecutor(BaseStepExecutor):
             output (PathToBaseModel): Step output
 
         """
-        lbl = step_cls.__name__
-        self.counter_started.labels(lbl).inc()
+        step_name = step_cls.__name__
+
+        report_labels = {
+            "step_name": step_name,
+            "history_first_step": None,
+            "history_last_step": None,
+        }
+
+        self.counter_started.labels(**report_labels).inc()
         try:
             data = super().execute_step(step_cls, inputs, output_dir)
         except:
-            self.counter_failed.labels(lbl)
+            self.counter_failed.labels(**report_labels)
             raise
-        tt_s, tt_l, tt_e = (0, 0, 0)
+        time_to_save, time_to_load, time_to_execute = (0, 0, 0)
         for _, report in data:
-            self.counter_results.labels(lbl).inc(report.results)
-            self.counter_inputs.labels(lbl).inc(report.inputs)
-            tt_s += report.time_to_save
-            tt_l += report.time_to_load
-            tt_e += report.time_to_execute
-        self.histogram_save.labels(lbl).observe(tt_s)
-        self.histogram_load.labels(lbl).observe(tt_l)
-        self.histogram_execute.labels(lbl).observe(tt_e)
+            # Increase counter variables with step report data
+            report_labels.update(
+                {
+                    # Keep track of pipeline history
+                    "history_first_step": report.history[0].split("-")[0],  # There is probably a cleaner way for doing this
+                    "history_last_step": report.history[-1],
+                }
+            )
+
+            self.counter_results.labels(**report_labels).inc(report.results)
+            self.counter_inputs.labels(**report_labels).inc(report.inputs)
+
+            self.counter_log_error_counts.labels(**report_labels).inc(report.log_error_counts)
+            self.counter_log_warning_counts.labels(**report_labels).inc(report.log_warning_counts)
+
+            time_to_save += report.time_to_save
+            time_to_load += report.time_to_load
+            time_to_execute += report.time_to_execute
+
+        self.histogram_save.labels(**report_labels).observe(time_to_save)
+        self.histogram_load.labels(**report_labels).observe(time_to_load)
+        self.histogram_execute.labels(**report_labels).observe(time_to_execute)
         return data
