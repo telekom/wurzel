@@ -7,9 +7,6 @@
 import importlib.metadata
 from pathlib import Path
 
-from wurzel.step import TypedStep
-from wurzel.step_executor import BaseStepExecutor
-
 __all__ = ["generate_cli_call"]
 try:
     __version__ = importlib.metadata.version("wurzel")
@@ -20,12 +17,12 @@ __version_info__ = __version__.split(".")
 
 
 def generate_cli_call(
-    step_cls: type[TypedStep],
-    inputs: list[Path],
-    output: Path,
-    executor: type[BaseStepExecutor] = None,
-    encapsulate_env: bool = True,
-) -> str:
+    step_cls,  # type: type[TypedStep]
+    inputs,  # type: list[Path]
+    output,  # type: Path
+    executor=None,  # type: type[BaseStepExecutor] | None
+    encapsulate_env=True,  # type: bool
+):
     """Generate the cli call to execute a given step with its
     inputs and output.
 
@@ -38,10 +35,14 @@ def generate_cli_call(
         str: cmd
 
     """
+    # Lazy import to avoid loading heavy dependencies at package import time
+    from wurzel.step import TypedStep
+    from wurzel.step_executor import BaseStepExecutor
+
     if inputs:
-        inputs = "-i " + " -i ".join(str(i) for i in inputs)
+        inputs_str = "-i " + " -i ".join(str(i) for i in inputs)
     else:
-        inputs = ""
+        inputs_str = ""
     return " ".join(
         [
             "wurzel run",
@@ -49,7 +50,7 @@ def generate_cli_call(
             "-o",
             str(output.absolute()),
             "" if executor is None else f"-e {executor.__qualname__}",
-            inputs,
+            inputs_str,
             "--encapsulate-env" if encapsulate_env else "--no-encapsulate-env",
         ]
     )

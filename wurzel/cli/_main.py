@@ -16,19 +16,6 @@ from pathlib import Path
 from typing import Annotated, cast
 
 import typer
-import typer.core
-
-from wurzel.backend.backend import Backend
-from wurzel.backend.backend_argo import ArgoBackend
-from wurzel.backend.backend_dvc import DvcBackend
-from wurzel.cli.cmd_generate import main as cmd_generate
-from wurzel.cli.cmd_inspect import main as cmd_inspect
-from wurzel.cli.cmd_run import main as cmd_run
-from wurzel.step import TypedStep
-from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
-from wurzel.utils.logging import get_logging_dict_config
-from wurzel.utils.meta_settings import WZ
-from wurzel.utils.meta_steps import find_sub_classes
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -51,6 +38,8 @@ def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: s
         Type[BaseStepExecutor]: {BaseStepExecutor, PrometheusStepExecutor}
 
     """
+    from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
+
     if "BASESTEPEXECUTOR".startswith(value.upper()):
         return BaseStepExecutor
     if "PROMETHEUSSTEPEXECUTOR".startswith(value.upper()):
@@ -58,7 +47,7 @@ def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: s
     raise typer.BadParameter(f"{value} is not a recognized executor")
 
 
-def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str) -> TypedStep:
+def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str):
     """Converts a cli-str to a TypedStep.
 
     Args:
@@ -73,6 +62,8 @@ def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path:
         Type[TypedStep]: <<step>>
 
     """
+    from wurzel.step import TypedStep
+
     try:
         if ":" in import_path:
             mod, kls = import_path.rsplit(":", 1)
@@ -94,6 +85,9 @@ def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path:
 
 def complete_step_import(incomplete: str):
     """AutoComplete for steps."""
+    from wurzel.step import TypedStep
+    from wurzel.utils.meta_steps import find_sub_classes
+
     packages = [p for p in pkgutil.iter_modules() if p.ispkg and p.name.startswith(incomplete if incomplete else "wurzel")]
     hints = []
     for pkg in packages:
@@ -147,6 +141,8 @@ def run(
     encapsulate_env: Annotated[bool, typer.Option()] = True,
 ):
     """Run."""
+    from wurzel.cli.cmd_run import main as cmd_run
+
     output_path = Path(str(output_path.absolute()).replace("<step-name>", step.__name__))
     log.debug(
         "executing run",
@@ -177,11 +173,16 @@ def inspekt(
     gen_env: Annotated[bool, typer.Option()] = False,
 ):
     """Inspect."""
+    from wurzel.cli.cmd_inspect import main as cmd_inspect
+
     return cmd_inspect(step, gen_env)
 
 
-def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str) -> type[Backend]:
+def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str):
     """Validates input and returns fitting backend. Currently always DVCBackend."""
+    from wurzel.backend.backend_argo import ArgoBackend
+    from wurzel.backend.backend_dvc import DvcBackend
+
     match backend:
         case DvcBackend.__name__:
             return DvcBackend
@@ -191,8 +192,10 @@ def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: 
             raise typer.BadParameter(f"Backend {backend} not supported. choose from DvcBackend or ArgoBackend")
 
 
-def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str) -> TypedStep:
+def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str):
     """Based on step_callback transform them to WZ pipeline elements."""
+    from wurzel.utils.meta_settings import WZ
+
     step = step_callback(_ctx, _param, import_path)
     if not hasattr(step, "required_steps"):
         step = WZ(step)
@@ -222,6 +225,9 @@ def generate(
     ] = "DvcBackend",
 ):
     """Run."""
+    from wurzel.backend.backend import Backend
+    from wurzel.cli.cmd_generate import main as cmd_generate
+
     log.debug(
         "generate pipeline",
         extra={
@@ -241,6 +247,8 @@ def generate(
 
 def update_log_level(log_level: str):
     """Fix for typer logs."""
+    from wurzel.utils.logging import get_logging_dict_config
+
     log_config = get_logging_dict_config(log_level)
     log_config["formatters"]["default"] = {
         "()": "wurzel.cli.logger.WithExtraFormatter",
@@ -265,8 +273,10 @@ def main_args(
     ] = "INFO",
 ):
     """Global settings, main."""
+    from wurzel.utils.logging import get_logging_dict_config
+
     if not os.isatty(1):
-        typer.core.rich = None
+        # typer.core.rich = None  # This may not be available in all typer versions
         logging.config.dictConfig(get_logging_dict_config(log_level, "wurzel.utils.logging.JsonStringFormatter"))
         app.pretty_exceptions_enable = False
         app.pretty_exceptions_show_locals = False
