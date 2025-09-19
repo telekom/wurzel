@@ -24,12 +24,12 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-        build-essential=12.9 \
-        gcc=4:12.2.0-3 \
-        g++=4:12.2.0-3 \
-        git=1:2.39.5-0+deb12u2 \
-        curl=7.88.1-10+deb12u12 \
-        ca-certificates=20230311+deb12u1
+        build-essential \
+        gcc \
+        g++ \
+        git \
+        curl \
+        ca-certificates
 
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -63,9 +63,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' >/etc/apt/apt.conf.d/keep-cache && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-        git=1:2.39.5-0+deb12u2 \
-        curl=7.88.1-10+deb12u12 \
-        ca-certificates=20230311+deb12u1 && \
+        git \
+        curl \
+        ca-certificates && \
     case "$(uname -m)" in \
         x86_64) curl -L -o /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64 ;; \
         aarch64) curl -L -o /usr/bin/jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-arm64 ;; \

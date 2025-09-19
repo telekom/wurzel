@@ -18,8 +18,10 @@ class SentenceSplitter(ABC):
     This interface provides a common API (`get_sentences`) for sentence splitters.
 
     Current implementations:
-    - Regex
+    - Regex ("regex")
+    - SaT ("sat-*" https://github.com/segment-any-text/wtpsplit)
     - Spacy (https://spacy.io/usage/models)
+
 
     Subclasses must implement `get_sentences`.
 
@@ -45,13 +47,17 @@ class SentenceSplitter(ABC):
 
         Args:
             name: Model name. Can be an Spacy model (e.g.,
-                "en_core_web_sm", "xx_ent_wiki_sm"), or "regex" ...
+                "en_core_web_sm", "xx_ent_wiki_sm"), a SaT model
+                (with "sat-*" like "sat-3l") or "regex".
 
         Returns:
             An instance of `SentenceSplitter`.
         """
         if name == "regex":
             return RegexSentenceSplitter()
+
+        if name.startswith("sat-"):
+            return SaTSentenceSplitter(name)
 
         # Try to load a Spacy model
         try:
@@ -194,3 +200,35 @@ class RegexSentenceSplitter(SentenceSplitter):
                 sentences.append(part)
 
         return [s.strip() for s in sentences if s.strip()]
+
+
+class SaTSentenceSplitter(SentenceSplitter):
+    """Adapter for wtpsplit's SaT sentence splitter.
+
+    SaT (Segment any Text) is a state-of-the-art sentence splitter. Depending on the
+    selected model you may want to use a GPU for faster inference.
+
+    Available models and benchmark results:  https://github.com/segment-any-text/wtpsplit
+
+    Example usage:
+    ```python
+    splitter = SentenceSplitter.from_name("sat-3l")
+    splitter.get_sentences("This is a test This is another test.")
+    # returns ["This is a test ", "This is another test."]
+    ```
+
+    """
+
+    def __init__(self, model_name_or_model: str):
+        """Initialize a SaTSentenceSplitter.
+
+        Args:
+            model_name_or_model: A string or Path (Hugging Face ID or local directory path)
+        """
+        from wtpsplit import SaT  # pylint: disable=import-outside-toplevel
+
+        self._sat = SaT(model_name_or_model)
+
+    def get_sentences(self, text: str) -> list[str]:
+        """Split text into sentences."""
+        return self._sat.split(text, strip_whitespace=True)
