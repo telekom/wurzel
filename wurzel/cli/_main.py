@@ -146,7 +146,7 @@ def _build_module_path(py_file: Path, search_path: Path, base_module: str) -> st
     return rel_path.stem
 
 
-def complete_step_import(incomplete: str) -> list[str]:
+def complete_step_import(incomplete: str) -> list[str]:  # pylint: disable=too-many-statements
     """AutoComplete for steps - discover TypedStep classes from current project and wurzel."""
     hints: list[str] = []
 
@@ -179,7 +179,13 @@ def complete_step_import(incomplete: str) -> list[str]:
             "doc",
         }
 
-        # Only scan top-level directories that might contain user steps
+        # First, scan Python files directly in the search path
+        for py_file in search_path.glob("*.py"):
+            if py_file.name == "__init__.py":
+                continue
+            _process_python_file(py_file, search_path, base_module, incomplete, hints)
+
+        # Then scan top-level directories that might contain user steps
         for item in search_path.iterdir():
             if item.is_dir() and item.name not in exclude_dirs:
                 # Only go 2 levels deep to avoid deep scanning
@@ -220,6 +226,27 @@ def complete_step_import(incomplete: str) -> list[str]:
     try:
         current_dir = Path.cwd()
         scan_directory_for_typed_steps(current_dir)
+    except Exception:  # pylint: disable=broad-except
+        pass
+
+    # Scan installed packages for TypedStep classes
+    try:
+        from importlib.metadata import distributions  # pylint: disable=import-outside-toplevel
+        from importlib.util import find_spec  # pylint: disable=import-outside-toplevel
+
+        installed_pkgs = {dist.name for dist in distributions()}
+        if "." in incomplete:
+            pkg = incomplete.split(".")[0]
+            if pkg in installed_pkgs:
+                spec = find_spec(pkg)
+                if spec and spec.origin:
+                    pkg_path = Path(spec.origin).parent
+                    scan_directory_for_typed_steps(pkg_path, pkg)
+        elif incomplete in installed_pkgs:
+            spec = find_spec(incomplete)
+            if spec and spec.origin:
+                pkg_path = Path(spec.origin).parent
+                scan_directory_for_typed_steps(pkg_path, incomplete)
     except Exception:  # pylint: disable=broad-except
         pass
 
