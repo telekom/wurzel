@@ -172,24 +172,54 @@ def complete_step_import(incomplete: str) -> list[str]:
             "dist",
             ".egg-info",
             "site-packages",
+            "tests",  # Skip test directories - unlikely to contain user steps
+            "test",
+            "testing",
+            "docs",  # Skip documentation
+            "doc",
         }
 
-        for py_file in search_path.rglob("*.py"):
-            # Skip files in excluded directories
-            if any(exclude_dir in py_file.parts for exclude_dir in exclude_dirs):
-                continue
+        # Only scan top-level directories that might contain user steps
+        for item in search_path.iterdir():
+            if item.is_dir() and item.name not in exclude_dirs:
+                # Only go 2 levels deep to avoid deep scanning
+                for py_file in item.rglob("*.py"):
+                    if py_file.name == "__init__.py":
+                        continue
 
-            if py_file.name == "__init__.py":
-                continue
+                    # Check if file is in excluded directory
+                    if any(exclude_dir in py_file.parts for exclude_dir in exclude_dirs):
+                        continue
 
-            _process_python_file(py_file, search_path, base_module, incomplete, hints)
+                    # Limit depth to 3 levels max
+                    relative_parts = py_file.relative_to(search_path).parts
+                    if len(relative_parts) > 3:
+                        continue
 
-    # Scan current Python project for user-defined TypedStep classes
+                    _process_python_file(py_file, search_path, base_module, incomplete, hints)
+
+    # Scan for wurzel built-in steps if wurzel is available as a dependency
+    try:
+        import wurzel  # pylint: disable=import-outside-toplevel
+
+        wurzel_path = Path(wurzel.__file__).parent
+
+        # Only scan wurzel steps and step directories, not the entire package
+        wurzel_steps_path = wurzel_path / "steps"
+        wurzel_step_path = wurzel_path / "step"
+
+        if wurzel_steps_path.exists():
+            scan_directory_for_typed_steps(wurzel_steps_path, "wurzel.steps")
+        if wurzel_step_path.exists():
+            scan_directory_for_typed_steps(wurzel_step_path, "wurzel.step")
+
+    except ImportError:
+        pass  # wurzel not available
+
+    # Scan current Python project for TypedStep classes (including wurzel if we're in wurzel directory)
     try:
         current_dir = Path.cwd()
-
         scan_directory_for_typed_steps(current_dir)
-
     except Exception:  # pylint: disable=broad-except
         pass
 
@@ -201,7 +231,7 @@ def complete_step_import(incomplete: str) -> list[str]:
             seen.add(hint)
             unique_hints.append(hint)
 
-    logging.info("found possible steps:", extra={"hints": unique_hints[:10]})  # Log first 10
+    logging.debug("found possible steps:", extra={"hints": unique_hints[:10]})  # Log first 10
 
     # Filter by incomplete prefix
     return [hint for hint in unique_hints if hint.startswith(incomplete)]
