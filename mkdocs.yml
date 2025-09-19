@@ -19,10 +19,10 @@ nav:
 - Installation: installation.md
 - Backend Configuration: backends.md
 - Development:
-  - Getting Started: developping/getting_started.md
-  - Building Steps: developping/Building_your_one_step.md
-  - Define Pipeline: developping/define_pipline.md
-  - Documentation: developping/docs.md
+  - Getting Started: developing/getting_started.md
+  - Building Steps: developing/Building_your_one_step.md
+  - Define Pipeline: developing/define_pipline.md
+  - Documentation: developing/docs.md
 - Steps:
   - Manual Markdown: steps/manual_markdown.md
   - Duplication: steps/duplication.md
