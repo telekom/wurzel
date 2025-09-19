@@ -204,51 +204,60 @@ def complete_step_import(incomplete: str) -> list[str]:  # pylint: disable=too-m
 
                     _process_python_file(py_file, search_path, base_module, incomplete, hints)
 
-    # Scan for wurzel built-in steps if wurzel is available as a dependency
-    try:
-        import wurzel  # pylint: disable=import-outside-toplevel
+    import threading  # pylint: disable=import-outside-toplevel
 
-        wurzel_path = Path(wurzel.__file__).parent
+    scan_threads = []
 
-        # Only scan wurzel steps and step directories, not the entire package
-        wurzel_steps_path = wurzel_path / "steps"
-        wurzel_step_path = wurzel_path / "step"
+    def scan_wurzel():
+        try:
+            import wurzel  # pylint: disable=import-outside-toplevel
 
-        if wurzel_steps_path.exists():
-            scan_directory_for_typed_steps(wurzel_steps_path, "wurzel.steps")
-        if wurzel_step_path.exists():
-            scan_directory_for_typed_steps(wurzel_step_path, "wurzel.step")
+            wurzel_path = Path(wurzel.__file__).parent
+            wurzel_steps_path = wurzel_path / "steps"
+            wurzel_step_path = wurzel_path / "step"
+            if wurzel_steps_path.exists():
+                scan_directory_for_typed_steps(wurzel_steps_path, "wurzel.steps")
+            if wurzel_step_path.exists():
+                scan_directory_for_typed_steps(wurzel_step_path, "wurzel.step")
+        except ImportError:
+            pass
 
-    except ImportError:
-        pass  # wurzel not available
+    def scan_current():
+        try:
+            current_dir = Path.cwd()
+            scan_directory_for_typed_steps(current_dir)
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
 
-    # Scan current Python project for TypedStep classes (including wurzel if we're in wurzel directory)
-    try:
-        current_dir = Path.cwd()
-        scan_directory_for_typed_steps(current_dir)
-    except Exception:  # pylint: disable=broad-except
-        pass
+    def scan_installed():
+        try:
+            from importlib.metadata import distributions  # pylint: disable=import-outside-toplevel
+            from importlib.util import find_spec  # pylint: disable=import-outside-toplevel
 
-    # Scan installed packages for TypedStep classes
-    try:
-        from importlib.metadata import distributions  # pylint: disable=import-outside-toplevel
-        from importlib.util import find_spec  # pylint: disable=import-outside-toplevel
-
-        installed_pkgs = {dist.name for dist in distributions()}
-        if "." in incomplete:
-            pkg = incomplete.split(".")[0]
-            if pkg in installed_pkgs:
-                spec = find_spec(pkg)
+            installed_pkgs = {dist.name for dist in distributions()}
+            if "." in incomplete:
+                pkg = incomplete.split(".")[0]
+                if pkg in installed_pkgs:
+                    spec = find_spec(pkg)
+                    if spec and spec.origin:
+                        pkg_path = Path(spec.origin).parent
+                        scan_directory_for_typed_steps(pkg_path, pkg)
+            elif incomplete in installed_pkgs:
+                spec = find_spec(incomplete)
                 if spec and spec.origin:
                     pkg_path = Path(spec.origin).parent
-                    scan_directory_for_typed_steps(pkg_path, pkg)
-        elif incomplete in installed_pkgs:
-            spec = find_spec(incomplete)
-            if spec and spec.origin:
-                pkg_path = Path(spec.origin).parent
-                scan_directory_for_typed_steps(pkg_path, incomplete)
-    except Exception:  # pylint: disable=broad-except
-        pass
+                    scan_directory_for_typed_steps(pkg_path, incomplete)
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
+
+    # Start all scan threads
+    scan_threads.append(threading.Thread(target=scan_wurzel))
+    scan_threads.append(threading.Thread(target=scan_current))
+    scan_threads.append(threading.Thread(target=scan_installed))
+    for t in scan_threads:
+        t.start()
+    for t in scan_threads:
+        t.join()
 
     # Remove duplicates while preserving order
     seen: set[str] = set()
