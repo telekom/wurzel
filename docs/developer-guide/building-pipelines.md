@@ -45,7 +45,6 @@ source >> embedding >> storage
 ```
 
 ## Defining a Complete Pipeline
-## Defining a Complete Pipeline
 
 <a id="defining-a-pipeline"></a>
 ### Basic Example

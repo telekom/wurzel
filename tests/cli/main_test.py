@@ -65,6 +65,62 @@ def test_autocomplete_step_import():
     assert "wurzel.steps.manual_markdown.ManualMarkdownStep" in completion
 
 
+def test_autocomplete_step_import_installed_package(tmp_path, monkeypatch):
+    """Test that complete_step_import finds TypedStep classes from installed packages."""
+    # Create a fake installed package structure
+    fake_pkg_dir = tmp_path / "fake_package"
+    fake_pkg_dir.mkdir()
+
+    # Create __init__.py
+    (fake_pkg_dir / "__init__.py").write_text("")
+
+    # Create a subdirectory with a TypedStep class
+    sub_dir = fake_pkg_dir / "steps"
+    sub_dir.mkdir()
+    (sub_dir / "__init__.py").write_text("")
+
+    # Create a Python file with a TypedStep class
+    step_file = sub_dir / "test_step.py"
+    step_file.write_text("""
+from wurzel.step import TypedStep
+from typing import List
+from wurzel.datacontract import MarkdownDataContract
+
+class FakeTestStep(TypedStep[None, None, List[MarkdownDataContract]]):
+    def run(self, input_data=None):
+        return []
+""")
+
+    # Mock importlib.metadata.distributions to return our fake package
+    from unittest.mock import Mock
+
+    fake_dist = Mock()
+    fake_dist.name = "fake_package"
+
+    def mock_distributions():
+        return [fake_dist]
+
+    # Mock importlib.util.find_spec to return our fake package path
+    fake_spec = Mock()
+    fake_spec.origin = str(fake_pkg_dir / "__init__.py")
+
+    def mock_find_spec(name):
+        if name == "fake_package":
+            return fake_spec
+        return None
+
+    monkeypatch.setattr("importlib.metadata.distributions", mock_distributions)
+    monkeypatch.setattr("importlib.util.find_spec", mock_find_spec)
+
+    # Test completion for the exact package name
+    completion = main.complete_step_import("fake_package")
+    assert "fake_package.steps.test_step.FakeTestStep" in completion
+
+    # Test completion for package with submodule
+    completion = main.complete_step_import("fake_package.steps")
+    assert "fake_package.steps.test_step.FakeTestStep" in completion
+
+
 def test_run(tmp_path, env):
     out = tmp_path / "out"
     inp = tmp_path / "in"  #

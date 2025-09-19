@@ -21,10 +21,6 @@ python -c "import wurzel; print('Wurzel installed successfully')"
 
 # Verify CLI access
 wurzel --help
-
-# Test that development tools are available
-make --version
-pre-commit --version
 ```
 
 ## Development Workflow
@@ -35,11 +31,7 @@ Wurzel uses pre-commit hooks to enforce consistent code quality and formatting. 
 
 #### Set Up Pre-commit Hooks
 
-If you used `make install`, pre-commit hooks are already configured. Otherwise, set them up manually:
-
-```bash
-pre-commit install
-```
+If you used `make install`, pre-commit hooks are already configured.
 
 #### Run Linting Manually
 
@@ -49,13 +41,7 @@ You can trigger the linting process manually at any time:
 make lint
 ```
 
-This runs all configured linters and formatters across the codebase, including:
-
-- **Black**: Code formatting
-- **isort**: Import sorting
-- **flake8**: Style and error checking
-- **mypy**: Type checking
-- **Ruff**: Fast Python linter
+This runs all configured linters and formatters across the codebase.
 
 ### Running Tests
 
@@ -64,15 +50,6 @@ Before submitting changes, ensure all tests pass:
 ```bash
 # Run the complete test suite
 make test
-
-# Run tests with coverage report
-make test-coverage
-
-# Run specific test files
-python -m pytest tests/test_specific_file.py
-
-# Run tests with verbose output
-python -m pytest -v
 ```
 
 #### Test Structure
@@ -105,7 +82,7 @@ Wurzel uses MkDocs for documentation management:
 
 - **Source files**: Located in `docs/`
 - **Configuration**: `mkdocs.yml`
-- **Auto-generated API docs**: Built from docstrings
+- **Auto-generated docs**: Built from docstrings
 
 ## Development Guidelines
 
@@ -242,63 +219,6 @@ For packages that can't be installed via PyPI (like spaCy models):
    ```
 
 2. **Document in installation guide** if user-facing
-
-## Debugging Tips
-
-### Common Issues
-
-#### Import Errors
-
-```bash
-# Check Python path
-python -c "import sys; print(sys.path)"
-
-# Verify package installation
-pip list | grep wurzel
-```
-
-#### Test Failures
-
-```bash
-# Run tests with detailed output
-python -m pytest -v -s
-
-# Run specific test method
-python -m pytest tests/test_file.py::TestClass::test_method
-
-# Debug with pdb
-python -m pytest --pdb tests/test_file.py
-```
-
-#### Development Environment Issues
-
-```bash
-# Clean and reinstall
-make clean
-make install
-
-# Verify pre-commit setup
-pre-commit run --all-files
-```
-
-### Useful Development Commands
-
-```bash
-# Clean build artifacts
-make clean
-
-# Format code manually
-black .
-isort .
-
-# Type checking
-mypy wurzel/
-
-# Check test coverage
-coverage run -m pytest
-coverage report
-coverage html  # Generate HTML report
-```
 
 ## Next Steps
 

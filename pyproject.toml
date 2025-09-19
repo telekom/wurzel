@@ -99,11 +99,17 @@ test = [
 
 docs = [
     "mkdocstrings[python]",
-    "mkdocs-mermaid2-plugin"
+    "mkdocs-mermaid2-plugin",
+    "mkdocs-typer2",
+    "mkdocs-material>=9.4.0",
+    "mkdocs-multirepo-plugin>=0.5.3",
+    "mkdocs-git-revision-date-localized-plugin>=1.2.0",
+    "mkdocs-minify-plugin>=0.7.0",
+    "pygments>=2.16.0",
 ]
 
 all = ["wurzel[qdrant,milvus,tlsh,docling,argo,openai,transformers,wtpsplit]"]
-dev = ["wurzel[lint,test,all]"]
+dev = ["wurzel[lint,test,docs,all]"]
 
 [build-system]
 requires = ["setuptools>=78.1.0", "wheel"]
