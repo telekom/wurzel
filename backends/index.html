@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://telekom.github.io/wurzel/backends/" />
+      <link rel="shortcut icon" href="../img/favicon.ico" />
+    <title>Wurzel: Using DVC and Argo Workflows Backends - Wurzel</title>
+    <link rel="stylesheet" href="../css/theme.css" />
+    <link rel="stylesheet" href="../css/theme_extra.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+        <link href="../assets/_mkdocstrings.css" rel="stylesheet" />
+    
+      <script>
+        // Current page data
+        var mkdocs_page_name = "Wurzel: Using DVC and Argo Workflows Backends";
+        var mkdocs_page_input_path = "backends.md";
+        var mkdocs_page_url = "/wurzel/backends/";
+      </script>
+    
+    <!--[if lt IE 9]>
+      <script src="../js/html5shiv.min.js"></script>
+    <![endif]-->
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+      <script>hljs.highlightAll();</script> 
+</head>
+
+<body class="wy-body-for-nav" role="document">
+
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side stickynav">
+    <div class="wy-side-scroll">
+      <div class="wy-side-nav-search">
+          <a href=".." class="icon icon-home"> Wurzel
+        </a><div role="search">
+  <form id ="rtd-search-form" class="wy-form" action="../search.html" method="get">
+      <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" title="Type search term here" />
+  </form>
+</div>
+      </div>
+
+      <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="..">Wurzel</a>
+                </li>
+              </ul>
+              <ul class="current">
+                <li class="toctree-l1 current"><a class="reference internal current" href="#">Wurzel: Using DVC and Argo Workflows Backends</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#cli-usage">CLI Usage</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#environment-configuration">Environment Configuration</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#programmatic-usage">Programmatic Usage</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#future-backends">Future Backends</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#documentation">Documentation</a>
+    </li>
+    </ul>
+                </li>
+              </ul>
+              <ul>
+                <li class="toctree-l1"><a class="reference internal" href="../installation/">Installation Guide</a>
+                </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Datacontract</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../datacontract/common/">Data contracts</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Developping</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../developping/Building_your_one_step/">📚 How to Build Your Own Step</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../developping/define_pipline/">🔗 Defining a Pipeline in Wurzel</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../developping/docs/">📖 Documentation</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../developping/getting_started/">👩‍💻 Developer Guide</a>
+                  </li>
+              </ul>
+              <p class="caption"><span class="caption-text">Steps</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/docling/">Docling</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/duplication/">Duplication</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/embedding/">Embedding</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/manual_markdown/">Manual markdown</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/milvus/">Milvus</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/qdrant/">Qdrant</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/scraperapi/">Scraperapi</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../steps/splitter/">Splitter</a>
+                  </li>
+              </ul>
+      </div>
+    </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+      <nav class="wy-nav-top" role="navigation" aria-label="Mobile navigation menu">
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="..">Wurzel</a>
+        
+      </nav>
+      <div class="wy-nav-content">
+        <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
+  <ul class="wy-breadcrumbs">
+    <li><a href=".." class="icon icon-home" aria-label="Docs"></a></li>
+      <li class="breadcrumb-item active">Wurzel: Using DVC and Argo Workflows Backends</li>
+    <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/telekom/wurzel/edit/master/docs/backends.md">Edit on telekom/wurzel</a>
+    </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+            <div class="section" itemprop="articleBody">
+              
+                <h1 id="wurzel-using-dvc-and-argo-workflows-backends">Wurzel: Using DVC and Argo Workflows Backends</h1>
+<p>Wurzel supports multiple backends to generate pipeline configuration for different execution environments.</p>
+<p>This document explains how to use the DvcBackend and ArgoBackend through the Wurzel CLI and highlights available and upcoming backends.</p>
+<hr />
+<p>Backend Overview:</p>
+<ul>
+<li>DvcBackend: Generates <code>dvc.yaml</code>, used with <code>dvc repro</code> or versioned pipelines.</li>
+<li>ArgoBackend: Generates Argo Workflows <code>CronWorkflow</code> YAML for Kubernetes-native scheduled pipelines.</li>
+</ul>
+<p>Note: The CLI uses <code>DvcBackend</code> by default if no backend is explicitly specified.</p>
+<hr />
+<h2 id="cli-usage">CLI Usage</h2>
+<p>To use Wurzel's CLI for generating pipeline definitions, follow these instructions:</p>
+<ol>
+<li>
+<p>Install the necessary dependencies:</p>
+<p>pip install wurzel[argo]</p>
+</li>
+<li>
+<p>Run the CLI:</p>
+<p>wurzel generate examples.pipeline.pipelinedemo:pipeline</p>
+</li>
+</ol>
+<p>This generates a <code>dvc.yaml</code> by default using the <code>DvcBackend</code>.</p>
+<p>To specify a different backend or output file:</p>
+<pre><code>wurzel generate --backend DvcBackend --output dvc.yaml examples.pipeline.pipelinedemo:pipeline
+
+wurzel generate --backend ArgoBackend --output cronworkflow.yaml examples.pipeline.pipelinedemo:pipeline
+</code></pre>
+<p>Replace <code>examples.pipeline.pipelinedemo:pipeline</code> with your actual module path and step name.</p>
+<hr />
+<h2 id="environment-configuration">Environment Configuration</h2>
+<p>You can configure each backend via environment variables.</p>
+<p>Example for DVC:</p>
+<pre><code>export DVCBACKEND__DATA_DIR=./data
+export DVCBACKEND__ENCAPSULATE_ENV=true
+</code></pre>
+<p>Example for Argo:</p>
+<pre><code>export ARGOWORKFLOWBACKEND__IMAGE=ghcr.io/telekom/wurzel
+export ARGOWORKFLOWBACKEND__SCHEDULE="0 4 * * *"
+export ARGOWORKFLOWBACKEND__DATA_DIR=/usr/app
+export ARGOWORKFLOWBACKEND__ENCAPSULATE_ENV=true
+export ARGOWORKFLOWBACKEND__S3_ARTIFACT_TEMPLATE__BUCKET=wurzel-bucket
+export ARGOWORKFLOWBACKEND__S3_ARTIFACT_TEMPLATE__ENDPOINT=s3.amazonaws.com
+export ARGOWORKFLOWBACKEND__SERVICE_ACCOUNT_NAME=wurzel-service-account
+export ARGOWORKFLOWBACKEND__SECRET_NAME=wurzel-secret
+export ARGOWORKFLOWBACKEND__CONFIG_MAP=wurzel-config
+export ARGOWORKFLOWBACKEND__PIPELINE_NAME=my-wurzel-pipeline
+</code></pre>
+<hr />
+<h2 id="programmatic-usage">Programmatic Usage</h2>
+<p>You can also use the backends directly in Python:</p>
+<pre><code>from wurzel.backend.dvc import DvcBackend
+from wurzel.backend.argo import ArgoBackend
+from wurzel.steps.embedding import EmbeddingStep
+from wurzel.steps.manual_markdown import ManualMarkdownStep
+from wurzel.steps.qdrant.step import QdrantConnectorStep
+from wurzel.utils import WZ
+
+source = WZ(ManualMarkdownStep)
+embedding = WZ(EmbeddingStep)
+step = WZ(QdrantConnectorStep)
+
+
+source &gt;&gt; embedding &gt;&gt; step
+pipeline = step
+
+dvc_yaml = DvcBackend().generate_yaml(pipeline)
+argo_yaml = ArgoBackend().generate_yaml(pipeline)
+</code></pre>
+<hr />
+<h2 id="future-backends">Future Backends</h2>
+<p>Wurzel is designed to support additional backends. Potential future targets include:</p>
+<ul>
+<li>GitLab CI/CD: For generating <code>.gitlab-ci.yml</code> pipelines</li>
+<li>GitHub Actions: To produce <code>workflow.yml</code> for GitHub-native automation</li>
+<li>Apache Airflow: For DAG-based orchestration and scheduling</li>
+<li>LocalBackend: Execute steps locally without an external orchestrator</li>
+<li>Kubernetes CronJobs: A planned enhancement to <code>DvcBackend</code> to support rendering Kubernetes-native <code>CronJob</code> manifests for scheduled execution of DVC pipelines</li>
+</ul>
+<p>These additions will further expand the flexibility of Wurzel across various deployment and orchestration environments.</p>
+<hr />
+<h2 id="documentation">Documentation</h2>
+<p>For more details, see:</p>
+<ul>
+<li>DVC: https://dvc.org/doc</li>
+<li>Argo Workflows: https://argoproj.github.io/argo-workflows/</li>
+<li>Automatic created Wurzel project documentation: https://deepwiki.com/telekom/wurzel/</li>
+</ul>
+              
+            </div>
+          </div><footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="Footer Navigation">
+        <a href=".." class="btn btn-neutral float-left" title="Wurzel"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+        <a href="../installation/" class="btn btn-neutral float-right" title="Installation Guide">Next <span class="icon icon-circle-arrow-right"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <!-- Copyright etc -->
+  </div>
+
+  Built with <a href="https://www.mkdocs.org/">MkDocs</a> using a <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>.
+</footer>
+          
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+
+  <div class="rst-versions" role="note" aria-label="Versions">
+  <span class="rst-current-version" data-toggle="rst-current-version">
+    
+        <span>
+          <a href="https://github.com/telekom/wurzel" class="fa fa-code-fork" style="color: #fcfcfc"> telekom/wurzel</a>
+        </span>
+    
+    
+      <span><a href=".." style="color: #fcfcfc">&laquo; Previous</a></span>
+    
+    
+      <span><a href="../installation/" style="color: #fcfcfc">Next &raquo;</a></span>
+    
+  </span>
+</div>
+    <script src="../js/jquery-3.6.0.min.js"></script>
+    <script>var base_url = "..";</script>
+    <script src="../js/theme_extra.js"></script>
+    <script src="../js/theme.js"></script>
+      <script src="../search/main.js"></script>
+    <script>
+        jQuery(function () {
+            SphinxRtdTheme.Navigation.enable(true);
+        });
+    </script>
+
+</body>
+</html>
