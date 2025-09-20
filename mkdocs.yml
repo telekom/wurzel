@@ -10,6 +10,26 @@ theme:
 plugins:
 - search
 - mkdocstrings
+- mkdocs-typer2:
+    pretty: true
+
+nav:
+- Home: index.md
+- CLI Reference: cli.md
+- Installation: installation.md
+- Backend Configuration: backends.md
+- Development:
+  - Getting Started: developing/getting_started.md
+  - Building Steps: developing/Building_your_one_step.md
+  - Define Pipeline: developing/define_pipline.md
+  - Documentation: developing/docs.md
+- Steps:
+  - Manual Markdown: steps/manual_markdown.md
+  - Duplication: steps/duplication.md
+  - Splitter: steps/splitter.md
+  - Docling: steps/docling.md
+  - Milvus: steps/milvus.md
+- Data Contracts: datacontract/common.md
 
 
 
