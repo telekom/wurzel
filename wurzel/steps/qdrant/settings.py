@@ -28,13 +28,6 @@ class QdrantSettings(Settings):
     Methods:
         parse_json(v):
             Validates and parses JSON strings into Python objects for SEARCH_PARAMS and INDEX_PARAMS.
-
-    Args:
-                v (Union[str, dict]): The input value, either a JSON string or a dictionary.
-
-    Returns:
-                dict: The parsed dictionary if the input is a JSON string, otherwise the input value.
-
     """
 
     DISTANCE: Distance = Distance.DOT

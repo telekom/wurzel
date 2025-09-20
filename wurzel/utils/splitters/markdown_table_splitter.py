@@ -354,7 +354,7 @@ class MarkdownTableSplitterUtil:
         """Split a markdown document into token-bounded chunks while respecting tables.
 
         Args:
-            md : str
+            md: str
                 Markdown document.
 
         Returns:
