@@ -6,13 +6,14 @@ import importlib.util
 import pytest
 
 from wurzel.steps.splitter import SimpleSplitterStep
-from wurzel.utils import HAS_SPACY
+from wurzel.utils import HAS_SPACY, HAS_TIKTOKEN, HAS_TRANSFORMERS
 from wurzel.utils.splitters.sentence_splitter import RegexSentenceSplitter, SentenceSplitter, SpacySentenceSplitter
 
 from .sentence_splitter_test_cases import BASIC_TEST_CASES, DE_TEST_CASES, EL_TEST_CASES, HR_TEST_CASES, PL_TEST_CASES, REGEX_TEST_CASES
 
 # Helpers for skip conditions
 spacy_missing = not HAS_SPACY
+tokenizer_missing = not HAS_TIKTOKEN and not HAS_TRANSFORMERS
 spacy_default_model_name = "de_core_news_sm"
 spacy_multilingual_model_name = "xx_ent_wiki_sm"
 wtpsplit_missing = importlib.util.find_spec("wtpsplit") is None
@@ -99,6 +100,7 @@ def test_expection_on_unsupported_splitter_name():
         SentenceSplitter.from_name("this-splitter-does-not-exist")
 
 
+@pytest.mark.skipif(tokenizer_missing, reason="tiktoken or transformers not installed")
 def test_simple_splitter_step_settings(env):
     env.set("SENTENCE_SPLITTER_MODEL", "regex")
 

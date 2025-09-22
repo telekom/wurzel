@@ -17,10 +17,9 @@ def test_import_steps():
 
     import wurzel.steps.embedding  # noqa: F401 I001
     import wurzel.steps.manual_markdown  # noqa: F401 I001
-    import wurzel.steps.milvus.settings  # noqa: F401 I001
-    import wurzel.steps.qdrant.settings  # noqa: F401 I001
 
     if HAS_QDRANT:
+        import wurzel.steps.qdrant.settings  # noqa: F401 I001
         import wurzel.steps.qdrant.step  # noqa: F401 I001
         from wurzel.steps import QdrantConnectorStep  # noqa: F401 I001
         from wurzel.steps import QdrantConnectorMultiVectorStep  # noqa: F401 I001
@@ -32,14 +31,15 @@ def test_import_steps():
         import wurzel.steps.docling.settings  # noqa: F401 I001
 
     if HAS_MILVUS:
+        import wurzel.steps.milvus.settings  # noqa: F401 I001
         import wurzel.steps.milvus.step  # noqa: F401 I001
         from wurzel.steps import MilvusConnectorStep  # noqa: F401 I001
 
-    import wurzel.steps.embedding.settings  # noqa: F401 I001
     from wurzel.steps import ManualMarkdownStep  # noqa: F401 I001
 
     if HAS_LANGCHAIN_CORE and HAS_REQUESTS:
         from wurzel.steps import EmbeddingStep  # noqa: F401 I001
+        import wurzel.steps.embedding.settings  # noqa: F401 I001
 
 
 def test_import_utils_meta_settings():

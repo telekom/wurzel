@@ -10,8 +10,11 @@ if HAS_DOCLING:
     from .docling import *  # noqa: F403 Allow importing Step classes from docling
 
 if HAS_LANGCHAIN_CORE and HAS_REQUESTS:
-    from .embedding import *  # noqa: F403 Allow importing Step classes
-    from .embedding import EmbeddingStep  # noqa: F401
+    try:
+        from .embedding import *  # noqa: F403 Allow importing Step classes
+        from .embedding import EmbeddingStep  # noqa: F401
+    except ImportError:
+        pass
 
 if HAS_REQUESTS and HAS_JOBLIB:
     from .scraperapi.step import ScraperAPIStep  # noqa: F401
