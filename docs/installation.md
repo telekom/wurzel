@@ -16,19 +16,12 @@ Due to PyPI restrictions on direct dependencies, some components require manual 
 
 ### Manual Installation
 
-If you plan to use the semantic text splitting functionality (e.g., `SemanticSplitter`), you'll need to manually install the German spaCy model:
+If you plan to use the semantic text splitting functionality (e.g., `SemanticSplitter`), you'll need to manually install the German spaCy model otherwise the latest model will be downloaded at runtime:
 
 ```bash
 pip install https://github.com/explosion/spacy-models/releases/download/de_core_news_sm-3.7.0/de_core_news_sm-3.7.0-py3-none-any.whl
 ```
 
-### Using DIRECT_REQUIREMENTS.txt
-
-If you're working with the source code, you can install from the provided requirements file:
-
-```bash
-pip install -r DIRECT_REQUIREMENTS.txt
-```
 
 
 ## Optional Dependencies
@@ -70,9 +63,6 @@ pip install wurzel[docs]
 ```bash
 # Install all optional dependencies
 pip install wurzel[all]
-
-# Don't forget the direct dependencies!
-pip install -r DIRECT_REQUIREMENTS.txt
 ```
 
 ## Development Installation

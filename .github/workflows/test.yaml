@@ -60,7 +60,6 @@ jobs:
         run: |
           ${{ env.UV }} lock
           ${{ env.UV }} --no-progress pip install -e ".[dev]"
-          ${{ env.UV }} --no-progress pip install -r DIRECT_REQUIREMENTS.txt
 
       - name: Install dependencies (full)
         if: matrix.test-type == 'full'
