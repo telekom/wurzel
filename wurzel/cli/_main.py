@@ -19,13 +19,13 @@ import typer
 import typer.core
 
 from wurzel.backend.backend import Backend
-from wurzel.backend.backend_argo import ArgoBackend
 from wurzel.backend.backend_dvc import DvcBackend
 from wurzel.cli.cmd_generate import main as cmd_generate
 from wurzel.cli.cmd_inspect import main as cmd_inspect
 from wurzel.cli.cmd_run import main as cmd_run
 from wurzel.step import TypedStep
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
+from wurzel.utils import HAS_HERA
 from wurzel.utils.logging import get_logging_dict_config
 from wurzel.utils.meta_settings import WZ
 from wurzel.utils.meta_steps import find_sub_classes
@@ -185,10 +185,20 @@ def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: 
     match backend:
         case DvcBackend.__name__:
             return DvcBackend
-        case ArgoBackend.__name__:
-            return ArgoBackend
+        case "ArgoBackend":
+            if HAS_HERA:
+                from wurzel.backend.backend_argo import ArgoBackend  # pylint: disable=import-outside-toplevel
+
+                return ArgoBackend
+            supported_backends = ["DvcBackend"]
+            raise typer.BadParameter(
+                f"Backend {backend} not supported. choose from {', '.join(supported_backends)} or install wurzel[argo]"
+            )
         case _:
-            raise typer.BadParameter(f"Backend {backend} not supported. choose from DvcBackend or ArgoBackend")
+            supported_backends = ["DvcBackend"]
+            if HAS_HERA:
+                supported_backends.append("ArgoBackend")
+            raise typer.BadParameter(f"Backend {backend} not supported. choose from {', '.join(supported_backends)}")
 
 
 def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str) -> TypedStep:
