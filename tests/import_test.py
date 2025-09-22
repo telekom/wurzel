@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Test for cyclic imports in utils."""
 
-from wurzel.utils import HAS_DOCLING, HAS_MILVUS, HAS_QDRANT
+from wurzel.utils import HAS_DOCLING, HAS_LANGCHAIN_CORE, HAS_MILVUS, HAS_QDRANT, HAS_REQUESTS
 
 
 def test_import_utils():
@@ -37,7 +37,9 @@ def test_import_steps():
 
     import wurzel.steps.embedding.settings  # noqa: F401 I001
     from wurzel.steps import ManualMarkdownStep  # noqa: F401 I001
-    from wurzel.steps import EmbeddingStep  # noqa: F401 I001
+
+    if HAS_LANGCHAIN_CORE and HAS_REQUESTS:
+        from wurzel.steps import EmbeddingStep  # noqa: F401 I001
 
 
 def test_import_utils_meta_settings():

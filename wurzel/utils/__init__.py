@@ -14,7 +14,20 @@ from .to_markdown.html2md import MarkdownConverterSettings, to_markdown
 log = getLogger(__name__)
 
 _opt_deps = {
-    k: bool(_find_spec(k)) for k in ["tlsh", "pymilvus", "qdrant_client", "docling", "langchain_core", "requests", "joblib", "hera"]
+    k: bool(_find_spec(k))
+    for k in [
+        "tlsh",
+        "pymilvus",
+        "qdrant_client",
+        "docling",
+        "langchain_core",
+        "requests",
+        "joblib",
+        "hera",
+        "spacy",
+        "tiktoken",
+        "transformers",
+    ]
 }
 HAS_TLSH = _opt_deps["tlsh"]
 HAS_MILVUS = _opt_deps["pymilvus"]
@@ -24,6 +37,9 @@ HAS_LANGCHAIN_CORE = _opt_deps["langchain_core"]
 HAS_REQUESTS = _opt_deps["requests"]
 HAS_JOBLIB = _opt_deps["joblib"]
 HAS_HERA = _opt_deps["hera"]
+HAS_SPACY = _opt_deps["spacy"]
+HAS_TIKTOKEN = _opt_deps["tiktoken"]
+HAS_TRANSFORMERS = _opt_deps["transformers"]
 log.info("Optional deps in env", extra={**_opt_deps})
 __all__ = [
     "semantic_splitter",

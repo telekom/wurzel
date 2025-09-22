@@ -6,18 +6,20 @@ import importlib.util
 import pytest
 
 from wurzel.steps.splitter import SimpleSplitterStep
+from wurzel.utils import HAS_SPACY
 from wurzel.utils.splitters.sentence_splitter import RegexSentenceSplitter, SentenceSplitter, SpacySentenceSplitter
 
 from .sentence_splitter_test_cases import BASIC_TEST_CASES, DE_TEST_CASES, EL_TEST_CASES, HR_TEST_CASES, PL_TEST_CASES, REGEX_TEST_CASES
 
 # Helpers for skip conditions
-spacy_missing = importlib.util.find_spec("spacy") is None
+spacy_missing = not HAS_SPACY
 spacy_default_model_name = "de_core_news_sm"
 spacy_multilingual_model_name = "xx_ent_wiki_sm"
 wtpsplit_missing = importlib.util.find_spec("wtpsplit") is None
 
 
 @pytest.fixture(scope="function")
+@pytest.mark.skipif(spacy_missing, reason="spacy or model not installed")
 def spacy_splitter():
     yield SentenceSplitter.from_name(spacy_default_model_name)
 
