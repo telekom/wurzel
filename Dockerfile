@@ -51,7 +51,7 @@ RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
 COPY wurzel ./wurzel
 RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
     uv sync --inexact && \
-    uv pip install -r DIRECT_REQUIREMENTS.txt
+    uv pip install pip
 
 FROM python:${PYTHON_VERSION}-slim AS production
 

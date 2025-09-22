@@ -13,9 +13,7 @@ from .sentence_splitter_test_cases import BASIC_TEST_CASES, DE_TEST_CASES, EL_TE
 # Helpers for skip conditions
 spacy_missing = importlib.util.find_spec("spacy") is None
 spacy_default_model_name = "de_core_news_sm"
-spacy_default_model_missing = importlib.util.find_spec(spacy_default_model_name) is None
 spacy_multilingual_model_name = "xx_ent_wiki_sm"
-spacy_multilingual_model_missing = importlib.util.find_spec(spacy_multilingual_model_name) is None
 wtpsplit_missing = importlib.util.find_spec("wtpsplit") is None
 
 
@@ -76,13 +74,13 @@ def test_from_name_routes_to_regex():
     assert isinstance(splitter, RegexSentenceSplitter)
 
 
-@pytest.mark.skipif(spacy_missing or spacy_default_model_missing, reason="spacy or model not installed")
+@pytest.mark.skipif(spacy_missing, reason="spacy or model not installed")
 def test_from_name_routes_to_spacy():
     splitter = SentenceSplitter.from_name(spacy_default_model_name)
     assert isinstance(splitter, SpacySentenceSplitter)
 
 
-@pytest.mark.skipif(spacy_missing or spacy_default_model_missing, reason="spacy or model not installed")
+@pytest.mark.skipif(spacy_missing, reason="spacy or model not installed")
 def test_spacy_sentence_splitter_simple():
     # Simple test
     splitter = SentenceSplitter.from_name(spacy_default_model_name)
@@ -106,7 +104,7 @@ def test_simple_splitter_step_settings(env):
     assert step.settings.SENTENCE_SPLITTER_MODEL == "regex"
 
 
-@pytest.mark.skipif(spacy_missing or spacy_default_model_missing, reason="spacy or model not installed")
+@pytest.mark.skipif(spacy_missing, reason="spacy or model not installed")
 @pytest.mark.parametrize(
     "test_cases",
     [
