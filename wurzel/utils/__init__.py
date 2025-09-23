@@ -1,15 +1,16 @@
-# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG
 #
 # SPDX-License-Identifier: Apache-2.0
 
 from importlib.util import find_spec as _find_spec
 from logging import getLogger
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from .meta_settings import WZ, create_model
-from .meta_steps import find_typed_steps_in_package
-from .splitters import semantic_splitter
-from .to_markdown.html2md import MarkdownConverterSettings, to_markdown
+if TYPE_CHECKING:
+    from .meta_settings import WZ, create_model  # noqa: F401
+    from .meta_steps import find_typed_steps_in_package  # noqa: F401
+    from .splitters import semantic_splitter  # noqa: F401
+    from .to_markdown.html2md import MarkdownConverterSettings, to_markdown  # noqa: F401
 
 log = getLogger(__name__)
 
@@ -18,6 +19,38 @@ HAS_TLSH = _opt_deps["tlsh"]
 HAS_MILVUS = _opt_deps["pymilvus"]
 HAS_QDRANT = _opt_deps["qdrant_client"]
 HAS_DOCLING = _opt_deps["docling"]
+
+
+def __getattr__(name: str) -> Any:
+    """Lazy import heavy dependencies to avoid slowing down CLI startup."""
+    if name == "WZ":
+        from .meta_settings import WZ  # pylint: disable=import-outside-toplevel
+
+        return WZ
+    if name == "create_model":
+        from .meta_settings import create_model  # pylint: disable=import-outside-toplevel
+
+        return create_model
+    if name == "find_typed_steps_in_package":
+        from .meta_steps import find_typed_steps_in_package  # pylint: disable=import-outside-toplevel
+
+        return find_typed_steps_in_package
+    if name == "semantic_splitter":
+        from .splitters import semantic_splitter  # pylint: disable=import-outside-toplevel
+
+        return semantic_splitter
+    if name == "MarkdownConverterSettings":
+        from .to_markdown.html2md import MarkdownConverterSettings  # pylint: disable=import-outside-toplevel
+
+        return MarkdownConverterSettings
+    if name == "to_markdown":
+        from .to_markdown.html2md import to_markdown  # pylint: disable=import-outside-toplevel
+
+        return to_markdown
+
+    raise AttributeError(f"module 'wurzel.utils' has no attribute '{name}'")
+
+
 log.info("Optional deps in env", extra={**_opt_deps})
 __all__ = [
     "semantic_splitter",

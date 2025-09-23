@@ -7,6 +7,7 @@ site_description: Wurzel documentation
 site_author: Deutsche Telekom AG
 site_url: https://telekom.github.io/wurzel/
 repo_url: https://github.com/telekom/wurzel
+repo_name: telekom/wurzel
 # Repository information
 #repo_name: knowledge-pipe/documentation
 
