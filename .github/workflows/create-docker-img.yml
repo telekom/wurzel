@@ -145,6 +145,11 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+      - name: Tag image with version
+        if: github.event_name == 'pull_request' && matrix.platform == 'linux/amd64'
+        run: |
+          docker tag ${{ steps.meta.outputs.tags }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.version }}
+
       - name: Save image for testing
         if: github.event_name == 'pull_request' && matrix.platform == 'linux/amd64'
         run: |
