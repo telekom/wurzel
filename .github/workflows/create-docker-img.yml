@@ -96,6 +96,9 @@ jobs:
         with:
           path: cache-mount
           key: cache-mount-${{ matrix.python_version }}-${{ matrix.platform }}
+          restore-keys: |
+            cache-mount-${{ matrix.python_version }}-
+            cache-mount-
 
       - name: Restore Docker cache mounts
         uses: reproducible-containers/buildkit-cache-dance@v3.3.0
@@ -127,8 +130,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
           tags: ${{ steps.meta.outputs.tags }}
-          cache-from: type=gha,scope=${{ github.workflow }}-${{ matrix.platform }}
-          cache-to: type=gha,mode=${{ matrix.platform == 'linux/amd64' && 'min' || 'max' }},scope=${{ github.workflow }}-${{ matrix.platform }}
+          cache-from: type=gha,scope=${{ github.workflow }}-${{ matrix.python_version }}-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=${{ github.workflow }}-${{ matrix.python_version }}-${{ matrix.platform }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
           load: ${{ github.event_name == 'pull_request' }}
           provenance: false
