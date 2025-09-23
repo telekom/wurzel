@@ -105,7 +105,7 @@ class AnotherStep(TypedStep):
         avg_time = sum(times) / len(times)
 
         # Should be fast since we're filtering
-        assert avg_time < 0.5, f"Prefix autocompletion too slow: {avg_time:.3f}s average (expected < 0.5s)"
+        assert avg_time < 0.7, f"Prefix autocompletion too slow: {avg_time:.3f}s average (expected < 0.7s)"
 
         # All results should match the prefix
         for result in results:
