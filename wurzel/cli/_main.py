@@ -352,7 +352,6 @@ def inspekt(
 
 def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str):
     """Validates input and returns fitting backend. Currently always DVCBackend."""
-    from wurzel.backend.backend_argo import ArgoBackend  # pylint: disable=import-outside-toplevel
     from wurzel.backend.backend_dvc import DvcBackend  # pylint: disable=import-outside-toplevel
 
     match backend:
@@ -360,6 +359,7 @@ def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: 
             return DvcBackend
         case "ArgoBackend":
             from wurzel.utils import HAS_HERA  # pylint: disable=import-outside-toplevel
+
             if HAS_HERA:
                 from wurzel.backend.backend_argo import ArgoBackend  # pylint: disable=import-outside-toplevel
 
