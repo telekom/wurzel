@@ -95,7 +95,7 @@ jobs:
         id: cache
         with:
           path: cache-mount
-          key: cache-mount-${{ matrix.python_version }}-${{ hashFiles('Dockerfile') }}
+          key: cache-mount-${{ matrix.python_version }}
 
       - name: Restore Docker cache mounts
         uses: reproducible-containers/buildkit-cache-dance@v3.3.0
