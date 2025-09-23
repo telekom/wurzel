@@ -41,16 +41,6 @@ def generate_cli_call(
         str: cmd
 
     """
-    # Lazy import to avoid loading heavy dependencies at package import time
-    from pathlib import Path  # pylint: disable=import-outside-toplevel
-
-    # Ensure we have Path type available at runtime
-    _ = Path
-
-    # These imports are for runtime type checking if needed
-    # from wurzel.step import TypedStep
-    # from wurzel.step_executor import BaseStepExecutor
-
     if inputs:
         inputs_str = "-i " + " -i ".join(str(i) for i in inputs)
     else:
