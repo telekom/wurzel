@@ -243,8 +243,8 @@ jobs:
     container:
       image: ghcr.io/${{ github.repository }}-py${{ matrix.python_version }}:${{ needs.build.outputs.version }}
       credentials:
-        username: ${{ github.event_name != 'pull_request' && github.actor || '' }}
-        password: ${{ github.event_name != 'pull_request' && secrets.GITHUB_TOKEN || '' }}
+        username: ${{ github.event_name != 'pull_request' && github.actor || null }}
+        password: ${{ github.event_name != 'pull_request' && secrets.GITHUB_TOKEN || null }}
       options: --user root
       env:
         MANUALMARKDOWNSTEP__FOLDER_PATH: /usr/app/demo-data
