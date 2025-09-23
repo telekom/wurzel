@@ -21,6 +21,7 @@ endif
 
 
 build: install
+	$(UV) pip install build
 	$(PY) -m build .
 
 $(VENV)/touchfile: pyproject.toml $(UV)
