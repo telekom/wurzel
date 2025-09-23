@@ -228,6 +228,7 @@ jobs:
           docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}:${{ steps.meta.outputs.version }}
 
   test-demo-pipeline:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -246,8 +247,8 @@ jobs:
     container:
       image: ghcr.io/${{ github.repository }}-py${{ matrix.python_version }}:${{ needs.build.outputs.version }}
       credentials:
-        username: ${{ github.event_name != 'pull_request' && github.actor }}
-        password: ${{ github.event_name != 'pull_request' && secrets.GITHUB_TOKEN }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
       options: --user root
       env:
         MANUALMARKDOWNSTEP__FOLDER_PATH: /usr/app/demo-data
@@ -258,60 +259,35 @@ jobs:
         DVC_FILE: /usr/app/dvc.yaml
 
     steps:
-      - name: Download image
-        if: github.event_name == 'pull_request'
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-image-${{ matrix.python_version }}
+      - uses: ./.github/actions/test-pipeline
 
-      - name: Load image
-        if: github.event_name == 'pull_request'
-        run: docker load -i image.tar
+  test-demo-pipeline-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python_version:
+          - '3.11'
+          - '3.12'
+    needs:
+      - build
+    permissions:
+      contents: read
+      packages: read
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    env:
+      REGISTRY: ghcr.io
 
-      - name: Fix ownership and switch to appuser
-        run: |
-          # Change ownership of the workspace to appuser
-          chown -R appuser:appgroup $GITHUB_WORKSPACE
-          # Ensure appuser has read/write access to output directory
-          mkdir -p /usr/app/data
-          chown -R appuser:appgroup /usr/app/data
-          # Switch to appuser for remaining steps
-          echo "USER_ID=$(id -u appuser)" >> $GITHUB_ENV
-          echo "GROUP_ID=$(id -g appuser)" >> $GITHUB_ENV
+    container:
+      image: ${{ github.repository }}-py${{ matrix.python_version }}:${{ needs.build.outputs.version }}
+      options: --user root
+      env:
+        MANUALMARKDOWNSTEP__FOLDER_PATH: /usr/app/demo-data
+        WURZEL_PIPELINE: pipelinedemo:pipeline
+        GIT_USER: ci-test
+        GIT_MAIL: ci@example.com
+        DVC_DATA_PATH: /usr/app/output
+        DVC_FILE: /usr/app/dvc.yaml
 
-      - name: Copy pipeline configuration
-        run: |
-          if [ -f "$GITHUB_WORKSPACE/examples/pipeline/pipelinedemo.py" ]; then
-            su -c "cp $GITHUB_WORKSPACE/examples/pipeline/pipelinedemo.py /usr/app/" appuser
-          else
-            echo "ERROR: pipelinedemo.py not found!"
-            exit 1
-          fi
-          if [ -d "$GITHUB_WORKSPACE/examples/pipeline/demo-data" ]; then
-            su -c "cp -r $GITHUB_WORKSPACE/examples/pipeline/demo-data /usr/app/demo-data" appuser
-          else
-            echo "ERROR: demo-data directory not found!"
-            exit 1
-          fi
-          echo "Files in /usr/app after copy:"
-          su -c "pwd && ls -l /usr/app" appuser
-
-
-      - name: Run demo pipeline
-        working-directory: /usr/app
-        run: su -c "/usr/app/entrypoint.sh" appuser
-
-      - name: Verify pipeline output
-        run: |
-          chmod +x $GITHUB_WORKSPACE/.github/scripts/verify-pipeline-output.sh
-          $GITHUB_WORKSPACE/.github/scripts/verify-pipeline-output.sh
-
-      - name: Upload pipeline outputs as artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: pipeline-outputs-${{ matrix.python_version }}
-          path: /usr/app/data/
-          retention-days: 7
+    steps:
+      - uses: ./.github/actions/test-pipeline
