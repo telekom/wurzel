@@ -112,7 +112,8 @@ test = [
 ]
 
 docs = [
-    "mkdocstrings[python]"
+    "mkdocstrings[python]",
+    "mkdocs-typer2"
 ]
 
 all = ["wurzel[qdrant,milvus,tlsh,docling,argo,openai,splitter,embedding,scraperapi]"]
