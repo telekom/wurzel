@@ -232,13 +232,16 @@ jobs:
           - '3.11'
           - '3.12'
     needs:
-      - merge
+      - build
     permissions:
       contents: read
       packages: read
 
+    env:
+      REGISTRY: ghcr.io
+
     container:
-      image: ${{ env.REGISTRY }}/${{ github.repository }}-py${{ matrix.python_version }}:${{ github.event_name == 'pull_request' && needs.build.outputs.version || needs.merge.outputs.version }}
+      image: ghcr.io/${{ github.repository }}-py${{ matrix.python_version }}:${{ needs.build.outputs.version }}
       credentials:
         username: ${{ github.event_name != 'pull_request' && github.actor || '' }}
         password: ${{ github.event_name != 'pull_request' && secrets.GITHUB_TOKEN || '' }}
