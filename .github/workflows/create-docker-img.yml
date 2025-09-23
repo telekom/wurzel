@@ -35,6 +35,9 @@ jobs:
         platform:
           - linux/amd64
           - linux/arm64
+        python_version:
+          - '3.11'
+          - '3.12'
 
     permissions:
       contents: read
@@ -92,7 +95,7 @@ jobs:
         id: cache
         with:
           path: cache-mount
-          key: cache-mount-${{ matrix.platform }}-${{ hashFiles('Dockerfile') }}
+          key: cache-mount-${{ matrix.python_version }}-${{ hashFiles('Dockerfile') }}
 
       - name: Restore Docker cache mounts
         uses: reproducible-containers/buildkit-cache-dance@v3.3.0
@@ -110,7 +113,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
 
@@ -120,6 +123,7 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
+          build-args: PYTHON_VERSION=${{ matrix.python_version }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -141,7 +145,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: digests-${{ env.PLATFORM_PAIR }}
+          name: digests-${{ matrix.python_version }}-${{ env.PLATFORM_PAIR }}
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
@@ -149,24 +153,29 @@ jobs:
       - name: Tag image with version
         if: github.event_name == 'pull_request' && matrix.platform == 'linux/amd64'
         run: |
-          docker tag ${{ steps.meta.outputs.tags }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.version }}
+          docker tag ${{ steps.meta.outputs.tags }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}:${{ env.version }}
 
       - name: Save image for testing
         if: github.event_name == 'pull_request' && matrix.platform == 'linux/amd64'
         run: |
-          docker save ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.version }} -o image.tar
+          docker save ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}:${{ env.version }} -o image.tar
 
       - name: Upload image
         if: github.event_name == 'pull_request' && matrix.platform == 'linux/amd64'
         uses: actions/upload-artifact@v4
         with:
-          name: docker-image
+          name: docker-image-${{ matrix.python_version }}
           path: image.tar
           retention-days: 1
 
   merge:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
+    strategy:
+      matrix:
+        python_version:
+          - '3.11'
+          - '3.12'
     needs:
       - build
     permissions:
@@ -180,7 +189,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ${{ runner.temp }}/digests
-          pattern: digests-*
+          pattern: digests-${{ matrix.python_version }}-*
           merge-multiple: true
 
       - name: Set up Docker Buildx
@@ -197,7 +206,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ needs.build.outputs.version }},enable={{is_default_branch}}
@@ -209,22 +218,27 @@ jobs:
         working-directory: ${{ runner.temp }}/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
+            $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}@sha256:%s ' *)
 
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}:${{ steps.meta.outputs.version }}
 
   test-demo-pipeline:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python_version:
+          - '3.11'
+          - '3.12'
     needs:
-      - build
+      - merge
     permissions:
       contents: read
       packages: read
 
     container:
-      image: ghcr.io/${{ github.repository }}:${{ github.event_name == 'pull_request' && needs.build.outputs.version || needs.merge.outputs.version }}
+      image: ${{ env.REGISTRY }}/${{ github.repository }}-py${{ matrix.python_version }}:${{ github.event_name == 'pull_request' && needs.build.outputs.version || needs.merge.outputs.version }}
       credentials:
         username: ${{ github.event_name != 'pull_request' && github.actor || '' }}
         password: ${{ github.event_name != 'pull_request' && secrets.GITHUB_TOKEN || '' }}
@@ -242,7 +256,7 @@ jobs:
         if: github.event_name == 'pull_request'
         uses: actions/download-artifact@v4
         with:
-          name: docker-image
+          name: docker-image-${{ matrix.python_version }}
 
       - name: Load image
         if: github.event_name == 'pull_request'
@@ -292,6 +306,6 @@ jobs:
       - name: Upload pipeline outputs as artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pipeline-outputs
+          name: pipeline-outputs-${{ matrix.python_version }}
           path: /usr/app/data/
           retention-days: 7
