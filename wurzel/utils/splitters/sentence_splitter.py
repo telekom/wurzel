@@ -4,8 +4,6 @@
 import importlib.util
 import logging
 import re
-import subprocess
-import sys
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
@@ -19,9 +17,12 @@ def download_sentence_splitter_model(model_name: str):
     """Download the SentenceSplitterModel model by name."""
     # SpaCy models can be installed via pip or via the spacy CLI
     try:
-        subprocess.check_call([sys.executable, "-m", "spacy", "download", model_name])
+        from spacy.cli.download import download as spacy_download  # pylint: disable=import-outside-toplevel
+
+        spacy_download(model_name)
+
         return
-    except Exception as e:
+    except (Exception, SystemExit) as e:
         logger.error(f"Failed to download SpaCy model '{model_name}' via spacy CLI: {e}")
         raise OSError(f"Failed to download SpaCy model '{model_name}' via spacy CLI") from e
 
