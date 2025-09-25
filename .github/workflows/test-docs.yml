@@ -35,7 +35,7 @@ jobs:
 
       - name: Build documentation (without strict mode due to known warnings)
         run: |
-          uv run mkdocs build
+          uv run mkdocs build --strict
 
       - name: Upload documentation artifacts
         uses: actions/upload-artifact@v4
