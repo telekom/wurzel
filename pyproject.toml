@@ -44,7 +44,7 @@ dependencies= [
     "mdformat==0.7.17",
     "lxml==5.2.*",
     "pyyaml>=6.0.2",
-    "pip"
+    "pip<26",
 ]
 
 [project.optional-dependencies]
