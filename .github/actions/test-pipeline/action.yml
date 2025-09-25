@@ -1,0 +1,73 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+#
+# SPDX-License-Identifier: Apache-2.0
+name: 'Test Pipeline'
+description: 'Run the demo pipeline in the container'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Download image
+      if: github.event_name == 'pull_request'
+      uses: actions/download-artifact@v4
+      with:
+        name: docker-image-${{ matrix.python_version }}
+
+    - name: Load image
+      if: github.event_name == 'pull_request'
+      shell: bash
+      run: docker load -i image.tar
+
+    - name: Tag image for local use
+      if: github.event_name == 'pull_request'
+      shell: bash
+      run: docker tag ghcr.io/${{ github.repository }}-py${{ matrix.python_version }}:${{ needs.build.outputs.version }} ${{ github.repository }}-py${{ matrix.python_version }}:${{ needs.build.outputs.version }}
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Fix ownership and switch to appuser
+      shell: bash
+      run: |
+        # Change ownership of the workspace to appuser
+        chown -R appuser:appgroup $GITHUB_WORKSPACE
+        # Ensure appuser has read/write access to output directory
+        mkdir -p /usr/app/data
+        chown -R appuser:appgroup /usr/app/data
+        # Switch to appuser for remaining steps
+        echo "USER_ID=$(id -u appuser)" >> $GITHUB_ENV
+        echo "GROUP_ID=$(id -g appuser)" >> $GITHUB_ENV
+
+    - name: Copy pipeline configuration
+      shell: bash
+      run: |
+        if [ -f "$GITHUB_WORKSPACE/examples/pipeline/pipelinedemo.py" ]; then
+          su -c "cp $GITHUB_WORKSPACE/examples/pipeline/pipelinedemo.py /usr/app/" appuser
+        else
+          echo "ERROR: pipelinedemo.py not found!"
+          exit 1
+        fi
+        if [ -d "$GITHUB_WORKSPACE/examples/pipeline/demo-data" ]; then
+          su -c "cp -r $GITHUB_WORKSPACE/examples/pipeline/demo-data /usr/app/" appuser
+        else
+          echo "ERROR: demo-data not found!"
+          exit 1
+        fi
+
+    - name: Run pipeline
+      shell: bash
+      run: |
+        su -c "cd /usr/app && python pipelinedemo.py" appuser
+
+    - name: Verify pipeline output
+      shell: bash
+      run: |
+        chmod +x $GITHUB_WORKSPACE/.github/scripts/verify-pipeline-output.sh
+        $GITHUB_WORKSPACE/.github/scripts/verify-pipeline-output.sh
+
+    - name: Upload pipeline outputs as artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: pipeline-outputs-${{ matrix.python_version }}
+        path: /usr/app/data/
+        retention-days: 7
