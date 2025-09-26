@@ -2,8 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import mdformat
 import pytest
+
+from wurzel.utils import HAS_SPACY
+
+if not HAS_SPACY:
+    pytest.skip("Spacy is not available", allow_module_level=True)
+
+import mdformat
 
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.steps.splitter import SimpleSplitterStep

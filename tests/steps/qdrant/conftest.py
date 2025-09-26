@@ -4,6 +4,11 @@
 
 import pytest
 
+from wurzel.utils import HAS_QDRANT
+
+if not HAS_QDRANT:
+    pytest.skip("Qdrant is not available", allow_module_level=True)
+
 pytest.importorskip("pymilvus")
 
 

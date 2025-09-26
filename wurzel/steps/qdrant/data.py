@@ -6,7 +6,7 @@ from typing import Optional
 
 from pandera.typing import Series
 
-from wurzel.steps.embedding.data import EmbeddingMultiVectorResult, EmbeddingResult
+from wurzel.steps.data import EmbeddingMultiVectorResult, EmbeddingResult
 
 
 class QdrantResult(EmbeddingResult):

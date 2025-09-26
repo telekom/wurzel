@@ -15,9 +15,8 @@ from pandera.typing import DataFrame
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import EmbeddingAPIException, SplittException, StepFailed
 from wurzel.step import TypedStep
+from wurzel.steps.data import EmbeddingMultiVectorResult
 from wurzel.steps.embedding import EmbeddingStep
-
-from .data import EmbeddingMultiVectorResult
 
 # Local application/library specific imports
 from .settings import EmbeddingSettings

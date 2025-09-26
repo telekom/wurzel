@@ -59,8 +59,7 @@ jobs:
         if: matrix.test-type == 'minimal'
         run: |
           ${{ env.UV }} lock
-          ${{ env.UV }} --no-progress pip install -e ".[dev]"
-          ${{ env.UV }} --no-progress pip install -r DIRECT_REQUIREMENTS.txt
+          ${{ env.UV }} --no-progress pip install -e ".[test]"
 
       - name: Install dependencies (full)
         if: matrix.test-type == 'full'

@@ -9,6 +9,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from wurzel.utils import HAS_LANGCHAIN_CORE, HAS_REQUESTS
+
+if not HAS_LANGCHAIN_CORE or not HAS_REQUESTS:
+    pytest.skip("Embedding dependencies (langchain-core, requests) are not available", allow_module_level=True)
+
 from wurzel.exceptions import StepFailed
 from wurzel.step_executor import BaseStepExecutor
 

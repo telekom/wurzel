@@ -8,6 +8,11 @@ import pytest
 import requests_mock
 from pydantic_core import Url
 
+from wurzel.utils import HAS_LANGCHAIN_CORE, HAS_REQUESTS
+
+if not HAS_LANGCHAIN_CORE or not HAS_REQUESTS:
+    pytest.skip("Embedding dependencies (langchain-core, requests) are not available", allow_module_level=True)
+
 from tests.steps.embedding.conftest import (
     GET_RESULT_INFO_DICT,
     GET_RESULT_INFO_STR,

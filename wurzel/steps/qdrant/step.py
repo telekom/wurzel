@@ -14,7 +14,7 @@ from qdrant_client import QdrantClient, models
 
 from wurzel.exceptions import CustomQdrantException, StepFailed
 from wurzel.step import TypedStep, step_history
-from wurzel.steps.embedding.data import EmbeddingResult
+from wurzel.steps.data import EmbeddingResult
 from wurzel.utils import HAS_TLSH
 
 from .data import QdrantResult

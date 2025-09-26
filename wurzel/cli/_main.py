@@ -352,16 +352,27 @@ def inspekt(
 
 def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str):
     """Validates input and returns fitting backend. Currently always DVCBackend."""
-    from wurzel.backend.backend_argo import ArgoBackend  # pylint: disable=import-outside-toplevel
     from wurzel.backend.backend_dvc import DvcBackend  # pylint: disable=import-outside-toplevel
 
     match backend:
         case DvcBackend.__name__:
             return DvcBackend
-        case ArgoBackend.__name__:
-            return ArgoBackend
+        case "ArgoBackend":
+            from wurzel.utils import HAS_HERA  # pylint: disable=import-outside-toplevel
+
+            if HAS_HERA:
+                from wurzel.backend.backend_argo import ArgoBackend  # pylint: disable=import-outside-toplevel
+
+                return ArgoBackend
+            supported_backends = ["DvcBackend"]
+            raise typer.BadParameter(
+                f"Backend {backend} not supported. choose from {', '.join(supported_backends)} or install wurzel[argo]"
+            )
         case _:
-            raise typer.BadParameter(f"Backend {backend} not supported. choose from DvcBackend or ArgoBackend")
+            supported_backends = ["DvcBackend"]
+            if HAS_HERA:
+                supported_backends.append("ArgoBackend")
+            raise typer.BadParameter(f"Backend {backend} not supported. choose from {', '.join(supported_backends)}")
 
 
 def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str):

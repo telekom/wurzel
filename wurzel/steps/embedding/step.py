@@ -18,10 +18,9 @@ from tqdm.auto import tqdm
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import EmbeddingAPIException, StepFailed
 from wurzel.step import TypedStep
+from wurzel.steps.data import EmbeddingResult
 from wurzel.steps.embedding.huggingface import HuggingFaceInferenceAPIEmbeddings, PrefixedAPIEmbeddings
 from wurzel.steps.splitter import SimpleSplitterStep
-
-from .data import EmbeddingResult
 
 # Local application/library specific imports
 from .settings import EmbeddingSettings

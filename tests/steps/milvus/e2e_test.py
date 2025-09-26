@@ -8,6 +8,11 @@ from pathlib import Path
 
 import pytest
 
+from wurzel.utils import HAS_MILVUS
+
+if not HAS_MILVUS:
+    pytest.skip("Milvus is not available", allow_module_level=True)
+
 from wurzel.exceptions import StepFailed
 from wurzel.step_executor import BaseStepExecutor
 

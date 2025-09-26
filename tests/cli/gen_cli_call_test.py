@@ -10,6 +10,7 @@ import yaml
 from wurzel.cli import generate_cli_call
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 from wurzel.steps.manual_markdown import ManualMarkdownStep
+from wurzel.utils import HAS_HERA
 
 
 @pytest.mark.parametrize("executor", [BaseStepExecutor, PrometheusStepExecutor])
@@ -53,7 +54,13 @@ def test_good_cli_call_with_inputs(tmp_path):
     )
 
 
-@pytest.mark.parametrize("backend", ["DvcBackend", "ArgoBackend"])
+@pytest.mark.parametrize(
+    "backend",
+    [
+        "DvcBackend",
+        pytest.param("ArgoBackend", marks=pytest.mark.skipif(not HAS_HERA, reason="Hera is not available")),
+    ],
+)
 def test_backend_cli(tmp_path, backend, env):
     env.set("EMBEDDINGSTEP__API", "https://example.com/embd")
     env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", "./data")

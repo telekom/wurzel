@@ -4,8 +4,15 @@
 
 import pytest
 
+from wurzel.utils import HAS_QDRANT, HAS_TLSH
+
+if not HAS_QDRANT:
+    pytest.skip("Qdrant is not available", allow_module_level=True)
+
+if not HAS_TLSH:
+    pytest.skip("TLSH is not available", allow_module_level=True)
+
 from wurzel.steps.qdrant.step import QdrantConnectorStep
-from wurzel.utils import HAS_TLSH
 
 
 @pytest.mark.parametrize(
