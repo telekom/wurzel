@@ -199,3 +199,21 @@ def get_logging_dict_config(
             "transaction": {**logger_template},
         },
     }
+
+
+class CountingHandler(logging.Handler):
+    """A log handler that counts emitted warning and error messages."""
+
+    def __init__(self):
+        super().__init__()
+        self.counts = {"WARNING": 0, "ERROR": 0}
+
+    def attach_to_root_logger(self):
+        """Attach counter to root logger to count all log messages."""
+        root_logger = logging.getLogger()
+        root_logger.addHandler(self)
+
+    def emit(self, record):
+        """Count message on emit depending on their log level."""
+        if record.levelname in self.counts:
+            self.counts[record.levelname] += 1
