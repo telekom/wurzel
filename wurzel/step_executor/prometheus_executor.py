@@ -24,6 +24,23 @@ class PrometheusStepExecutor(BaseStepExecutor):
     Adds PrometheusCounter; is a singelton.
 
     For more info see `BaseStepExecutor`.
+
+    The Prometheus metrics are labeled with metadata (step name, history, ...). To distinguish
+    between different pipeline runs you can also set a `pipeline_id` through environment variables.
+    With `WZ_PIPELINE_ID_ENV_VARIABLES` you define the names of environment variables. Each value
+    of the provided environment variables is then concatenate with a underscore and assign to the
+    `pipeline_id` label. For example, when your environment sets a variable `MY_JOB_ID` you use
+    this variable as your pipeline ID follows:
+
+    ```
+    WZ_PIPELINE_ID_ENV_VARIABLES = "MY_JOB_ID"
+    ```
+
+    If multiple variables are needed, they can be provided as comma separated list:
+
+    ```
+    WZ_PIPELINE_ID_ENV_VARIABLES = "JOB_TENANT,MY_JOB_ID"
+    ```
     """
 
     # pylint: disable=too-many-instance-attributes
@@ -36,6 +53,7 @@ class PrometheusStepExecutor(BaseStepExecutor):
     histogram_load: Histogram
     histogram_save: Histogram
     histogram_execute: Histogram
+    pipeline_id: str | None = None
     # step_info: Info
     # Singelton Instance
     _instance = None
@@ -59,6 +77,7 @@ class PrometheusStepExecutor(BaseStepExecutor):
             "step_name",
             "history_first_step",
             "history_last_step",
+            "pipeline_id",
         ]
         self.counter_started = Counter("steps_started", "Total number of TypedSteps started", base_labels)
         self.counter_failed = Counter("steps_failed", "Total number of TypedSteps failed", base_labels)
@@ -93,6 +112,19 @@ class PrometheusStepExecutor(BaseStepExecutor):
         except Exception:  # pylint: disable=broad-exception-caught
             log.warning("Could not push prometheus metrics to gateway", exc_info=True)
 
+    def get_pipeline_id(self) -> str | None:
+        """Get the pipeline ID based on environment variables."""
+        # Comma separated list of environment variable names
+        pipeline_id_env_variables = os.environ.get("WZ_PIPELINE_ID_ENV_VARIABLES", None)
+
+        if pipeline_id_env_variables is not None:
+            env_variable_names = pipeline_id_env_variables.split(",")
+
+            # Concatenate all environment variables into a single string
+            return "__".join([os.environ.get(env_name, "") for env_name in env_variable_names])
+
+        return None
+
     def execute_step(
         self,
         step_cls: TypedStep,
@@ -110,6 +142,7 @@ class PrometheusStepExecutor(BaseStepExecutor):
         step_name = step_cls.__name__
 
         report_labels = {
+            "pipeline_id": self.get_pipeline_id(),
             "step_name": step_name,
             "history_first_step": None,
             "history_last_step": None,

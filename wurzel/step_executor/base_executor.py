@@ -273,6 +273,7 @@ class BaseStepExecutor:
         output_path: Optional[PathToFolderWithBaseModels],
     ):
         """Exceute specified step."""
+        # pylint: disable=too-many-locals  # no meaningful way to split this function
         step = step_cls()
         # pylint: disable=protected-access
         if output_path:

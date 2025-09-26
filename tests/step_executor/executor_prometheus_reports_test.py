@@ -40,13 +40,16 @@ class TstDStep(TypedStep[NoSettings, list[MarkdownDataContract], MarkdownDataCon
         return inputs[0]
 
 
-def test_multi_step_pipeline_with_history_labels_and_log_counter(tmp_path):
-    out_a = tmp_path / "out_a"
-    out_b = tmp_path / "out_b"
-    out_c = tmp_path / "out_c"
-    out_d = tmp_path / "out_d"
+def test_multi_step_pipeline_with_history_labels_and_log_counter(tmp_path, monkeypatch):
+    # multiple tests in one function to ensure isolation for ENV var changes
 
     with PrometheusStepExecutor() as ex:
+        # 1) basic test without pipeline ID
+        out_a = tmp_path / "out_a"
+        out_b = tmp_path / "out_b"
+        out_c = tmp_path / "out_c"
+        out_d = tmp_path / "out_d"
+
         ex.execute_step(TstAStep, None, out_a)
         ex.execute_step(TstBStep, (out_a,), out_b)
         ex.execute_step(TstCStep, (out_b,), out_c)
@@ -65,3 +68,37 @@ def test_multi_step_pipeline_with_history_labels_and_log_counter(tmp_path):
         assert ex.counter_log_error_counts.collect()[0].samples[2].value == 10
         assert ex.counter_log_error_counts.collect()[0].samples[-2].value == 6
         assert ex.counter_log_warning_counts.collect()[0].samples[0].value == 1
+
+        # clear counter
+        ex.counter_results.clear()
+
+        # 2) pipeline ID from single env var
+        monkeypatch.setenv("WZ_PIPELINE_ID_ENV_VARIABLES", "WZ_PIPELINE_ID")
+        monkeypatch.setenv("WZ_PIPELINE_ID", "my-pipeline-123")
+
+        out_a = tmp_path / "out_a"
+
+        ex.execute_step(TstAStep, None, out_a)
+
+        # Check labels
+        for sample in ex.counter_results.collect()[0].samples:
+            assert sample.labels["pipeline_id"] == "my-pipeline-123"
+
+        # clear counter
+        ex.counter_results.clear()
+
+        # 3) pipeline ID from multiple env vars
+        monkeypatch.setenv("WZ_PIPELINE_ID_ENV_VARIABLES", "WZ_TENANT,WZ_PIPELINE_ID")
+        monkeypatch.setenv("WZ_TENANT", "abc")
+        monkeypatch.setenv("WZ_PIPELINE_ID", "my-pipeline-123")
+
+        out_a = tmp_path / "out_a"
+
+        ex.execute_step(TstAStep, None, out_a)
+
+        # Check labels
+        for sample in ex.counter_results.collect()[0].samples:
+            assert sample.labels["pipeline_id"] == "abc__my-pipeline-123"
+
+        # clear counter
+        ex.counter_results.clear()
