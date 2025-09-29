@@ -22,7 +22,6 @@ path = [
     ".github/**/*.md",
     "VERSION",
     ".vscode/settings.json",
-    "DIRECT_REQUIREMENTS.txt",
     "tests/data/scraperapi/*.html",
     "docs/**/*.md",
     "tests/data/**/*",
