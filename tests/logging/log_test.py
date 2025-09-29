@@ -4,10 +4,11 @@
 
 import json
 import logging
+import sys
 
 import pytest
 
-from wurzel.utils.logging import JsonFormatter, JsonStringFormatter
+from wurzel.utils.logging import JsonFormatter, JsonStringFormatter, log_uncaught_exception, setup_uncaught_exception_logging
 
 FOR_EACH_LOG_LEVEL = pytest.mark.parametrize(
     "level",
@@ -77,3 +78,41 @@ def test_logging_cor_id(capsys, level, loggername):
     assert logging.getLevelName(level) in out
     assert json.loads(out)
     assert str(uuid) in out
+
+
+def test_setup_uncaught_exception_logging(caplog):
+    """Test that setup_uncaught_exception_logging sets sys.excepthook."""
+    # Save original excepthook
+    original_hook = sys.excepthook
+
+    try:
+        setup_uncaught_exception_logging()
+        assert sys.excepthook == log_uncaught_exception
+    finally:
+        # Restore original hook
+        sys.excepthook = original_hook
+
+
+def test_log_uncaught_exception(caplog):
+    """Test that log_uncaught_exception logs the exception."""
+    # Create a mock exception
+    exc_type = None
+    exc_value = None
+    exc_traceback = None
+    try:
+        raise ValueError("Test exception")
+    except ValueError:
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+
+    # Ensure they are not None
+    assert exc_type is not None
+    assert exc_value is not None
+    assert exc_traceback is not None
+
+    # Call the function
+    with caplog.at_level(logging.ERROR):
+        log_uncaught_exception(exc_type, exc_value, exc_traceback)
+
+    # Check that it was logged
+    assert "Uncaught exception" in caplog.text
+    assert "Test exception" in caplog.text

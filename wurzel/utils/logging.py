@@ -8,11 +8,22 @@ import logging.config
 import os
 import sys
 from collections.abc import Mapping
+from types import TracebackType
 from typing import Any, Literal, Optional, Union
 
 from asgi_correlation_id import correlation_id
 
 log = logging.getLogger(__name__)
+
+
+def log_uncaught_exception(exc_type: type[BaseException], exc_value: BaseException, exc_traceback: TracebackType | None) -> None:
+    """Log uncaught exceptions."""
+    log.exception("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+
+def setup_uncaught_exception_logging() -> None:
+    """Set up logging for uncaught exceptions."""
+    sys.excepthook = log_uncaught_exception
 
 
 # pylint: disable-next=too-many-positional-arguments
