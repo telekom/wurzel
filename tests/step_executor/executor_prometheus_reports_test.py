@@ -40,7 +40,7 @@ class TstDStep(TypedStep[NoSettings, list[MarkdownDataContract], MarkdownDataCon
         return inputs[0]
 
 
-def test_multi_step_pipeline_with_history_labels_and_log_counter(tmp_path, monkeypatch):
+def test_multi_step_pipeline_with_history_labels_and_log_counter(tmp_path, env):
     # multiple tests in one function to ensure isolation for ENV var changes
 
     with PrometheusStepExecutor() as ex:
@@ -73,8 +73,8 @@ def test_multi_step_pipeline_with_history_labels_and_log_counter(tmp_path, monke
         ex.counter_results.clear()
 
         # 2) pipeline ID from single env var
-        monkeypatch.setenv("WZ_PIPELINE_ID_ENV_VARIABLES", "WZ_PIPELINE_ID")
-        monkeypatch.setenv("WZ_PIPELINE_ID", "my-pipeline-123")
+        env.set("WZ_PIPELINE_ID_ENV_VARIABLES", "WZ_PIPELINE_ID")
+        env.set("WZ_PIPELINE_ID", "my-pipeline-123")
 
         out_a = tmp_path / "out_a"
 
@@ -88,9 +88,9 @@ def test_multi_step_pipeline_with_history_labels_and_log_counter(tmp_path, monke
         ex.counter_results.clear()
 
         # 3) pipeline ID from multiple env vars
-        monkeypatch.setenv("WZ_PIPELINE_ID_ENV_VARIABLES", "WZ_TENANT,WZ_PIPELINE_ID")
-        monkeypatch.setenv("WZ_TENANT", "abc")
-        monkeypatch.setenv("WZ_PIPELINE_ID", "my-pipeline-123")
+        env.set("WZ_PIPELINE_ID_ENV_VARIABLES", "WZ_TENANT,WZ_PIPELINE_ID")
+        env.set("WZ_TENANT", "abc")
+        env.set("WZ_PIPELINE_ID", "my-pipeline-123")
 
         out_a = tmp_path / "out_a"
 

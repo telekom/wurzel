@@ -51,7 +51,7 @@ class StepReport(pydantic.BaseModel):
 
     model_config = pydantic.ConfigDict(frozen=True)
     inputs: int = 0
-    results: int = 1  # NOTE for consistency this should be renamed to "outputs"
+    outputs: int = 1
     time_to_load: float
     time_to_execute: float
     time_to_save: float
