@@ -39,8 +39,10 @@ from wurzel.step.typed_step import (
     TypedStep,
 )
 from wurzel.utils import WZ, create_model, try_get_length
+from wurzel.utils.logging import setup_uncaught_exception_logging
 
 log = getLogger(__name__)
+
 
 StepReturnType: TypeAlias = Union[pandas.DataFrame, PydanticModel, list[PydanticModel]]
 
@@ -162,6 +164,7 @@ class BaseStepExecutor:
 
     def __init__(self, dont_encapsulate: bool = False) -> None:
         self.__dont_encapsulate = dont_encapsulate
+        setup_uncaught_exception_logging()
 
     def store(
         self,
