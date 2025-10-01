@@ -200,11 +200,16 @@ class BaseStepExecutor:
 
         """
         input_model_class: type[datacontract.DataModel] = step.input_model_class
-        for p in path.glob("*"):
+        for step_input_path in path.glob("*"):
             start = time.time()
-            data = input_model_class.load_from_path(p, step.input_model_type)
+            data = input_model_class.load_from_path(step_input_path, step.input_model_type)
             yield (
-                (data, History(".".join(p.name.split(".")[:-1]), step)),
+                (
+                    # step input data
+                    data,
+                    # previous history + current step
+                    History(*step_input_path.stem.split(History._History__SEP_STR), step),  # pylint: disable=protected-access
+                ),
                 time.time() - start,
             )
 
@@ -298,13 +303,13 @@ class BaseStepExecutor:
 
                 try:
                     # Execute step with inputs
-                    res = ctx.run(run, inpt)
+                    step_outputs = ctx.run(run, inpt)
                 finally:
                     step_history.reset(token)
                 run_time = time.time() - run_start
                 store_time = 0
                 if output_path:
-                    self.store(step, history, res, output_path)
+                    self.store(step, history, step_outputs, output_path)
                     store_time = time.time() - run_time
 
                 # Step report
@@ -314,8 +319,8 @@ class BaseStepExecutor:
                     time_to_save=store_time,
                     step_name=step_cls.__name__,
                     inputs=try_get_length(inpt),
-                    results=try_get_length(res),
-                    history=history.get(),
+                    outputs=try_get_length(step_outputs),
+                    history=history._history,
                     log_warning_counts=log_counting_handler.counts["WARNING"],
                     log_error_counts=log_counting_handler.counts["ERROR"],
                 )
@@ -323,7 +328,7 @@ class BaseStepExecutor:
                     f"Finished pipeline step: {step_cls.__name__}.run({history[:-1]}) -> {output_path}",
                     extra=report.model_dump(),
                 )
-                yield res, report
+                yield step_outputs, report
             log.info(f"{step_cls.__name__}.finalize()")
             if not was_called_once:
                 log.error(

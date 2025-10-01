@@ -27,26 +27,26 @@ class PrometheusStepExecutor(BaseStepExecutor):
 
     The Prometheus metrics are labeled with metadata (step name, history, ...). To distinguish
     between different pipeline runs you can also set a `pipeline_id` through environment variables.
-    With `WZ_PIPELINE_ID_ENV_VARIABLES` you define the names of environment variables. Each value
+    With `PROMETHEUS_PIPELINE_ID_ENV_VARIABLES` you define the names of environment variables. Each value
     of the provided environment variables is then concatenate with a underscore and assign to the
     `pipeline_id` label. For example, when your environment sets a variable `MY_JOB_ID` you use
     this variable as your pipeline ID follows:
 
     ```
-    WZ_PIPELINE_ID_ENV_VARIABLES = "MY_JOB_ID"
+    PROMETHEUS_PIPELINE_ID_ENV_VARIABLES = "MY_JOB_ID"
     ```
 
     If multiple variables are needed, they can be provided as comma separated list:
 
     ```
-    WZ_PIPELINE_ID_ENV_VARIABLES = "JOB_TENANT,MY_JOB_ID"
+    PROMETHEUS_PIPELINE_ID_ENV_VARIABLES = "JOB_TENANT,MY_JOB_ID"
     ```
     """
 
     # pylint: disable=too-many-instance-attributes
     counter_started: Counter
     counter_failed: Counter
-    counter_results: Counter
+    counter_outputs: Counter
     counter_inputs: Counter
     counter_log_warning_counts: Counter
     counter_log_error_counts: Counter
@@ -81,9 +81,9 @@ class PrometheusStepExecutor(BaseStepExecutor):
         ]
         self.counter_started = Counter("steps_started", "Total number of TypedSteps started", base_labels)
         self.counter_failed = Counter("steps_failed", "Total number of TypedSteps failed", base_labels)
-        self.counter_results = Counter(
-            "step_results",
-            "count of result, if its an array, otherwise -1",
+        self.counter_outputs = Counter(
+            "step_outputs",
+            "count of outputs, if its an array, otherwise -1",
             base_labels,
         )
         self.counter_log_warning_counts = Counter(
@@ -113,12 +113,12 @@ class PrometheusStepExecutor(BaseStepExecutor):
             log.warning("Could not push prometheus metrics to gateway", exc_info=True)
 
     def get_pipeline_id(self) -> str | None:
-        """Get the pipeline ID based on environment variables."""
+        """Get the pipeline ID based on environment variables if available."""
         # Comma separated list of environment variable names
-        pipeline_id_env_variables = os.environ.get("WZ_PIPELINE_ID_ENV_VARIABLES", None)
+        pipeline_id_env_variables = self.s.PROMETHEUS_PIPELINE_ID_ENV_VARIABLES
 
         if pipeline_id_env_variables is not None:
-            env_variable_names = pipeline_id_env_variables.split(",")
+            env_variable_names = str(pipeline_id_env_variables).split(",")
 
             # Concatenate all environment variables into a single string
             return "__".join([os.environ.get(env_name, "") for env_name in env_variable_names])
@@ -160,12 +160,12 @@ class PrometheusStepExecutor(BaseStepExecutor):
             report_labels.update(
                 {
                     # Keep track of pipeline history
-                    "history_first_step": report.history[0].split("-")[0],  # There is probably a cleaner way for doing this
+                    "history_first_step": report.history[0],
                     "history_last_step": report.history[-1],
                 }
             )
 
-            self.counter_results.labels(**report_labels).inc(report.results)
+            self.counter_outputs.labels(**report_labels).inc(report.outputs)
             self.counter_inputs.labels(**report_labels).inc(report.inputs)
 
             self.counter_log_error_counts.labels(**report_labels).inc(report.log_error_counts)
