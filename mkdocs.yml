@@ -148,6 +148,8 @@ nav:
     - Milvus: steps/milvus.md
     - ScraperAPI: steps/scraperapi.md
     - Splitter: steps/splitter.md
+  - Step executors:
+    - Prometheus step executor: step_executors/prometheus_step_executor.md
 
 
 # Custom CSS and JavaScript

@@ -5,12 +5,12 @@
 """Base Executor."""
 
 import json
+import logging
 import os
 import time
 from collections.abc import Generator
 from contextlib import contextmanager
 from contextvars import copy_context
-from logging import getLogger
 from pathlib import Path
 from types import NoneType
 from typing import Any, Callable, Optional, Self, TypeAlias, Union
@@ -39,8 +39,9 @@ from wurzel.step.typed_step import (
     TypedStep,
 )
 from wurzel.utils import WZ, create_model, try_get_length
+from wurzel.utils.logging import CountingHandler
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 
 StepReturnType: TypeAlias = Union[pandas.DataFrame, PydanticModel, list[PydanticModel]]
 
@@ -50,12 +51,14 @@ class StepReport(pydantic.BaseModel):
 
     model_config = pydantic.ConfigDict(frozen=True)
     inputs: int = 0
-    results: int = 1
+    outputs: int = 1
     time_to_load: float
     time_to_execute: float
     time_to_save: float
     step_name: str
     history: list[str]
+    log_warning_counts: int = 0
+    log_error_counts: int = 0
 
 
 def _try_sort(x: StepReturnType) -> StepReturnType:
@@ -197,11 +200,16 @@ class BaseStepExecutor:
 
         """
         input_model_class: type[datacontract.DataModel] = step.input_model_class
-        for p in path.glob("*"):
+        for step_input_path in path.glob("*"):
             start = time.time()
-            data = input_model_class.load_from_path(p, step.input_model_type)
+            data = input_model_class.load_from_path(step_input_path, step.input_model_type)
             yield (
-                (data, History(".".join(p.name.split(".")[:-1]), step)),
+                (
+                    # step input data
+                    data,
+                    # previous history + current step
+                    History(*step_input_path.stem.split(History._History__SEP_STR), step),  # pylint: disable=protected-access
+                ),
                 time.time() - start,
             )
 
@@ -270,6 +278,7 @@ class BaseStepExecutor:
         output_path: Optional[PathToFolderWithBaseModels],
     ):
         """Exceute specified step."""
+        # pylint: disable=too-many-locals  # no meaningful way to split this function
         step = step_cls()
         # pylint: disable=protected-access
         if output_path:
@@ -280,36 +289,46 @@ class BaseStepExecutor:
             for (inpt, history), load_time in self._load_data(step, inputs, output_path):
                 was_called_once = True
                 log.info(
-                    f"Start: {step_cls.__name__}.run({history[:-1]}) -> {output_path}",
+                    f"Start pipeline step: {step_cls.__name__}.run({history[:-1]}) -> {output_path}",
                 )
                 history: History
                 run_start = time.time()
                 ctx = copy_context()
                 token = step_history.set(history)
                 ctx.run(step_history.set, history)
+
+                # Setup log counting
+                log_counting_handler = CountingHandler()
+                log_counting_handler.attach_to_root_logger()
+
                 try:
-                    res = ctx.run(run, inpt)
+                    # Execute step with inputs
+                    step_outputs = ctx.run(run, inpt)
                 finally:
                     step_history.reset(token)
                 run_time = time.time() - run_start
                 store_time = 0
                 if output_path:
-                    self.store(step, history, res, output_path)
+                    self.store(step, history, step_outputs, output_path)
                     store_time = time.time() - run_time
+
+                # Step report
                 report = StepReport(
                     time_to_load=load_time,
                     time_to_execute=run_time,
                     time_to_save=store_time,
                     step_name=step_cls.__name__,
                     inputs=try_get_length(inpt),
-                    results=try_get_length(res),
-                    history=history.get(),
+                    outputs=try_get_length(step_outputs),
+                    history=history._history,
+                    log_warning_counts=log_counting_handler.counts["WARNING"],
+                    log_error_counts=log_counting_handler.counts["ERROR"],
                 )
                 log.info(
-                    f"Finished: {step_cls.__name__}.run({history[:-1]}) -> {output_path}",
+                    f"Finished pipeline step: {step_cls.__name__}.run({history[:-1]}) -> {output_path}",
                     extra=report.model_dump(),
                 )
-                yield res, report
+                yield step_outputs, report
             log.info(f"{step_cls.__name__}.finalize()")
             if not was_called_once:
                 log.error(

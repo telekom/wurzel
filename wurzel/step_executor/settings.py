@@ -13,3 +13,6 @@ class PrometheusSettings(Settings):
     PROMETHEUS_GATEWAY: str = Field("localhost:9091", description="host:port of pushgateway")
     PROMETHEUS_JOB: str = Field("default-job-name", description="jobname for the prometheus counter")
     PROMETHEUS_DISABLE_CREATED_METRIC: bool = Field(True, description="disable *_created metrics")
+    PROMETHEUS_PIPELINE_ID_ENV_VARIABLES: str | None = Field(
+        None, description="names of environment variables to be concatenated as pipeline ID (comma separated)"
+    )

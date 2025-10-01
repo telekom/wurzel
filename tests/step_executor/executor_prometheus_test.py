@@ -32,6 +32,6 @@ def test_context_manager_singelton():
 def test_setting_of_counters():
     with PrometheusStepExecutor() as exc:
         exc(DummyStep, None, None)
-        assert exc.counter_results.collect()[0].samples[0].value == 1.0
+        assert exc.counter_outputs.collect()[0].samples[0].value == 1.0
         exc(DummyStep, None, None)
-        assert exc.counter_results.collect()[0].samples[0].value == 2.0
+        assert exc.counter_outputs.collect()[0].samples[0].value == 2.0
