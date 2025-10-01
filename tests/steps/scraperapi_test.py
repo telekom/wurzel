@@ -8,6 +8,15 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+from wurzel.utils import HAS_JOBLIB, HAS_REQUESTS
+
+if not HAS_REQUESTS:
+    pytest.skip("Requests is not available", allow_module_level=True)
+
+if not HAS_JOBLIB:
+    pytest.skip("Joblib is not available", allow_module_level=True)
+
 import requests
 import requests_mock
 

@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
 #
 # SPDX-License-Identifier: Apache-2.0
+import importlib.util
 import logging
 import re
 from abc import ABC, abstractmethod
@@ -10,6 +11,20 @@ if TYPE_CHECKING:
     import spacy
 
 logger = logging.getLogger(__name__)
+
+
+def download_sentence_splitter_model(model_name: str):
+    """Download the SentenceSplitterModel model by name."""
+    # SpaCy models can be installed via pip or via the spacy CLI
+    try:
+        from spacy.cli.download import download as spacy_download  # pylint: disable=import-outside-toplevel
+
+        spacy_download(model_name)
+
+        return
+    except (Exception, SystemExit) as e:
+        logger.error(f"Failed to download SpaCy model '{model_name}' via spacy CLI: {e}")
+        raise OSError(f"Failed to download SpaCy model '{model_name}' via spacy CLI") from e
 
 
 class SentenceSplitter(ABC):
@@ -62,6 +77,15 @@ class SentenceSplitter(ABC):
         # Try to load a Spacy model
         try:
             import spacy  # pylint: disable=import-outside-toplevel
+
+            spec = importlib.util.find_spec(name)
+
+            if spec is None:
+                # Try to download the model if not found
+                download_sentence_splitter_model(name)
+                spec = importlib.util.find_spec(name)
+                if spec is None:
+                    raise OSError(f"Sentence splitter '{name}' is not installed and could not be loaded.")
 
             # Try Spacy model name, like "en_core_web_sm"
             nlp = spacy.load(name)

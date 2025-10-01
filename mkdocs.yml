@@ -1,18 +1,162 @@
 # SPDX-FileCopyrightText: 2024 Deutsche Telekom AG
 #
 # SPDX-License-Identifier: CC0-1.0
-site_name: "Wurzel"
-site_url: https://telekom.github.io/wurzel
 
-theme:
-  name: readthedocs
-
-plugins:
-- search
-- mkdocstrings
-
-
-
-# Repository
-repo_name: telekom/wurzel
+site_name: Wurzel
+site_description: Wurzel documentation
+site_author: Deutsche Telekom AG
+site_url: https://telekom.github.io/wurzel/
 repo_url: https://github.com/telekom/wurzel
+repo_name: telekom/wurzel
+# Repository information
+#repo_name: knowledge-pipe/documentation
+
+#edit_uri: -/edit/main/documentation/docs/
+
+# Theme configuration with Telekom Magenta branding
+theme:
+  name: material
+  custom_dir: docs/static/overrides/
+  palette:
+    # Telekom Magenta primary color scheme
+    - scheme: default
+      primary: custom  # We'll define custom magenta color
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - search.highlight
+    - search.share
+    - search.suggest
+    - content.tabs.link
+    - content.code.annotate
+    - content.code.copy
+    - content.action.edit
+    - content.action.view
+    - toc.follow
+    - toc.integrate
+
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil
+    view: material/eye
+    logo: material/library
+
+  favicon: assets/images/favicon.ico
+
+  font:
+    text: TeleNeoWeb
+    code: Roboto Mono
+
+# Plugins
+plugins:
+  - search:
+      lang: en
+  - minify:
+      minify_html: true
+  - mkdocs-typer2:
+      pretty: true
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_root_members_full_path: false
+            show_category_heading: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+
+
+# Markdown extensions
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - toc:
+      permalink: true
+  - tables
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem:
+      smart_enable: all
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.tilde
+  - pymdownx.keys
+  - pymdownx.smartsymbols
+  - pymdownx.tasklist:
+      custom_checkbox: true
+
+# Navigation structure
+
+nav:
+  - Home: index.md
+  - Developer Guide:
+    - Overview: developer-guide/index.md
+    - Installation: developer-guide/installation.md
+    - Getting Started: developer-guide/getting-started.md
+    - Cli Reference: developer-guide/cli.md
+    - Building Pipelines: developer-guide/building-pipelines.md
+    - Creating Custom Steps: developer-guide/creating-steps.md
+    - Data Contracts: developer-guide/data-contracts.md
+  - Backends:
+      - Overview: backends/index.md
+      - Argo Workflows: backends/argoworkflows.md
+      - DVC: backends/dvc.md
+  - Steps:
+    - Docling: steps/docling.md
+    - Deduplication: steps/duplication.md
+    - Embedding: steps/embedding.md
+    - Manual Markdown: steps/manual_markdown.md
+    - Qdrant: steps/qdrant.md
+    - Milvus: steps/milvus.md
+    - ScraperAPI: steps/scraperapi.md
+    - Splitter: steps/splitter.md
+
+
+# Custom CSS and JavaScript
+extra_css:
+  - static/stylesheets/telekom-magenta.css
+  - static/stylesheets/custom.css
+
+extra_javascript:
+  - static/javascripts/config.js
+
+# Copyright
+copyright: Copyright &cop - Telekom

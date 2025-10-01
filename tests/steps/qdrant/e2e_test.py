@@ -11,6 +11,11 @@ from typing import Union
 
 import pytest
 
+from wurzel.utils import HAS_QDRANT
+
+if not HAS_QDRANT:
+    pytest.skip("Qdrant is not available", allow_module_level=True)
+
 # qdrant-Lite; See: https://qdrant.io/docs/qdrant_lite.md
 from qdrant_client import QdrantClient, models
 
