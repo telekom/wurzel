@@ -131,12 +131,12 @@ class PrometheusStepExecutor(BaseStepExecutor):
         inputs: Optional[set[PathToFolderWithBaseModels]],
         output_dir: Optional[PathToFolderWithBaseModels],
     ) -> list[tuple[Any, StepReport]]:
-        """Run a given Step.
+        """Run a given Step and send metrics to Prometheus counters.
 
         Args:
             step_cls (Type[TypedDVCStep]): Step to run
-            inputs (set[PathToBaseModel]): Step inputs
-            output (PathToBaseModel): Step output
+            inputs (set[PathToFolderWithBaseModels]): Step inputs
+            output_dir (PathToFolderWithBaseModels): Step output dir
 
         """
         step_name = step_cls.__name__
