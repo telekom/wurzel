@@ -41,7 +41,7 @@ dependencies= [
     "prometheus-client==0.21.1",
     "mistletoe==1.4.0",
     "pandera==0.20.3",
-    "mdformat==0.7.17",
+    "mdformat==0.7.22",
     "lxml==5.2.*",
     "pyyaml>=6.0.2",
     "pip<26",
