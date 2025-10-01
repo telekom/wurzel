@@ -31,7 +31,7 @@ classifiers = [
 ]
 dependencies= [
     "tqdm==4.66.5",
-    "pandas==2.2.2",
+    "pandas==2.3.3",
     "numpy < 2.0.0",
     "dvc==3.53.1",
     "Markdown==3.6",
