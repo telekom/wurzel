@@ -89,6 +89,9 @@ scraperapi = [
     "requests",
     "joblib>=1.4.0",
 ]
+sftp = [
+    "paramiko>=3.0.0",
+]
 argo = [
     "hera >=5.20.1",
 ]

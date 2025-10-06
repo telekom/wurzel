@@ -28,6 +28,7 @@ _opt_deps = {
         "spacy",
         "tiktoken",
         "transformers",
+        "paramiko",
     ]
 }
 HAS_TLSH = _opt_deps["tlsh"]
@@ -41,6 +42,7 @@ HAS_HERA = _opt_deps["hera"]
 HAS_SPACY = _opt_deps["spacy"]
 HAS_TIKTOKEN = _opt_deps["tiktoken"]
 HAS_TRANSFORMERS = _opt_deps["transformers"]
+HAS_PARAMIKO = _opt_deps["paramiko"]
 
 
 def __getattr__(name: str) -> Any:
@@ -88,6 +90,7 @@ __all__ = [
     "HAS_REQUESTS",
     "HAS_JOBLIB",
     "HAS_HERA",
+    "HAS_PARAMIKO",
     "MarkdownConverterSettings",
 ]
 
