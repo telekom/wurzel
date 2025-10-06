@@ -1,8 +1,10 @@
 # SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
 #
 # SPDX-License-Identifier: Apache-2.0
+# pylint: disable=duplicate-code
 
 import os
+import warnings
 from logging import getLogger
 from typing import Any, Optional, Self
 
@@ -24,6 +26,13 @@ class PrometheusStepExecutor(BaseStepExecutor):
     Adds PrometheusCounter; is a singelton.
 
     For more info see `BaseStepExecutor`.
+
+    .. deprecated::
+        PrometheusStepExecutor is deprecated. Use BaseStepExecutor with
+        middlewares=['prometheus'] instead:
+
+        >>> with BaseStepExecutor(middlewares=["prometheus"]) as exc:
+        ...     exc(MyStep, inputs, output)
     """
 
     # pylint: disable=too-many-instance-attributes
@@ -40,6 +49,14 @@ class PrometheusStepExecutor(BaseStepExecutor):
     s = Settings
 
     def __new__(cls, *args, **kwargs):
+        # Issue deprecation warning
+        warnings.warn(
+            "PrometheusStepExecutor is deprecated and will be removed in a future version. "
+            "Use BaseStepExecutor(middlewares=['prometheus']) instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance.__init__(*args, **kwargs)

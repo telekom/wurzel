@@ -71,7 +71,13 @@ def test_env_set(env, env_set):
         MyStep()
 
 
-@pytest.mark.parametrize("executor", [PrometheusStepExecutor, BaseStepExecutor])
+@pytest.mark.parametrize(
+    "executor,expect_warning",
+    [
+        (BaseStepExecutor, False),
+        pytest.param(PrometheusStepExecutor, True, marks=pytest.mark.filterwarnings("ignore::DeprecationWarning")),
+    ],
+)
 @pytest.mark.parametrize(
     "kwargs",
     [
@@ -80,9 +86,18 @@ def test_env_set(env, env_set):
         pytest.param({"dont_encapsulate": False}, id="False"),
     ],
 )
-def test_constructor(executor, kwargs):
-    with executor(**kwargs) as ex:
-        assert ex
+def test_constructor(executor, expect_warning, kwargs):
+    """Test executor constructors with various configurations.
+
+    Note: PrometheusStepExecutor is deprecated, test is kept for backward compatibility.
+    """
+    if expect_warning:
+        with pytest.warns(DeprecationWarning):
+            with executor(**kwargs) as ex:
+                assert ex
+    else:
+        with executor(**kwargs) as ex:
+            assert ex
 
 
 class TestSecretStrEncapsulation:

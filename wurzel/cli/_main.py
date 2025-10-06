@@ -150,7 +150,12 @@ def complete_step_import(incomplete: str) -> list[str]:  # pylint: disable=too-m
     """AutoComplete for steps - discover TypedStep classes from current project and wurzel."""
     hints: list[str] = []
 
-    def scan_directory_for_typed_steps(search_path: Path, base_module: str = "") -> None:
+    # Early optimization: If we have a specific prefix, we can limit scanning
+    should_scan_wurzel = not incomplete or incomplete.startswith("wurzel")
+    should_scan_current = not incomplete or not incomplete.startswith("wurzel")
+    should_scan_installed = "." in incomplete and not incomplete.startswith("wurzel")
+
+    def scan_directory_for_typed_steps(search_path: Path, base_module: str = "", max_files: int = 200) -> None:
         """Scan a directory for TypedStep classes and add them to hints."""
         if not search_path.exists():
             return
@@ -179,17 +184,26 @@ def complete_step_import(incomplete: str) -> list[str]:  # pylint: disable=too-m
             "doc",
         }
 
+        files_processed = 0
+
         # First, scan Python files directly in the search path
         for py_file in search_path.glob("*.py"):
+            if files_processed >= max_files:
+                break
             if py_file.name == "__init__.py":
                 continue
             _process_python_file(py_file, search_path, base_module, incomplete, hints)
+            files_processed += 1
 
         # Then scan top-level directories that might contain user steps
         for item in search_path.iterdir():
+            if files_processed >= max_files:
+                break
             if item.is_dir() and item.name not in exclude_dirs:
                 # Only go 2 levels deep to avoid deep scanning
                 for py_file in item.rglob("*.py"):
+                    if files_processed >= max_files:
+                        break
                     if py_file.name == "__init__.py":
                         continue
 
@@ -203,12 +217,15 @@ def complete_step_import(incomplete: str) -> list[str]:  # pylint: disable=too-m
                         continue
 
                     _process_python_file(py_file, search_path, base_module, incomplete, hints)
+                    files_processed += 1
 
     import threading  # pylint: disable=import-outside-toplevel
 
     scan_threads = []
 
     def scan_wurzel():
+        if not should_scan_wurzel:
+            return
         try:
             import wurzel  # pylint: disable=import-outside-toplevel
 
@@ -216,20 +233,24 @@ def complete_step_import(incomplete: str) -> list[str]:  # pylint: disable=too-m
             wurzel_steps_path = wurzel_path / "steps"
             wurzel_step_path = wurzel_path / "step"
             if wurzel_steps_path.exists():
-                scan_directory_for_typed_steps(wurzel_steps_path, "wurzel.steps")
+                scan_directory_for_typed_steps(wurzel_steps_path, "wurzel.steps", max_files=100)
             if wurzel_step_path.exists():
-                scan_directory_for_typed_steps(wurzel_step_path, "wurzel.step")
+                scan_directory_for_typed_steps(wurzel_step_path, "wurzel.step", max_files=50)
         except ImportError:
             pass
 
     def scan_current():
+        if not should_scan_current:
+            return
         try:
             current_dir = Path.cwd()
-            scan_directory_for_typed_steps(current_dir)
+            scan_directory_for_typed_steps(current_dir, max_files=50)
         except Exception:  # pylint: disable=broad-exception-caught
             pass
 
     def scan_installed():
+        if not should_scan_installed:
+            return
         try:
             from importlib.metadata import distributions  # pylint: disable=import-outside-toplevel
             from importlib.util import find_spec  # pylint: disable=import-outside-toplevel
@@ -241,23 +262,27 @@ def complete_step_import(incomplete: str) -> list[str]:  # pylint: disable=too-m
                     spec = find_spec(pkg)
                     if spec and spec.origin:
                         pkg_path = Path(spec.origin).parent
-                        scan_directory_for_typed_steps(pkg_path, pkg)
+                        scan_directory_for_typed_steps(pkg_path, pkg, max_files=50)
             elif incomplete in installed_pkgs:
                 spec = find_spec(incomplete)
                 if spec and spec.origin:
                     pkg_path = Path(spec.origin).parent
-                    scan_directory_for_typed_steps(pkg_path, incomplete)
+                    scan_directory_for_typed_steps(pkg_path, incomplete, max_files=50)
         except Exception:  # pylint: disable=broad-exception-caught
             pass
 
-    # Start all scan threads
-    scan_threads.append(threading.Thread(target=scan_wurzel))
-    scan_threads.append(threading.Thread(target=scan_current))
-    scan_threads.append(threading.Thread(target=scan_installed))
+    # Start all scan threads (only those that are needed)
+    if should_scan_wurzel:
+        scan_threads.append(threading.Thread(target=scan_wurzel))
+    if should_scan_current:
+        scan_threads.append(threading.Thread(target=scan_current))
+    if should_scan_installed:
+        scan_threads.append(threading.Thread(target=scan_installed))
+
     for t in scan_threads:
         t.start()
     for t in scan_threads:
-        t.join()
+        t.join(timeout=1.0)  # Add timeout to prevent hanging
 
     # Remove duplicates while preserving order
     seen: set[str] = set()
@@ -274,7 +299,7 @@ def complete_step_import(incomplete: str) -> list[str]:  # pylint: disable=too-m
 
 
 @app.command(no_args_is_help=True, help="Run a step")
-# pylint: disable-next=dangerous-default-value
+# pylint: disable-next=dangerous-default-value,too-many-positional-arguments
 def run(
     step: Annotated[
         str,
@@ -305,11 +330,19 @@ def run(
             # "",
             "-e",
             "--executor",
-            help="executor to use",
+            help="executor to use (deprecated, use --middlewares instead)",
             callback=executer_callback,
             autocompletion=lambda: ["BaseStepExecutor", "PrometheusStepExecutor"],
         ),
     ] = "BaseStepExecutor",
+    middlewares: Annotated[
+        str,
+        typer.Option(
+            "-m",
+            "--middlewares",
+            help="comma-separated list of middlewares to enable (e.g., 'prometheus')",
+        ),
+    ] = "",
     encapsulate_env: Annotated[bool, typer.Option()] = True,
 ):
     """Run."""
@@ -324,11 +357,12 @@ def run(
                 "output_path": output_path,
                 "input_folders": input_folders,
                 "executor": executor,
+                "middlewares": middlewares,
                 "encapsulate_env": encapsulate_env,
             }
         },
     )
-    return cmd_run(step, output_path, input_folders, executor, encapsulate_env)
+    return cmd_run(step, output_path, input_folders, executor, encapsulate_env, middlewares)
 
 
 @app.command("inspect", no_args_is_help=True, help="Display information about a step")

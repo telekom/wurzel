@@ -13,7 +13,7 @@ from contextvars import copy_context
 from logging import getLogger
 from pathlib import Path
 from types import NoneType
-from typing import Any, Callable, Optional, Self, TypeAlias, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, Self, TypeAlias, Union
 
 import pandas
 import pandera.typing as patyp
@@ -40,6 +40,9 @@ from wurzel.step.typed_step import (
 )
 from wurzel.utils import WZ, create_model, try_get_length
 from wurzel.utils.logging import setup_uncaught_exception_logging
+
+if TYPE_CHECKING:
+    from wurzel.step_executor.middlewares.base import BaseMiddleware, MiddlewareChain
 
 log = getLogger(__name__)
 
@@ -144,10 +147,16 @@ class BaseStepExecutor:
         # exc(...) == exc.execute_step(...)
     ```
 
+    Middlewares can be added to wrap execution with additional functionality:
+    ```python
+    with BaseStepExecutor(middlewares=["prometheus"]) as exc:
+        exc(MyStep, [], Path("output"))
+    ```
 
     """
 
     __dont_encapsulate: bool
+    __middleware_chain: Optional["MiddlewareChain"]
 
     @classmethod
     def is_allow_extra_settings(cls: "BaseStepExecutor") -> bool:
@@ -162,8 +171,44 @@ class BaseStepExecutor:
         """
         return os.environ.get("ALLOW_EXTRA_SETTINGS", "False").upper() == "TRUE"
 
-    def __init__(self, dont_encapsulate: bool = False) -> None:
+    def __init__(
+        self,
+        dont_encapsulate: bool = False,
+        middlewares: Optional[Union[list[str], list["BaseMiddleware"]]] = None,
+        load_middlewares_from_env: bool = True,
+    ) -> None:
+        """Initialize the step executor.
+
+        Args:
+            dont_encapsulate: If True, don't encapsulate environment variables
+            middlewares: List of middleware names or instances to use
+            load_middlewares_from_env: Whether to load middlewares from MIDDLEWARES env var
+        """
         self.__dont_encapsulate = dont_encapsulate
+        self.__middleware_chain = None
+
+        # Import here to avoid circular dependency
+        from wurzel.step_executor.middlewares import (  # pylint: disable=import-outside-toplevel
+            BaseMiddleware,
+            MiddlewareChain,
+            create_middleware_chain,
+        )
+
+        # Handle middleware configuration
+        if middlewares:
+            # Check if we got instances or names
+            if all(isinstance(m, BaseMiddleware) for m in middlewares):
+                # Got middleware instances
+                self.__middleware_chain = MiddlewareChain(middlewares)
+            elif all(isinstance(m, str) for m in middlewares):
+                # Got middleware names
+                self.__middleware_chain = create_middleware_chain(names=middlewares, from_env=load_middlewares_from_env)
+            else:
+                raise TypeError("middlewares must be all strings or all BaseMiddleware instances")
+        elif load_middlewares_from_env:
+            # Load from environment only
+            self.__middleware_chain = create_middleware_chain(from_env=True)
+
         setup_uncaught_exception_logging()
 
     def store(
@@ -345,6 +390,34 @@ class BaseStepExecutor:
         """
         if not inputs:
             inputs = set()
+
+        # Build the execution chain with middlewares
+        if self.__middleware_chain and self.__middleware_chain.middlewares:
+            # Wrap _execute_step_internal with middleware chain
+            execution_chain = self.__middleware_chain.build_chain(self._execute_step_internal)
+            return execution_chain(step_cls, inputs, output_dir)
+
+        # No middlewares, execute directly
+        return self._execute_step_internal(step_cls, inputs, output_dir)
+
+    def _execute_step_internal(
+        self,
+        step_cls: type[TypedStep],
+        inputs: Optional[set[PathToFolderWithBaseModels]],
+        output_dir: Optional[PathToFolderWithBaseModels],
+    ) -> list[tuple[Any, StepReport]]:
+        """Internal method that actually executes the step (wrapped by middlewares).
+
+        This is the base execution logic that middlewares wrap around.
+
+        Args:
+            step_cls (Type[TypedStep]): class to execute
+            inputs (Optional[set[PathToFolderWithBaseModels]]): Either objects or a folder path
+            output_dir (Optional[PathToFolderWithBaseModels]): If folder is supllied, save to folder
+
+        Returns:
+            list[tuple[Any, StepReport]]: Result of step and repots in list
+        """
         try:
             correlation_id.set(step_cls.__name__)
             log.info(f"{self.__class__.__name__} - start: {step_cls.__name__}")
@@ -366,7 +439,12 @@ class BaseStepExecutor:
         return self.execute_step(step_cls, inputs, output_dir)
 
     def __enter__(self) -> Self:
+        # Enter middleware chain context if present
+        if self.__middleware_chain:
+            self.__middleware_chain.__enter__()
         return self
 
     def __exit__(self, *exc_details):
-        pass
+        # Exit middleware chain context if present
+        if self.__middleware_chain:
+            self.__middleware_chain.__exit__(*exc_details)
