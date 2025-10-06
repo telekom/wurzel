@@ -720,6 +720,14 @@ def generate(  # pylint: disable=too-many-positional-arguments
     return None
 
 
+@app.command("list-middlewares", help="List all available middlewares")
+def list_middlewares():
+    """List all available middlewares."""
+    from wurzel.cli.cmd_list_middlewares import main as cmd_list_middlewares  # pylint: disable=import-outside-toplevel
+
+    return cmd_list_middlewares()
+
+
 def update_log_level(log_level: str):
     """Configure loguru for interactive terminal sessions."""
     from wurzel.cli.logger import setup_cli_logging  # pylint: disable=import-outside-toplevel
