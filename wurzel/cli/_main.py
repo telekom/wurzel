@@ -22,6 +22,7 @@ from rich.table import Table
 
 app = typer.Typer(
     no_args_is_help=True,
+    context_settings={"help_option_names": ["-h", "--help"]},
 )
 log = logging.getLogger(__name__)
 console = Console()
@@ -689,6 +690,14 @@ def generate(  # pylint: disable=too-many-positional-arguments
     if output is None:
         print(rendered)  # noqa: T201
     return None
+
+
+@app.command("list-middlewares", help="List all available middlewares")
+def list_middlewares():
+    """List all available middlewares."""
+    from wurzel.cli.cmd_list_middlewares import main as cmd_list_middlewares  # pylint: disable=import-outside-toplevel
+
+    return cmd_list_middlewares()
 
 
 def update_log_level(log_level: str):
