@@ -20,6 +20,13 @@ app = typer.Typer(
     no_args_is_help=True,
     context_settings={"help_option_names": ["-h", "--help"]},
 )
+
+# Import and add the middlewares command group
+# ruff: noqa: E402
+from wurzel.cli import cmd_middlewares  # pylint: disable=wrong-import-position
+
+app.add_typer(cmd_middlewares.app, name="middlewares")
+
 log = logging.getLogger(__name__)
 
 
@@ -461,14 +468,6 @@ def generate(
             backend=cast(type[Backend], backend),
         )
     )
-
-
-@app.command("list-middlewares", help="List all available middlewares")
-def list_middlewares():
-    """List all available middlewares."""
-    from wurzel.cli.cmd_list_middlewares import main as cmd_list_middlewares  # pylint: disable=import-outside-toplevel
-
-    return cmd_list_middlewares()
 
 
 def update_log_level(log_level: str):
