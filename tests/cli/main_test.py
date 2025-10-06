@@ -260,3 +260,83 @@ def test_generate_with_malformed_yaml_raises_bad_parameter(tmp_path):
             values=[malformed_file],
             pipeline_name=None,
         )
+
+
+def test_run_with_middleware_string(tmp_path, env):
+    """Test running with middleware specified as comma-separated string."""
+    out = tmp_path / "out"
+    inp = tmp_path / "in"
+    inp.mkdir()
+    (inp / "file.md").write_text("#Hello\n world")
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
+
+    # Run with middleware string
+    main.run(
+        step=ManualMarkdownStep,
+        executor=BaseStepExecutor,
+        input_folders=[],
+        output_path=out,
+        middlewares="prometheus",
+    )
+    assert list(out.glob("*"))
+    assert (out / "ManualMarkdown.json").read_text()
+
+
+def test_run_with_multiple_middlewares(tmp_path, env):
+    """Test running with multiple middlewares."""
+    out = tmp_path / "out"
+    inp = tmp_path / "in"
+    inp.mkdir()
+    (inp / "file.md").write_text("#Hello\n world")
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
+
+    # Run with multiple middlewares
+    main.run(
+        step=ManualMarkdownStep,
+        executor=BaseStepExecutor,
+        input_folders=[],
+        output_path=out,
+        middlewares="prometheus",  # We only have prometheus for now
+    )
+    assert list(out.glob("*"))
+    assert (out / "ManualMarkdown.json").read_text()
+
+
+def test_run_with_empty_middleware_string(tmp_path, env):
+    """Test that empty middleware string works."""
+    out = tmp_path / "out"
+    inp = tmp_path / "in"
+    inp.mkdir()
+    (inp / "file.md").write_text("#Hello\n world")
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
+
+    # Run with empty middleware string (should not load any)
+    main.run(
+        step=ManualMarkdownStep,
+        executor=BaseStepExecutor,
+        input_folders=[],
+        output_path=out,
+        middlewares="",
+    )
+    assert list(out.glob("*"))
+    assert (out / "ManualMarkdown.json").read_text()
+
+
+def test_run_with_middleware_from_env(tmp_path, env):
+    """Test that middleware can be loaded from environment variable."""
+    out = tmp_path / "out"
+    inp = tmp_path / "in"
+    inp.mkdir()
+    (inp / "file.md").write_text("#Hello\n world")
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
+    env.set("MIDDLEWARES", "prometheus")
+
+    # Run without explicit middleware (should load from env)
+    main.run(
+        step=ManualMarkdownStep,
+        executor=BaseStepExecutor,
+        input_folders=[],
+        output_path=out,
+    )
+    assert list(out.glob("*"))
+    assert (out / "ManualMarkdown.json").read_text()
