@@ -75,6 +75,21 @@ wurzel run MyStep --middlewares prometheus,custom
 
 ## Built-in Middlewares
 
+### Discovering Available Middlewares
+
+To see all available middlewares in your installation:
+
+```bash
+wurzel list-middlewares
+```
+
+This will output something like:
+
+```text
+Available middlewares:
+  - prometheus
+```
+
 ### Prometheus Middleware
 
 Collects metrics about step execution:
