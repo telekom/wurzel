@@ -164,3 +164,14 @@ def test_run_with_middleware_from_env(tmp_path, env):
     )
     assert list(out.glob("*"))
     assert (out / "ManualMarkdown.json").read_text()
+
+
+def test_list_middlewares(capsys):
+    """Test the list-middlewares command."""
+    from wurzel.cli.cmd_list_middlewares import main as cmd_list_middlewares
+
+    cmd_list_middlewares()
+
+    captured = capsys.readouterr()
+    assert "Available middlewares:" in captured.out
+    assert "prometheus" in captured.out
