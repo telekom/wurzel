@@ -102,7 +102,7 @@ lint = [
 test = [
     "pytest==8.4.*",
     "pytest-asyncio==0.23.*",
-    "pytest-cov==4.*",
+    "pytest-cov>=4,<8",
     "pytest-html==4.*",
     "pytest_env==1.*",
     "pytest-xdist==3.*",
