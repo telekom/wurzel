@@ -58,7 +58,7 @@ milvus = [
     "pymilvus==2.5.14",
 ]
 openai = [
-    "tiktoken==0.7.0",
+    "tiktoken==0.11.0",
 ]
 transformers = [
     "transformers",
