@@ -5,6 +5,7 @@
 """Comprehensive tests for SFTPManualMarkdownStep."""
 
 import stat
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -217,7 +218,7 @@ class TestAuthentication:
 
                     # Verify key was loaded with passphrase (SecretStr is passed through)
                     call_args = mock_rsa.call_args
-                    assert call_args[0][0] == "/path/to/key"
+                    assert Path(call_args[0][0]) == Path("/path/to/key")
                     assert call_args[1]["password"].get_secret_value() == "keypass"
 
 
