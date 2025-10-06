@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
 #
 # SPDX-License-Identifier: Apache-2.0
+# pylint: disable=duplicate-code
 
 """Prometheus metrics middleware for step execution."""
 
@@ -14,7 +15,7 @@ from wurzel.path import PathToFolderWithBaseModels
 from wurzel.step.typed_step import TypedStep
 
 from .base import BaseMiddleware, ExecuteStepCallable
-from .settings import PrometheusMiddlewareSettings
+from .prometheus.settings import PrometheusMiddlewareSettings
 
 log = getLogger(__name__)
 
