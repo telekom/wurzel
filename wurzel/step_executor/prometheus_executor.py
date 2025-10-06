@@ -46,6 +46,7 @@ class PrometheusStepExecutor(BaseStepExecutor):
     # step_info: Info
     # Singelton Instance
     _instance = None
+    _metrics_initialized = False
     s = Settings
 
     def __new__(cls, *args, **kwargs):
@@ -67,6 +68,10 @@ class PrometheusStepExecutor(BaseStepExecutor):
 
     # pylint: disable=unused-private-member
     def __setup_metrics(self):
+        # Only setup metrics once to avoid duplicate registry errors
+        if PrometheusStepExecutor._metrics_initialized:
+            return
+
         if self.s.PROMETHEUS_DISABLE_CREATED_METRIC:
             os.environ["PROMETHEUS_DISABLE_CREATED_SERIES"] = "True"
         self.counter_started = Counter("steps_started", "Total number of TypedSteps started", ("step_name",))
@@ -80,6 +85,8 @@ class PrometheusStepExecutor(BaseStepExecutor):
         self.histogram_save = Histogram("step_hist_save", "Time to save results", ("step_name",))
         self.histogram_load = Histogram("step_hist_load", "Time to load inputs", ("step_name",))
         self.histogram_execute = Histogram("step_hist_execute", "Time to execute results", ("step_name",))
+
+        PrometheusStepExecutor._metrics_initialized = True
 
     def __enter__(self) -> Self:
         return self
