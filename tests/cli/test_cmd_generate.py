@@ -152,3 +152,18 @@ def test_cmd_generate_main_writes_to_output(monkeypatch, tmp_path):
 
     assert result == "artifact-yaml"
     assert output_path.read_text(encoding="utf-8") == "artifact-yaml"
+
+
+class DummyBackend:
+    def generate_artifact(self, step):  # noqa: ARG002
+        return "ok"
+
+
+class DummyStep:
+    def traverse(self):
+        return []
+
+
+def test_cmd_generate_runs():
+    res = cmd_generate.main(DummyStep(), DummyBackend)
+    assert res == "ok"
