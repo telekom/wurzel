@@ -127,7 +127,7 @@ docs = [
 ]
 
 all = ["wurzel[qdrant,milvus,tlsh,docling,argo,openai,splitter,embedding,scraperapi,sftp,s3]"]
-dev = ["wurzel[lint,test,all]"]
+dev = ["wurzel[docs,lint,test,all]"]
 
 [project.scripts]
 wurzel = "wurzel.cli._main:main"
