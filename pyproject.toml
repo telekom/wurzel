@@ -123,7 +123,7 @@ docs = [
 ]
 
 all = ["wurzel[qdrant,milvus,tlsh,docling,argo,openai,splitter,embedding,scraperapi]"]
-dev = ["wurzel[lint,test,all]"]
+dev = ["wurzel[docs,lint,test,all]"]
 
 [build-system]
 requires = ["setuptools>=78.1.0", "wheel"]
