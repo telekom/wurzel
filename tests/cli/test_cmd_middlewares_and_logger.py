@@ -20,7 +20,7 @@ def test_list_middlewares_empty(monkeypatch):
         def get(self, name):
             return None
 
-    monkeypatch.setattr("wurzel.step_executor.middlewares.get_registry", lambda: DummyRegistry())
+    monkeypatch.setattr("wurzel.executors.middlewares.get_registry", lambda: DummyRegistry())
     result = runner.invoke(cmd_middlewares.app, ["list"])
     assert result.exit_code == 0
     assert "No middlewares available" in result.output
@@ -34,7 +34,7 @@ def test_inspect_middleware_not_found(monkeypatch):
         def get(self, name):
             return None
 
-    monkeypatch.setattr("wurzel.step_executor.middlewares.get_registry", lambda: DummyRegistry())
+    monkeypatch.setattr("wurzel.executors.middlewares.get_registry", lambda: DummyRegistry())
     result = runner.invoke(cmd_middlewares.app, ["inspect", "missing"])
     assert result.exit_code == 1
     assert "Error: Middleware 'missing' not found." in result.output

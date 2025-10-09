@@ -7,7 +7,7 @@
 from pathlib import Path
 
 from wurzel.cli import _main as main
-from wurzel.step_executor import BaseStepExecutor
+from wurzel.executors import BaseStepExecutor
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 
 

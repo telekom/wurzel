@@ -8,7 +8,7 @@ import pytest
 import yaml
 
 from wurzel.cli import generate_cli_call
-from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
+from wurzel.executors import BaseStepExecutor, PrometheusStepExecutor
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.utils import HAS_HERA
 

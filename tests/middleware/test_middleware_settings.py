@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from wurzel.step_executor.middlewares.settings import MiddlewareSettings
+from wurzel.executors.middlewares.settings import MiddlewareSettings
 
 
 def test_middleware_settings_default():

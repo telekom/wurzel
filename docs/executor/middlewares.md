@@ -33,14 +33,14 @@ You can enable middlewares in two ways:
 1. By passing names or instances to `BaseStepExecutor`:
 
 ```python
-from wurzel.step_executor.base_executor import BaseStepExecutor
+from wurzel.executors.base_executor import BaseStepExecutor
 
 # Using names registered in the middleware registry
 with BaseStepExecutor(middlewares=["timing", "custom"]) as exc:
     exc(MyStep, set(), Path("output"))
 
 # Or provide middleware instances directly
-from wurzel.step_executor.middlewares import TimingMiddleware
+from wurzel.executors.middlewares import TimingMiddleware
 with BaseStepExecutor(middlewares=[TimingMiddleware()]) as exc:
     exc(MyStep, set(), Path("output"))
 ```
@@ -72,7 +72,7 @@ and return values.
 Minimal example:
 
 ```python
-from wurzel.step_executor.middlewares.base import BaseMiddleware
+from wurzel.executors.middlewares.base import BaseMiddleware
 
 class LoggingMiddleware(BaseMiddleware):
     def __call__(self, call_next, step_cls, inputs, output_path):
@@ -109,7 +109,7 @@ registry, follow the project's conventions for step executor extensions.
 Registering and using a custom middleware:
 
 ```python
-from wurzel.step_executor.middlewares import get_registry
+from wurzel.executors.middlewares import get_registry
 
 registry = get_registry()
 registry.register("custom", MyCustomMiddleware)

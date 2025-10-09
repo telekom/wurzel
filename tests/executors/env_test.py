@@ -7,9 +7,9 @@ import json
 import pytest
 
 from wurzel.datacontract import PydanticModel
+from wurzel.executors import BaseStepExecutor
 from wurzel.step.settings import Settings
 from wurzel.step.typed_step import TypedStep
-from wurzel.step_executor import BaseStepExecutor
 
 
 class MySettings(Settings):

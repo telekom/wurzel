@@ -55,8 +55,11 @@ def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: s
         Type[BaseStepExecutor] | None: {BaseStepExecutor, PrometheusStepExecutor, ArgoBackend, DvcBackend, None}
 
     """
-    from wurzel.backend import DvcBackend  # pylint: disable=import-outside-toplevel
-    from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor  # pylint: disable=import-outside-toplevel
+    from wurzel.executors import (  # pylint: disable=import-outside-toplevel
+        BaseStepExecutor,
+        DvcBackend,  # pylint: disable=import-outside-toplevel
+        PrometheusStepExecutor,
+    )
     from wurzel.utils import HAS_HERA  # pylint: disable=import-outside-toplevel
 
     if value is None:
@@ -73,7 +76,7 @@ def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: s
         return DvcBackend
     if "ARGOBACKEND".startswith(value.upper()):
         if HAS_HERA:
-            from wurzel.backend import ArgoBackend  # pylint: disable=import-outside-toplevel
+            from wurzel.executors import ArgoBackend  # pylint: disable=import-outside-toplevel
 
             return ArgoBackend
         raise typer.BadParameter("ArgoBackend requires wurzel[argo] to be installed")
@@ -571,14 +574,14 @@ def get_available_backends() -> list[str]:
     Returns:
         list[str]: List of available backend names (e.g., ['DvcBackend', 'ArgoBackend'])
     """
-    from wurzel.backend import get_available_backends as _get_backends  # pylint: disable=import-outside-toplevel
+    from wurzel.executors.backend import get_available_backends as _get_backends  # pylint: disable=import-outside-toplevel
 
     return list(_get_backends().keys())
 
 
 def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str):
     """Validates input and returns fitting backend. Case-insensitive."""
-    from wurzel.backend import get_backend_by_name  # pylint: disable=import-outside-toplevel
+    from wurzel.executors.backend import get_backend_by_name  # pylint: disable=import-outside-toplevel
 
     backend_cls = get_backend_by_name(backend)
     if backend_cls is not None:
@@ -681,9 +684,9 @@ def generate(  # pylint: disable=too-many-positional-arguments
     pipeline_obj = pipeline_callback(None, None, pipeline)
     backend_obj = backend_callback(None, None, backend)
 
-    from wurzel.backend.backend import Backend  # pylint: disable=import-outside-toplevel
-    from wurzel.backend.values import ValuesFileError  # pylint: disable=import-outside-toplevel
     from wurzel.cli.cmd_generate import main as cmd_generate  # pylint: disable=import-outside-toplevel
+    from wurzel.executors.backend.backend import Backend  # pylint: disable=import-outside-toplevel
+    from wurzel.executors.backend.values import ValuesFileError  # pylint: disable=import-outside-toplevel
 
     log.debug(
         "generate pipeline",

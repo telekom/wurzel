@@ -5,7 +5,7 @@
 from types import SimpleNamespace
 from typing import Any, Optional
 
-from wurzel.step_executor.middlewares.prometheus import PrometheusMiddleware
+from wurzel.executors.middlewares.prometheus import PrometheusMiddleware
 
 
 class DummyReport(SimpleNamespace):

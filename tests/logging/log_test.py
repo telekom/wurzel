@@ -127,7 +127,7 @@ def test_uncaught_exception_causes_exit_code_1(tmp_path):
     the CLI properly propagates StepFailed exceptions.
     """
     from wurzel.exceptions import StepFailed
-    from wurzel.step_executor import BaseStepExecutor
+    from wurzel.executors import BaseStepExecutor
 
     # Create a test step that raises an exception
     step_file = tmp_path / "exception_step.py"

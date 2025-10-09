@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Tests for wurzel.backend.backend_argo module."""
+"""Tests for wurzel.executors.backend.backend_argo module."""
 
 from pathlib import Path
 
@@ -14,7 +14,7 @@ from wurzel.utils import HAS_HERA
 if not HAS_HERA:
     pytest.skip("Hera is not available", allow_module_level=True)
 
-from wurzel.backend.backend_argo import (
+from wurzel.executors.backend.backend_argo import (
     ArgoBackend,
     ContainerConfig,
     EnvFromConfig,
@@ -28,8 +28,8 @@ from wurzel.backend.backend_argo import (
     WorkflowConfig,
     select_workflow,
 )
-from wurzel.backend.values import ValuesFileError, deep_merge_dicts, load_values
-from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
+from wurzel.executors.backend.values import ValuesFileError, deep_merge_dicts, load_values
+from wurzel.executors import BaseStepExecutor, PrometheusStepExecutor
 
 from .conftest import DummyFollowStep, DummyStep
 

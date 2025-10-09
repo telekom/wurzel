@@ -20,7 +20,7 @@ from pydantic import ValidationError
 from qdrant_client import QdrantClient, models
 from qdrant_client.models import AliasDescription, CollectionsAliasesResponse
 
-from wurzel.step_executor import BaseStepExecutor
+from wurzel.executors import BaseStepExecutor
 from wurzel.steps.qdrant import QdrantConnectorStep
 from wurzel.steps.qdrant.retirement import CollectionRetirer
 from wurzel.steps.qdrant.telemetry import (

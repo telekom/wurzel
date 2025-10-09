@@ -8,9 +8,9 @@ import typer
 
 import wurzel
 import wurzel.steps
-from wurzel.backend.backend_dvc import DvcBackend
+from wurzel.executors.backend.backend_dvc import DvcBackend
 from wurzel.cli import _main as main
-from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
+from wurzel.executors import BaseStepExecutor, PrometheusStepExecutor
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.utils import HAS_HERA
 
@@ -115,7 +115,7 @@ def test_backend_callback_dvc(backend_str):
 )
 def test_backend_callback_argo(backend_str):
     """Test backend_callback with ArgoBackend when Hera is available (case-insensitive)."""
-    from wurzel.backend.backend_argo import ArgoBackend
+    from wurzel.executors.backend.backend_argo import ArgoBackend
 
     result = main.backend_callback(None, None, backend_str)
     assert result == ArgoBackend

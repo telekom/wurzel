@@ -9,8 +9,8 @@ concerns to step execution. Middlewares can be chained together to add
 features like metrics, logging, tracing, etc.
 
 Example:
-    >>> from wurzel.step_executor.middlewares import MiddlewareRegistry
-    >>> from wurzel.step_executor.middlewares.prometheus import PrometheusMiddleware
+    >>> from wurzel.executors.middlewares import MiddlewareRegistry
+    >>> from wurzel.executors.middlewares.prometheus import PrometheusMiddleware
     >>>
     >>> # Register and load middlewares
     >>> registry = MiddlewareRegistry()

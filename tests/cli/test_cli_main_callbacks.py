@@ -10,7 +10,7 @@ from wurzel.cli import _main as cli_main
 def test_executer_callback_base_and_prometheus():
     # Base
     res = cli_main.executer_callback(None, None, "Base")
-    from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
+    from wurzel.executors import BaseStepExecutor, PrometheusStepExecutor
 
     assert res is BaseStepExecutor
 

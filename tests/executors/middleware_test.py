@@ -7,13 +7,13 @@
 from pathlib import Path
 
 from wurzel.datacontract.common import MarkdownDataContract
-from wurzel.step.typed_step import TypedStep
-from wurzel.step_executor import BaseStepExecutor
-from wurzel.step_executor.middlewares import (
+from wurzel.executors import BaseStepExecutor
+from wurzel.executors.middlewares import (
     BaseMiddleware,
     MiddlewareChain,
     get_registry,
 )
+from wurzel.step.typed_step import TypedStep
 
 
 class DummyStep(TypedStep[None, None, MarkdownDataContract]):

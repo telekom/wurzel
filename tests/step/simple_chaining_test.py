@@ -11,9 +11,9 @@ from wurzel.utils import HAS_DOCLING, HAS_HERA
 if not HAS_DOCLING:
     pytest.skip("Docling is not available", allow_module_level=True)
 
-from wurzel.backend import DvcBackend
-from wurzel.backend.backend import Backend
 from wurzel.datacontract import MarkdownDataContract
+from wurzel.executors import DvcBackend
+from wurzel.executors.backend.backend import Backend
 from wurzel.step.typed_step import TypedStep
 from wurzel.steps.docling.docling_step import DoclingStep
 from wurzel.steps.duplication import DropDuplicationStep
@@ -21,7 +21,7 @@ from wurzel.steps.splitter import SimpleSplitterStep
 from wurzel.utils.meta_settings import WZ
 
 if HAS_HERA:
-    from wurzel.backend import ArgoBackend
+    from wurzel.executors import ArgoBackend
 
 
 class A(TypedStep[None, None, MarkdownDataContract]):

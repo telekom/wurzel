@@ -41,14 +41,15 @@ from hera.workflows.models import (
 )
 from pydantic import BaseModel, Field
 
-from wurzel.backend.backend import Backend
-from wurzel.backend.values import load_values
 from wurzel.cli import generate_cli_call
+from wurzel.executors.backend.backend import Backend
+from wurzel.executors.backend.values import load_values
+from wurzel.executors.base_executor import BaseStepExecutor
+from wurzel.executors.prometheus_executor import PrometheusStepExecutor
 from wurzel.step import TypedStep
-from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 
 if TYPE_CHECKING:
-    from wurzel.step_executor.middlewares.base import BaseMiddleware
+    from wurzel.executors.middlewares.base import BaseMiddleware
 
 log = logging.getLogger(__name__)
 
@@ -401,7 +402,7 @@ class ArgoBackend(Backend):
         Examples:
             Create a CronWorkflow that runs daily at 4 AM:
 
-            >>> from wurzel.backend.backend_argo import ArgoBackend, WorkflowConfig
+            >>> from wurzel.executors.backend.backend_argo import ArgoBackend, WorkflowConfig
             >>> config = WorkflowConfig(schedules=["0 4 * * *"])
             >>> backend = ArgoBackend(config=config)
             >>> # Assuming 'step' is a TypedStep instance

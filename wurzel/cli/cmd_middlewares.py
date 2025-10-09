@@ -24,7 +24,7 @@ def middleware_name_autocomplete(incomplete: str) -> list[str]:
     Returns:
         List of matching middleware names
     """
-    from wurzel.step_executor.middlewares import get_registry  # pylint: disable=import-outside-toplevel
+    from wurzel.executors.middlewares import get_registry  # pylint: disable=import-outside-toplevel
 
     registry = get_registry()
     available = registry.list_available()
@@ -34,7 +34,7 @@ def middleware_name_autocomplete(incomplete: str) -> list[str]:
 @app.command("list", help="List all available middlewares")
 def list_middlewares():
     """List all available middlewares with brief descriptions."""
-    from wurzel.step_executor.middlewares import get_registry  # pylint: disable=import-outside-toplevel
+    from wurzel.executors.middlewares import get_registry  # pylint: disable=import-outside-toplevel
 
     registry = get_registry()
     available_middlewares = registry.list_available()
@@ -73,7 +73,7 @@ def inspect_middleware(
     Args:
         name: The name of the middleware to inspect
     """
-    from wurzel.step_executor.middlewares import get_registry  # pylint: disable=import-outside-toplevel
+    from wurzel.executors.middlewares import get_registry  # pylint: disable=import-outside-toplevel
 
     registry = get_registry()
     middleware_class = registry.get(name.lower())
@@ -137,7 +137,7 @@ def inspect_middleware(
     typer.echo(f"  export MIDDLEWARES={name}")
     typer.echo("  wurzel run <step>")
     typer.echo("\n  # Via Python:")
-    typer.echo("  from wurzel.step_executor import BaseStepExecutor")
+    typer.echo("  from wurzel.executors import BaseStepExecutor")
     typer.echo(f"  with BaseStepExecutor(middlewares=['{name}']) as exc:")
     typer.echo("      exc(MyStep, inputs, output)")
     typer.echo()

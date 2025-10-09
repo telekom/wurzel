@@ -2,21 +2,21 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Tests for wurzel.backend.backend_dvc module."""
+"""Tests for wurzel.executors.backend.backend_dvc module."""
 
 from pathlib import Path
 
 import pytest
 import yaml
 
-from wurzel.backend.backend_dvc import (
+from wurzel.executors.backend.backend_dvc import (
     DvcBackend,
     DvcBackendSettings,
     DvcConfig,
     DvcTemplateValues,
     select_pipeline,
 )
-from wurzel.backend.values import load_values
+from wurzel.executors.backend.values import load_values
 from wurzel.datacontract.common import MarkdownDataContract
 from wurzel.step import NoSettings, TypedStep
 

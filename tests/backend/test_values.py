@@ -2,14 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Tests for wurzel.backend.values module (no optional dependencies required)."""
+"""Tests for wurzel.executors.backend.values module (no optional dependencies required)."""
 
 from pathlib import Path
 
 import pytest
 from pydantic import BaseModel
 
-from wurzel.backend.values import ValuesFileError, deep_merge_dicts, load_values
+from wurzel.executors.backend.values import ValuesFileError, deep_merge_dicts, load_values
 
 
 class SimpleModel(BaseModel):

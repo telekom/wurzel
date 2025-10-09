@@ -5,11 +5,11 @@
 
 from typing import TYPE_CHECKING
 
+from wurzel.executors.base_executor import BaseStepExecutor
 from wurzel.step.typed_step import TypedStep
-from wurzel.step_executor.base_executor import BaseStepExecutor
 
 if TYPE_CHECKING:  # pragma: no cover - only used for type checking
-    from wurzel.step_executor.middlewares.base import BaseMiddleware
+    from wurzel.executors.middlewares.base import BaseMiddleware
 
 
 class Backend(BaseStepExecutor):

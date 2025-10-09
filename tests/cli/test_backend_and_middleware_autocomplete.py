@@ -2,8 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from wurzel.backend.backend import Backend
 from wurzel.cli.cmd_middlewares import middleware_name_autocomplete as cmd_middleware_autocomplete
+from wurzel.executors.backend.backend import Backend
 
 
 def test_middleware_name_autocomplete_cli():
@@ -12,10 +12,10 @@ def test_middleware_name_autocomplete_cli():
         def list_available(self):
             return ["prometheus", "custom"]
 
-    import wurzel.step_executor.middlewares
+    import wurzel.executors.middlewares
 
-    original = wurzel.step_executor.middlewares.get_registry
-    wurzel.step_executor.middlewares.get_registry = lambda: DummyRegistry()
+    original = wurzel.executors.middlewares.get_registry
+    wurzel.executors.middlewares.get_registry = lambda: DummyRegistry()
 
     try:
         result = cmd_middleware_autocomplete("pro")
@@ -24,7 +24,7 @@ def test_middleware_name_autocomplete_cli():
         result2 = cmd_middleware_autocomplete("xyz")
         assert len(result2) == 0
     finally:
-        wurzel.step_executor.middlewares.get_registry = original
+        wurzel.executors.middlewares.get_registry = original
 
 
 def test_backend_base_class():

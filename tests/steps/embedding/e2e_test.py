@@ -15,7 +15,9 @@ if not HAS_LANGCHAIN_CORE or not HAS_REQUESTS or not HAS_SPACY or not HAS_TIKTOK
     pytest.skip("Embedding dependencies (langchain-core, requests, spacy, tiktoken) are not available", allow_module_level=True)
 
 from wurzel.exceptions import StepFailed
-from wurzel.step_executor import BaseStepExecutor
+from wurzel.executors import BaseStepExecutor
+
+# Local application/library specific imports
 from wurzel.steps import EmbeddingStep
 from wurzel.steps.embedding.huggingface import HuggingFaceInferenceAPIEmbeddings
 from wurzel.steps.embedding.step_multivector import EmbeddingMultiVectorStep

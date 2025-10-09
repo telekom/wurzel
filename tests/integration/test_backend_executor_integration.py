@@ -16,9 +16,8 @@ import subprocess
 import pytest
 import yaml
 
-from wurzel.backend import Backend, DvcBackend
 from wurzel.cli import generate_cli_call
-from wurzel.step_executor import BaseStepExecutor
+from wurzel.executors import Backend, BaseStepExecutor, DvcBackend
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.utils import HAS_HERA
 from wurzel.utils.meta_settings import WZ
@@ -27,7 +26,7 @@ from wurzel.utils.meta_settings import WZ
 def get_argo_backend():
     """Helper to get ArgoBackend class."""
     if HAS_HERA:
-        from wurzel.backend import ArgoBackend
+        from wurzel.executors import ArgoBackend
 
         return ArgoBackend
     return None
@@ -350,7 +349,7 @@ class TestBackendSettings:
         [
             pytest.param(
                 DvcBackend,
-                lambda: __import__("wurzel.backend.backend_dvc", fromlist=["DvcBackendSettings"]).DvcBackendSettings,
+                lambda: __import__("wurzel.executors.backend.backend_dvc", fromlist=["DvcBackendSettings"]).DvcBackendSettings,
                 lambda tmp_path: {"DATA_DIR": tmp_path, "ENCAPSULATE_ENV": False},
                 lambda tmp_path, backend: {
                     "DATA_DIR": (backend.settings.DATA_DIR, tmp_path),
@@ -360,7 +359,7 @@ class TestBackendSettings:
             ),
             pytest.param(
                 get_argo_backend(),
-                lambda: __import__("wurzel.backend.backend_argo", fromlist=["ArgoBackendSettings"]).ArgoBackendSettings,
+                lambda: __import__("wurzel.executors.backend.backend_argo", fromlist=["ArgoBackendSettings"]).ArgoBackendSettings,
                 lambda tmp_path: {"IMAGE": "custom/image:latest", "NAMESPACE": "test-ns"},
                 lambda tmp_path, backend: {
                     "IMAGE": (backend.settings.IMAGE, "custom/image:latest"),

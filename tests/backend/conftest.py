@@ -13,7 +13,7 @@ import yaml
 from wurzel.utils import HAS_HERA
 
 if HAS_HERA:
-    from wurzel.backend.backend_argo import (
+    from wurzel.executors.backend.backend_argo import (
         ContainerConfig,
         S3ArtifactConfig,
         WorkflowConfig,

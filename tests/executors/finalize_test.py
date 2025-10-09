@@ -4,8 +4,8 @@
 
 import pytest
 
+from wurzel.executors import BaseStepExecutor
 from wurzel.step import NoSettings, PydanticModel, TypedStep
-from wurzel.step_executor import BaseStepExecutor
 
 
 class NiecheException(Exception):
