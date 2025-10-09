@@ -69,7 +69,7 @@ Available configuration options:
 Use the Argo backend directly in Python:
 
 ```python
-from wurzel.backend.argo import ArgoBackend
+from wurzel.executors.backend.backend_argo import ArgoBackend
 from wurzel.steps.embedding import EmbeddingStep
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.steps.qdrant.step import QdrantConnectorStep

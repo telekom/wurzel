@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 from wurzel.steps import ManualMarkdownStep
 
 EXCLUDE_FROM_LEAF_TESTS: list[type[TypedStep]] = []
