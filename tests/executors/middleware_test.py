@@ -14,6 +14,7 @@ from wurzel.executors.middlewares import (
     MiddlewareChain,
     get_registry,
 )
+from wurzel.step.typed_step import TypedStep
 
 
 class DummyStep(TypedStep[None, None, MarkdownDataContract]):
