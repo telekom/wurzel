@@ -11,8 +11,8 @@ from typing import Any, Optional
 
 from prometheus_client import REGISTRY, Counter, Histogram, push_to_gateway
 
+from wurzel.core.typed_step import TypedStep
 from wurzel.path import PathToFolderWithBaseModels
-from wurzel.step.typed_step import TypedStep
 
 from .base import BaseMiddleware, ExecuteStepCallable
 from .prometheus.settings import PrometheusMiddlewareSettings

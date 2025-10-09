@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from wurzel.step import TypedStep
+    from wurzel.core import TypedStep
 
 
 def main(  # pylint: disable=too-many-positional-arguments

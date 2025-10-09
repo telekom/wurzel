@@ -5,8 +5,8 @@
 
 from typing import TYPE_CHECKING
 
+from wurzel.core.typed_step import TypedStep
 from wurzel.executors.base_executor import BaseStepExecutor
-from wurzel.step.typed_step import TypedStep
 
 if TYPE_CHECKING:  # pragma: no cover - only used for type checking
     from wurzel.executors.middlewares.base import BaseMiddleware

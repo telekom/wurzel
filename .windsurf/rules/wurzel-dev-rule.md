@@ -6,10 +6,10 @@ trigger: always_on
 
 ## Core Architecture
 
-### TypedStep System (`wurzel/step/`)
+### TypedStep System (`wurzel/core/`)
 - **TypedStep[SETTINGS, INCONTRACT, OUTCONTRACT]**: Base class for all steps
 - Chain with `>>` operator (type-safe): `source >> splitter >> embedder`
-- Input can be `None` for leaf steps, output always required
+- Input can be `None` for leaf steps, output always requiredAfter ANY Code Change:
 
 ### Data Contracts (`wurzel/datacontract/`)
 - **PydanticModel**: Structured objects (JSON), **PanderaDataFrameModel**: Tabular data (CSV)
@@ -46,29 +46,14 @@ trigger: always_on
 ### Core Technologies
 - **Pydantic v2**: For data validation and settings
   - Use `pydantic.BaseModel` for data models
-  - Use `wurzel.step.Settings` for step settings (NOT `pydantic_settings.BaseSettings`)
-  - Custom implementations in `wurzel.datacontract` and `wurzel.step.settings`
+  - Use `wurzel.core.Settings` for step settings (NOT `pydantic_settings.BaseSettings`)
+  - Custom implementations in `wurzel.datacontract` and `wurzel.core.settings`
 - **Pandera**: For DataFrame validation
 - **uv**: Package manager (NOT pip directly)
 - **mkdocs**: Documentation (with material theme, mermaid, typer integration)
 - **DVC**: Pipeline versioning and execution
 - **typer**: CLI framework
 
-
-## make
-All make commands automatically run make install, which installs the latest dependencies.
-When you run commands like make test or make lint or ..., the installation step will be executed first.
-
-### Testing
-- **Coverage**: Minimum 90% (enforced in Makefile)
-- **Location**: `tests/` mirrors `wurzel/` structure
-- **Run**: `make test` or `uv run pytest`
-
-### Linting Tools
-- **ruff**: Primary linter and formatter (replaces black, isort, flake8)
-- **pylint**: Additional checks (max-line-length: 140)
-- **pre-commit**: Automated checks on commit
-- **reuse**: License compliance (SPDX headers required)
 
 ## Environment Variables
 
@@ -84,7 +69,7 @@ export DVCBACKEND__DATA_DIR=./data
 
 ### Step
 ```python
-from wurzel.step import TypedStep, Settings
+from wurzel.core import TypedStep, Settings
 from wurzel.datacontract import MarkdownDataContract
 
 class MyStepSettings(Settings):
@@ -118,7 +103,7 @@ with BaseStepExecutor(middlewares=["prometheus"]) as ex:
 ## Key Notes
 - TypedStep enforces type compatibility at definition time
 - Steps run in isolated env (settings from env vars with `STEPNAME__` prefix)
-- **Settings**: Use `wurzel.step.Settings` (custom wrapper around pydantic_settings)
+- **Settings**: Use `wurzel.core.Settings` (custom wrapper around pydantic_settings)
   - Supports nested settings with `__` delimiter
   - Auto-loads from env vars with step name prefix
   - Use `NoSettings` type alias for steps without settings

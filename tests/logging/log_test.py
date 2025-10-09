@@ -132,7 +132,7 @@ def test_uncaught_exception_causes_exit_code_1(tmp_path):
     # Create a test step that raises an exception
     step_file = tmp_path / "exception_step.py"
     step_file.write_text("""
-from wurzel.step import TypedStep, NoSettings
+from wurzel.core import TypedStep, NoSettings
 from wurzel.datacontract import PydanticModel
 
 class TestInput(PydanticModel):

@@ -11,7 +11,7 @@ import requests
 
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import StepFailed
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 
 from .settings import DecagonSettings
 

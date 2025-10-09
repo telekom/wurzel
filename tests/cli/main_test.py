@@ -9,6 +9,7 @@ import typer
 import wurzel
 import wurzel.steps
 from wurzel.executors.backend.backend_dvc import DvcBackend
+import wurzel.core
 from wurzel.cli import _main as main
 from wurzel.executors import BaseStepExecutor, PrometheusStepExecutor
 from wurzel.steps.manual_markdown import ManualMarkdownStep

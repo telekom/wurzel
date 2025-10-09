@@ -4,7 +4,7 @@
 
 from pydantic import Field
 
-from wurzel.step.settings import Settings
+from wurzel.core.settings import Settings
 
 
 class PrometheusSettings(Settings):

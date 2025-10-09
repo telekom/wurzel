@@ -37,11 +37,10 @@ source >> embedding >> storage
 Define a function that builds the chain and returns the last step. Wurzel runs upstream steps in order:
 
 ```python
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 from wurzel.steps import EmbeddingStep, QdrantConnectorStep
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.utils import WZ
-
 
 def pipeline() -> TypedStep:
     md = WZ(ManualMarkdownStep)
@@ -60,7 +59,7 @@ Execution order: ManualMarkdownStep → EmbeddingStep → QdrantConnectorStep.
 One source can feed multiple downstream steps:
 
 ```python
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 from wurzel.steps import EmbeddingStep, QdrantConnectorStep
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.steps.splitter import SimpleSplitterStep
@@ -82,7 +81,7 @@ def branching_pipeline() -> TypedStep:
 Choose steps at build time:
 
 ```python
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 from wurzel.steps import EmbeddingStep, QdrantConnectorStep
 from wurzel.steps.embedding import TruncatedEmbeddingStep
 from wurzel.steps.manual_markdown import ManualMarkdownStep
@@ -110,7 +109,7 @@ Use environment variables to choose steps:
 ```python
 import os
 
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 from wurzel.steps import EmbeddingStep, QdrantConnectorStep
 from wurzel.steps.embedding import TruncatedEmbeddingStep
 from wurzel.steps.manual_markdown import ManualMarkdownStep
@@ -129,7 +128,7 @@ def configurable_pipeline() -> TypedStep:
 ## Testing Pipelines
 
 ```python
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 from wurzel.steps import EmbeddingStep, QdrantConnectorStep
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.utils import WZ
@@ -161,7 +160,7 @@ def test_complete_pipeline():
 Independent branches can run in parallel (backend-dependent):
 
 ```python
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 from wurzel.steps import EmbeddingStep, QdrantConnectorStep
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.utils import WZ
@@ -199,7 +198,7 @@ Steps cache outputs based on input changes; backends handle persistence.
 ### ETL-style (extract → transform → load)
 
 ```python
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 from wurzel.steps import EmbeddingStep, QdrantConnectorStep
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.steps.splitter import SimpleSplitterStep

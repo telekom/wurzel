@@ -7,7 +7,7 @@ import inspect
 import pkgutil
 from typing import TypeVar
 
-from wurzel.step.typed_step import TypedStep
+from wurzel.core.typed_step import TypedStep
 
 T = TypeVar("T", bound=object)
 

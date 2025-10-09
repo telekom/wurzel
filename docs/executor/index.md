@@ -25,7 +25,7 @@ Basic usage as a context manager:
 
 ```python
 from wurzel.executors.base_executor import BaseStepExecutor
-from wurzel.step.typed_step import TypedStep
+from wurzel.core.typed_step import TypedStep
 
 class MyStep(TypedStep):
     ...

@@ -7,10 +7,10 @@ from typing import Any
 
 import pytest
 
+from wurzel.core import TypedStep
 from wurzel.datacontract import PydanticModel
 from wurzel.exceptions import ContractFailedException
 from wurzel.executors import BaseStepExecutor
-from wurzel.step import TypedStep
 
 
 class MyModel(PydanticModel):

@@ -19,7 +19,7 @@ if HAS_HERA:
         WorkflowConfig,
     )
     from wurzel.datacontract.common import MarkdownDataContract
-    from wurzel.step import NoSettings, TypedStep
+    from wurzel.core import NoSettings, TypedStep
 
 
 @pytest.fixture(scope="function", autouse=True)

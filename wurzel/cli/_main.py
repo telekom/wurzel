@@ -37,7 +37,7 @@ console = Console()
 
 if TYPE_CHECKING:  # pragma: no cover - only for typing
     from wurzel.cli.cmd_env import EnvValidationIssue
-    from wurzel.step import TypedStep
+    from wurzel.core import TypedStep
 
 
 def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: str | None):
@@ -99,7 +99,7 @@ def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path:
         Type[TypedStep]: <<step>>
 
     """
-    from wurzel.step import TypedStep  # pylint: disable=import-outside-toplevel
+    from wurzel.core import TypedStep  # pylint: disable=import-outside-toplevel
 
     try:
         if ":" in import_path:
@@ -230,7 +230,7 @@ def _check_if_typed_step(node) -> bool:
             if isinstance(base.value, ast.Attribute) and base.value.attr == "TypedStep":
                 return True
         if isinstance(base, ast.Attribute):
-            # Handle cases like wurzel.step.TypedStep
+            # Handle cases like wurzel.core.TypedStep
             if base.attr == "TypedStep":
                 return True
     return False
@@ -338,7 +338,7 @@ def complete_step_import(incomplete: str) -> list[str]:  # pylint: disable=too-m
             if wurzel_steps_path.exists():
                 scan_directory_for_typed_steps(wurzel_steps_path, "wurzel.steps", max_files=100)
             if wurzel_step_path.exists():
-                scan_directory_for_typed_steps(wurzel_step_path, "wurzel.step", max_files=50)
+                scan_directory_for_typed_steps(wurzel_step_path, "wurzel.core", max_files=50)
         except ImportError:
             pass
 

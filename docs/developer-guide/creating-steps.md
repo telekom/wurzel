@@ -58,7 +58,7 @@ Data source steps introduce data into your pipeline. They have `None` as their i
 from pathlib import Path
 
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.step import Settings, TypedStep
+from wurzel.core import Settings, TypedStep
 
 
 class MySettings(Settings):
@@ -93,7 +93,7 @@ Shows a source step with **resource cleanup** in `finalize`:
 import sqlite3
 
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.step import Settings, TypedStep
+from wurzel.core import Settings, TypedStep
 
 
 class DatabaseSettings(Settings):
@@ -137,7 +137,7 @@ Processing steps transform data from upstream steps. They can filter, validate, 
 
 ```python
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.step import Settings, TypedStep
+from wurzel.core import Settings, TypedStep
 
 
 class FilterSettings(Settings):
@@ -173,7 +173,7 @@ class DocumentFilterStep(
 
 ```python
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.step import Settings, TypedStep
+from wurzel.core import Settings, TypedStep
 
 
 class TransformSettings(Settings):
@@ -205,7 +205,7 @@ Uses a helper and raises after too many errors:
 
 ```python
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.step import Settings, TypedStep
+from wurzel.core import Settings, TypedStep
 
 
 class ValidationSettings(Settings):
@@ -256,7 +256,7 @@ Steps can collect data from multiple upstream runs (simplified: single input lis
 
 ```python
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.step import Settings, TypedStep
+from wurzel.core import Settings, TypedStep
 
 
 class MergerSettings(Settings):
@@ -290,7 +290,7 @@ import hashlib
 from collections import defaultdict
 
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.step import Settings, TypedStep
+from wurzel.core import Settings, TypedStep
 
 
 class DeduplicationSettings(Settings):
@@ -337,7 +337,7 @@ class DeduplicationStep(
 Settings fields map to env vars (prefix = step name in UPPERCASE, e.g. `MYSTEP__API_KEY`):
 
 ```python
-from wurzel.step import Settings
+from wurzel.core import Settings
 
 
 class APISettings(Settings):
@@ -352,7 +352,7 @@ class APISettings(Settings):
 Nested settings use `__` in env var names:
 
 ```python
-from wurzel.step import Settings
+from wurzel.core import Settings
 
 
 class DatabaseConfig(Settings):
@@ -383,7 +383,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.utils import WZ
 
@@ -399,7 +399,7 @@ def test_markdown_step_returns_list(tmp_path: Path):
 
 
 def test_filter_step():
-    from wurzel.step import Settings
+    from wurzel.core import Settings
 
     class FilterSettings(Settings):
         MIN_LENGTH: int = 10
@@ -447,7 +447,7 @@ Catch per-item errors and fail if too many:
 
 ```python
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.step import NoSettings, TypedStep
+from wurzel.core import NoSettings, TypedStep
 
 
 class RobustProcessingStep(
@@ -475,7 +475,7 @@ import os
 from typing import Any
 
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.step import NoSettings, TypedStep
+from wurzel.core import NoSettings, TypedStep
 
 
 class ResourceManagedStep(

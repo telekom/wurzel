@@ -29,6 +29,8 @@ path = [
     "**/requirements.txt",
     "**/*.pyc",
     "**/__pycache__/**",
+    "**/__pycache__/**/*",
+    "**/ub/**/*",
     ".python-version",
     "pyproject.toml",
     "docs/icon.png",

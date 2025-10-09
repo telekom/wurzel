@@ -13,7 +13,7 @@ from botocore.exceptions import BotoCoreError, ClientError
 
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import StepFailed
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 
 from .settings import S3MarkdownStepSettings
 

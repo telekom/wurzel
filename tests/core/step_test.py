@@ -9,8 +9,8 @@ from pathlib import Path
 import pytest
 import yaml
 
+from wurzel.core import Step
 from wurzel.executors import BaseStepExecutor, DvcBackend
-from wurzel.step import Step
 
 
 def is_valid_dvc_yaml(path: Path) -> bool:

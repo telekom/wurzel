@@ -7,9 +7,9 @@ from pathlib import Path
 import asgi_correlation_id
 import pytest
 
+from wurzel.core import MarkdownDataContract, TypedStep
 from wurzel.exceptions import StepFailed
 from wurzel.executors import BaseStepExecutor
-from wurzel.step import MarkdownDataContract, TypedStep
 
 
 class OkExc(Exception):
