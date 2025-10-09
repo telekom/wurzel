@@ -5,7 +5,7 @@
 import inspect
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import yaml
 from pydantic import BaseModel, Field
@@ -16,7 +16,10 @@ import wurzel.cli
 from wurzel.backend.backend import Backend
 from wurzel.backend.values import load_values
 from wurzel.step import TypedStep
-from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
+from wurzel.step_executor import BaseStepExecutor
+
+if TYPE_CHECKING:
+    from wurzel.step_executor.middlewares.base import BaseMiddleware
 
 
 class DvcDict(TypedDict):
@@ -87,11 +90,17 @@ class DvcBackend(Backend):
     This adapter generates DVC-compatible `dvc.yaml` files from typed step definitions.
     It recursively resolves all step dependencies and constructs CLI commands for DVC execution.
 
+    Inherits from Backend (which inherits from BaseStepExecutor), providing both step
+    execution capabilities and artifact generation for DVC pipelines.
+
     Args:
         config (DvcConfig | None): Optional config from YAML values.
         settings (DvcBackendSettings | None): Optional settings object; if not provided,
             defaults will be loaded from environment or defaults.
-        executor (BaseStepExecutor): Executor class used to wrap the CLI call.
+        executor (BaseStepExecutor): Executor class used to wrap the generated CLI call.
+        dont_encapsulate: If True, don't encapsulate environment variables
+        middlewares: List of middleware names or instances to use
+        load_middlewares_from_env: Whether to load middlewares from MIDDLEWARES env var
 
     """
 
@@ -105,10 +114,17 @@ class DvcBackend(Backend):
         config: DvcConfig | None = None,
         *,
         settings: DvcBackendSettings | None = None,
-        executor: type[BaseStepExecutor] = PrometheusStepExecutor,
+        executor: type[BaseStepExecutor] | None = None,
+        dont_encapsulate: bool = False,
+        middlewares: list[str] | list["BaseMiddleware"] | None = None,
+        load_middlewares_from_env: bool = True,
     ) -> None:
-        super().__init__()
-        self.executor: type[BaseStepExecutor] = executor
+        super().__init__(
+            executor=executor,
+            dont_encapsulate=dont_encapsulate,
+            middlewares=middlewares,
+            load_middlewares_from_env=load_middlewares_from_env,
+        )
         self.settings = settings or DvcBackendSettings()
         self.config = config or DvcConfig(
             dataDir=self.settings.DATA_DIR,
@@ -161,7 +177,7 @@ class DvcBackend(Backend):
             step.__class__,
             inputs=outputs_of_deps,
             output=output_path,
-            executor=self.executor,
+            backend=self.executor or self.__class__,
             encapsulate_env=self.config.encapsulateEnv,
         )
 

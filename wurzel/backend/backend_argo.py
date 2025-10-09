@@ -11,7 +11,7 @@ import os
 from collections.abc import Iterable
 from functools import cache
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import yaml
 from hera.workflows import (
@@ -46,6 +46,9 @@ from wurzel.backend.values import load_values
 from wurzel.cli import generate_cli_call
 from wurzel.step import TypedStep
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
+
+if TYPE_CHECKING:
+    from wurzel.step_executor.middlewares.base import BaseMiddleware
 
 log = logging.getLogger(__name__)
 
@@ -216,11 +219,20 @@ class ArgoBackend(Backend):
         values: TemplateValues | None = None,
         workflow_name: str | None = None,
         executor: type[BaseStepExecutor] | None = None,
+        dont_encapsulate: bool = False,
+        middlewares: list[str] | list["BaseMiddleware"] | None = None,
+        load_middlewares_from_env: bool = True,
     ) -> None:
-        super().__init__()
         self.values = values or TemplateValues()
         self.config = config or select_workflow(self.values, workflow_name)
-        self.executor: type[BaseStepExecutor] = executor if executor is not None else default_argo_step_executor(self.config)
+        selected_executor = executor if executor is not None else default_argo_step_executor(self.config)
+        super().__init__(
+            executor=selected_executor,
+            dont_encapsulate=dont_encapsulate,
+            middlewares=middlewares,
+            load_middlewares_from_env=load_middlewares_from_env,
+        )
+        self.executor: type[BaseStepExecutor] = selected_executor
         self._volumes, self._volume_mounts = self._build_volumes()
 
     @classmethod

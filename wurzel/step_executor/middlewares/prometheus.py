@@ -54,9 +54,9 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
         self.histogram_load = Histogram("step_hist_load", "Time to load inputs", ("step_name",))
         self.histogram_execute = Histogram("step_hist_execute", "Time to execute results", ("step_name",))
 
-    def execute(
+    def __call__(
         self,
-        next_call: ExecuteStepCallable,
+        call_next: ExecuteStepCallable,
         step_cls: type[TypedStep],
         inputs: Optional[set[PathToFolderWithBaseModels]],
         output_dir: Optional[PathToFolderWithBaseModels],
@@ -64,7 +64,7 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
         """Execute step with Prometheus metrics collection.
 
         Args:
-            next_call: The next function in the chain
+            call_next: The next function in the chain
             step_cls: The step class to execute
             inputs: Input paths or objects
             output_dir: Output directory
@@ -76,7 +76,7 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
         self.counter_started.labels(lbl).inc()
 
         try:
-            data = next_call(step_cls, inputs, output_dir)
+            data = call_next(step_cls, inputs, output_dir)
         except Exception:
             self.counter_failed.labels(lbl).inc()
             raise
@@ -95,10 +95,6 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
         self.histogram_execute.labels(lbl).observe(tt_e)
 
         return data
-
-    def __enter__(self):
-        """Context manager entry."""
-        return self
 
     def __exit__(self, *exc_details):
         """Context manager exit - push metrics to gateway."""

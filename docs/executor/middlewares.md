@@ -64,8 +64,8 @@ wurzel middlewares inspect <name>
 
 ## Middleware interface
 
-A middleware typically subclasses `BaseMiddleware` and implements an
-`execute()` method. The middleware should accept a `next` callable (the inner
+A middleware typically subclasses `BaseMiddleware` and implements a
+`__call__()` method. The middleware should accept a `call_next` callable (the inner
 chain) and call it to continue execution. It may inspect or modify arguments
 and return values.
 
@@ -75,16 +75,16 @@ Minimal example:
 from wurzel.step_executor.middlewares.base import BaseMiddleware
 
 class LoggingMiddleware(BaseMiddleware):
-    def execute(self, step_cls, inputs, output_path, next_call):
+    def __call__(self, call_next, step_cls, inputs, output_path):
         print(f"Starting {step_cls.__name__}")
-        result = next_call(step_cls, inputs, output_path)
+        result = call_next(step_cls, inputs, output_path)
         print(f"Finished {step_cls.__name__}")
         return result
 ```
 
 ## Writing robust middlewares
 
-- Always call the inner `next_call` to ensure the chain continues unless you
+- Always call the inner `call_next` to ensure the chain continues unless you
   intentionally short-circuit execution.
 - Preserve and return the inner chain's return value unless a middleware
   transforms it intentionally.

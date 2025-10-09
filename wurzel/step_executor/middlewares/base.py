@@ -48,9 +48,9 @@ class BaseMiddleware(ABC):
         return middleware
 
     @abstractmethod
-    def execute(
+    def __call__(
         self,
-        next_call: ExecuteStepCallable,
+        call_next: ExecuteStepCallable,
         step_cls: type[TypedStep],
         inputs: Optional[set[PathToFolderWithBaseModels]],
         output_dir: Optional[PathToFolderWithBaseModels],
@@ -59,12 +59,12 @@ class BaseMiddleware(ABC):
 
         This method should:
         1. Execute any pre-processing logic
-        2. Call next_call() to continue the chain
+        2. Call call_next() to continue the chain
         3. Execute any post-processing logic
         4. Return the result
 
         Args:
-            next_call: The next function in the chain (next middleware or base executor)
+            call_next: The next function in the chain (next middleware or base executor)
             step_cls: The step class to execute
             inputs: Input paths or objects for the step
             output_dir: Output directory for results
@@ -73,13 +73,13 @@ class BaseMiddleware(ABC):
             List of tuples containing step results and reports
         """
 
-    @abstractmethod
     def __enter__(self):
         """Context manager entry. Called when executor is used with 'with' statement."""
+        return self
 
-    @abstractmethod
     def __exit__(self, *exc_details):
         """Context manager exit. Called when leaving the 'with' block."""
+        return self
 
 
 class MiddlewareChain:
@@ -127,12 +127,12 @@ class MiddlewareChain:
         return current_call
 
     @staticmethod
-    def _wrap_middleware(middleware: BaseMiddleware, next_call: ExecuteStepCallable) -> ExecuteStepCallable:
+    def _wrap_middleware(middleware: BaseMiddleware, call_next: ExecuteStepCallable) -> ExecuteStepCallable:
         """Wrap a middleware around a callable.
 
         Args:
             middleware: The middleware to wrap
-            next_call: The next callable in the chain
+            call_next: The next callable in the chain
 
         Returns:
             A new callable that executes the middleware
@@ -143,7 +143,7 @@ class MiddlewareChain:
             inputs: Optional[set[PathToFolderWithBaseModels]],
             output_dir: Optional[PathToFolderWithBaseModels],
         ) -> list[tuple[Any, Any]]:
-            return middleware.execute(next_call, step_cls, inputs, output_dir)
+            return middleware(call_next, step_cls, inputs, output_dir)
 
         return wrapped
 

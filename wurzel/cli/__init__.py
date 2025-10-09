@@ -26,8 +26,10 @@ def generate_cli_call(
     step_cls: "type[TypedStep]",
     inputs: "list[Path]",
     output: "Path",
+    *,
     executor: "type[BaseStepExecutor] | None" = None,
     encapsulate_env: bool = True,
+    backend: "type[BaseStepExecutor] | None" = None,
 ) -> str:
     """Generate the cli call to execute a given step with its
     inputs and output.
@@ -36,11 +38,17 @@ def generate_cli_call(
         step_cls (type[TypedStep]): Step to execute
         inputs (list[Path]): list of Directories
         output (Path): Output Directory
+        executor (type[BaseStepExecutor] | None): Deprecated, use backend instead
+        encapsulate_env (bool): Whether to encapsulate environment variables
+        backend (type[BaseStepExecutor] | None): Backend/executor to use for execution
 
     Returns:
         str: cmd
 
     """
+    # Use backend if provided, otherwise fall back to executor for backward compatibility
+    executor_to_use = backend if backend is not None else executor
+
     if inputs:
         inputs_str = "-i " + " -i ".join(str(i) for i in inputs)
     else:
@@ -51,7 +59,7 @@ def generate_cli_call(
             f"{step_cls.__module__}:{step_cls.__qualname__}",
             "-o",
             str(output.absolute()),
-            "" if executor is None else f"-e {executor.__qualname__}",
+            "" if executor_to_use is None else f"-e {executor_to_use.__qualname__}",
             inputs_str,
             "--encapsulate-env" if encapsulate_env else "--no-encapsulate-env",
         ]

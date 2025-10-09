@@ -32,10 +32,10 @@ class TrackerMiddleware(BaseMiddleware):
         self.entered = False
         self.exited = False
 
-    def execute(self, next_call, step_cls, inputs, output_dir):
+    def __call__(self, call_next, step_cls, inputs, output_dir):
         """Track execution."""
         self.calls.append(("before", step_cls.__name__))
-        result = next_call(step_cls, inputs, output_dir)
+        result = call_next(step_cls, inputs, output_dir)
         self.calls.append(("after", step_cls.__name__))
         return result
 
