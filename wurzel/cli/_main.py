@@ -31,7 +31,7 @@ log = logging.getLogger(__name__)
 
 
 def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: str):
-    """Convert a cli-str to a Type[BaseStepExecutor].
+    """Convert a cli-str to a Type[BaseStepExecutor] or Backend.
 
     Args:
         _ctx (typer.Context)
@@ -39,19 +39,33 @@ def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: s
         value (str): user typed string
 
     Raises:
-        typer.BadParameter: If user typed string does not correlate with a Executor
+        typer.BadParameter: If user typed string does not correlate with a Executor or Backend
 
     Returns:
-        Type[BaseStepExecutor]: {BaseStepExecutor, PrometheusStepExecutor}
+        Type[BaseStepExecutor]: {BaseStepExecutor, PrometheusStepExecutor, ArgoBackend, DvcBackend}
 
     """
+    from wurzel.backend import DvcBackend  # pylint: disable=import-outside-toplevel
     from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor  # pylint: disable=import-outside-toplevel
+    from wurzel.utils import HAS_HERA  # pylint: disable=import-outside-toplevel
 
+    # Check for executors
     if "BASESTEPEXECUTOR".startswith(value.upper()):
         return BaseStepExecutor
     if "PROMETHEUSSTEPEXECUTOR".startswith(value.upper()):
         return PrometheusStepExecutor
-    raise typer.BadParameter(f"{value} is not a recognized executor")
+
+    # Check for backends
+    if "DVCBACKEND".startswith(value.upper()):
+        return DvcBackend
+    if "ARGOBACKEND".startswith(value.upper()):
+        if HAS_HERA:
+            from wurzel.backend import ArgoBackend  # pylint: disable=import-outside-toplevel
+
+            return ArgoBackend
+        raise typer.BadParameter("ArgoBackend requires wurzel[argo] to be installed")
+
+    raise typer.BadParameter(f"{value} is not a recognized executor or backend")
 
 
 def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str):
@@ -338,9 +352,9 @@ def run(
             # "",
             "-e",
             "--executor",
-            help="executor to use (deprecated, use --middlewares instead)",
+            help="executor or backend to use for execution",
             callback=executer_callback,
-            autocompletion=lambda: ["BaseStepExecutor", "PrometheusStepExecutor"],
+            autocompletion=lambda: ["BaseStepExecutor", "PrometheusStepExecutor", "DvcBackend", "ArgoBackend"],
         ),
     ] = "BaseStepExecutor",
     middlewares: Annotated[

@@ -4,7 +4,7 @@
 
 import inspect
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict
 
 import yaml
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -14,6 +14,9 @@ import wurzel.cli
 from wurzel.backend.backend import Backend
 from wurzel.step import TypedStep
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
+
+if TYPE_CHECKING:
+    from wurzel.step_executor.middlewares.base import BaseMiddleware
 
 
 class DvcDict(TypedDict):
@@ -58,21 +61,41 @@ class DvcBackend(Backend):
     This adapter generates DVC-compatible `dvc.yaml` files from typed step definitions.
     It recursively resolves all step dependencies and constructs CLI commands for DVC execution.
 
+    Inherits from Backend (which inherits from BaseStepExecutor), providing both step
+    execution capabilities and artifact generation for DVC pipelines.
+
     Args:
         settings (DvcBackendSettings | None): Optional settings object; if not provided,
             defaults will be loaded from environment or defaults.
-        executer (BaseStepExecutor): Executor class used to wrap the CLI call.
+        executer (BaseStepExecutor): Executor class used to wrap the CLI call (deprecated, kept for compatibility).
+        dont_encapsulate: If True, don't encapsulate environment variables
+        middlewares: List of middleware names or instances to use
+        load_middlewares_from_env: Whether to load middlewares from MIDDLEWARES env var
 
     """
 
     def __init__(
         self,
         settings: DvcBackendSettings | None = None,
+        *,
         executer: type[BaseStepExecutor] = PrometheusStepExecutor,
+        dont_encapsulate: bool = False,
+        middlewares: list[str] | list["BaseMiddleware"] | None = None,
+        load_middlewares_from_env: bool = True,
     ) -> None:
-        self.executor: type[BaseStepExecutor] = executer
+        """Initialize DvcBackend.
+
+        Args:
+            settings: DVC-specific settings for pipeline generation
+            executer: Executor class used for CLI generation (deprecated, kept for compatibility)
+            dont_encapsulate: If True, don't encapsulate environment variables
+            middlewares: List of middleware names or instances to use
+            load_middlewares_from_env: Whether to load middlewares from MIDDLEWARES env var
+        """
+        super().__init__(
+            executer, dont_encapsulate=dont_encapsulate, middlewares=middlewares, load_middlewares_from_env=load_middlewares_from_env
+        )
         self.settings = settings if settings else DvcBackendSettings()
-        super().__init__()
 
     def _generate_dict(
         self,
@@ -105,7 +128,7 @@ class DvcBackend(Backend):
             step.__class__,
             inputs=outputs_of_deps,
             output=output_path,
-            executor=self.executor,
+            backend=self.__class__,
             encapsulate_env=self.settings.ENCAPSULATE_ENV,
         )
 

@@ -5,7 +5,7 @@
 import logging
 from functools import cache
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from hera.workflows import DAG, ConfigMapEnvFrom, Container, CronWorkflow, S3Artifact, SecretEnvFrom, Task, Workflow
 from hera.workflows.archive import NoneArchiveStrategy
@@ -18,6 +18,9 @@ from wurzel.cli import generate_cli_call
 from wurzel.step import TypedStep
 from wurzel.step.settings import SettingsBase, SettingsLeaf
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
+
+if TYPE_CHECKING:
+    from wurzel.step_executor.middlewares.base import BaseMiddleware
 
 log = logging.getLogger(__name__)
 
@@ -85,12 +88,33 @@ class ArgoBackend(Backend):
 
     This backend converts a graph of `TypedStep` instances into a CronWorkflow definition
     with DAG-structured task execution and artifact-based I/O between steps.
+
+    Inherits from Backend (which inherits from BaseStepExecutor), providing both step
+    execution capabilities and artifact generation for Argo Workflows.
     """
 
-    def __init__(self, settings: ArgoBackendSettings | None = None, executer: type[BaseStepExecutor] = PrometheusStepExecutor) -> None:
-        self.executor: type[BaseStepExecutor] = executer
+    def __init__(
+        self,
+        settings: ArgoBackendSettings | None = None,
+        *,
+        executer: type[BaseStepExecutor] = PrometheusStepExecutor,
+        dont_encapsulate: bool = False,
+        middlewares: list[str] | list["BaseMiddleware"] | None = None,
+        load_middlewares_from_env: bool = True,
+    ) -> None:
+        """Initialize ArgoBackend.
+
+        Args:
+            settings: Argo-specific settings for workflow generation
+            executer: Executor class used for CLI generation (deprecated, kept for compatibility)
+            dont_encapsulate: If True, don't encapsulate environment variables
+            middlewares: List of middleware names or instances to use
+            load_middlewares_from_env: Whether to load middlewares from MIDDLEWARES env var
+        """
+        super().__init__(
+            executer, dont_encapsulate=dont_encapsulate, middlewares=middlewares, load_middlewares_from_env=load_middlewares_from_env
+        )
         self.settings = settings if settings else ArgoBackendSettings()
-        super().__init__()
 
     def _create_envs_from_step_settings(self, step: "TypedStep[Any, Any, Any]") -> list[EnvVar]:
         if not self.settings.INLINE_STEP_SETTINGS:
@@ -200,6 +224,7 @@ class ArgoBackend(Backend):
                 step.__class__,
                 inputs=[Path(inpt.path) for inpt in inputs if inpt.path],
                 output=self.settings.DATA_DIR / step.__class__.__name__,
+                backend=self.__class__,
             ).split(" ")
             if entry.strip()
         ]

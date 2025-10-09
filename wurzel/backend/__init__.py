@@ -4,9 +4,10 @@
 
 from wurzel.utils import HAS_HERA
 
+from .backend import Backend
 from .backend_dvc import DvcBackend
 
-__all__ = ["DvcBackend"]
+__all__ = ["Backend", "DvcBackend"]
 
 if HAS_HERA:
     from .backend_argo import ArgoBackend  # noqa: F401
