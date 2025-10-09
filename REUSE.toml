@@ -27,6 +27,7 @@ path = [
     "tests/data/**/*",
     "examples/**/*.md",
     "**/requirements.txt",
+    ".windsurf/**/*",
     ]
 precedence = "override"
 SPDX-FileCopyrightText = "NONE"
