@@ -12,9 +12,9 @@ from wurzel.utils import HAS_HERA
 if not HAS_HERA:
     pytest.skip("Hera is not available", allow_module_level=True)
 
+from wurzel.core import Settings, TypedStep
 from wurzel.datacontract.common import MarkdownDataContract
 from wurzel.executors.backend.backend_argo import ArgoBackend, ArgoBackendSettings, EnvVar
-from wurzel.step import Settings, TypedStep
 from wurzel.utils.meta_settings import WZ
 
 

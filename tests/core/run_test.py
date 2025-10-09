@@ -4,10 +4,10 @@
 
 import pytest
 
+from wurzel.core import NoSettings, TypedStep
 from wurzel.datacontract import PydanticModel
 from wurzel.exceptions import ContractFailedException
 from wurzel.executors import BaseStepExecutor
-from wurzel.step import NoSettings, TypedStep
 
 
 class A(PydanticModel):

@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+from wurzel.core import MarkdownDataContract, NoSettings, TypedStep
 from wurzel.executors import BaseStepExecutor
-from wurzel.step import MarkdownDataContract, NoSettings, TypedStep
 
 
 class MyStep(TypedStep[NoSettings, MarkdownDataContract, list[MarkdownDataContract]]):

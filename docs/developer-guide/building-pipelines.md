@@ -58,7 +58,7 @@ from wurzel.steps import (
 )
 from wurzel.utils import WZ
 from wurzel.steps.manual_markdown import ManualMarkdownStep
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 
 def pipeline() -> TypedStep:
     """Defines a Wurzel pipeline that embeds manual markdown and stores it in Qdrant."""

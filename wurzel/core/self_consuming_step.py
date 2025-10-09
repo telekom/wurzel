@@ -5,8 +5,8 @@
 
 from typing import Generic, Optional, get_args
 
-from wurzel.step import TypedStep
-from wurzel.step.typed_step import OUTCONTRACT, SETTS
+from wurzel.core import TypedStep
+from wurzel.core.typed_step import OUTCONTRACT, SETTS
 
 
 class SelfConsumingLeafStep(TypedStep[SETTS, OUTCONTRACT, OUTCONTRACT], Generic[SETTS, OUTCONTRACT]):

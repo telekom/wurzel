@@ -22,6 +22,14 @@ from asgi_correlation_id import correlation_id
 from pydantic import SecretStr
 from pydantic_core import ValidationError
 
+from wurzel.core.history import (
+    History,
+    step_history,
+)
+from wurzel.core.self_consuming_step import SelfConsumingLeafStep
+from wurzel.core.typed_step import (
+    TypedStep,
+)
 from wurzel.datacontract import PanderaDataFrameModel, PydanticModel, datacontract
 from wurzel.exceptions import (
     ContractFailedException,
@@ -30,14 +38,6 @@ from wurzel.exceptions import (
     StepFailed,
 )
 from wurzel.path import PathToFolderWithBaseModels
-from wurzel.step.history import (
-    History,
-    step_history,
-)
-from wurzel.step.self_consuming_step import SelfConsumingLeafStep
-from wurzel.step.typed_step import (
-    TypedStep,
-)
 from wurzel.utils import WZ, create_model, try_get_length
 from wurzel.utils.logging import setup_uncaught_exception_logging
 

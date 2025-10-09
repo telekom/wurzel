@@ -9,7 +9,7 @@ import pytest
 from pydantic import Field
 from pydantic_core import Url as pyd_c_Url
 
-from wurzel.step.settings import SettingsBase, SettingsLeaf
+from wurzel.core.settings import SettingsBase, SettingsLeaf
 
 
 def test_prefix():

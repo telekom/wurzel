@@ -10,8 +10,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from pathlib import Path
 
+    from wurzel.core import TypedStep
     from wurzel.executors import BaseStepExecutor
-    from wurzel.step import TypedStep
 
 __all__ = ["generate_cli_call"]
 try:

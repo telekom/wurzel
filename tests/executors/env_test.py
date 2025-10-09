@@ -7,10 +7,10 @@ from typing import Optional
 
 import pytest
 
+from wurzel.core.settings import Settings
+from wurzel.core.typed_step import TypedStep
 from wurzel.datacontract import PydanticModel
 from wurzel.executors import BaseStepExecutor
-from wurzel.step.settings import Settings
-from wurzel.step.typed_step import TypedStep
 
 
 class MySettings(Settings):

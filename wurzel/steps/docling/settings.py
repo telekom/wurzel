@@ -6,7 +6,7 @@
 
 from docling.datamodel.base_models import InputFormat
 
-from wurzel.step import Settings
+from wurzel.core import Settings
 
 
 class DoclingSettings(Settings):

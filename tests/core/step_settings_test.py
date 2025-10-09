@@ -7,8 +7,8 @@ from types import NoneType
 import pytest
 from pydantic import ValidationError
 
+from wurzel.core import NoSettings, PydanticModel, Settings, TypedStep
 from wurzel.exceptions import StaticTypeError
-from wurzel.step import NoSettings, PydanticModel, Settings, TypedStep
 
 # used in pipel
 

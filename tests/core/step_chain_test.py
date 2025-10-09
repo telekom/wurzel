@@ -4,8 +4,8 @@
 
 import pytest
 
+from wurzel.core import TypedStep
 from wurzel.datacontract import PydanticModel
-from wurzel.step import TypedStep
 
 
 class DataType(PydanticModel):

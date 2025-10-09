@@ -31,7 +31,7 @@ def test_process_python_file(tmp_path):
     # Create a test Python file with a TypedStep
     test_file = tmp_path / "test_step.py"
     test_file.write_text("""
-from wurzel.step.typed_step import TypedStep
+from wurzel.core.typed_step import TypedStep
 
 class TestStep(TypedStep):
     pass

@@ -27,6 +27,8 @@ path = [
     "tests/data/**/*",
     "examples/**/*.md",
     "**/requirements.txt",
+    "**/__pycache__/**/*",
+    "**/ub/**/*",
     ".windsurf/**/*",
     ]
 precedence = "override"

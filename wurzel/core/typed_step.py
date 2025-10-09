@@ -20,11 +20,11 @@ from typing import (
 import pandera.typing as patyp
 from typing_inspect import get_origin
 
+from wurzel.core.settings import Settings
+from wurzel.core.step import Step
 from wurzel.datacontract import PanderaDataFrameModel, PydanticModel
 from wurzel.exceptions import ContractFailedException, StaticTypeError
 from wurzel.path import PathToFolderWithBaseModels
-from wurzel.step.settings import Settings
-from wurzel.step.step import Step
 
 # pylint: disable-next=invalid-name
 MODEL_TYPE: TypeAlias = type[Union[PydanticModel, PanderaDataFrameModel]]
@@ -52,7 +52,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     The first part of the triplet. Is either None or a Subtype of wurzel.Settings (internally StepSettings).
     These settings are a special form of pydantic settings meaning they will try to load
     their values from the environment with the prefix `UPPERCASE_STEP_NAME`.
-    For more information take a look at wurzel.step.settings
+    For more information take a look at wurzel.core.settings
     ## Contract / Input-Output Classes
     The Inputs and outputs of TypedSteps are restricted.
     However they need to inherit from  wurzel.datacontract.DataModel
@@ -67,7 +67,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     ### Input
     ## Example:
     ```python
-    from wurzel.step import PanderaDataFrameModel, TypedStep, PydanticModel, NoSettings
+    from wurzel.core import PanderaDataFrameModel, TypedStep, PydanticModel, NoSettings
     from pandera.typing import Series
 
 

@@ -8,8 +8,8 @@ from abc import ABC, abstractmethod
 from logging import getLogger
 from typing import Any, Callable, Optional
 
+from wurzel.core.typed_step import TypedStep
 from wurzel.path import PathToFolderWithBaseModels
-from wurzel.step.typed_step import TypedStep
 
 log = getLogger(__name__)
 
