@@ -125,7 +125,7 @@ def reset_prometheus_singleton():
 
     # Clean up after each test
     try:
-        from wurzel.step_executor import PrometheusStepExecutor
+        from wurzel.executors import PrometheusStepExecutor
 
         # Reset singleton instance
         PrometheusStepExecutor._instance = None

@@ -24,7 +24,7 @@ logging and error reporting when contracts fail.
 Basic usage as a context manager:
 
 ```python
-from wurzel.step_executor.base_executor import BaseStepExecutor
+from wurzel.executors.base_executor import BaseStepExecutor
 from wurzel.step.typed_step import TypedStep
 
 class MyStep(TypedStep):
@@ -44,7 +44,7 @@ with BaseStepExecutor(middlewares=["prometheus", "timing"]) as exc:
 Or provide middleware instances directly:
 
 ```python
-from wurzel.step_executor.middlewares import SomeMiddleware
+from wurzel.executors.middlewares import SomeMiddleware
 
 with BaseStepExecutor(middlewares=[SomeMiddleware()]) as exc:
     results = exc(MyStep, set(), Path("output"))

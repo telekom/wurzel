@@ -15,7 +15,7 @@ if not HAS_LANGCHAIN_CORE or not HAS_REQUESTS:
     pytest.skip("Embedding dependencies (langchain-core, requests) are not available", allow_module_level=True)
 
 from wurzel.exceptions import StepFailed
-from wurzel.step_executor import BaseStepExecutor
+from wurzel.executors import BaseStepExecutor
 
 # Local application/library specific imports
 from wurzel.steps import EmbeddingStep

@@ -20,7 +20,7 @@ if not HAS_QDRANT:
 from qdrant_client import QdrantClient, models
 
 from wurzel.exceptions import StepFailed
-from wurzel.step_executor import BaseStepExecutor
+from wurzel.executors import BaseStepExecutor
 from wurzel.steps.qdrant import QdrantConnectorMultiVectorStep, QdrantConnectorStep
 from wurzel.steps.qdrant.data import QdrantMultiVectorResult, QdrantResult
 from wurzel.utils import HAS_TLSH

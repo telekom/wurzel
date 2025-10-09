@@ -13,14 +13,15 @@ from hera.workflows.models import EnvVar, SecurityContext
 from pydantic import Field, SecretStr
 from pydantic_settings import SettingsConfigDict
 
-from wurzel.backend.backend import Backend
 from wurzel.cli import generate_cli_call
+from wurzel.executors.backend.backend import Backend
+from wurzel.executors.base_executor import BaseStepExecutor
+from wurzel.executors.prometheus_executor import PrometheusStepExecutor
 from wurzel.step import TypedStep
 from wurzel.step.settings import SettingsBase, SettingsLeaf
-from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 
 if TYPE_CHECKING:
-    from wurzel.step_executor.middlewares.base import BaseMiddleware
+    from wurzel.executors.middlewares.base import BaseMiddleware
 
 log = logging.getLogger(__name__)
 

@@ -11,8 +11,8 @@ For new tests, see middleware_test.py
 import pytest
 
 from wurzel.datacontract.common import MarkdownDataContract
+from wurzel.executors import PrometheusStepExecutor
 from wurzel.step.typed_step import TypedStep
-from wurzel.step_executor import PrometheusStepExecutor
 
 
 class DummyStep(TypedStep[None, None, MarkdownDataContract]):

@@ -6,16 +6,16 @@ import pytest
 from pydantic import SecretStr, ValidationError
 
 from wurzel.exceptions import EnvSettingsError
+from wurzel.executors import (
+    BaseStepExecutor,
+    PrometheusStepExecutor,
+)
+from wurzel.executors.base_executor import step_env_encapsulation
 from wurzel.step import (
     PydanticModel,
     Settings,
     TypedStep,
 )
-from wurzel.step_executor import (
-    BaseStepExecutor,
-    PrometheusStepExecutor,
-)
-from wurzel.step_executor.base_executor import step_env_encapsulation
 
 
 class MySettings(Settings):

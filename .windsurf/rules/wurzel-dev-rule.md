@@ -55,6 +55,9 @@ trigger: always_on
 - **typer**: CLI framework
 
 
+## make
+All make commands automatically run make install, which installs the latest dependencies.
+When you run commands like make test or make lint or ..., the installation step will be executed first.
 
 ### Testing
 - **Coverage**: Minimum 90% (enforced in Makefile)

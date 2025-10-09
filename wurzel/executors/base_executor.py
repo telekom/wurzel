@@ -42,7 +42,7 @@ from wurzel.utils import WZ, create_model, try_get_length
 from wurzel.utils.logging import setup_uncaught_exception_logging
 
 if TYPE_CHECKING:
-    from wurzel.step_executor.middlewares.base import BaseMiddleware, MiddlewareChain
+    from wurzel.executors.middlewares.base import BaseMiddleware, MiddlewareChain
 
 log = getLogger(__name__)
 
@@ -188,7 +188,7 @@ class BaseStepExecutor:
         self.__middleware_chain = None
 
         # Import here to avoid circular dependency
-        from wurzel.step_executor.middlewares import (  # pylint: disable=import-outside-toplevel
+        from wurzel.executors.middlewares import (  # pylint: disable=import-outside-toplevel
             BaseMiddleware,
             MiddlewareChain,
             create_middleware_chain,

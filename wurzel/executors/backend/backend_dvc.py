@@ -11,12 +11,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 import wurzel
 import wurzel.cli
-from wurzel.backend.backend import Backend
+from wurzel.executors.backend.backend import Backend
+from wurzel.executors.base_executor import BaseStepExecutor
+from wurzel.executors.prometheus_executor import PrometheusStepExecutor
 from wurzel.step import TypedStep
-from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 
 if TYPE_CHECKING:
-    from wurzel.step_executor.middlewares.base import BaseMiddleware
+    from wurzel.executors.middlewares.base import BaseMiddleware
 
 
 class DvcDict(TypedDict):

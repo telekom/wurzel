@@ -45,8 +45,11 @@ def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: s
         Type[BaseStepExecutor]: {BaseStepExecutor, PrometheusStepExecutor, ArgoBackend, DvcBackend}
 
     """
-    from wurzel.backend import DvcBackend  # pylint: disable=import-outside-toplevel
-    from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor  # pylint: disable=import-outside-toplevel
+    from wurzel.executors import (  # pylint: disable=import-outside-toplevel
+        BaseStepExecutor,
+        DvcBackend,  # pylint: disable=import-outside-toplevel
+        PrometheusStepExecutor,
+    )
     from wurzel.utils import HAS_HERA  # pylint: disable=import-outside-toplevel
 
     # Check for executors
@@ -60,7 +63,7 @@ def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: s
         return DvcBackend
     if "ARGOBACKEND".startswith(value.upper()):
         if HAS_HERA:
-            from wurzel.backend import ArgoBackend  # pylint: disable=import-outside-toplevel
+            from wurzel.executors import ArgoBackend  # pylint: disable=import-outside-toplevel
 
             return ArgoBackend
         raise typer.BadParameter("ArgoBackend requires wurzel[argo] to be installed")
@@ -408,7 +411,7 @@ def inspekt(
 
 def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str):
     """Validates input and returns fitting backend. Currently always DVCBackend."""
-    from wurzel.backend.backend_dvc import DvcBackend  # pylint: disable=import-outside-toplevel
+    from wurzel.executors.backend.backend_dvc import DvcBackend  # pylint: disable=import-outside-toplevel
     from wurzel.utils import HAS_HERA  # pylint: disable=import-outside-toplevel
 
     match backend:
@@ -416,7 +419,7 @@ def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: 
             return DvcBackend
         case "ArgoBackend":
             if HAS_HERA:
-                from wurzel.backend.backend_argo import ArgoBackend  # pylint: disable=import-outside-toplevel
+                from wurzel.executors.backend.backend_argo import ArgoBackend  # pylint: disable=import-outside-toplevel
 
                 return ArgoBackend
             supported_backends = ["DvcBackend"]
@@ -463,8 +466,8 @@ def generate(
     ] = "DvcBackend",
 ):
     """Run."""
-    from wurzel.backend.backend import Backend  # pylint: disable=import-outside-toplevel
     from wurzel.cli.cmd_generate import main as cmd_generate  # pylint: disable=import-outside-toplevel
+    from wurzel.executors.backend.backend import Backend  # pylint: disable=import-outside-toplevel
 
     log.debug(
         "generate pipeline",

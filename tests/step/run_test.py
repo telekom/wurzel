@@ -6,8 +6,8 @@ import pytest
 
 from wurzel.datacontract import PydanticModel
 from wurzel.exceptions import ContractFailedException
+from wurzel.executors import BaseStepExecutor
 from wurzel.step import NoSettings, TypedStep
-from wurzel.step_executor import BaseStepExecutor
 
 
 class A(PydanticModel):

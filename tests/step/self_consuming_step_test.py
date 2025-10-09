@@ -6,9 +6,9 @@ import os
 import shutil
 from pathlib import Path
 
+from wurzel.executors.base_executor import BaseStepExecutor
 from wurzel.step import MarkdownDataContract, NoSettings
 from wurzel.step.self_consuming_step import SelfConsumingLeafStep
-from wurzel.step_executor.base_executor import BaseStepExecutor
 
 
 class MySelfConsumingStep(SelfConsumingLeafStep[NoSettings, list[MarkdownDataContract]]):

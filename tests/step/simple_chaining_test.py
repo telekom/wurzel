@@ -11,10 +11,10 @@ from wurzel.utils import HAS_DOCLING
 if not HAS_DOCLING:
     pytest.skip("Docling is not available", allow_module_level=True)
 
-from wurzel.backend import ArgoBackend, DvcBackend
-from wurzel.backend.backend import Backend
-from wurzel.backend.backend_argo import ArgoBackendSettings
 from wurzel.datacontract import MarkdownDataContract
+from wurzel.executors import ArgoBackend, DvcBackend
+from wurzel.executors.backend.backend import Backend
+from wurzel.executors.backend.backend_argo import ArgoBackendSettings
 from wurzel.step.typed_step import TypedStep
 from wurzel.steps.docling.docling_step import DoclingStep
 from wurzel.steps.duplication import DropDuplicationStep
