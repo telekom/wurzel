@@ -32,8 +32,8 @@ from docling.document_converter import (
 from mistletoe import Document as MTDocument
 from mistletoe import HTMLRenderer
 
+from wurzel.core.typed_step import TypedStep
 from wurzel.datacontract.common import MarkdownDataContract
-from wurzel.step.typed_step import TypedStep
 from wurzel.utils.to_markdown.html2md import MD_RENDER_LOCK
 
 from .settings import DoclingSettings

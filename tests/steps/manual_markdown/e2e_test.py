@@ -5,7 +5,7 @@
 
 import json
 
-from wurzel.step_executor import BaseStepExecutor
+from wurzel.executors import BaseStepExecutor
 from wurzel.steps import ManualMarkdownStep
 
 

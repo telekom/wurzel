@@ -52,7 +52,7 @@ class TestAutocompletionPerformance:
             # Create a custom TypedStep file
             custom_step_file = steps_dir / "custom_step.py"
             custom_step_file.write_text("""
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 
 class MyCustomStep(TypedStep):
     pass
@@ -152,7 +152,7 @@ class AnotherStep(TypedStep):
                     file_path = subdir / f"file_{j}.py"
                     if j % 3 == 0:  # Only some files have TypedStep
                         file_path.write_text(f"""
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 
 class Step{i}{j}(TypedStep):
     pass

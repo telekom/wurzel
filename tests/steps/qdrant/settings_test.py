@@ -11,7 +11,7 @@ if not HAS_QDRANT:
 
 from pydantic import SecretStr, ValidationError
 
-from wurzel.step_executor.base_executor import step_env_encapsulation
+from wurzel.executors.base_executor import step_env_encapsulation
 from wurzel.steps.qdrant.settings import QdrantSettings
 from wurzel.steps.qdrant.step import QdrantConnectorStep
 

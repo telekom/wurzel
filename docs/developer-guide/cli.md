@@ -42,11 +42,11 @@ wurzel run wurzel.steps.manual_markdown.ManualMarkdownStep \
     --inputs ./markdown-files \
     --output ./processed-output
 
-# With custom executor
+# With middlewares (e.g., prometheus metrics)
 wurzel run wurzel.steps.manual_markdown.ManualMarkdownStep \
     --inputs ./markdown-files \
     --output ./processed-output \
-    --executor PrometheusStepExecutor
+    --middlewares prometheus
 
 # Multiple input folders
 wurzel run wurzel.steps.splitter.SimpleSplitterStep \

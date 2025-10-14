@@ -176,7 +176,9 @@ When running Wurzel, several environment variables can be configured to customiz
 
 ### Monitoring (Optional)
 
-- `PROMETHEUS__GATEWAY`: Prometheus pushgateway URL for metrics
+- `PROMETHEUS_GATEWAY`: Prometheus pushgateway URL for metrics (when using prometheus middleware)
+- `PROMETHEUS_JOB`: Job name for Prometheus metrics (default: `default-job-name`)
+- `MIDDLEWARES`: Comma-separated list of middlewares to enable (e.g., `prometheus`)
 
 For backend-specific configuration, see:
 
