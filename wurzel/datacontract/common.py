@@ -69,9 +69,14 @@ class MarkdownDataContract(PydanticModel):
 
         Args:
             path (Path): Path to a Markdown file.
+            url_prefix (str): Prefix to add to the URL if it is not specified in the metadata.
 
         Returns:
             MarkdownDataContract: The file that was loaded
+
+        Raises:
+            yaml.YAMLError: If the YAML metadata cannot be parsed.
+            ValueError: If the YAML metadata is not a dictionary.
 
         """
         # Read MD from file path
