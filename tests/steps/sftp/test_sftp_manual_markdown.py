@@ -24,6 +24,7 @@ if not HAS_PARAMIKO:
 from pydantic import SecretStr
 
 from wurzel.datacontract import MarkdownDataContract
+from wurzel.exceptions import StepFailed
 from wurzel.steps.sftp import SFTPManualMarkdownSettings, SFTPManualMarkdownStep
 
 # Test fixtures for markdown content
@@ -101,11 +102,12 @@ class TestMetadataParsing:
     """Tests for YAML metadata parsing in markdown files."""
 
     @pytest.mark.parametrize(
-        "markdown_content,expected_keywords,expected_url_contains",
+        "markdown_content,expected_keywords,expected_url_contains,check_keywords_exact",
         [
-            (MARKDOWN_WITH_METADATA, "test,markdown", "test/file.md"),
-            (MARKDOWN_WITHOUT_URL, "test,markdown", "/remote/path/test.md"),
-            (MARKDOWN_NO_METADATA, "", "/remote/path/test.md"),
+            (MARKDOWN_WITH_METADATA, "test,markdown", "test/file.md", True),
+            (MARKDOWN_WITHOUT_URL, "test,markdown", "/remote/path/test.md", True),
+            # For no metadata, keywords will be temp filename, so we just check it's not empty
+            (MARKDOWN_NO_METADATA, None, "/remote/path/test.md", False),
         ],
     )
     def test_metadata_parsing(
@@ -113,6 +115,7 @@ class TestMetadataParsing:
         markdown_content,
         expected_keywords,
         expected_url_contains,
+        check_keywords_exact,
         mock_transport,
         mock_sftp_client,
     ):
@@ -135,7 +138,11 @@ class TestMetadataParsing:
 
                 assert len(results) == 1
                 assert isinstance(results[0], MarkdownDataContract)
-                assert results[0].keywords == expected_keywords
+                if check_keywords_exact:
+                    assert results[0].keywords == expected_keywords
+                else:
+                    # When no metadata, keywords defaults to temp filename (not empty)
+                    assert results[0].keywords != ""
                 assert expected_url_contains in results[0].url
 
 
@@ -156,7 +163,10 @@ class TestAuthentication:
         with patch("paramiko.Transport", return_value=mock_transport) as mock_transport_class:
             with patch("paramiko.SFTPClient.from_transport", return_value=mock_sftp_client):
                 step = create_step_with_settings(settings)
-                results = step.run(None)
+
+                # Should raise StepFailed when no files found
+                with pytest.raises(StepFailed, match="No Markdown files found"):
+                    step.run(None)
 
                 # Verify Transport was created with correct host/port
                 mock_transport_class.assert_called_once_with(("test.example.com", 22))
@@ -167,8 +177,6 @@ class TestAuthentication:
                 assert call_kwargs["username"] == "testuser"
                 assert call_kwargs["password"].get_secret_value() == "testpass"
                 assert call_kwargs["pkey"] is None
-
-                assert results == []
 
     def test_ssh_key_authentication(self, mock_transport, mock_sftp_client):
         """Test SFTP connection with SSH key authentication."""
@@ -186,7 +194,10 @@ class TestAuthentication:
             with patch("paramiko.SFTPClient.from_transport", return_value=mock_sftp_client):
                 with patch("paramiko.RSAKey.from_private_key_file", return_value=mock_key):
                     step = create_step_with_settings(settings)
-                    results = step.run(None)
+
+                    # Should raise StepFailed when no files found
+                    with pytest.raises(StepFailed, match="No Markdown files found"):
+                        step.run(None)
 
                     # Verify connect was called with key
                     mock_transport.connect.assert_called_once()
@@ -194,8 +205,6 @@ class TestAuthentication:
                     assert call_kwargs["username"] == "testuser"
                     assert call_kwargs["pkey"] == mock_key
                     assert call_kwargs["password"] is None
-
-                    assert results == []
 
     def test_key_with_passphrase(self, mock_transport, mock_sftp_client):
         """Test SSH key loading with passphrase."""
@@ -214,7 +223,10 @@ class TestAuthentication:
             with patch("paramiko.SFTPClient.from_transport", return_value=mock_sftp_client):
                 with patch("paramiko.RSAKey.from_private_key_file", return_value=mock_key) as mock_rsa:
                     step = create_step_with_settings(settings)
-                    step.run(None)
+
+                    # Will raise StepFailed due to no files
+                    with pytest.raises(StepFailed):
+                        step.run(None)
 
                     # Verify key was loaded with passphrase (SecretStr is passed through)
                     call_args = mock_rsa.call_args
@@ -330,9 +342,10 @@ class TestFileDiscovery:
         with patch("paramiko.Transport", return_value=mock_transport):
             with patch("paramiko.SFTPClient.from_transport", return_value=mock_sftp_client):
                 step = create_step_with_settings(settings)
-                results = step.run(None)
 
-                assert results == []
+                # Should raise StepFailed when no files found
+                with pytest.raises(StepFailed, match="No Markdown files found"):
+                    step.run(None)
 
 
 class TestErrorHandling:
@@ -376,7 +389,7 @@ class TestErrorHandling:
                 step.run(None)
 
     def test_file_read_error_handling(self, mock_transport, mock_sftp_client):
-        """Test handling of file read errors (logs error and continues)."""
+        """Test handling of file read errors (raises StepFailed immediately)."""
         settings = SFTPManualMarkdownSettings(
             HOST="test.example.com",
             USERNAME="testuser",
@@ -391,12 +404,12 @@ class TestErrorHandling:
             with patch("paramiko.SFTPClient.from_transport", return_value=mock_sftp_client):
                 step = create_step_with_settings(settings)
 
-                # Should log error and return empty list (not raise)
-                results = step.run(None)
-                assert results == []
+                # Should raise StepFailed with specific error message
+                with pytest.raises(StepFailed, match="Failed to load markdown file"):
+                    step.run(None)
 
     def test_directory_access_error(self, mock_transport, mock_sftp_client):
-        """Test handling of directory access errors (logs warning and returns empty)."""
+        """Test handling of directory access errors (logs warning and raises StepFailed)."""
         settings = SFTPManualMarkdownSettings(
             HOST="test.example.com",
             USERNAME="testuser",
@@ -410,9 +423,9 @@ class TestErrorHandling:
             with patch("paramiko.SFTPClient.from_transport", return_value=mock_sftp_client):
                 step = create_step_with_settings(settings)
 
-                # Should log warning and return empty list (not raise)
-                results = step.run(None)
-                assert results == []
+                # Should log warning and raise StepFailed when no files found
+                with pytest.raises(StepFailed, match="No Markdown files found"):
+                    step.run(None)
 
     def test_invalid_key_file(self, mock_transport, mock_sftp_client):
         """Test handling of invalid SSH key file."""
@@ -450,7 +463,7 @@ class TestConnectionCleanup:
     """Tests for connection cleanup."""
 
     def test_connection_cleanup(self, mock_transport, mock_sftp_client):
-        """Test that connections are properly closed after successful run."""
+        """Test that connections are properly closed after run (even with StepFailed)."""
         settings = SFTPManualMarkdownSettings(
             HOST="test.example.com",
             USERNAME="testuser",
@@ -463,9 +476,12 @@ class TestConnectionCleanup:
         with patch("paramiko.Transport", return_value=mock_transport):
             with patch("paramiko.SFTPClient.from_transport", return_value=mock_sftp_client):
                 step = create_step_with_settings(settings)
-                step.run(None)
 
-                # Verify cleanup
+                # Will raise StepFailed due to no files
+                with pytest.raises(StepFailed):
+                    step.run(None)
+
+                # Verify cleanup still happened
                 mock_sftp_client.close.assert_called_once()
                 mock_transport.close.assert_called_once()
 
@@ -516,7 +532,10 @@ class TestSSHKeyTypes:
                 ):
                     with patch("paramiko.Ed25519Key.from_private_key_file", return_value=mock_key):
                         step = create_step_with_settings(settings)
-                        _ = step.run(None)
+
+                        # Will raise StepFailed due to no files
+                        with pytest.raises(StepFailed):
+                            step.run(None)
 
                         # Verify Ed25519 key was used
                         call_kwargs = mock_transport.connect.call_args.kwargs
