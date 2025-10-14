@@ -207,7 +207,7 @@ class SFTPManualMarkdownStep(TypedStep[SFTPManualMarkdownSettings, None, list[Ma
         """
         try:
             # Download file to temporary location and use MarkdownDataContract.from_file
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as tmp_file:
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False, encoding="utf-8") as tmp_file:
                 # Read content from SFTP
                 with sftp.open(remote_file, "r") as remote:
                     content = remote.read().decode("utf-8")
