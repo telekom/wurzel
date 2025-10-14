@@ -146,7 +146,7 @@ jobs:
 
           # Run wurzel and capture exit code
           set +e
-          uv run wurzel run steps.sftp.SFTPManualMarkdownStep -o output
+          uv run wurzel run wurzel.steps.sftp.SFTPManualMarkdownStep -o output
           EXIT_CODE=$?
           set -e
 
