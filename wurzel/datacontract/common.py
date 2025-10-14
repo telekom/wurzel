@@ -80,7 +80,7 @@ class MarkdownDataContract(PydanticModel):
 
         """
         # Read MD from file path
-        md = path.read_text()
+        md = path.read_text(encoding="utf-8")
 
         # Regex to match YAML metadata between --- ... ---
         metadata = {}
