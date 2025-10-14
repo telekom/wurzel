@@ -7,7 +7,6 @@
 from __future__ import annotations
 
 import logging
-import os
 from collections.abc import Iterable
 from functools import cache
 from pathlib import Path
@@ -43,11 +42,9 @@ from pydantic import BaseModel, Field
 
 from wurzel.cli import generate_cli_call
 from wurzel.core import TypedStep
-from wurzel.core.settings import SettingsBase, SettingsLeaf
 from wurzel.executors.backend.backend import Backend
 from wurzel.executors.backend.values import load_values
 from wurzel.executors.base_executor import BaseStepExecutor
-from wurzel.executors.prometheus_executor import PrometheusStepExecutor
 
 if TYPE_CHECKING:
     from wurzel.executors.middlewares.base import BaseMiddleware
@@ -58,15 +55,9 @@ log = logging.getLogger(__name__)
 def default_argo_step_executor(config: WorkflowConfig | None = None) -> type[BaseStepExecutor]:
     """Pick the step executor for generated Argo task commands.
 
-    When ``PROMETHEUS_GATEWAY`` is set (non-empty) in the workflow container
-    env (preferred) or in the generator process environment (fallback), emitted
-    ``wurzel run`` lines use ``PrometheusStepExecutor`` so metrics match the
-    runtime pushgateway config.  Otherwise ``BaseStepExecutor`` is used.
+    The legacy Prometheus-specific executor has been replaced by middleware,
+    so generated Argo task commands use ``BaseStepExecutor`` unless overridden.
     """
-    if config is not None and config.container.env.get("PROMETHEUS_GATEWAY", "").strip():
-        return PrometheusStepExecutor
-    if os.environ.get("PROMETHEUS_GATEWAY", "").strip():
-        return PrometheusStepExecutor
     return BaseStepExecutor
 
 

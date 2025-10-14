@@ -8,17 +8,17 @@ import pytest
 import yaml
 
 from wurzel.cli import generate_cli_call
-from wurzel.executors import BaseStepExecutor, PrometheusStepExecutor
+from wurzel.executors import BaseStepExecutor
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.utils import HAS_HERA
 
 
-@pytest.mark.parametrize("executor", [BaseStepExecutor, PrometheusStepExecutor])
+@pytest.mark.parametrize("executor", [BaseStepExecutor])
 def test_good_cli_call(executor, tmp_path):
     """Test the generate_cli_call function with valid parameters and different executors.
 
     Args:
-        executor: The step executor class to use (BaseStepExecutor or PrometheusStepExecutor).
+        executor: The step executor class to use.
         tmp_path: Temporary directory path provided by pytest.
 
     """

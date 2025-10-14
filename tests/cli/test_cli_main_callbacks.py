@@ -7,15 +7,12 @@ import typer
 from wurzel.cli import _main as cli_main
 
 
-def test_executer_callback_base_and_prometheus():
+def test_executer_callback_base():
     # Base
     res = cli_main.executer_callback(None, None, "Base")
-    from wurzel.executors import BaseStepExecutor, PrometheusStepExecutor
+    from wurzel.executors import BaseStepExecutor
 
     assert res is BaseStepExecutor
-
-    res2 = cli_main.executer_callback(None, None, "Prom")
-    assert res2 is PrometheusStepExecutor
 
 
 def test_executer_callback_bad():

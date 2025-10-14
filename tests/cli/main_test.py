@@ -11,7 +11,7 @@ import wurzel.steps
 from wurzel.executors.backend.backend_dvc import DvcBackend
 import wurzel.core
 from wurzel.cli import _main as main
-from wurzel.executors import BaseStepExecutor, PrometheusStepExecutor
+from wurzel.executors import BaseStepExecutor
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.utils import HAS_HERA
 
@@ -22,8 +22,6 @@ from wurzel.utils import HAS_HERA
         ("base", BaseStepExecutor),
         ("BASE", BaseStepExecutor),
         ("BaseStepExecutor", BaseStepExecutor),
-        ("Prom", PrometheusStepExecutor),
-        ("PROMETHEUS", PrometheusStepExecutor),
     ],
 )
 def test_executer_callback(inpt_str, expected):

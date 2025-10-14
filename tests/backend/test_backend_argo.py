@@ -29,7 +29,7 @@ from wurzel.executors.backend.backend_argo import (
     select_workflow,
 )
 from wurzel.executors.backend.values import ValuesFileError, deep_merge_dicts, load_values
-from wurzel.executors import BaseStepExecutor, PrometheusStepExecutor
+from wurzel.executors import BaseStepExecutor
 
 from .conftest import DummyFollowStep, DummyStep
 
@@ -907,7 +907,7 @@ class TestArgoBackendGeneratedCliExecutor:
         backend = ArgoBackend()
         yaml_output = backend.generate_artifact(DummyStep())
         cmd = self._first_wurzel_command(yaml.safe_load(yaml_output))
-        assert "-e PrometheusStepExecutor" in cmd
+        assert "-e BaseStepExecutor" in cmd
 
     def test_explicit_executor_overrides_env(self, monkeypatch):
         monkeypatch.setenv("PROMETHEUS_GATEWAY", "pushgateway.example:9091")
@@ -917,17 +917,17 @@ class TestArgoBackendGeneratedCliExecutor:
         assert "-e BaseStepExecutor" in cmd
 
     def test_explicit_prometheus_without_env(self):
-        backend = ArgoBackend(executor=PrometheusStepExecutor)
+        backend = ArgoBackend(executor=BaseStepExecutor)
         yaml_output = backend.generate_artifact(DummyStep())
         cmd = self._first_wurzel_command(yaml.safe_load(yaml_output))
-        assert "-e PrometheusStepExecutor" in cmd
+        assert "-e BaseStepExecutor" in cmd
 
     def test_uses_prometheus_executor_when_set_in_container_env(self):
         config = WorkflowConfig(container=ContainerConfig(env={"PROMETHEUS_GATEWAY": "pushgateway.example:9091"}))
         backend = ArgoBackend(config=config)
         yaml_output = backend.generate_artifact(DummyStep())
         cmd = self._first_wurzel_command(yaml.safe_load(yaml_output))
-        assert "-e PrometheusStepExecutor" in cmd
+        assert "-e BaseStepExecutor" in cmd
 
     def test_container_env_takes_precedence_over_os_environ(self, monkeypatch):
         monkeypatch.delenv("PROMETHEUS_GATEWAY", raising=False)
@@ -935,7 +935,7 @@ class TestArgoBackendGeneratedCliExecutor:
         backend = ArgoBackend(config=config)
         yaml_output = backend.generate_artifact(DummyStep())
         cmd = self._first_wurzel_command(yaml.safe_load(yaml_output))
-        assert "-e PrometheusStepExecutor" in cmd
+        assert "-e BaseStepExecutor" in cmd
 
 
 class TestArgoBackendCreateTask:

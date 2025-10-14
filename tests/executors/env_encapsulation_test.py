@@ -13,10 +13,7 @@ from wurzel.core import (
     TypedStep,
 )
 from wurzel.exceptions import EnvSettingsError
-from wurzel.executors import (
-    BaseStepExecutor,
-    PrometheusStepExecutor,
-)
+from wurzel.executors import BaseStepExecutor
 from wurzel.executors.base_executor import step_env_encapsulation
 
 
@@ -88,13 +85,6 @@ def test_env_set(env, env_set):
 
 
 @pytest.mark.parametrize(
-    "executor,expect_warning",
-    [
-        (BaseStepExecutor, False),
-        pytest.param(PrometheusStepExecutor, True, marks=pytest.mark.filterwarnings("ignore::DeprecationWarning")),
-    ],
-)
-@pytest.mark.parametrize(
     "kwargs",
     [
         pytest.param({}, id="{}"),
@@ -102,18 +92,10 @@ def test_env_set(env, env_set):
         pytest.param({"dont_encapsulate": False}, id="False"),
     ],
 )
-def test_constructor(executor, expect_warning, kwargs):
-    """Test executor constructors with various configurations.
-
-    Note: PrometheusStepExecutor is deprecated, test is kept for backward compatibility.
-    """
-    if expect_warning:
-        with pytest.warns(DeprecationWarning):
-            with executor(**kwargs) as ex:
-                assert ex
-    else:
-        with executor(**kwargs) as ex:
-            assert ex
+def test_constructor(kwargs):
+    """Test executor constructors with various configurations."""
+    with BaseStepExecutor(**kwargs) as ex:
+        assert ex
 
 
 class TestSecretStrEncapsulation:

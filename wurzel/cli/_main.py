@@ -52,13 +52,12 @@ def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: s
         typer.BadParameter: If user typed string does not correlate with a Executor or Backend
 
     Returns:
-        Type[BaseStepExecutor] | None: {BaseStepExecutor, PrometheusStepExecutor, ArgoBackend, DvcBackend, None}
+        Type[BaseStepExecutor] | None: {BaseStepExecutor, ArgoBackend, DvcBackend, None}
 
     """
     from wurzel.executors import (  # pylint: disable=import-outside-toplevel
         BaseStepExecutor,
         DvcBackend,  # pylint: disable=import-outside-toplevel
-        PrometheusStepExecutor,
     )
     from wurzel.utils import HAS_HERA  # pylint: disable=import-outside-toplevel
 
@@ -68,8 +67,6 @@ def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: s
     # Check for executors
     if "BASESTEPEXECUTOR".startswith(value.upper()):
         return BaseStepExecutor
-    if "PROMETHEUSSTEPEXECUTOR".startswith(value.upper()):
-        return PrometheusStepExecutor
 
     # Check for backends
     if "DVCBACKEND".startswith(value.upper()):
@@ -435,7 +432,7 @@ def run(
             "--executor",
             help="executor or backend to use for execution",
             callback=executer_callback,
-            autocompletion=lambda: ["BaseStepExecutor", "PrometheusStepExecutor", "DvcBackend", "ArgoBackend"],
+            autocompletion=lambda: ["BaseStepExecutor", "DvcBackend", "ArgoBackend"],
         ),
     ] = "BaseStepExecutor",
     middlewares: Annotated[
@@ -644,9 +641,9 @@ def generate(  # pylint: disable=too-many-positional-arguments
         typer.Option(
             "-e",
             "--executor",
-            help="Step executor class for generated commands (overrides defaults and PROMETHEUS_GATEWAY for Argo)",
+            help="Step executor class for generated commands",
             callback=executer_callback,
-            autocompletion=lambda: ["BaseStepExecutor", "PrometheusStepExecutor"],
+            autocompletion=lambda: ["BaseStepExecutor"],
         ),
     ] = None,
     output: Annotated[
