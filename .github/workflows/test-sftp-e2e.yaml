@@ -1,0 +1,250 @@
+name: SFTP E2E Tests
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'wurzel/steps/sftp/**'
+      - 'tests/steps/sftp/**'
+      - '.github/workflows/test-sftp-e2e.yaml'
+  pull_request:
+    paths:
+      - 'wurzel/steps/sftp/**'
+      - 'tests/steps/sftp/**'
+      - '.github/workflows/test-sftp-e2e.yaml'
+  workflow_dispatch:
+
+jobs:
+  sftp-e2e:
+    name: SFTP E2E Tests
+    runs-on: ubuntu-latest
+
+    services:
+      sftp:
+        image: atmoz/sftp:latest
+        ports:
+          - 2222:22
+        options: >-
+          --health-cmd "nc -z localhost 22 || exit 1"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+        env:
+          SFTP_USERS: testuser:testpass:1001:100:upload
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the latest version of uv and set the python version
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+          python-version: "3.11"
+          activate-environment: true
+
+      - name: Set environment variables for SFTP connection
+        run: |
+          echo "SFTPMANUALMARKDOWNSTEP__HOST=localhost" >> $GITHUB_ENV
+          echo "SFTPMANUALMARKDOWNSTEP__PORT=2222" >> $GITHUB_ENV
+          echo "SFTPMANUALMARKDOWNSTEP__USERNAME=testuser" >> $GITHUB_ENV
+          echo "SFTPMANUALMARKDOWNSTEP__PASSWORD=testpass" >> $GITHUB_ENV
+          echo "SFTPMANUALMARKDOWNSTEP__REMOTE_PATH=/upload/test_data" >> $GITHUB_ENV
+          echo "SFTPMANUALMARKDOWNSTEP__RECURSIVE=true" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: |
+          uv lock
+          uv --no-progress pip install -e ".[test, sftp]"
+
+      - name: Wait for SFTP server to be ready
+        run: |
+          echo "Waiting for SFTP server to be ready..."
+          for i in {1..30}; do
+            if nc -z localhost 2222 2>/dev/null; then
+              echo "SFTP server is ready!"
+              break
+            fi
+            echo "Attempt $i: SFTP server not ready yet, waiting..."
+            sleep 2
+          done
+
+      - name: Setup test data on SFTP server
+        run: |
+          uv run python -c "
+          import paramiko
+          import time
+
+          # Connect to SFTP server
+          transport = paramiko.Transport(('localhost', 2222))
+          transport.connect(username='testuser', password='testpass')
+          sftp = paramiko.SFTPClient.from_transport(transport)
+
+          # Create test directory structure
+          base_path = '/upload/test_data'
+          try:
+              sftp.mkdir('/upload')
+          except:
+              pass
+          try:
+              sftp.mkdir(base_path)
+          except:
+              pass
+          try:
+              sftp.mkdir(f'{base_path}/subdir')
+          except:
+              pass
+
+          # Create test files
+          # File 1: Simple markdown with metadata
+          with sftp.open(f'{base_path}/doc1.md', 'w') as f:
+              content = '''---
+          keywords: \"test,e2e,simple\"
+          url: \"https://example.com/doc1\"
+          ---
+          # Test Document 1
+          This is a simple test document.'''
+              f.write(content.encode('utf-8'))
+
+          # File 2: UTF-8 content
+          with sftp.open(f'{base_path}/doc2.md', 'w') as f:
+              content = '''---
+          keywords: \"test,unicode,emoji\"
+          ---
+          # UTF-8 Test Document
+          Content with émojis 🎉 and spëcial çharacters.
+          This tests UTF-8 encoding on all platforms.'''
+              f.write(content.encode('utf-8'))
+
+          # File 3: No metadata
+          with sftp.open(f'{base_path}/doc3.md', 'w') as f:
+              content = '''# Document Without Metadata
+          This document has no YAML frontmatter.'''
+              f.write(content.encode('utf-8'))
+
+          # File 4: In subdirectory
+          with sftp.open(f'{base_path}/subdir/doc4.md', 'w') as f:
+              content = '''---
+          keywords: \"test,subdirectory\"
+          ---
+          # Subdirectory Document
+          This file is in a subdirectory.'''
+              f.write(content.encode('utf-8'))
+
+          sftp.close()
+          transport.close()
+          print('Test data uploaded successfully!')
+          "
+
+      - name: Run SFTP step with wurzel
+        run: |
+          echo "Running SFTP step with output to ./output directory..."
+          mkdir -p output
+
+          # Run wurzel and capture exit code
+          set +e
+          uv run wurzel run steps.sftp.SFTPManualMarkdownStep -o output
+          EXIT_CODE=$?
+          set -e
+
+          echo "Wurzel exit code: $EXIT_CODE"
+
+          # Check exit code
+          if [ "$EXIT_CODE" -ne 0 ]; then
+            echo "ERROR: Wurzel command failed with exit code $EXIT_CODE"
+            exit 1
+          fi
+
+          echo "✓ Wurzel command succeeded with exit code 0"
+
+          echo "Checking output directory..."
+          ls -lah output/
+
+          # Check if output directory exists and is not empty
+          if [ ! -d "output" ]; then
+            echo "ERROR: Output directory does not exist!"
+            exit 1
+          fi
+
+          file_count=$(find output -type f -name "*.json" | wc -l | tr -d ' ')
+          echo "Found $file_count JSON files in output directory"
+
+          if [ "$file_count" -eq 0 ]; then
+            echo "ERROR: No output files were created!"
+            exit 1
+          fi
+
+          # We expect 4 markdown files to be converted to JSON
+          if [ "$file_count" -lt 4 ]; then
+            echo "WARNING: Expected at least 4 files but found $file_count"
+          fi
+
+          echo "✓ SUCCESS: SFTP step executed and created $file_count output files!"
+
+      - name: Verify output files content
+        run: |
+          echo "Verifying output files..."
+
+          # Check each JSON file is not empty and contains expected content
+          file_count=0
+          empty_files=0
+
+          for file in output/*.json; do
+            if [ -f "$file" ]; then
+              file_count=$((file_count + 1))
+              size=$(wc -c < "$file")
+              echo "File: $(basename $file) - Size: $size bytes"
+
+              if [ "$size" -eq 0 ]; then
+                echo "ERROR: File $(basename $file) is empty!"
+                empty_files=$((empty_files + 1))
+              fi
+
+              # Verify it's valid JSON
+              if ! python3 -m json.tool "$file" > /dev/null 2>&1; then
+                echo "ERROR: File $(basename $file) is not valid JSON!"
+                exit 1
+              fi
+
+              # Show first few lines of each file
+              echo "Preview of $(basename $file):"
+              head -n 10 "$file"
+              echo "---"
+            fi
+          done
+
+          if [ "$empty_files" -gt 0 ]; then
+            echo "ERROR: Found $empty_files empty files!"
+            exit 1
+          fi
+
+          if [ "$file_count" -eq 0 ]; then
+            echo "ERROR: No JSON files found in output directory!"
+            exit 1
+          fi
+
+          echo "✓ All $file_count output files are non-empty and valid JSON"
+
+          # Verify UTF-8 content is preserved in JSON files
+          if grep -r "🎉" output/; then
+            echo "✓ UTF-8 emoji found in output files"
+          else
+            echo "WARNING: UTF-8 emoji not found in output files"
+          fi
+
+          if grep -r "émojis" output/; then
+            echo "✓ UTF-8 accented characters found in output files"
+          else
+            echo "WARNING: UTF-8 accented characters not found in output files"
+          fi
+
+          echo "✓ All output files verified successfully!"
+
+      - name: Show SFTP server logs on failure
+        if: failure()
+        run: |
+          echo "SFTP server logs:"
+          docker logs $(docker ps -q --filter ancestor=atmoz/sftp:latest) || echo "Could not retrieve logs"
