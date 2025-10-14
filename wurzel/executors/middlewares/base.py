@@ -35,18 +35,6 @@ class BaseMiddleware(ABC):
         """Initialize the middleware."""
         self.next_middleware: Optional[BaseMiddleware] = None
 
-    def set_next(self, middleware: "BaseMiddleware") -> "BaseMiddleware":
-        """Set the next middleware in the chain.
-
-        Args:
-            middleware: The next middleware to call
-
-        Returns:
-            The middleware that was set (for chaining)
-        """
-        self.next_middleware = middleware
-        return middleware
-
     @abstractmethod
     def __call__(
         self,

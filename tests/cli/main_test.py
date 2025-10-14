@@ -9,7 +9,7 @@ import typer
 import wurzel
 import wurzel.core
 from wurzel.cli import _main as main
-from wurzel.executors import BaseStepExecutor, PrometheusStepExecutor
+from wurzel.executors import BaseStepExecutor
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 
 
@@ -19,8 +19,6 @@ from wurzel.steps.manual_markdown import ManualMarkdownStep
         ("base", BaseStepExecutor),
         ("BASE", BaseStepExecutor),
         ("BaseStepExecutor", BaseStepExecutor),
-        ("Prom", PrometheusStepExecutor),
-        ("PROMETHEUS", PrometheusStepExecutor),
     ],
 )
 def test_executer_callback(inpt_str, expected):

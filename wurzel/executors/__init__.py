@@ -17,11 +17,9 @@ from .middlewares import (  # noqa: F401
     get_registry,
     load_middlewares,
 )
-from .prometheus_executor import PrometheusStepExecutor  # noqa: F401
 
 __all__ = [
     "BaseStepExecutor",
-    "PrometheusStepExecutor",
     "Backend",
     "DvcBackend",
     "BaseMiddleware",

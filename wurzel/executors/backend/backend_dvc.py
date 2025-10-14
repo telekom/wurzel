@@ -14,7 +14,6 @@ import wurzel.cli
 from wurzel.core import TypedStep
 from wurzel.executors.backend.backend import Backend
 from wurzel.executors.base_executor import BaseStepExecutor
-from wurzel.executors.prometheus_executor import PrometheusStepExecutor
 
 if TYPE_CHECKING:
     from wurzel.executors.middlewares.base import BaseMiddleware
@@ -79,7 +78,7 @@ class DvcBackend(Backend):
         self,
         settings: DvcBackendSettings | None = None,
         *,
-        executer: type[BaseStepExecutor] = PrometheusStepExecutor,
+        executer: type[BaseStepExecutor] = BaseStepExecutor,
         dont_encapsulate: bool = False,
         middlewares: list[str] | list["BaseMiddleware"] | None = None,
         load_middlewares_from_env: bool = True,
