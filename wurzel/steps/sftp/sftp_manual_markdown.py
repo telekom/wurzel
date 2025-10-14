@@ -118,6 +118,8 @@ class SFTPManualMarkdownStep(TypedStep[SFTPManualMarkdownSettings, None, list[Ma
                 f"Successfully loaded {len(results)} Markdown files from SFTP",
                 extra={"loaded_count": len(results), "total_found": len(md_files)},
             )
+            if len(results) == 0:
+                raise StepFailed("No Markdown files found or failed to load any")
 
             return results
 
