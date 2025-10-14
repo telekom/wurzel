@@ -28,7 +28,7 @@ jobs:
         ports:
           - 2222:22
         options: >-
-          --health-cmd "nc -z localhost 22 || exit 1"
+          --health-cmd "pgrep sshd || exit 1"
           --health-interval 5s
           --health-timeout 3s
           --health-retries 10
