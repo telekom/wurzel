@@ -5,21 +5,19 @@
 """SFTP Manual Markdown Step for loading Markdown files from SFTP servers."""
 
 import logging
-import re
 import stat
+import tempfile
 from pathlib import Path, PurePosixPath
 from typing import Optional
 
 import paramiko
-import yaml
 from pydantic import Field, SecretStr
 
 from wurzel.datacontract import MarkdownDataContract
+from wurzel.exceptions import StepFailed
 from wurzel.step import Settings, TypedStep
 
 logger = logging.getLogger(__name__)
-
-_RE_METADATA = re.compile(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", re.DOTALL | re.MULTILINE)
 
 
 class SFTPManualMarkdownSettings(Settings):
@@ -206,39 +204,29 @@ class SFTPManualMarkdownStep(TypedStep[SFTPManualMarkdownSettings, None, list[Ma
             Optional[MarkdownDataContract]: Loaded contract or None if failed
         """
         try:
-            # Read file content from SFTP
-            with sftp.open(remote_file, "r") as f:
-                content = f.read().decode("utf-8")
+            # Download file to temporary location and use MarkdownDataContract.from_file
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".md", delete=False) as tmp_file:
+                # Read content from SFTP
+                with sftp.open(remote_file, "r") as remote:
+                    content = remote.read().decode("utf-8")
 
-            # Parse metadata similar to MarkdownDataContract.from_file
-            metadata: dict[str, str] = {}
-            metadata_match = _RE_METADATA.match(content)
+                # Write to temp file
+                tmp_file.write(content)
+                tmp_path = Path(tmp_file.name)
 
-            if metadata_match:
-                yaml_str, md_body = metadata_match.groups()
-                try:
-                    parsed_metadata = yaml.safe_load(yaml_str)
-                    if isinstance(parsed_metadata, dict):
-                        metadata = parsed_metadata
-                    else:
-                        metadata = {}
-                except yaml.YAMLError as e:
-                    logger.error(f"Cannot parse YAML metadata in {remote_file}: {e}", extra={"remote_file": remote_file, "error": str(e)})
-                    metadata = {}
-            else:
-                md_body = content
-                logger.info(f"MarkdownDataContract has no YAML metadata: {remote_file}", extra={"remote_file": remote_file})
+            try:
+                # Use MarkdownDataContract.from_file to handle metadata parsing
+                url_prefix = f"{self.__class__.__name__}/{remote_file}"
+                contract = MarkdownDataContract.from_file(tmp_path, url_prefix="")
 
-            # Construct the MarkdownDataContract
-            url = metadata.get("url", f"{self.__class__.__name__}/{remote_file}")
-            keywords = metadata.get("keywords", "")
+                # Override URL if not set in metadata to use remote file path
+                if contract.url == str(tmp_path.absolute()):
+                    contract.url = url_prefix
 
-            return MarkdownDataContract(
-                md=md_body,
-                url=str(url),
-                keywords=str(keywords),
-            )
+                return contract
+            finally:
+                # Clean up temporary file
+                tmp_path.unlink(missing_ok=True)
 
         except (OSError, paramiko.SSHException) as e:
-            logger.error(f"Failed to load markdown file {remote_file}: {e}", extra={"remote_file": remote_file, "error": str(e)})
-            return None
+            raise StepFailed(f"Failed to load markdown file {remote_file}: {e}") from e
