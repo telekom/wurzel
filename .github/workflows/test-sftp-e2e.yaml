@@ -177,12 +177,16 @@ jobs:
             exit 1
           fi
 
-          # Check if the output file contains more than just "[]"
-          grep -vq '^\[\]$' output/*.json
-          if [ $? -eq 0 ]; then
-            echo "ERROR: Output file contains empty JSON array '[]'"
-            exit 1
-          fi
+          # Check if any output file contains only "[]" (empty array)
+          for file in output/*.json; do
+            if [ -f "$file" ]; then
+              content=$(cat "$file" | tr -d '[:space:]')
+              if [ "$content" = "[]" ]; then
+                echo "ERROR: Output file $(basename "$file") contains empty JSON array '[]'"
+                exit 1
+              fi
+            fi
+          done
 
 
 
