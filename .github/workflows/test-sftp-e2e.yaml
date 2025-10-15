@@ -97,17 +97,6 @@ jobs:
           uv lock
           uv --no-progress pip install -e ".[test, sftp]"
 
-      - name: Test SSH key authentication (SSH key auth only)
-        if: matrix.auth-type == 'ssh-key'
-        run: |
-          echo "Testing SSH key authentication..."
-          ssh -i /tmp/ssh_keys/id_ed25519 \
-            -o StrictHostKeyChecking=no \
-            -o UserKnownHostsFile=/dev/null \
-            -p 2222 \
-            testuser@localhost \
-            "echo 'SSH key authentication successful!'"
-
       - name: Setup test data on SFTP server
         run: |
           AUTH_TYPE="${{ matrix.auth-type }}"
