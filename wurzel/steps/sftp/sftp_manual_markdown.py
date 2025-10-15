@@ -31,9 +31,9 @@ class SFTPManualMarkdownSettings(Settings):
     HOST: str = Field(..., description="SFTP server hostname or IP address")
     PORT: int = Field(22, description="SFTP server port")
     USERNAME: str = Field(..., description="SFTP username")
-    PASSWORD: Optional[SecretStr] = Field(None, description="SFTP password (optional if using key)")
+    PASSWORD: SecretStr = SecretStr("")
     PRIVATE_KEY_PATH: Optional[Path] = Field(None, description="Path to SSH private key file")
-    PRIVATE_KEY_PASSPHRASE: Optional[SecretStr] = Field(None, description="Passphrase for private key")
+    PRIVATE_KEY_PASSPHRASE: SecretStr = SecretStr("")
     REMOTE_PATH: str = Field(..., description="Remote path on SFTP server to search for .md files")
     RECURSIVE: bool = Field(True, description="Whether to search recursively for .md files")
     TIMEOUT: float = Field(30.0, description="Connection timeout in seconds")
@@ -83,13 +83,12 @@ class SFTPManualMarkdownStep(TypedStep[SFTPManualMarkdownSettings, None, list[Ma
         # Establish SFTP connection
         transport = None
         sftp = None
-
         try:
             # Create SSH transport
             transport = paramiko.Transport((self.settings.HOST, self.settings.PORT))
             transport.connect(
                 username=self.settings.USERNAME,
-                password=self.settings.PASSWORD.get_secret_value() if self.settings.PASSWORD else None,
+                password=self.settings.PASSWORD.get_secret_value() if self.settings.PASSWORD.get_secret_value() != "" else None,
                 pkey=self._load_private_key() if self.settings.PRIVATE_KEY_PATH else None,
             )
 
@@ -140,7 +139,11 @@ class SFTPManualMarkdownStep(TypedStep[SFTPManualMarkdownSettings, None, list[Ma
             paramiko.SSHException: If key cannot be loaded
         """
         key_path = self.settings.PRIVATE_KEY_PATH
-        passphrase = self.settings.PRIVATE_KEY_PASSPHRASE.get_secret_value() if self.settings.PRIVATE_KEY_PASSPHRASE else None
+        passphrase = (
+            self.settings.PRIVATE_KEY_PASSPHRASE.get_secret_value()
+            if self.settings.PRIVATE_KEY_PASSPHRASE.get_secret_value() != ""
+            else None
+        )
 
         # Try different key types
         for key_class in (paramiko.RSAKey, paramiko.Ed25519Key, paramiko.ECDSAKey):
