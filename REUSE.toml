@@ -27,6 +27,8 @@ path = [
     "tests/data/**/*",
     "examples/**/*.md",
     "**/requirements.txt",
+    "**/*.pyc",
+    "**/__pycache__/**",
     ]
 precedence = "override"
 SPDX-FileCopyrightText = "NONE"

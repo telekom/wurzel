@@ -14,7 +14,7 @@ repos:
     rev: v1.5.0
     hooks:
       - id: detect-secrets
-        exclude: .html
+        exclude: .html|test-sftp-e2e.yaml
 
   - repo: https://github.com/fsfe/reuse-tool
     rev: v5.0.2
