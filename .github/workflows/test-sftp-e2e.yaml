@@ -177,10 +177,14 @@ jobs:
             exit 1
           fi
 
-          # We expect 4 markdown files to be converted to JSON
-          if [ "$file_count" -lt 4 ]; then
-            echo "WARNING: Expected at least 4 files but found $file_count"
+          # Check if the output file contains more than just "[]"
+          grep -vq '^\[\]$' output/*.json
+          if [ $? -eq 0 ]; then
+            echo "ERROR: Output file contains empty JSON array '[]'"
+            exit 1
           fi
+
+
 
           echo "✓ SUCCESS: SFTP step executed and created $file_count output files!"
 
