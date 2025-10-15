@@ -88,18 +88,36 @@ def test_inspekt(gen_env):
     main.inspekt(ManualMarkdownStep, gen_env)
 
 
-def test_backend_callback_dvc():
-    """Test backend_callback with DvcBackend."""
-    result = main.backend_callback(None, None, "DvcBackend")
+@pytest.mark.parametrize(
+    "backend_str",
+    [
+        "DvcBackend",
+        "dvcbackend",
+        "DVCBACKEND",
+        "DvCbAcKeNd",
+    ],
+)
+def test_backend_callback_dvc(backend_str):
+    """Test backend_callback with DvcBackend (case-insensitive)."""
+    result = main.backend_callback(None, None, backend_str)
     assert result == DvcBackend
 
 
 @pytest.mark.skipif(not HAS_HERA, reason="Hera is not available")
-def test_backend_callback_argo():
-    """Test backend_callback with ArgoBackend when Hera is available."""
+@pytest.mark.parametrize(
+    "backend_str",
+    [
+        "ArgoBackend",
+        "argobackend",
+        "ARGOBACKEND",
+        "ArGoBaCkEnD",
+    ],
+)
+def test_backend_callback_argo(backend_str):
+    """Test backend_callback with ArgoBackend when Hera is available (case-insensitive)."""
     from wurzel.backend.backend_argo import ArgoBackend
 
-    result = main.backend_callback(None, None, "ArgoBackend")
+    result = main.backend_callback(None, None, backend_str)
     assert result == ArgoBackend
 
 
@@ -115,3 +133,51 @@ def test_backend_callback_invalid():
     # ArgoBackend should only be in the message if Hera is available
     if HAS_HERA:
         assert "ArgoBackend" in error_msg
+
+
+@pytest.mark.parametrize(
+    "has_hera_value, expected_backends",
+    [
+        (True, ["DvcBackend", "ArgoBackend"]),
+        (False, ["DvcBackend"]),
+    ],
+)
+def test_get_available_backends(monkeypatch, has_hera_value, expected_backends):
+    """Test get_available_backends returns correct list of backends based on HAS_HERA."""
+    # Mock HAS_HERA value
+    monkeypatch.setattr("wurzel.cli._main.HAS_HERA", has_hera_value, raising=False)
+    import importlib
+
+    importlib.reload(main)
+
+    # Need to patch it in the function's context
+    with monkeypatch.context() as m:
+        m.setattr("wurzel.utils.HAS_HERA", has_hera_value)
+        backends = main.get_available_backends()
+
+    assert isinstance(backends, list)
+    assert backends == expected_backends
+
+
+@pytest.mark.parametrize(
+    "has_hera_value, should_have_argo",
+    [
+        (True, True),
+        (False, False),
+    ],
+)
+def test_generate_list_backends(monkeypatch, capsys, has_hera_value, should_have_argo):
+    """Test generate command with --list-backends flag."""
+    # Mock HAS_HERA value
+    with monkeypatch.context() as m:
+        m.setattr("wurzel.utils.HAS_HERA", has_hera_value)
+        main.generate(pipeline=None, backend="DvcBackend", list_backends=True)
+
+    captured = capsys.readouterr()
+    assert "Available backends:" in captured.out
+    assert "DvcBackend" in captured.out
+
+    if should_have_argo:
+        assert "ArgoBackend" in captured.out
+    else:
+        assert "ArgoBackend" not in captured.out

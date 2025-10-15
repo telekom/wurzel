@@ -350,31 +350,41 @@ def inspekt(
     return cmd_inspect(step, gen_env)
 
 
+def get_available_backends() -> list[str]:
+    """Get list of available backend names.
+
+    Returns:
+        list[str]: List of available backend names (e.g., ['DvcBackend', 'ArgoBackend'])
+    """
+    from wurzel.utils import HAS_HERA  # pylint: disable=import-outside-toplevel
+
+    backends = ["DvcBackend"]
+    if HAS_HERA:
+        backends.append("ArgoBackend")
+    return backends
+
+
 def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str):
-    """Validates input and returns fitting backend. Currently always DVCBackend."""
+    """Validates input and returns fitting backend. Case-insensitive."""
     from wurzel.backend.backend_dvc import DvcBackend  # pylint: disable=import-outside-toplevel
 
-    match backend:
-        case DvcBackend.__name__:
-            return DvcBackend
-        case "ArgoBackend":
-            from wurzel.utils import HAS_HERA  # pylint: disable=import-outside-toplevel
+    # Normalize backend name to handle case-insensitive input
+    backend_normalized = backend.lower()
 
-            if HAS_HERA:
-                from wurzel.backend.backend_argo import ArgoBackend  # pylint: disable=import-outside-toplevel
+    if backend_normalized == "dvcbackend".lower():
+        return DvcBackend
+    if backend_normalized == "argobackend".lower():
+        from wurzel.utils import HAS_HERA  # pylint: disable=import-outside-toplevel
 
-                return ArgoBackend
-            supported_backends = ["DvcBackend"]
-            raise typer.BadParameter(
-                f"Backend {backend} not supported. choose from {', '.join(supported_backends)} or install wurzel[argo]"
-            )
-        case _:
-            from wurzel.utils import HAS_HERA  # pylint: disable=import-outside-toplevel
+        if HAS_HERA:
+            from wurzel.backend.backend_argo import ArgoBackend  # pylint: disable=import-outside-toplevel
 
-            supported_backends = ["DvcBackend"]
-            if HAS_HERA:
-                supported_backends.append("ArgoBackend")
-            raise typer.BadParameter(f"Backend {backend} not supported. choose from {', '.join(supported_backends)}")
+            return ArgoBackend
+        supported_backends = get_available_backends()
+        raise typer.BadParameter(f"Backend {backend} not supported. choose from {', '.join(supported_backends)} or install wurzel[argo]")
+
+    supported_backends = get_available_backends()
+    raise typer.BadParameter(f"Backend {backend} not supported. choose from {', '.join(supported_backends)}")
 
 
 def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str):
@@ -387,29 +397,48 @@ def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_p
     return step
 
 
-@app.command(no_args_is_help=True, help="generate a pipeline")
+@app.command(help="generate a pipeline")
 # pylint: disable-next=dangerous-default-value
 def generate(
     pipeline: Annotated[
-        str,
+        str | None,
         typer.Argument(
             allow_dash=False,
             help="module path to step or pipeline(which is a chained step)",
             autocompletion=complete_step_import,
-            callback=pipeline_callback,
         ),
-    ],
+    ] = None,
     backend: Annotated[
         str,
         typer.Option(
             "-b",
             "--backend",
-            callback=backend_callback,
             help="backend to use",
         ),
     ] = "DvcBackend",
+    list_backends: Annotated[
+        bool,
+        typer.Option(
+            "--list-backends",
+            help="List all available backends and exit",
+        ),
+    ] = False,
 ):
-    """Run."""
+    """Generate pipeline or list available backends."""
+    if list_backends:
+        backends = get_available_backends()
+        print("Available backends:")  # noqa: T201
+        for backend_name in backends:
+            print(f"  - {backend_name}")  # noqa: T201
+        return None
+
+    if pipeline is None:
+        raise typer.BadParameter("pipeline argument is required when not using --list-backends")
+
+    # Process pipeline and backend
+    pipeline_obj = pipeline_callback(None, None, pipeline)
+    backend_obj = backend_callback(None, None, backend)
+
     from wurzel.backend.backend import Backend  # pylint: disable=import-outside-toplevel
     from wurzel.cli.cmd_generate import main as cmd_generate  # pylint: disable=import-outside-toplevel
 
@@ -417,15 +446,15 @@ def generate(
         "generate pipeline",
         extra={
             "parsed_args": {
-                "pipeline": pipeline,
-                "backend": backend,
+                "pipeline": pipeline_obj,
+                "backend": backend_obj,
             }
         },
     )
     return print(  # noqa: T201
         cmd_generate(
-            pipeline,
-            backend=cast(type[Backend], backend),
+            pipeline_obj,
+            backend=cast(type[Backend], backend_obj),
         )
     )
 

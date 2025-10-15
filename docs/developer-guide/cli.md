@@ -68,12 +68,55 @@ wurzel inspect wurzel.steps.manual_markdown.ManualMarkdownStep --gen-env
 
 ### Generating Pipelines
 
-```bash
-# Generate DVC pipeline (default)
-wurzel generate wurzel.steps.manual_markdown.ManualMarkdownStep
+The `wurzel generate` command creates backend-specific pipeline configurations from chained pipelines.
 
-# Generate Argo pipeline
-wurzel generate wurzel.steps.manual_markdown.ManualMarkdownStep --backend ArgoBackend
+**Arguments:**
+- `pipeline` - Module path to a chained pipeline (multiple steps combined with `>>` operator)
+
+**Options:**
+- `-b, --backend` - Backend to use (default: DvcBackend). Case-insensitive.
+- `--list-backends` - List all available backends and exit
+
+```bash
+# List all available backends
+wurzel generate --list-backends
+
+# Generate from a chained pipeline
+wurzel generate examples.pipeline.pipelinedemo.pipeline
+
+# Generate with explicit backend (case-insensitive)
+wurzel generate myproject.pipelines.MyPipeline --backend DvcBackend
+wurzel generate myproject.pipelines.MyPipeline -b dvcbackend
+
+# Generate Argo Workflows pipeline (requires wurzel[argo])
+wurzel generate myproject.pipelines.MyPipeline --backend ArgoBackend
+wurzel generate myproject.pipelines.MyPipeline -b argobackend
+```
+
+**Creating a Chained Pipeline:**
+
+A chained pipeline is created by combining multiple steps with the `>>` operator:
+
+```python
+# In myproject/pipelines.py
+from wurzel.steps.manual_markdown import ManualMarkdownStep
+from wurzel.steps.splitter import SimpleSplitterStep
+from wurzel.utils import WZ
+
+# Wrap steps with WZ
+source = WZ(ManualMarkdownStep)
+splitter = WZ(SimpleSplitterStep)
+
+# Chain steps together
+source >> splitter
+
+# Export the final step as the pipeline
+pipeline = splitter
+```
+
+Then generate the pipeline configuration:
+```bash
+wurzel generate myproject.pipelines.pipeline -b DvcBackend
 ```
 
 ## Step Auto-Discovery
