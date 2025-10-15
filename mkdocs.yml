@@ -66,6 +66,7 @@ theme:
 plugins:
   - search:
       lang: en
+  - autorefs
   - minify:
       minify_html: true
   - mkdocs-typer2:
