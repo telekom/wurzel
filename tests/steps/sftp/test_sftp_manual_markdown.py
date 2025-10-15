@@ -175,7 +175,7 @@ class TestAuthentication:
                 mock_transport.connect.assert_called_once()
                 call_kwargs = mock_transport.connect.call_args.kwargs
                 assert call_kwargs["username"] == "testuser"
-                assert call_kwargs["password"].get_secret_value() == "testpass"
+                assert call_kwargs["password"] == "testpass"  # pragma: allowlist secret
                 assert call_kwargs["pkey"] is None
 
     def test_ssh_key_authentication(self, mock_transport, mock_sftp_client):
@@ -228,10 +228,10 @@ class TestAuthentication:
                     with pytest.raises(StepFailed):
                         step.run(None)
 
-                    # Verify key was loaded with passphrase (SecretStr is passed through)
+                    # Verify key was loaded with passphrase (string value is passed)
                     call_args = mock_rsa.call_args
                     assert Path(call_args[0][0]) == Path("/path/to/key")
-                    assert call_args[1]["password"].get_secret_value() == "keypass"
+                    assert call_args[1]["password"] == "keypass"  # pragma: allowlist secret
 
 
 class TestFileDiscovery:
