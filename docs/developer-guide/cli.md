@@ -21,8 +21,14 @@ wurzel run wurzel.steps.manual_markdown.ManualMarkdownStep --inputs ./data --out
 wurzel inspect wurzel.steps.manual_markdown.ManualMarkdownStep
 
 # Generate a pipeline
-wurzel generate wurzel.steps.manual_markdown.ManualMarkdownStep
+wurzel generate examples.pipeline.pipelinedemo.pipeline
 ```
+
+## Glossary
+
+### PIPELINE { #PIPELINE data-toc-label="PIPELINE" }
+
+Module path to a chained pipeline (multiple steps combined with the `>>` operator). Example: `examples.pipeline.pipelinedemo.pipeline`
 
 ## CLI Commands Reference
 
@@ -133,12 +139,3 @@ The auto-completion discovers:
 
 1. **Built-in Wurzel steps** - Available in the `wurzel.steps.*` namespace
 2. **User-defined steps** - TypedStep classes in your current project
-
-### Performance Optimizations
-
-The CLI auto-completion is optimized for speed:
-
-- ✅ **Fast scanning** - Only scans relevant directories
-- ✅ **Smart exclusions** - Skips `.venv`, `tests`, `docs`, `__pycache__`, etc.
-- ✅ **AST parsing** - Analyzes code without importing modules
-- ✅ **Depth limiting** - Prevents deep directory traversal
