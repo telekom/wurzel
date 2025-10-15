@@ -369,6 +369,8 @@ def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: 
                 f"Backend {backend} not supported. choose from {', '.join(supported_backends)} or install wurzel[argo]"
             )
         case _:
+            from wurzel.utils import HAS_HERA  # pylint: disable=import-outside-toplevel
+
             supported_backends = ["DvcBackend"]
             if HAS_HERA:
                 supported_backends.append("ArgoBackend")
