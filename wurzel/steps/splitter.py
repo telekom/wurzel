@@ -10,7 +10,7 @@ from logging import getLogger
 from pydantic import Field
 
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.exceptions import MarkdownException, SplittException
+from wurzel.exceptions import MarkdownException, SplittException, StepFailed
 from wurzel.step import Settings, TypedStep
 from wurzel.utils import HAS_JOBLIB
 from wurzel.utils.splitters.semantic_splitter import SemanticSplitter
@@ -83,7 +83,12 @@ class SimpleSplitterStep(TypedStep[SplitterSettings, list[MarkdownDataContract],
             results = [self._split_markdown(batch) for batch in batches]
 
         # Flatten the list of lists
-        return [item for sublist in results for item in sublist]
+        results = [item for sublist in results for item in sublist]
+
+        if not results:
+            raise StepFailed("no results from simple splitter step")
+
+        return results
 
     def _split_markdown(self, markdowns: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
         """Creates data rows from a batch of markdown texts by splitting them and counting tokens."""
