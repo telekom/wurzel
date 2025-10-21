@@ -103,6 +103,7 @@ def _format_markdown_docs(
             md=mdformat.text(doc.md).strip(),
             url=doc.url,
             keywords=doc.keywords,
+            metadata=doc.metadata if hasattr(doc, "metadata") else None,
         )
         for doc in docs
     ]
@@ -510,17 +511,26 @@ class SemanticSplitter:
                     md=self._cut_to_tokenlen(child["text"], self.token_limit),
                     url=child["metadata"]["url"],
                     keywords=child["metadata"]["keywords"],
+                    metadata={
+                        "token_len": self.token_limit,
+                        "char_len": len(child["text"]),
+                    },
                 )
             ]
             remaining_snipped = ""
         else:
             if not _is_standalone_a_heading(remaining_snipped):
-                if self._get_token_len(remaining_snipped) >= self.token_limit_min:
+                remaining_snipped_token_len = self._get_token_len(remaining_snipped)
+                if remaining_snipped_token_len >= self.token_limit_min:
                     return_doc.append(
                         MarkdownDataContract(
                             md=remaining_snipped,
                             keywords=doc["metadata"]["keywords"],
                             url=doc["metadata"]["url"],
+                            metadata={
+                                "token_len": remaining_snipped_token_len,
+                                "char_len": len(remaining_snipped),
+                            },
                         )
                     )
                 remaining_snipped = ""
@@ -535,6 +545,10 @@ class SemanticSplitter:
                         md=remaining_snipped + "\n\n" + d.md,
                         keywords=d.keywords,
                         url=d.url,
+                        metadata={
+                            "token_len": self._get_token_len(remaining_snipped + "\n\n" + d.md),
+                            "char_len": len(remaining_snipped + "\n\n" + d.md),
+                        },
                     )
                     for d in temp_docs
                 ]
@@ -552,8 +566,13 @@ class SemanticSplitter:
             md=text,
             url=doc["metadata"]["url"],
             keywords=doc["metadata"]["keywords"],
+            metadata={
+                "token_len": self.token_limit,
+                "char_len": len(text),
+            },
         )
 
+    # pylint: disable-next=too-many-locals
     def _parse_hierarchical(
         self,
         doc: DocumentNode,
@@ -578,13 +597,18 @@ class SemanticSplitter:
                 tokenizer=self.tokenizer,
                 repeat_header_row=self.repeat_table_header_row,
             )
+            chunks_md, chunks_token_len = table_splitter.split(doc["text"])
             return [
                 MarkdownDataContract(
                     md=chunk_md,
                     url=doc["metadata"]["url"],
                     keywords=doc["metadata"]["keywords"],
+                    metadata={
+                        "token_len": chunk_token_len,
+                        "char_len": len(chunk_md),
+                    },
                 )
-                for chunk_md in table_splitter.split(doc["text"])
+                for chunk_md, chunk_token_len in zip(chunks_md, chunks_token_len)
             ]
         if len(doc["children"]) == 0:
             log.warning(
@@ -633,6 +657,10 @@ class SemanticSplitter:
                     md=self._cut_to_tokenlen(remaining_snipped, self.token_limit),
                     url=doc["metadata"]["url"],
                     keywords=doc["metadata"]["keywords"],
+                    metadata={
+                        "token_len": self.token_limit,
+                        "char_len": len(remaining_snipped),
+                    },
                 )
             ]
         return return_doc

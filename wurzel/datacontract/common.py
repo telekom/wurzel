@@ -52,6 +52,7 @@ class MarkdownDataContract(PydanticModel):
     md: str
     keywords: str
     url: str  # Url of pydantic is buggy in serialization
+    metadata: dict[str, Any] | None = None
 
     @classmethod
     @pydantic.validate_call
@@ -61,6 +62,7 @@ class MarkdownDataContract(PydanticModel):
             md=func(doc["text"]),
             url=doc["metadata"]["url"],
             keywords=doc["metadata"]["keywords"],
+            metadata=doc["metadata"].get("keywords", None),
         )
 
     @classmethod
@@ -110,4 +112,9 @@ class MarkdownDataContract(PydanticModel):
             # Extract metadata fields or use default value
             url=metadata.get("url", url_prefix + str(path.absolute())),
             keywords=metadata.get("keywords", path.name.split(".")[0]),
+            metadata=metadata.get("metadata", None),
         )
+
+    def __hash__(self):
+        # Use frozenset for hashable dict representation, works even if attributes are None.
+        return hash(frozenset(self.model_dump().items()))

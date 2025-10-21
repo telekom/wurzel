@@ -137,3 +137,15 @@ def test_inheritance(env, default_embedding_data):
         with BaseStepExecutor() as ex:
             ex(InheritedStep, [inp], out)
     assert sf.value.message.endswith(EXPECTED_EXCEPTION)
+
+
+def test_embedding_step_log_statistics(mock_embedding, default_embedding_data, env, caplog):
+    """Tests the logging of descriptive statistics in the `EmbeddingStep` with a mock input file."""
+    env.set("EMBEDDINGSTEP__API", "https://example-embedding.com/embed")
+    EmbeddingStep._select_embedding = mock_embedding
+    input_folder, output_folder = default_embedding_data
+    BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingStep, [input_folder], output_folder)
+
+    # check output log
+    assert "Distribution of char length: count=11; mean=589.0;" in caplog.text
+    assert "Distribution of token length: count=11; mean=256.0;" in caplog.text
