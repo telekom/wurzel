@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import hashlib
 import logging
 import re
 import warnings
@@ -115,6 +116,19 @@ class MarkdownDataContract(PydanticModel):
             metadata=metadata.get("metadata", None),
         )
 
-    def __hash__(self):
-        # Use frozenset for hashable dict representation, works even if attributes are None.
-        return hash(frozenset(self.model_dump().items()))
+    # def __hash__(self):
+    #     # Use frozenset for hashable dict representation, works even if attributes are None.
+    #     return hash(frozenset(self.model_dump().items()))
+
+    def __hash__(self) -> int:
+        # pylint: disable-next=not-an-iterable
+        return int(
+            hashlib.sha256(
+                bytes(
+                    "".join([getattr(self, name) or "" for name in sorted(type(self).model_fields)]),
+                    encoding="utf-8",
+                ),
+                usedforsecurity=False,
+            ).hexdigest(),
+            16,
+        )
