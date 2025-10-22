@@ -697,9 +697,45 @@ class SemanticSplitter:
             # The higher heading the lower its level
             doc_has_lower_heading = docwide_highest_level < highest_level
             new_doc = text.strip() if not doc_has_lower_heading else (new_header + "\n\n" + doc.md).strip()
+
+            # reset token len if markdown was changed
+            if doc.md != new_doc and doc.metadata is not None:
+                if "token_len" in doc.metadata:
+                    del doc.metadata["token_len"]
+
+                if "char_len" in doc.metadata:
+                    del doc.metadata["char_len"]
+
             doc.md = new_doc
 
         return docs
+
+    def _set_metadata(self, doc_chunks: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
+        """Set metadata fields for each document chunk.
+
+        - This might re-tokenizes the text due to _adopt_splitted_list_to_use_highest_prev_header().
+        - Metadata fields: chunk_index, total_chunks, token_len, char_len.
+        """
+        for chunk_idx, doc in enumerate(doc_chunks):
+            metadata = doc.metadata if doc.metadata is not None else {}
+
+            # extend metadata (if needed)
+            if "char_len" not in doc.metadata:
+                doc.metadata["char_len"] = len(doc.md)
+
+            if "token_len" not in doc.metadata:
+                doc.metadata["token_len"] = self._get_token_len(doc.md)
+
+            metadata.update(
+                {
+                    "chunk_index": chunk_idx,
+                    "chunks_count": len(doc_chunks),
+                }
+            )
+
+            doc_chunks[chunk_idx].metadata = metadata
+
+        return doc_chunks
 
     def split_markdown_document(self, doc: MarkdownDataContract) -> list[MarkdownDataContract]:
         """Split a Markdown Document into Snippets."""
@@ -708,4 +744,5 @@ class SemanticSplitter:
         doc_snippets: list[MarkdownDataContract] = self._parse_hierarchical(doc_hierarchy)
         improved_snippets: list[MarkdownDataContract] = self._adopt_splitted_list_to_use_highest_prev_header(doc_snippets)
         formatted_snippets: list[MarkdownDataContract] = _format_markdown_docs(improved_snippets)
-        return formatted_snippets
+        snippets_with_metadata: list[MarkdownDataContract] = self._set_metadata(formatted_snippets)
+        return snippets_with_metadata

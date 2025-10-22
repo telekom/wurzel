@@ -7,6 +7,7 @@
 # Standard library imports
 import os
 import re
+from collections import defaultdict
 from io import StringIO
 from logging import getLogger
 from typing import Optional, TypedDict
@@ -88,16 +89,17 @@ class EmbeddingStep(
         splitted_md_rows = self._split_markdown(inpt)
         rows = []
         failed = 0
-        char_lens = []
-        token_lens = []
+        stats = defaultdict(list)
+
         for row in tqdm(splitted_md_rows, desc="Calculate Embeddings"):
             try:
                 rows.append(self._get_embedding(row))
 
                 # collect statistics
                 if row.metadata is not None:
-                    char_lens.append(row.metadata.get("char_len", 0))
-                    token_lens.append(row.metadata.get("token_len", 0))
+                    stats["char length"].append(row.metadata.get("char_len", 0))
+                    stats["token length"].append(row.metadata.get("token_len", 0))
+                    stats["chunks count"].append(row.metadata.get("chunks_count", 0))
 
             except EmbeddingAPIException as err:
                 log.warning(
@@ -111,8 +113,8 @@ class EmbeddingStep(
             raise StepFailed(f"all {len(splitted_md_rows)} embeddings got skipped")
 
         # log statistics
-        self.log_statistics(series=np.array(char_lens), name="char length")
-        self.log_statistics(series=np.array(token_lens), name="token length")
+        for k, v in stats.items():
+            self.log_statistics(series=np.array(v), name=k)
 
         return DataFrame[EmbeddingResult](DataFrame[EmbeddingResult](rows))
 

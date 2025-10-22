@@ -89,13 +89,13 @@ class SimpleSplitterStep(TypedStep[SplitterSettings, list[MarkdownDataContract],
         """Creates data rows from a batch of markdown texts by splitting them and counting tokens."""
         rows = []
         skipped = 0
-        for s in markdowns:
+        for md_data_contract in markdowns:
             try:
-                rows.extend(self.splitter.split_markdown_document(s))
+                rows.extend(self.splitter.split_markdown_document(md_data_contract))
             except MarkdownException as err:
                 log.warning(
                     "skipped dokument ",
-                    extra={"reason": err.__class__.__name__, "doc": s},
+                    extra={"reason": err.__class__.__name__, "doc": md_data_contract},
                 )
                 skipped += 1
         if skipped == len(markdowns):

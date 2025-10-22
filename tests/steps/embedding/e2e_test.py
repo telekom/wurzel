@@ -147,5 +147,6 @@ def test_embedding_step_log_statistics(mock_embedding, default_embedding_data, e
     BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingStep, [input_folder], output_folder)
 
     # check output log
-    assert "Distribution of char length: count=11; mean=589.0;" in caplog.text
-    assert "Distribution of token length: count=11; mean=256.0;" in caplog.text
+    assert "Distribution of char length: count=11; mean=609.9" in caplog.text, "Invalid log output for char length"
+    assert "Distribution of token length: count=11; mean=257.9" in caplog.text, "Invalid log output for token length"
+    assert "Distribution of chunks count: count=11; mean=3.1" in caplog.text, "Invalid log output for chunks count"
