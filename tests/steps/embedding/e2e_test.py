@@ -146,7 +146,40 @@ def test_embedding_step_log_statistics(mock_embedding, default_embedding_data, e
     input_folder, output_folder = default_embedding_data
     BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingStep, [input_folder], output_folder)
 
-    # check output log
-    assert "Distribution of char length: count=11; mean=609." in caplog.text, "Invalid log output for char length"
-    assert "Distribution of token length: count=11; mean=257." in caplog.text, "Invalid log output for token length"
-    assert "Distribution of chunks count: count=11; mean=3." in caplog.text, "Invalid log output for chunks count"
+    # check if output log exists
+    assert "Distribution of char length" in caplog.text, "Missing log output for char length"
+    assert "Distribution of token length" in caplog.text, "Missing log output for token length"
+    assert "Distribution of chunks count" in caplog.text, "Missing log output for chunks count"
+
+    # check extras
+    char_length_record = None
+    token_length_record = None
+    chunks_count_record = None
+
+    for record in caplog.records:
+        if "Distribution of char length" in record.message:
+            char_length_record = record
+
+        if "Distribution of token length" in record.message:
+            token_length_record = record
+
+        if "Distribution of chunks count" in record.message:
+            chunks_count_record = record
+
+    expected_char_length_count = 11
+    expected_char_length_mean = pytest.approx(609.9, abs=1e-2)
+    expected_token_length_mean = pytest.approx(257.9, abs=1e-1)
+    expected_chunks_count_mean = pytest.approx(3.1, abs=1e-1)
+
+    assert char_length_record.count == expected_char_length_count, (
+        f"Invalid char length count: expected {expected_char_length_count}, got {char_length_record.count}"
+    )
+    assert char_length_record.mean == expected_char_length_mean, (
+        f"Invalid char length mean: expected {expected_char_length_mean}, got {char_length_record.mean}"
+    )
+    assert token_length_record.mean == expected_token_length_mean, (
+        f"Invalid token length mean: expected {expected_token_length_mean}, got {token_length_record.mean}"
+    )
+    assert chunks_count_record.mean == expected_chunks_count_mean, (
+        f"Invalid chunks count mean: expected {expected_chunks_count_mean}, got {chunks_count_record.mean}"
+    )
