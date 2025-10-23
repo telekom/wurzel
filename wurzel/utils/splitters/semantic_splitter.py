@@ -20,6 +20,9 @@ from wurzel.utils.splitters.sentence_splitter import SentenceSplitter
 from wurzel.utils.to_markdown.html2md import MD_RENDER_LOCK
 from wurzel.utils.tokenizers import Tokenizer
 
+URL_BOUNDARY_LOOKAROUND = 256
+URL_SPLIT_PATTERN = re.compile(r"https?://[^\s<>\]\)]+")
+
 LEVEL_MAPPING = {
     block_token.Heading: 0,  # actually 1-6
     block_token.List: 7,
@@ -215,13 +218,55 @@ class SemanticSplitter:
         output_tokens = input_tokens[:token_len]  # ensure token length
         output_text = self.tokenizer.decode(output_tokens)  # convert back to text
 
-        if return_discarded_text:
-            discarded_tokens = input_tokens[token_len:]  # beyond token length
-            discarded_text = self.tokenizer.decode(discarded_tokens)  # convert back to text
+        discarded_tokens = input_tokens[token_len:]  # beyond token length
+        discarded_text = self.tokenizer.decode(discarded_tokens) if discarded_tokens else ""
 
+        output_text, discarded_text = self._merge_split_urls(output_text, discarded_text, token_len)
+
+        if return_discarded_text:
             return output_text, discarded_text
 
         return output_text
+
+    def _merge_split_urls(self, chunk: str, remainder: str, token_len: int) -> tuple[str, str]:
+        """Extend chunk text to ensure URLs are not split between chunk and remainder."""
+        if not chunk or not remainder:
+            return chunk, remainder
+
+        while True:
+            look_back = chunk[-URL_BOUNDARY_LOOKAROUND:]
+            look_ahead = remainder[:URL_BOUNDARY_LOOKAROUND]
+            boundary = len(look_back)
+            if boundary == 0 or not look_ahead:
+                break
+
+            combined = look_back + look_ahead
+            url_found = False
+            for match in URL_SPLIT_PATTERN.finditer(combined):
+                start, end = match.span()
+                if start < boundary < end:
+                    missing_part = combined[boundary:end]
+                    if not missing_part:
+                        continue
+                    chunk += missing_part
+                    remainder = remainder[len(missing_part) :]
+                    url_found = True
+                    break
+            if not url_found:
+                break
+
+        chunk_token_len = self._get_token_len(chunk)
+        if chunk_token_len > token_len + self.token_limit_buffer:
+            log.warning(
+                "URL completion exceeded token limit buffer",
+                extra={
+                    "requested_token_len": token_len,
+                    "actual_token_len": chunk_token_len,
+                    "token_limit_buffer": self.token_limit_buffer,
+                },
+            )
+
+        return chunk, remainder
 
     def _is_short(self, text: str) -> bool:
         """Return True when the text is below the lower token threshold."""
