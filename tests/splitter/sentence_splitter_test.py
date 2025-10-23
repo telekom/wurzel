@@ -1,22 +1,20 @@
 # SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
 #
 # SPDX-License-Identifier: Apache-2.0
-import importlib.util
 
 import pytest
 
+from tests.splitter import spacy_default_model_name, spacy_missing, tokenizer_missing, wtpsplit_missing
+from tests.splitter.sentence_splitter_test_cases import (
+    BASIC_TEST_CASES,
+    DE_TEST_CASES,
+    EL_TEST_CASES,
+    HR_TEST_CASES,
+    PL_TEST_CASES,
+    REGEX_TEST_CASES,
+)
 from wurzel.steps.splitter import SimpleSplitterStep
-from wurzel.utils import HAS_SPACY, HAS_TIKTOKEN, HAS_TRANSFORMERS
 from wurzel.utils.splitters.sentence_splitter import RegexSentenceSplitter, SentenceSplitter, SpacySentenceSplitter
-
-from .sentence_splitter_test_cases import BASIC_TEST_CASES, DE_TEST_CASES, EL_TEST_CASES, HR_TEST_CASES, PL_TEST_CASES, REGEX_TEST_CASES
-
-# Helpers for skip conditions
-spacy_missing = not HAS_SPACY
-tokenizer_missing = not HAS_TIKTOKEN and not HAS_TRANSFORMERS
-spacy_default_model_name = "de_core_news_sm"
-spacy_multilingual_model_name = "xx_ent_wiki_sm"
-wtpsplit_missing = importlib.util.find_spec("wtpsplit") is None
 
 
 @pytest.fixture(scope="function")
