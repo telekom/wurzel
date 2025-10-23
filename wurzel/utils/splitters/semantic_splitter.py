@@ -54,6 +54,7 @@ class DocumentNode(TypedDict):
 
 
 def _is_all_children_same_level(children: list[DocumentNode]) -> bool:
+    """Check whether every child node uses the same `highest_level` value."""
     nbr_different_level = len({c["highest_level"] for c in children})
     return nbr_different_level == 1
 
@@ -61,6 +62,7 @@ def _is_all_children_same_level(children: list[DocumentNode]) -> bool:
 def _get_children_sorted_by_level(
     children: list[DocumentNode],
 ) -> list[tuple[int, int]]:
+    """Return pairs of (index, level) sorted by ascending `highest_level`."""
     return sorted(
         [(i, c["highest_level"]) for i, c in enumerate(children)],
         key=lambda x: x[1],
@@ -69,11 +71,13 @@ def _get_children_sorted_by_level(
 
 
 def _get_highest_index_of_children(children: list[DocumentNode]) -> int:
+    """Get the index of the child with the smallest `highest_level` value."""
     sorted_by_level = _get_children_sorted_by_level(children)
     return sorted_by_level[0][0]
 
 
 def _get_highest_level_of_children(children: list[DocumentNode]) -> int:
+    """Get the lowest `highest_level` value among the provided children."""
     sorted_by_level = _get_children_sorted_by_level(children)
     return sorted_by_level[0][1]
 
@@ -88,6 +92,7 @@ def _get_heading_text(token: block_token.Heading):
 
 
 def _is_standalone_a_heading(text):
+    """Check whether the provided Markdown string contains a single heading."""
     childs = MisDocument(text).children
     if len(childs) != 1:
         return False
@@ -141,7 +146,7 @@ class WurzelMarkdownRenderer(markdown_renderer.MarkdownRenderer):
 
 
 class SemanticSplitter:
-    """Splitter implementation."""
+    """Splitter implementation for splitting Markdown documents into chunks of a given maximum token count."""
 
     sentence_splitter: SentenceSplitter
     token_limit: int
@@ -219,12 +224,15 @@ class SemanticSplitter:
         return output_text
 
     def _is_short(self, text: str) -> bool:
+        """Return True when the text is below the lower token threshold."""
         return self._get_token_len(text) <= self.token_limit - self.token_limit_buffer
 
     def _is_table(self, doc: DocumentNode) -> bool:
+        """Check if the document node represents a Markdown table."""
         return doc["highest_level"] == LEVEL_MAPPING[block_token.Table]
 
     def _is_within_targetlen_w_buffer(self, text: str) -> bool:
+        """Check whether text length lies within the target limit including buffer."""
         length = self._get_token_len(text)
         return self.token_limit + self.token_limit_buffer >= length >= self.token_limit - self.token_limit_buffer
 
@@ -578,6 +586,15 @@ class SemanticSplitter:
         doc: DocumentNode,
         recursive_depth: int = 1,
     ) -> list[MarkdownDataContract]:
+        """Recursively split the hierarchy until every node fits within token limits.
+
+        Args:
+            doc (DocumentNode): Current document node to process.
+            recursive_depth (int): Tracks recursion depth to avoid infinite loops.
+
+        Returns:
+            list[MarkdownDataContract]: Markdown chunks produced from the node.
+        """
         if self._get_token_len(doc["text"]) <= self.token_limit_min:
             # Skipping document since it is below token minium
             log.warning("document to short", extra={"token_limit_min": self.token_limit_min, **doc})
@@ -668,10 +685,16 @@ class SemanticSplitter:
     def _adopt_splitted_list_to_use_highest_prev_header(
         self,
         docs: list[MarkdownDataContract],
+        skip_if_above_token_limit: bool = False,
     ) -> list[MarkdownDataContract]:
-        """Function to improve the semantic meaning of the Markdown document by reattaching a parent heading.
+        """Improve the semantic meaning of the Markdown document chunks by reattaching a parent heading.
 
-        Does not yet respect the token limit, however headings usually have little impact
+        Args:
+            docs (list[MarkdownDataContract]): Document chunks.
+            skip_if_above_token_limit (bool): If false, token limit is not respected, however headings usually have little impact.
+
+        Returns:
+            list[MarkdownDataContract]: Markdown chunks with reattached parent headings.
         """
         highest_header_until_now = {i + 1: "" for i in range(6)}
         for doc in docs:
@@ -693,20 +716,28 @@ class SemanticSplitter:
             document_is_just_single_header = text.strip().startswith("#") and "\n" not in text.strip()
             if document_is_just_single_header:
                 continue
-            # TODOo check token limit or limit header lenght
+
             # The higher heading the lower its level
             doc_has_lower_heading = docwide_highest_level < highest_level
-            new_doc = text.strip() if not doc_has_lower_heading else (new_header + "\n\n" + doc.md).strip()
+            new_md = text.strip() if not doc_has_lower_heading else (new_header + "\n\n" + doc.md).strip()
 
-            # reset token len if markdown was changed
-            if doc.md != new_doc and doc.metadata is not None:
+            # Respect token limit
+            if skip_if_above_token_limit and self._get_token_len(new_md) > self.token_limit:
+                log.debug(
+                    "Skip reattaching parent heading due to token limit",
+                    extra={"token_limit": self.token_limit, "new_md": new_md, "old_md": doc.md},
+                )
+                continue
+
+            # Reset token len if markdown was changed
+            if doc.md != new_md and doc.metadata is not None:
                 if "token_len" in doc.metadata:
                     del doc.metadata["token_len"]
 
                 if "char_len" in doc.metadata:
                     del doc.metadata["char_len"]
 
-            doc.md = new_doc
+            doc.md = new_md
 
         return docs
 
