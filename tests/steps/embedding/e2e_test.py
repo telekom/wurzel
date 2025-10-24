@@ -142,6 +142,7 @@ def test_inheritance(env, default_embedding_data):
 def test_embedding_step_log_statistics(mock_embedding, default_embedding_data, env, caplog):
     """Tests the logging of descriptive statistics in the `EmbeddingStep` with a mock input file."""
     env.set("EMBEDDINGSTEP__API", "https://example-embedding.com/embed")
+    env.set("EMBEDDINGSTEP__NUM_THREADS", "1")  # Ensure deterministic behavior with single thread
     EmbeddingStep._select_embedding = mock_embedding
     input_folder, output_folder = default_embedding_data
     BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingStep, [input_folder], output_folder)
