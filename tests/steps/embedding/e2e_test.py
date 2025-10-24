@@ -137,3 +137,52 @@ def test_inheritance(env, default_embedding_data):
         with BaseStepExecutor() as ex:
             ex(InheritedStep, [inp], out)
     assert sf.value.message.endswith(EXPECTED_EXCEPTION)
+
+
+def test_embedding_step_log_statistics(mock_embedding, default_embedding_data, env, caplog):
+    """Tests the logging of descriptive statistics in the `EmbeddingStep` with a mock input file."""
+    env.set("EMBEDDINGSTEP__API", "https://example-embedding.com/embed")
+    env.set("EMBEDDINGSTEP__NUM_THREADS", "1")  # Ensure deterministic behavior with single thread
+    EmbeddingStep._select_embedding = mock_embedding
+    input_folder, output_folder = default_embedding_data
+    BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingStep, [input_folder], output_folder)
+
+    # check if output log exists
+    assert "Distribution of char length" in caplog.text, "Missing log output for char length"
+    assert "Distribution of token length" in caplog.text, "Missing log output for token length"
+    assert "Distribution of chunks count" in caplog.text, "Missing log output for chunks count"
+
+    # check extras
+    char_length_record = None
+    token_length_record = None
+    chunks_count_record = None
+
+    for record in caplog.records:
+        if "Distribution of char length" in record.message:
+            char_length_record = record
+
+        if "Distribution of token length" in record.message:
+            token_length_record = record
+
+        if "Distribution of chunks count" in record.message:
+            chunks_count_record = record
+
+    expected_char_length_count = 11
+
+    # TODO Exact value seems to be not reproducible
+    expected_char_length_mean = pytest.approx(609.5, abs=1.0)
+    expected_token_length_mean = pytest.approx(257.6, abs=1.0)
+    expected_chunks_count_mean = pytest.approx(3, abs=1.0)
+
+    assert char_length_record.count == expected_char_length_count, (
+        f"Invalid char length count: expected {expected_char_length_count}, got {char_length_record.count}"
+    )
+    assert char_length_record.mean == expected_char_length_mean, (
+        f"Invalid char length mean: expected {expected_char_length_mean}, got {char_length_record.mean}"
+    )
+    assert token_length_record.mean == expected_token_length_mean, (
+        f"Invalid token length mean: expected {expected_token_length_mean}, got {token_length_record.mean}"
+    )
+    assert chunks_count_record.mean == expected_chunks_count_mean, (
+        f"Invalid chunks count mean: expected {expected_chunks_count_mean}, got {chunks_count_record.mean}"
+    )
