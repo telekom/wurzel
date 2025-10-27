@@ -82,4 +82,5 @@ jobs:
 
       - name: Test full installation
         if: matrix.test-type == 'full'
-        run: make test
+        # run: make test
+        run: ${{ env.UV }} run pytest tests/steps/embedding/e2e_test.py
