@@ -3,16 +3,17 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard library imports
+import logging
 import shutil
 from pathlib import Path
 
 import numpy as np
 import pytest
 
-from wurzel.utils import HAS_LANGCHAIN_CORE, HAS_REQUESTS
+from wurzel.utils import HAS_LANGCHAIN_CORE, HAS_REQUESTS, HAS_SPACY, HAS_TIKTOKEN
 
-if not HAS_LANGCHAIN_CORE or not HAS_REQUESTS:
-    pytest.skip("Embedding dependencies (langchain-core, requests) are not available", allow_module_level=True)
+if not HAS_LANGCHAIN_CORE or not HAS_REQUESTS or not HAS_SPACY or not HAS_TIKTOKEN:
+    pytest.skip("Embedding dependencies (langchain-core, requests, spacy, tiktoken) are not available", allow_module_level=True)
 
 # from wurzel.exceptions import StepFailed
 from wurzel.step_executor import BaseStepExecutor
@@ -88,6 +89,10 @@ def test_embedding_step(mock_embedding, default_embedding_data, env):
 
     """
     env.set("EMBEDDINGSTEP__API", "https://example-embedding.com/embed")
+    env.set("EMBEDDINGSTEP__TOKEN_COUNT_MIN", "64")
+    env.set("EMBEDDINGSTEP__TOKEN_COUNT_MAX", "256")
+    env.set("EMBEDDINGSTEP__TOKEN_COUNT_BUFFER", "32")
+
     EmbeddingStep._select_embedding = mock_embedding
     input_folder, output_folder = default_embedding_data
     step_res = BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingStep, [input_folder], output_folder)
@@ -149,9 +154,15 @@ def test_embedding_step_log_statistics(mock_embedding, default_embedding_data, e
     """Tests the logging of descriptive statistics in the `EmbeddingStep` with a mock input file."""
     env.set("EMBEDDINGSTEP__API", "https://example-embedding.com/embed")
     env.set("EMBEDDINGSTEP__NUM_THREADS", "1")  # Ensure deterministic behavior with single thread
+    env.set("EMBEDDINGSTEP__TOKEN_COUNT_MIN", "64")
+    env.set("EMBEDDINGSTEP__TOKEN_COUNT_MAX", "256")
+    env.set("EMBEDDINGSTEP__TOKEN_COUNT_BUFFER", "32")
+
     EmbeddingStep._select_embedding = mock_embedding
     input_folder, output_folder = default_embedding_data
-    BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingStep, [input_folder], output_folder)
+
+    with caplog.at_level(logging.INFO):
+        BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingStep, [input_folder], output_folder)
 
     # check if output log exists
     assert "Distribution of char length" in caplog.text, "Missing log output for char length"
