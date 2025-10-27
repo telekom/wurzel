@@ -14,25 +14,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest]
-        python-version: [3.12]
-        test-type: [full]
-        # os: [ubuntu-latest]
-        # python-version: [3.11, 3.12]
-        # test-type: [minimal, full]
-        # include:
-        #   - os: windows-latest
-        #     python-version: "3.11"
-        #     test-type: minimal
-        #   - os: windows-latest
-        #     python-version: "3.11"
-        #     test-type: full
-        #   - os: macos-latest
-        #     python-version: "3.11"
-        #     test-type: minimal
-        #   - os: macos-latest
-        #     python-version: "3.11"
-        #     test-type: full
+        os: [ubuntu-latest]
+        python-version: [3.11, 3.12]
+        test-type: [minimal, full]
+        include:
+          - os: windows-latest
+            python-version: "3.11"
+            test-type: minimal
+          - os: windows-latest
+            python-version: "3.11"
+            test-type: full
+          - os: macos-latest
+            python-version: "3.11"
+            test-type: minimal
+          - os: macos-latest
+            python-version: "3.11"
+            test-type: full
 
     steps:
       - uses: actions/checkout@v4
@@ -82,5 +79,4 @@ jobs:
 
       - name: Test full installation
         if: matrix.test-type == 'full'
-        # run: make test
-        run: ${{ env.UV }} run pytest tests/steps/embedding/e2e_test.py tests/steps/simple_splitter/e2e_simple_splitter_test.py
+        run: make test
