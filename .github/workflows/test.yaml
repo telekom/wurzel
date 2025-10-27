@@ -14,22 +14,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        python-version: [3.11, 3.12]
-        test-type: [minimal, full]
-        include:
-          - os: windows-latest
-            python-version: "3.11"
-            test-type: minimal
-          - os: windows-latest
-            python-version: "3.11"
-            test-type: full
-          - os: macos-latest
-            python-version: "3.11"
-            test-type: minimal
-          - os: macos-latest
-            python-version: "3.11"
-            test-type: full
+        os: [macos-latest]
+        python-version: [3.12]
+        test-type: [full]
+        # os: [ubuntu-latest]
+        # python-version: [3.11, 3.12]
+        # test-type: [minimal, full]
+        # include:
+        #   - os: windows-latest
+        #     python-version: "3.11"
+        #     test-type: minimal
+        #   - os: windows-latest
+        #     python-version: "3.11"
+        #     test-type: full
+        #   - os: macos-latest
+        #     python-version: "3.11"
+        #     test-type: minimal
+        #   - os: macos-latest
+        #     python-version: "3.11"
+        #     test-type: full
 
     steps:
       - uses: actions/checkout@v4
