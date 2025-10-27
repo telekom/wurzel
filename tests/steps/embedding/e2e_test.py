@@ -89,9 +89,14 @@ def test_embedding_step(mock_embedding, default_embedding_data, env):
     env.set("EMBEDDINGSTEP__API", "https://example-embedding.com/embed")
     EmbeddingStep._select_embedding = mock_embedding
     input_folder, output_folder = default_embedding_data
-    BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingStep, [input_folder], output_folder)
+    step_res = BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingStep, [input_folder], output_folder)
     assert output_folder.is_dir()
     assert len(list(output_folder.glob("*"))) > 0
+
+    step_output, step_report = step_res[0]
+
+    assert len(step_output) == 11, "Step outputs have wrong count."
+    assert step_report.results == 11, "Step report has wrong count of outputs."
 
 
 def test_mutlivector_embedding_step(mock_embedding, tmp_path, env):
