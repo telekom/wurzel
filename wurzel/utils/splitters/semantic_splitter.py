@@ -751,11 +751,11 @@ class SemanticSplitter:
             metadata = doc.metadata if doc.metadata is not None else {}
 
             # extend metadata (if needed)
-            if "char_len" not in doc.metadata:
-                doc.metadata["char_len"] = len(doc.md)
+            if "char_len" not in metadata:
+                metadata["char_len"] = len(doc.md)
 
-            if "token_len" not in doc.metadata:
-                doc.metadata["token_len"] = self._get_token_len(doc.md)
+            if "token_len" not in metadata:
+                metadata["token_len"] = self._get_token_len(doc.md)
 
             metadata.update(
                 {
