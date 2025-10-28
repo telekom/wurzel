@@ -76,7 +76,7 @@ class MarkdownDataContract(PydanticModel):
             md=func(doc["text"]),
             url=doc["metadata"]["url"],
             keywords=doc["metadata"]["keywords"],
-            metadata=doc["metadata"].get("keywords", None),
+            metadata=doc["metadata"].get("metadata", None),
         )
 
     @classmethod
