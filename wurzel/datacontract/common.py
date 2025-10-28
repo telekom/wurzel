@@ -135,7 +135,7 @@ class MarkdownDataContract(PydanticModel):
         return int(
             hashlib.sha256(
                 bytes(
-                    "".join([getattr(self, name) or "" for name in sorted(type(self).model_fields)]),
+                    "".join([str(getattr(self, name) or "") for name in sorted(type(self).model_fields)]),
                     encoding="utf-8",
                 ),
                 usedforsecurity=False,
