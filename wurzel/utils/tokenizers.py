@@ -138,4 +138,4 @@ class HFTokenizer(Tokenizer):
 
     def decode(self, tokens: list[int]) -> str:
         """Convert token IDs back into text."""
-        return self._tok.decode(tokens)
+        return self._tok.decode(tokens, skip_special_tokens=True)
