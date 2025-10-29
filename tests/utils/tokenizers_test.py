@@ -44,7 +44,7 @@ def test_from_name_routes_to_hf_for_non_openai_name():
     text = "Hello world"
     ids = tok.encode(text)
     decoded = tok.decode(ids)
-    assert decoded == "<s> Hello world</s>"
+    assert decoded == "Hello world"
 
 
 @pytest.mark.skipif(transformers_missing, reason="transformers not installed")
