@@ -50,6 +50,9 @@ def test_manual_step_md_parsing(tmp_path, md, url, bread):
     else:
         assert s.md == "Text"
 
+    # check metadata field
+    assert s.metadata is None
+
 
 class MDCChild(MarkdownDataContract):
     pass
@@ -198,3 +201,26 @@ def test_topics_deprecation_warning(tmp_path):
         s = MarkdownDataContract.from_file(f, url_prefix="SPACE/")
 
         assert s.md.startswith("# Some title")
+
+
+def test_metadata_field_metadata(tmp_path):
+    md = """---
+keywords: "k1"
+metadata:
+ foo: bar
+ bar: 123
+---
+# Title
+
+Text.
+ """
+    f = tmp_path / "file.md"
+    f.write_text(md)
+    s = MarkdownDataContract.from_file(f, url_prefix="SPACE/")
+
+    assert "# Title" in s.md
+    assert s.metadata is not None
+    assert s.metadata["foo"] == "bar"
+    assert s.metadata["bar"] == 123
+    assert s.url.startswith("SPACE/")
+    assert s.url.endswith("file.md")
