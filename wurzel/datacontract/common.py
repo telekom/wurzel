@@ -2,6 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import hashlib
 import logging
 import re
 import warnings
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class MarkdownDataContract(PydanticModel):
-    """A data contract of the input of the EmbeddingStep representing a document in Markdown format.
+    """A data contract of the input/output of the various pipeline steps representing a document in Markdown format.
 
     The document consists have the Markdown body (document content) and additional metadata (keywords, url).
     The metadata is optional.
@@ -47,11 +48,25 @@ class MarkdownDataContract(PydanticModel):
     Another text.
     ```
 
+    Example 3 (with extra metadata fields)
+    ```md
+    ---
+    keywords: "bread,butter"
+    url: "some/file/path.md"
+    metadata:
+        token_len: 123
+        char_len: 550
+    ---
+    # Some title
+
+    A short text.
+    ```
     """
 
     md: str
     keywords: str
     url: str  # Url of pydantic is buggy in serialization
+    metadata: dict[str, Any] | None = None
 
     @classmethod
     @pydantic.validate_call
@@ -61,6 +76,7 @@ class MarkdownDataContract(PydanticModel):
             md=func(doc["text"]),
             url=doc["metadata"]["url"],
             keywords=doc["metadata"]["keywords"],
+            metadata=doc["metadata"].get("metadata", None),
         )
 
     @classmethod
@@ -110,4 +126,19 @@ class MarkdownDataContract(PydanticModel):
             # Extract metadata fields or use default value
             url=metadata.get("url", url_prefix + str(path.absolute())),
             keywords=metadata.get("keywords", path.name.split(".")[0]),
+            metadata=metadata.get("metadata", None),
+        )
+
+    def __hash__(self) -> int:
+        """Compute a hash based on all not-none field values (like super() but excluding none values)."""
+        # pylint: disable-next=not-an-iterable
+        return int(
+            hashlib.sha256(
+                bytes(
+                    "".join([str(getattr(self, name) or "") for name in sorted(type(self).model_fields)]),
+                    encoding="utf-8",
+                ),
+                usedforsecurity=False,
+            ).hexdigest(),
+            16,
         )

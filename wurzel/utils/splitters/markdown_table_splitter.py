@@ -77,10 +77,12 @@ class MarkdownTableSplitterUtil:
 
     """
 
+    # pylint: disable=too-many-instance-attributes
     token_limit: int
     tokenizer: Tokenizer
     repeat_header_row: bool = True
     chunks: list[str] = field(default_factory=lambda: [])
+    chunks_token_len: list[int] = field(default_factory=lambda: [])
     buf: list[str] = field(default_factory=lambda: [])
     buf_tok: int = 0
     min_safety_token_limit: int = 10
@@ -92,6 +94,7 @@ class MarkdownTableSplitterUtil:
     def _reset_state(self) -> None:
         """Reset the internal state for a new splitting operation."""
         self.chunks.clear()
+        self.chunks_token_len.clear()
         self.buf.clear()
         self.buf_tok = 0
 
@@ -109,6 +112,7 @@ class MarkdownTableSplitterUtil:
         """Append joined buffer to chunks and clear buffer."""
         if self.buf:
             self.chunks.append("".join(self.buf))
+            self.chunks_token_len.append(self.buf_tok)
             self.buf.clear()
             self.buf_tok = 0
 
@@ -350,7 +354,7 @@ class MarkdownTableSplitterUtil:
 
         return i
 
-    def split(self, md: str) -> list[str]:
+    def split(self, md: str) -> tuple[list[str], list[int]]:
         """Split a markdown document into token-bounded chunks while respecting tables.
 
         Args:
@@ -358,7 +362,7 @@ class MarkdownTableSplitterUtil:
                 Markdown document.
 
         Returns:
-            list[str]: Chunks whose token counts are <= token_limit.
+            tuple[list[str], list[int]]: Tuple of chunks whose token counts are <= token_limit and token count of chunks.
 
         """
         self._reset_state()
@@ -395,7 +399,7 @@ class MarkdownTableSplitterUtil:
             },
         )
 
-        return self.chunks.copy()
+        return self.chunks.copy(), self.chunks_token_len.copy()
 
     def _get_metrics(self) -> SplittingOperationMetrics:
         """Get metrics about the last splitting operation.
