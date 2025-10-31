@@ -75,7 +75,7 @@ tlsh = [
 splitter = [
     "wurzel[wtpsplit]",
     "wurzel[transformers]",
-    "spacy==3.7.5",
+    "spacy==3.8.7",
     "joblib>=1.4.0",
 ]
 wtpsplit = [
