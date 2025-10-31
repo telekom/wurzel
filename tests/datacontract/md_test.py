@@ -198,3 +198,20 @@ def test_topics_deprecation_warning(tmp_path):
         s = MarkdownDataContract.from_file(f, url_prefix="SPACE/")
 
         assert s.md.startswith("# Some title")
+
+
+def test_utf8_encoding(tmp_path):
+    """Test that UTF-8 encoded files are read correctly, especially on Windows."""
+    f = tmp_path / "file.md"
+    # Write UTF-8 content explicitly
+    utf8_content = "---\nkeywords: test,unicode\n---\n# UTF-8 Test\nContent with émojis 🎉 and spëcial çharacters."
+    f.write_text(utf8_content, encoding="utf-8")
+
+    s = MarkdownDataContract.from_file(f, url_prefix="SPACE/")
+
+    # Verify UTF-8 characters are preserved
+    assert "🎉" in s.md
+    assert "émojis" in s.md
+    assert "spëcial" in s.md
+    assert "çharacters" in s.md
+    assert s.keywords == "test,unicode"
