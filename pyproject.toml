@@ -55,7 +55,7 @@ docling = [
     "docling==2.30.0"
 ]
 milvus = [
-    "pymilvus==2.5.14",
+    "pymilvus==2.6.3",
 ]
 openai = [
     "tiktoken==0.11.0",
