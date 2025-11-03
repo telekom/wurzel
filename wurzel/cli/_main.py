@@ -451,7 +451,7 @@ def main_args(
         str,
         typer.Option(
             "--log-level",
-            autocompletion=lambda: ["CRITICAL", "FATAL", "ERROR", "WARN", "INFO"],
+            autocompletion=lambda: ["CRITICAL", "FATAL", "ERROR", "WARN", "INFO", "DEBUG"],
         ),
     ] = "INFO",
 ):
