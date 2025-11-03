@@ -30,7 +30,7 @@ classifiers = [
     'Topic :: Software Development :: Version Control',
 ]
 dependencies= [
-    "tqdm==4.66.5",
+    "tqdm==4.67.1",
     "pandas==2.3.3",
     "numpy < 2.0.0",
     "dvc==3.63.0",
