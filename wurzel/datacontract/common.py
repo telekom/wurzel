@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import hashlib
 import logging
 import re
 import warnings
@@ -127,18 +126,4 @@ class MarkdownDataContract(PydanticModel):
             url=metadata.get("url", url_prefix + str(path.absolute())),
             keywords=metadata.get("keywords", path.name.split(".")[0]),
             metadata=metadata.get("metadata", None),
-        )
-
-    def __hash__(self) -> int:
-        """Compute a hash based on all not-none field values (like super() but excluding none values)."""
-        # pylint: disable-next=not-an-iterable
-        return int(
-            hashlib.sha256(
-                bytes(
-                    "".join([str(getattr(self, name) or "") for name in sorted(type(self).model_fields)]),
-                    encoding="utf-8",
-                ),
-                usedforsecurity=False,
-            ).hexdigest(),
-            16,
         )

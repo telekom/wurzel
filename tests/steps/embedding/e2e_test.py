@@ -21,6 +21,9 @@ from wurzel.steps import EmbeddingStep
 from wurzel.steps.embedding.huggingface import HuggingFaceInferenceAPIEmbeddings
 from wurzel.steps.embedding.step_multivector import EmbeddingMultiVectorStep
 
+SPLITTER_TOKENIZER_MODEL = "gpt-3.5-turbo"
+SENTENCE_SPLITTER_MODEL = "de_core_news_sm"
+
 
 @pytest.fixture(scope="module")
 def mock_embedding():
@@ -89,6 +92,8 @@ def test_embedding_step(mock_embedding, default_embedding_data, env):
     env.set("EMBEDDINGSTEP__TOKEN_COUNT_MIN", "64")
     env.set("EMBEDDINGSTEP__TOKEN_COUNT_MAX", "256")
     env.set("EMBEDDINGSTEP__TOKEN_COUNT_BUFFER", "32")
+    env.set("EMBEDDINGSTEP__TOKENIZER_MODEL", SPLITTER_TOKENIZER_MODEL)
+    env.set("EMBEDDINGSTEP__SENTENCE_SPLITTER_MODEL", SENTENCE_SPLITTER_MODEL)
 
     EmbeddingStep._select_embedding = mock_embedding
     input_folder, output_folder = default_embedding_data
@@ -154,6 +159,8 @@ def test_embedding_step_log_statistics(mock_embedding, default_embedding_data, e
     env.set("EMBEDDINGSTEP__TOKEN_COUNT_MIN", "64")
     env.set("EMBEDDINGSTEP__TOKEN_COUNT_MAX", "256")
     env.set("EMBEDDINGSTEP__TOKEN_COUNT_BUFFER", "32")
+    env.set("EMBEDDINGSTEP__TOKENIZER_MODEL", SPLITTER_TOKENIZER_MODEL)
+    env.set("EMBEDDINGSTEP__SENTENCE_SPLITTER_MODEL", SENTENCE_SPLITTER_MODEL)
 
     EmbeddingStep._select_embedding = mock_embedding
     input_folder, output_folder = default_embedding_data

@@ -206,6 +206,7 @@ def test_topics_deprecation_warning(tmp_path):
 def test_metadata_field_metadata(tmp_path):
     md = """---
 keywords: "k1"
+url: foo/bar
 metadata:
  foo: bar
  bar: 123
@@ -216,11 +217,21 @@ Text.
  """
     f = tmp_path / "file.md"
     f.write_text(md)
-    s = MarkdownDataContract.from_file(f, url_prefix="SPACE/")
+    s = MarkdownDataContract.from_file(f)
 
     assert "# Title" in s.md
     assert s.metadata is not None
     assert s.metadata["foo"] == "bar"
     assert s.metadata["bar"] == 123
-    assert s.url.startswith("SPACE/")
-    assert s.url.endswith("file.md")
+    assert s.url == "foo/bar"
+
+    assert s.__hash__() == 21317556317919954558699657768736304700342060298586059611903002870732316103488, "Invalid hash"
+
+    # save and load again
+    f2 = tmp_path / "file2.json"
+
+    MarkdownDataContract.save_to_path(f2, s)
+
+    s2 = MarkdownDataContract.load_from_path(f2, MarkdownDataContract)
+
+    assert s.__hash__() == s2.__hash__(), "Invalid hash after write/load file"

@@ -548,18 +548,20 @@ class SemanticSplitter:
                     return_doc += self._parse_hierarchical(child, recursive_depth + 1)
             else:
                 temp_docs = self._parse_hierarchical(child, recursive_depth + 1)
-                return_doc += [
-                    MarkdownDataContract(
-                        md=remaining_snipped + "\n\n" + d.md,
-                        keywords=d.keywords,
-                        url=d.url,
-                        metadata={
-                            "token_len": self._get_token_len(remaining_snipped + "\n\n" + d.md),
-                            "char_len": len(remaining_snipped + "\n\n" + d.md),
-                        },
+                for d in temp_docs:
+                    # Concatenate remaining snipped to doc
+                    temp_doc_md = remaining_snipped + "\n\n" + d.md
+                    return_doc.append(
+                        MarkdownDataContract(
+                            md=temp_doc_md,
+                            keywords=d.keywords,
+                            url=d.url,
+                            metadata={
+                                "token_len": self._get_token_len(temp_doc_md),
+                                "char_len": len(temp_doc_md),
+                            },
+                        )
                     )
-                    for d in temp_docs
-                ]
         return remaining_snipped, return_doc
 
     def _md_data_from_dict_cut(self, doc: DocumentNode) -> MarkdownDataContract:
