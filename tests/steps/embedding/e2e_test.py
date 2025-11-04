@@ -191,9 +191,12 @@ def test_embedding_step_log_statistics(mock_embedding, default_embedding_data, e
     expected_char_length_count = 11
 
     # TODO Exact value seems to be not reproducible
-    expected_char_length_mean = pytest.approx(609.5, abs=1.0)
-    expected_token_length_mean = pytest.approx(257.6, abs=1.0)
-    expected_chunks_count_mean = pytest.approx(3, abs=1.0)
+    # expected_char_length_mean = pytest.approx(609.5, abs=1.0)
+    # expected_token_length_mean = pytest.approx(257.6, abs=1.0)
+    # expected_chunks_count_mean = pytest.approx(3, abs=1.0)
+    expected_char_length_mean = pytest.approx(609.18, abs=0.1)
+    expected_token_length_mean = pytest.approx(257.18, abs=0.1)
+    expected_chunks_count_mean = pytest.approx(3.18, abs=0.2)
 
     assert char_length_record.count == expected_char_length_count, (
         f"Invalid char length count: expected {expected_char_length_count}, got {char_length_record.count}"
