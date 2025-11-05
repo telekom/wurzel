@@ -750,7 +750,7 @@ class SemanticSplitter:
         - Metadata fields: chunk_index, total_chunks, token_len, char_len.
         """
         for chunk_idx, doc in enumerate(doc_chunks):
-            metadata = doc.metadata if doc.metadata is not None else {}
+            metadata = doc.metadata or {}
 
             # extend metadata (if needed)
             if "char_len" not in metadata:
