@@ -369,14 +369,15 @@ def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: 
     from wurzel.backend.backend_dvc import DvcBackend  # pylint: disable=import-outside-toplevel
 
     backend_normalized = backend.lower()
-    available_backends = [backend.lower() for backend in get_available_backends()]
+    available_backends = get_available_backends()
+    available_backends_lower = [b.lower() for b in available_backends]
 
     # Map normalized backend names to their classes
     if backend_normalized == "dvcbackend":
-        if "dvcbackend" in available_backends:
+        if "dvcbackend" in available_backends_lower:
             return DvcBackend
     elif backend_normalized == "argobackend":
-        if "argobackend" in available_backends:
+        if "argobackend" in available_backends_lower:
             from wurzel.backend.backend_argo import ArgoBackend  # pylint: disable=import-outside-toplevel
 
             return ArgoBackend
