@@ -368,23 +368,21 @@ def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: 
     """Validates input and returns fitting backend. Case-insensitive."""
     from wurzel.backend.backend_dvc import DvcBackend  # pylint: disable=import-outside-toplevel
 
-    # Normalize backend name to handle case-insensitive input
     backend_normalized = backend.lower()
+    available_backends = [backend.lower() for backend in get_available_backends()]
 
-    if backend_normalized == "dvcbackend".lower():
-        return DvcBackend
-    if backend_normalized == "argobackend".lower():
-        from wurzel.utils import HAS_HERA  # pylint: disable=import-outside-toplevel
-
-        if HAS_HERA:
+    # Map normalized backend names to their classes
+    if backend_normalized == "dvcbackend":
+        if "dvcbackend" in available_backends:
+            return DvcBackend
+    elif backend_normalized == "argobackend":
+        if "argobackend" in available_backends:
             from wurzel.backend.backend_argo import ArgoBackend  # pylint: disable=import-outside-toplevel
 
             return ArgoBackend
-        supported_backends = get_available_backends()
-        raise typer.BadParameter(f"Backend {backend} not supported. choose from {', '.join(supported_backends)} or install wurzel[argo]")
+        raise typer.BadParameter(f"Backend {backend} not supported. Choose from {', '.join(available_backends)} or install wurzel[argo]")
 
-    supported_backends = get_available_backends()
-    raise typer.BadParameter(f"Backend {backend} not supported. choose from {', '.join(supported_backends)}")
+    raise typer.BadParameter(f"Backend {backend} not supported. Choose from {', '.join(available_backends)}")
 
 
 def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str):
