@@ -146,7 +146,24 @@ class WurzelMarkdownRenderer(markdown_renderer.MarkdownRenderer):
 
 
 class SemanticSplitter:
-    """Splitter implementation for splitting Markdown documents into chunks of a given maximum token count."""
+    """Splitter implementation for splitting Markdown documents into chunks of a given maximum token count.
+
+    To preserve context, the splitter repeats headers (headlines, table headers, ...).
+
+    The splitter tries to only split at:
+
+    - Boundaries of Markdown elements.
+    - Between sentences (using a sentence splitting model).
+
+    As the last resort, splits can be made a abritrary string offsets.
+
+    The splitter store metadata in the output chunks:
+
+    - chunks_count (number of chunks in the source document)
+    - chunk_index (index of current chunk)
+    - token_len (number of tokens in the current chunk)
+    - char_len (number of characters in the current chunk)
+    """
 
     sentence_splitter: SentenceSplitter
     token_limit: int
