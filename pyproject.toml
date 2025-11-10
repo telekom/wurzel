@@ -96,7 +96,7 @@ argo = [
     "hera >=5.20.1",
 ]
 lint = [
-    "pylint[spelling]==3.3.7",
+    "pylint[spelling]==4.0.2",
     "pylint-json2html==0.5.0",
     "pre-commit==4.1.*",
     "reuse==5.0.2",
