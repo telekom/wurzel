@@ -60,3 +60,27 @@ def test_cut_off_logging(caplog):
     # check if logs are correct
     assert caplog.records[0].discarded_text == input_text[44:]
     assert caplog.records[0].text == input_text
+
+
+def test_merge_split_urls_appends_remainder():
+    splitter = SemanticSplitter()
+    chunk = "Visit our docs at https://example."
+    remainder = "com/path for details."
+
+    fixed_chunk, fixed_remainder = splitter._merge_split_urls(chunk, remainder, token_len=splitter.token_limit)
+
+    assert fixed_chunk.endswith("https://example.com/path")
+    assert fixed_remainder.startswith(" for details.")
+
+
+def test_merge_split_urls_handles_long_urls():
+    splitter = SemanticSplitter()
+    url = "https://example.com/" + "section/" * 10
+    boundary_point = url[: len(url) // 2]
+    chunk = f"Link: {boundary_point}"
+    remainder = url[len(boundary_point) :] + " and more text"
+
+    fixed_chunk, fixed_remainder = splitter._merge_split_urls(chunk, remainder, token_len=splitter.token_limit)
+
+    assert url in fixed_chunk
+    assert fixed_remainder.startswith(" and more text")
