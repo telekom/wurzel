@@ -7,10 +7,12 @@
 # Standard library imports
 import os
 import re
+from collections import defaultdict
 from io import StringIO
 from logging import getLogger
 from typing import Optional, TypedDict
 
+import numpy as np
 from markdown import Markdown
 from pandera.typing import DataFrame
 from tqdm.auto import tqdm
@@ -87,9 +89,18 @@ class EmbeddingStep(
         splitted_md_rows = self._split_markdown(inpt)
         rows = []
         failed = 0
+        stats = defaultdict(list)
+
         for row in tqdm(splitted_md_rows, desc="Calculate Embeddings"):
             try:
                 rows.append(self._get_embedding(row))
+
+                # collect statistics
+                if row.metadata is not None:
+                    stats["char length"].append(row.metadata.get("char_len", 0))
+                    stats["token length"].append(row.metadata.get("token_len", 0))
+                    stats["chunks count"].append(row.metadata.get("chunks_count", 0))
+
             except EmbeddingAPIException as err:
                 log.warning(
                     f"Skipped because EmbeddingAPIException: {err.message}",
@@ -100,7 +111,46 @@ class EmbeddingStep(
             log.warning(f"{failed}/{len(splitted_md_rows)} got skipped")
         if failed == len(splitted_md_rows):
             raise StepFailed(f"all {len(splitted_md_rows)} embeddings got skipped")
+
+        # log statistics
+        for k, v in stats.items():
+            self.log_statistics(series=np.array(v), name=k)
+
         return DataFrame[EmbeddingResult](DataFrame[EmbeddingResult](rows))
+
+    def log_statistics(self, series: np.ndarray, name: str):
+        """Log descriptive statistics for all documents.
+
+        Parameters
+        ----------
+        series : np.ndarray
+            Numerical values representing the documents.
+        name : str
+            The name of the document metric.
+        """
+        stats = {
+            "count": len(series),
+            "mean": None,
+            "std": None,
+        }
+
+        if len(series) > 0:
+            stats.update(
+                {
+                    "mean": np.mean(series),
+                    "median": np.median(series),
+                    "std": np.std(series),
+                    "var": np.var(series),
+                    "min": np.min(series),
+                    "percentile_5": np.percentile(series, 5),
+                    "percentile_25": np.percentile(series, 25),
+                    "percentile_75": np.percentile(series, 75),
+                    "percentile_95": np.percentile(series, 95),
+                    "max": np.max(series),
+                }
+            )
+
+        log.info(f"Distribution of {name}: count={stats['count']}; mean={stats['mean']}; std={stats['std']}", extra=stats)
 
     def get_embedding_input_from_document(self, doc: MarkdownDataContract) -> str:
         """Clean the document such that it can be used as input to the embedding model.
