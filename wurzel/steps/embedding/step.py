@@ -118,12 +118,12 @@ class EmbeddingStep(
 
         return DataFrame[EmbeddingResult](DataFrame[EmbeddingResult](rows))
 
-    def log_statistics(self, series: np.array, name: str):
+    def log_statistics(self, series: np.ndarray, name: str):
         """Log descriptive statistics for all documents.
 
         Parameters
         ----------
-        series : np.array
+        series : np.ndarray
             Numerical values representing the documents.
         name : str
             The name of the document metric.

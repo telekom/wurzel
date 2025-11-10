@@ -149,7 +149,24 @@ class WurzelMarkdownRenderer(markdown_renderer.MarkdownRenderer):
 
 
 class SemanticSplitter:
-    """Splitter implementation for splitting Markdown documents into chunks of a given maximum token count."""
+    """Splitter implementation for splitting Markdown documents into chunks of a given maximum token count.
+
+    To preserve context, the splitter repeats headers (headlines, table headers, ...).
+
+    The splitter tries to only split at:
+
+    - Boundaries of Markdown elements.
+    - Between sentences (using a sentence splitting model).
+
+    As the last resort, splits can be made a abritrary string offsets.
+
+    The splitter store metadata in the output chunks:
+
+    - chunks_count (number of chunks in the source document)
+    - chunk_index (index of current chunk)
+    - token_len (number of tokens in the current chunk)
+    - char_len (number of characters in the current chunk)
+    """
 
     sentence_splitter: SentenceSplitter
     token_limit: int
@@ -593,18 +610,20 @@ class SemanticSplitter:
                     return_doc += self._parse_hierarchical(child, recursive_depth + 1)
             else:
                 temp_docs = self._parse_hierarchical(child, recursive_depth + 1)
-                return_doc += [
-                    MarkdownDataContract(
-                        md=remaining_snipped + "\n\n" + d.md,
-                        keywords=d.keywords,
-                        url=d.url,
-                        metadata={
-                            "token_len": self._get_token_len(remaining_snipped + "\n\n" + d.md),
-                            "char_len": len(remaining_snipped + "\n\n" + d.md),
-                        },
+                for d in temp_docs:
+                    # Concatenate remaining snipped to doc
+                    temp_doc_md = remaining_snipped + "\n\n" + d.md
+                    return_doc.append(
+                        MarkdownDataContract(
+                            md=temp_doc_md,
+                            keywords=d.keywords,
+                            url=d.url,
+                            metadata={
+                                "token_len": self._get_token_len(temp_doc_md),
+                                "char_len": len(temp_doc_md),
+                            },
+                        )
                     )
-                    for d in temp_docs
-                ]
         return remaining_snipped, return_doc
 
     def _md_data_from_dict_cut(self, doc: DocumentNode) -> MarkdownDataContract:
@@ -793,14 +812,14 @@ class SemanticSplitter:
         - Metadata fields: chunk_index, total_chunks, token_len, char_len.
         """
         for chunk_idx, doc in enumerate(doc_chunks):
-            metadata = doc.metadata if doc.metadata is not None else {}
+            metadata = doc.metadata or {}
 
             # extend metadata (if needed)
-            if "char_len" not in doc.metadata:
-                doc.metadata["char_len"] = len(doc.md)
+            if "char_len" not in metadata:
+                metadata["char_len"] = len(doc.md)
 
-            if "token_len" not in doc.metadata:
-                doc.metadata["token_len"] = self._get_token_len(doc.md)
+            if "token_len" not in metadata:
+                metadata["token_len"] = self._get_token_len(doc.md)
 
             metadata.update(
                 {

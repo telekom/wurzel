@@ -116,11 +116,12 @@ class PydanticModel(pydantic.BaseModel, DataModel):
         raise NotImplementedError(f"Can not load {model_type}")
 
     def __hash__(self) -> int:
+        """Compute a hash based on all not-none field values."""
         # pylint: disable-next=not-an-iterable
         return int(
             hashlib.sha256(
                 bytes(
-                    "".join([getattr(self, name) for name in sorted(type(self).model_fields)]),
+                    "".join([str(getattr(self, name) or "") for name in sorted(type(self).model_fields)]),
                     encoding="utf-8",
                 ),
                 usedforsecurity=False,

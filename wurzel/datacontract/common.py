@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import hashlib
 import logging
 import re
 import warnings
@@ -20,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class MarkdownDataContract(PydanticModel):
-    """A data contract of the input of the EmbeddingStep representing a document in Markdown format.
+    """A data contract of the input/output of the various pipeline steps representing a document in Markdown format.
 
     The document consists have the Markdown body (document content) and additional metadata (keywords, url).
     The metadata is optional.
@@ -48,6 +47,19 @@ class MarkdownDataContract(PydanticModel):
     Another text.
     ```
 
+    Example 3 (with extra metadata fields)
+    ```md
+    ---
+    keywords: "bread,butter"
+    url: "some/file/path.md"
+    metadata:
+        token_len: 123
+        char_len: 550
+    ---
+    # Some title
+
+    A short text.
+    ```
     """
 
     md: str
@@ -63,7 +75,7 @@ class MarkdownDataContract(PydanticModel):
             md=func(doc["text"]),
             url=doc["metadata"]["url"],
             keywords=doc["metadata"]["keywords"],
-            metadata=doc["metadata"].get("keywords", None),
+            metadata=doc["metadata"].get("metadata", None),
         )
 
     @classmethod
@@ -72,13 +84,18 @@ class MarkdownDataContract(PydanticModel):
 
         Args:
             path (Path): Path to a Markdown file.
+            url_prefix (str): Prefix to add to the URL if it is not specified in the metadata.
 
         Returns:
             MarkdownDataContract: The file that was loaded
 
+        Raises:
+            yaml.YAMLError: If the YAML metadata cannot be parsed.
+            ValueError: If the YAML metadata is not a dictionary.
+
         """
         # Read MD from file path
-        md = path.read_text()
+        md = path.read_text(encoding="utf-8")
 
         # Regex to match YAML metadata between --- ... ---
         metadata = {}
@@ -114,21 +131,4 @@ class MarkdownDataContract(PydanticModel):
             url=metadata.get("url", url_prefix + str(path.absolute())),
             keywords=metadata.get("keywords", path.name.split(".")[0]),
             metadata=metadata.get("metadata", None),
-        )
-
-    # def __hash__(self):
-    #     # Use frozenset for hashable dict representation, works even if attributes are None.
-    #     return hash(frozenset(self.model_dump().items()))
-
-    def __hash__(self) -> int:
-        # pylint: disable-next=not-an-iterable
-        return int(
-            hashlib.sha256(
-                bytes(
-                    "".join([getattr(self, name) or "" for name in sorted(type(self).model_fields)]),
-                    encoding="utf-8",
-                ),
-                usedforsecurity=False,
-            ).hexdigest(),
-            16,
         )

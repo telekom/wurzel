@@ -3,24 +3,26 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Standard library imports
+import logging
 import shutil
 from pathlib import Path
 
 import numpy as np
 import pytest
 
-from wurzel.utils import HAS_LANGCHAIN_CORE, HAS_REQUESTS
+from wurzel.utils import HAS_LANGCHAIN_CORE, HAS_REQUESTS, HAS_SPACY, HAS_TIKTOKEN
 
-if not HAS_LANGCHAIN_CORE or not HAS_REQUESTS:
-    pytest.skip("Embedding dependencies (langchain-core, requests) are not available", allow_module_level=True)
+if not HAS_LANGCHAIN_CORE or not HAS_REQUESTS or not HAS_SPACY or not HAS_TIKTOKEN:
+    pytest.skip("Embedding dependencies (langchain-core, requests, spacy, tiktoken) are not available", allow_module_level=True)
 
 from wurzel.exceptions import StepFailed
 from wurzel.step_executor import BaseStepExecutor
-
-# Local application/library specific imports
 from wurzel.steps import EmbeddingStep
 from wurzel.steps.embedding.huggingface import HuggingFaceInferenceAPIEmbeddings
 from wurzel.steps.embedding.step_multivector import EmbeddingMultiVectorStep
+
+SPLITTER_TOKENIZER_MODEL = "gpt-3.5-turbo"
+SENTENCE_SPLITTER_MODEL = "de_core_news_sm"
 
 
 @pytest.fixture(scope="module")
@@ -87,11 +89,22 @@ def test_embedding_step(mock_embedding, default_embedding_data, env):
 
     """
     env.set("EMBEDDINGSTEP__API", "https://example-embedding.com/embed")
+    env.set("EMBEDDINGSTEP__TOKEN_COUNT_MIN", "64")
+    env.set("EMBEDDINGSTEP__TOKEN_COUNT_MAX", "256")
+    env.set("EMBEDDINGSTEP__TOKEN_COUNT_BUFFER", "32")
+    env.set("EMBEDDINGSTEP__TOKENIZER_MODEL", SPLITTER_TOKENIZER_MODEL)
+    env.set("EMBEDDINGSTEP__SENTENCE_SPLITTER_MODEL", SENTENCE_SPLITTER_MODEL)
+
     EmbeddingStep._select_embedding = mock_embedding
     input_folder, output_folder = default_embedding_data
-    BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingStep, [input_folder], output_folder)
+    step_res = BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingStep, [input_folder], output_folder)
     assert output_folder.is_dir()
     assert len(list(output_folder.glob("*"))) > 0
+
+    step_output, step_report = step_res[0]
+
+    assert len(step_output) == 11, "Step outputs have wrong count."
+    assert step_report.results == 11, "Step report has wrong count of outputs."
 
 
 def test_mutlivector_embedding_step(mock_embedding, tmp_path, env):
@@ -142,11 +155,55 @@ def test_inheritance(env, default_embedding_data):
 def test_embedding_step_log_statistics(mock_embedding, default_embedding_data, env, caplog):
     """Tests the logging of descriptive statistics in the `EmbeddingStep` with a mock input file."""
     env.set("EMBEDDINGSTEP__API", "https://example-embedding.com/embed")
+    env.set("EMBEDDINGSTEP__NUM_THREADS", "1")  # Ensure deterministic behavior with single thread
+    env.set("EMBEDDINGSTEP__TOKEN_COUNT_MIN", "64")
+    env.set("EMBEDDINGSTEP__TOKEN_COUNT_MAX", "256")
+    env.set("EMBEDDINGSTEP__TOKEN_COUNT_BUFFER", "32")
+    env.set("EMBEDDINGSTEP__TOKENIZER_MODEL", SPLITTER_TOKENIZER_MODEL)
+    env.set("EMBEDDINGSTEP__SENTENCE_SPLITTER_MODEL", SENTENCE_SPLITTER_MODEL)
+
     EmbeddingStep._select_embedding = mock_embedding
     input_folder, output_folder = default_embedding_data
-    BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingStep, [input_folder], output_folder)
 
-    # check output log
-    assert "Distribution of char length: count=11; mean=609." in caplog.text, "Invalid log output for char length"
-    assert "Distribution of token length: count=11; mean=257." in caplog.text, "Invalid log output for token length"
-    assert "Distribution of chunks count: count=11; mean=3." in caplog.text, "Invalid log output for chunks count"
+    with caplog.at_level(logging.INFO):
+        BaseStepExecutor(dont_encapsulate=False).execute_step(EmbeddingStep, [input_folder], output_folder)
+
+    # check if output log exists
+    assert "Distribution of char length" in caplog.text, "Missing log output for char length"
+    assert "Distribution of token length" in caplog.text, "Missing log output for token length"
+    assert "Distribution of chunks count" in caplog.text, "Missing log output for chunks count"
+
+    # check extras
+    char_length_record = None
+    token_length_record = None
+    chunks_count_record = None
+
+    for record in caplog.records:
+        if "Distribution of char length" in record.message:
+            char_length_record = record
+
+        if "Distribution of token length" in record.message:
+            token_length_record = record
+
+        if "Distribution of chunks count" in record.message:
+            chunks_count_record = record
+
+    expected_char_length_count = 11
+
+    # Check values if a small tolerance
+    expected_char_length_mean = pytest.approx(609.18, abs=0.1)
+    expected_token_length_mean = pytest.approx(257.18, abs=0.1)
+    expected_chunks_count_mean = pytest.approx(3.18, abs=0.2)
+
+    assert char_length_record.count == expected_char_length_count, (
+        f"Invalid char length count: expected {expected_char_length_count}, got {char_length_record.count}"
+    )
+    assert char_length_record.mean == expected_char_length_mean, (
+        f"Invalid char length mean: expected {expected_char_length_mean}, got {char_length_record.mean}"
+    )
+    assert token_length_record.mean == expected_token_length_mean, (
+        f"Invalid token length mean: expected {expected_token_length_mean}, got {token_length_record.mean}"
+    )
+    assert chunks_count_record.mean == expected_chunks_count_mean, (
+        f"Invalid chunks count mean: expected {expected_chunks_count_mean}, got {chunks_count_record.mean}"
+    )
