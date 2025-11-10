@@ -15,6 +15,9 @@ class EmbeddingResult(PanderaDataFrameModel):
     url: Series[str] = Field(nullable=True, default=" ", coerce=True, description="url used for search ")
     vector: Series[list[float]]
     keywords: Series[str] = Field(nullable=True, default=" ", coerce=True, description="Keywords used for search ")
+    embedding_input_text: Series[str] = Field(
+        nullable=True, default=None, coerce=True, description="Input text sent to the embedding model"
+    )
 
 
 class EmbeddingMultiVectorResult(PanderaDataFrameModel):
