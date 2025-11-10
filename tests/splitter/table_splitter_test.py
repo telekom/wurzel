@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import re
+
 import pytest
 
 from wurzel.utils import HAS_SPACY
@@ -44,8 +46,10 @@ def assert_splitter_outputs(Splitter, fixture_path: Path, save_actual_output: bo
     assert len(res) == len(expected_output_texts), "incorrect split count"
 
     for x, expected_output_text in zip(res, expected_output_texts):
-        # stripped split content is correct
-        assert x.md == mdformat.text(expected_output_text).strip(), "incorrect split content"
+        # Normalize newlines for comparison (mdformat adds extra newlines that we normalize)
+        normalized_actual = re.sub(r"\n{2,}", "\n", x.md).rstrip("\n")
+        normalized_expected = re.sub(r"\n{2,}", "\n", mdformat.text(expected_output_text).strip()).rstrip("\n")
+        assert normalized_actual == normalized_expected, "incorrect split content"
 
 
 @pytest.fixture(scope="function")

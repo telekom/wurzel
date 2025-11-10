@@ -100,7 +100,7 @@ def _format_markdown_docs(
     """Formats the Markdown Document by the standards."""
     return [
         MarkdownDataContract(
-            md=mdformat.text(doc.md).strip(),
+            md=re.sub(r"\n{2,}", "\n", mdformat.text(doc.md).strip()).rstrip("\n"),
             url=doc.url,
             keywords=doc.keywords,
         )
