@@ -95,6 +95,12 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             "keywords": row["keywords"],
             "history": str(step_history.get()),
         }
+
+        # Add to payload if `embedding_input_text` is used
+        # (due to difference between `EmbeddingMultiVectorStep` and `EmbeddingStep`)
+        if "embedding_input_text" in row:
+            payload["embedding_input_text"] = row["embedding_input_text"]
+
         return payload
 
     def _create_point(self, row: dict) -> models.PointStruct:
