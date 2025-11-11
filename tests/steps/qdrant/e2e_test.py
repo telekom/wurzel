@@ -43,7 +43,9 @@ def test_qdrant_connector_first(input_output_folder: tuple[Path, Path], dummy_co
     input_file = input_path / "qdrant_at.csv"
     output_file = output_path / "QdrantConnectorStep"
     shutil.copy("./tests/data/embedded.csv", input_file)
-    mock_telemetry = InlineResponse2002(result=TelemetryData.model_construct(collections=CollectionsTelemetry.model_construct()))
+    mock_telemetry = InlineResponse2002.model_construct(
+        result=TelemetryData.model_construct(collections=CollectionsTelemetry.model_construct())
+    )
 
     with unittest.mock.patch("wurzel.steps.qdrant.step.QdrantConnectorStep._get_telemetry", return_value=mock_telemetry):
         BaseStepExecutor().execute_step(QdrantConnectorStep, {input_path}, output_file)
@@ -55,7 +57,9 @@ def test_qdrant_connector_has_previous(input_output_folder: tuple[Path, Path], d
     input_file = input_path / "qdrant_at.csv"
     output_file = output_path / "QdrantConnectorStep"
     shutil.copy("./tests/data/embedded.csv", input_file)
-    mock_telemetry = InlineResponse2002(result=TelemetryData.model_construct(collections=CollectionsTelemetry.model_construct()))
+    mock_telemetry = InlineResponse2002.model_construct(
+        result=TelemetryData.model_construct(collections=CollectionsTelemetry.model_construct())
+    )
 
     with unittest.mock.patch("wurzel.steps.qdrant.step.QdrantConnectorStep._get_telemetry", return_value=mock_telemetry):
         all_outputs = []
@@ -192,7 +196,7 @@ def test_qdrant_collection_retirement_with_missing_versions(
 
     collection_data = [(col_id, recent_time if col_id in recently_used else old_time) for col_id in remaining_collections]
 
-    mock_telemetry = InlineResponse2002(
+    mock_telemetry = InlineResponse2002.model_construct(
         result=TelemetryData.model_construct(
             collections=CollectionsTelemetry.model_construct(
                 collections=[
@@ -320,8 +324,11 @@ def test_qdrant_connector_true_csv(
     input_file = input_path / "qdrant_at.csv"
     output_file = output_path / step.__name__
     shutil.copy(inpt_file, input_file)
-    mock_telemetry = InlineResponse2002(result=TelemetryData.model_construct(collections=CollectionsTelemetry.model_construct()))
 
+    # mock_telemetry = InlineResponse2002(result=TelemetryData.model_construct(collections=CollectionsTelemetry.model_construct()))
+    mock_telemetry = InlineResponse2002.model_construct(
+        result=TelemetryData.model_construct(collections=CollectionsTelemetry.model_construct(collections=[]))
+    )
     with unittest.mock.patch("wurzel.steps.qdrant.step.QdrantConnectorStep._get_telemetry", return_value=mock_telemetry):
         res = BaseStepExecutor().execute_step(step, {input_path}, output_file)
         expected_cols = list(result_type.to_schema().columns)

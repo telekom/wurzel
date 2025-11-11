@@ -240,7 +240,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         )
 
     def _retire_collections(self) -> None:
-        """Retire (delete) historical Qdrant collections that.
+        """Retire (delete) historical Qdrant collections.
 
         - Are not among the last N (per COLLECTION_HISTORY_LEN),
         - Are not currently targeted by an alias,
@@ -282,7 +282,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             log.info("Deleting retired collection", extra={"collection": collection_name})
             self.client.delete_collection(collection_name)
 
-    def _should_skip_collection(self, name: str, alias_pointed: set[str], telemetry_collections: list) -> bool:
+    def _should_skip_collection(self, name: str, alias_pointed: set[str], telemetry_collections: list[CollectionTelemetry]) -> bool:
         """Check if a collection should not be deleted."""
         if name in alias_pointed:
             log.info("Skipping deletion: still aliased", extra={"collection": name})
