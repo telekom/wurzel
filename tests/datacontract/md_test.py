@@ -11,23 +11,24 @@ from wurzel.step import MarkdownDataContract
 @pytest.mark.parametrize(
     "md,url,bread",
     [
-        ("\n---\n\nurl:myurl\n\n---\nText", "myurl", ""),
-        ("\n---\n\n   url:myurl\n\n---\nText", "myurl", ""),
-        ("\n---\n\n\t url:myurl\n\n---\nText", "myurl", ""),
-        ("\n---\n\nurl:myurl\n\ntopics:bread\n\n---\nText", "myurl", "bread"),
+        ("---\n\nurl: myurl\n---\nText", "myurl", ""),
+        ("---\n\n   url: myurl\n---\nText", "myurl", ""),
+        ("---\n\n\t url: myurl\n---\nText", "", ""),  # invalid YAML, ignore metadata
+        ("---\nurl: myurl\n---\nText", "myurl", ""),
+        ("---\n\nurl: myurl\n\nkeywords: bread\n---\nText", "myurl", "bread"),
         (
-            "\n---\n\nurl:myurl\n\ntopics:bread,butter\n\n---\nText",
+            "---\n\nurl: myurl\n\nkeywords: bread,butter\n---\nText",
             "myurl",
             "bread,butter",
         ),
-        ("\n---\n\n\ntopics:bread,butter\n\n---\nText", "", "bread,butter"),
+        ("---\n\n\nkeywords: bread,butter\n---\nText", "", "bread,butter"),
         (
-            "\n---\n\n\ntopics:bread,butter\n\n---\nText\nurl:url_body",
+            "---\n\n\nkeywords: bread,butter\n\n---\nText\nurl:url_body",
             "",
             "bread,butter",
         ),
         (
-            "\n---\n\n\ntopics:bread,butter\nurl:url_header\n\n---\nText",
+            "---\n\n\nkeywords: bread,butter\nurl: url_header\n---\nText",
             "url_header",
             "bread,butter",
         ),
@@ -48,6 +49,9 @@ def test_manual_step_md_parsing(tmp_path, md, url, bread):
         assert s.md == "Text\nurl:url_body"
     else:
         assert s.md == "Text"
+
+    # check metadata field
+    assert s.metadata is None
 
 
 class MDCChild(MarkdownDataContract):
@@ -119,3 +123,132 @@ def test_equality_and_hash(a, b, outcome):
         hash_equal = hash(a) == hash(b)
         assert obj_equal == hash_equal
     assert obj_equal == outcome
+
+
+def test_table_not_metadata(tmp_path):
+    md = """some text
+
+| no | header |
+| --- | --- |
+| but a | table |
+
+some more text
+
+| no | header |
+| --- | --- |
+| but a | table |"""
+
+    f = tmp_path / "file.md"
+    f.write_text(md)
+    s = MarkdownDataContract.from_file(f, url_prefix="SPACE/")
+
+    assert s.md == md
+    assert s.url.startswith("SPACE/")
+    assert s.url.endswith("file.md")
+
+
+@pytest.mark.parametrize(
+    "header_md,body_md",
+    [
+        (
+            """---
+fo_ : ",
+-
+-
+#
+---
+""",
+            """# title
+some text
+
+some more text
+
+| no | header |
+| --- | --- |
+| but a | table |""",
+        ),  # YAML is invalid syntax
+        (
+            """---
+- foo
+- bar
+---
+""",
+            """# title
+some text
+
+some more text
+
+| no | header |
+| --- | --- |
+| but a | table |""",
+        ),  # YAML is a list not a dictionary
+    ],
+)
+def test_metadata_invalid_yaml_ignore_metadata(tmp_path, header_md, body_md):
+    f = tmp_path / "file.md"
+    f.write_text(header_md + "\n" + body_md)
+    s = MarkdownDataContract.from_file(f, url_prefix="SPACE/")
+
+    assert s.md == body_md
+    assert s.url.startswith("SPACE/")
+    assert s.url.endswith("file.md")
+
+
+def test_topics_deprecation_warning(tmp_path):
+    with pytest.warns(DeprecationWarning, match="`topics` metadata field is deprecated "):
+        f = tmp_path / "file.md"
+        f.write_text("---\ntopics: foo\n---\n# Some title\n\nMore text.")
+        s = MarkdownDataContract.from_file(f, url_prefix="SPACE/")
+
+        assert s.md.startswith("# Some title")
+
+
+def test_metadata_field_metadata(tmp_path):
+    md = """---
+keywords: "k1"
+url: foo/bar
+metadata:
+ foo: bar
+ bar: 123
+---
+# Title
+
+Text.
+ """
+    f = tmp_path / "file.md"
+    f.write_text(md)
+    s = MarkdownDataContract.from_file(f)
+
+    assert "# Title" in s.md
+    assert s.metadata is not None
+    assert s.metadata["foo"] == "bar"
+    assert s.metadata["bar"] == 123
+    assert s.url == "foo/bar"
+
+    assert s.__hash__() == 21317556317919954558699657768736304700342060298586059611903002870732316103488, "Invalid hash"
+
+    # save and load again
+    f2 = tmp_path / "file2.json"
+
+    MarkdownDataContract.save_to_path(f2, s)
+
+    s2 = MarkdownDataContract.load_from_path(f2, MarkdownDataContract)
+
+    assert s.__hash__() == s2.__hash__(), "Invalid hash after write/load file"
+
+
+def test_utf8_encoding(tmp_path):
+    """Test that UTF-8 encoded files are read correctly, especially on Windows."""
+    f = tmp_path / "file.md"
+    # Write UTF-8 content explicitly
+    utf8_content = "---\nkeywords: test,unicode\n---\n# UTF-8 Test\nContent with émojis 🎉 and spëcial çharacters."
+    f.write_text(utf8_content, encoding="utf-8")
+
+    s = MarkdownDataContract.from_file(f, url_prefix="SPACE/")
+
+    # Verify UTF-8 characters are preserved
+    assert "🎉" in s.md
+    assert "émojis" in s.md
+    assert "spëcial" in s.md
+    assert "çharacters" in s.md
+    assert s.keywords == "test,unicode"

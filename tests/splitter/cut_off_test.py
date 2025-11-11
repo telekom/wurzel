@@ -2,9 +2,16 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import pytest
+
+from wurzel.utils import HAS_SPACY
+
+if not HAS_SPACY:
+    pytest.skip("Spacy is not available", allow_module_level=True)
+
 import logging
 
-from wurzel.utils.semantic_splitter import DocumentNode, MetaDataDict, SemanticSplitter
+from wurzel.utils.splitters.semantic_splitter import DocumentNode, MetaDataDict, SemanticSplitter
 
 
 def test_cut_off():

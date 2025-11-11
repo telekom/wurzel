@@ -1,4 +1,5 @@
 ::: wurzel.steps.qdrant.step
+    handler: python
 
 ## Qdrant Collection Retirement
 
@@ -22,5 +23,7 @@ To avoid unbounded growth of collections, the `QdrantConnectorStep` implements l
 
 
 ::: wurzel.steps.qdrant.step_multi_vector
+    handler: python
 
 ::: wurzel.steps.qdrant.settings
+    handler: python

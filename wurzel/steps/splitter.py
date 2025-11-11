@@ -7,26 +7,31 @@
 # Standard library imports
 from logging import getLogger
 
-from joblib import Parallel, delayed
 from pydantic import Field
 
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.exceptions import MarkdownException, SplittException
+from wurzel.exceptions import MarkdownException, SplittException, StepFailed
 from wurzel.step import Settings, TypedStep
-from wurzel.utils.semantic_splitter import SemanticSplitter
+from wurzel.utils import HAS_JOBLIB
+from wurzel.utils.splitters.semantic_splitter import SemanticSplitter
 
-# Local application/library specific imports
+# Optional imports
+if HAS_JOBLIB:
+    from joblib import Parallel, delayed
 
 
 class SplitterSettings(Settings):
     """Anything Embedding-related."""
 
     BATCH_SIZE: int = Field(100, gt=0)
-    NUM_THREADS: int = Field(4, gt=1)
+    NUM_THREADS: int = Field(4, ge=1)
     TOKEN_COUNT_MIN: int = Field(64, gt=0)
     TOKEN_COUNT_MAX: int = Field(1024, gt=1)
     TOKEN_COUNT_BUFFER: int = Field(32, gt=0)
-    TOKENIZER_MODEL: str = Field("gpt-3.5-turbo", description="The tokenizer model to use for splitting documents.")
+    TOKENIZER_MODEL: str = Field(
+        "gpt-3.5-turbo", description="The tokenizer model to use for splitting documents (supported: tiktoken and HF transformers)."
+    )
+    SENTENCE_SPLITTER_MODEL: str = Field("de_core_news_sm", description="The model splitting text into sentences.")
 
 
 log = getLogger(__name__)
@@ -42,6 +47,7 @@ class SimpleSplitterStep(TypedStep[SplitterSettings, list[MarkdownDataContract],
             token_limit_buffer=self.settings.TOKEN_COUNT_BUFFER,
             token_limit_min=self.settings.TOKEN_COUNT_MIN,
             tokenizer_model=self.settings.TOKENIZER_MODEL,
+            sentence_splitter_model=self.settings.SENTENCE_SPLITTER_MODEL,
         )
 
     def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
@@ -61,28 +67,40 @@ class SimpleSplitterStep(TypedStep[SplitterSettings, list[MarkdownDataContract],
 
         """
 
-        def _batchify(data: list, size: int) -> list[list]:
+        def _batchify(data: list[MarkdownDataContract], size: int) -> list[list[MarkdownDataContract]]:
             return [data[i : i + size] for i in range(0, len(data), size)]
 
         batches = _batchify(inpt, self.settings.BATCH_SIZE)
 
-        # Run each batch in parallel using threading
-        results = Parallel(n_jobs=self.settings.NUM_THREADS, prefer="threads")(delayed(self._split_markdown)(batch) for batch in batches)
+        # Use joblib for parallel processing if available, otherwise sequential
+        if HAS_JOBLIB:
+            results = Parallel(n_jobs=self.settings.NUM_THREADS, prefer="threads")(  # type: ignore
+                delayed(self._split_markdown)(batch)
+                for batch in batches  # type: ignore
+            )
+        else:
+            # Fall back to sequential processing
+            results = [self._split_markdown(batch) for batch in batches]
 
         # Flatten the list of lists
-        return [item for sublist in results for item in sublist]
+        results = [item for sublist in results for item in sublist]
+
+        if not results:
+            raise StepFailed("no results from simple splitter step")
+
+        return results
 
     def _split_markdown(self, markdowns: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
         """Creates data rows from a batch of markdown texts by splitting them and counting tokens."""
         rows = []
         skipped = 0
-        for s in markdowns:
+        for md_data_contract in markdowns:
             try:
-                rows.extend(self.splitter.split_markdown_document(s))
+                rows.extend(self.splitter.split_markdown_document(md_data_contract))
             except MarkdownException as err:
                 log.warning(
                     "skipped dokument ",
-                    extra={"reason": err.__class__.__name__, "doc": s},
+                    extra={"reason": err.__class__.__name__, "doc": md_data_contract},
                 )
                 skipped += 1
         if skipped == len(markdowns):

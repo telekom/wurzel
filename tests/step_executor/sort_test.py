@@ -8,7 +8,7 @@ from pandera.typing import DataFrame
 from wurzel.datacontract.common import MarkdownDataContract
 from wurzel.datacontract.datacontract import PydanticModel
 from wurzel.step_executor.base_executor import _try_sort
-from wurzel.steps.embedding.data import EmbeddingResult
+from wurzel.steps.data import EmbeddingResult
 
 
 @pytest.mark.parametrize(

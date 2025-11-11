@@ -14,7 +14,7 @@ import re
 from dataclasses import asdict, dataclass, field
 from logging import getLogger
 
-import tiktoken  # pip install tiktoken
+from wurzel.utils.tokenizers import Tokenizer
 
 # Regex that matches a Markdown table alignment row, e.g.  |---|:---:|---|
 TABLE_SEP_RE = re.compile(r"^\s*\|?(?:\s*:?-+:?\s*\|)+\s*$")
@@ -55,9 +55,9 @@ class MarkdownTableSplitterUtil:
 
     Example:
     ```
-    >>> import tiktoken
-    >>> enc = tiktoken.get_encoding("cl100k_base")
-    >>> splitter = MarkdownTableSplitterUtil(token_limit=8000, enc=enc)
+    >>> from wurzel.utils.tokenizers import Tokenizer
+    >>> tokenizer = Tokenizer.from_name("cl100k_base")
+    >>> splitter = MarkdownTableSplitterUtil(token_limit=8000, tokenizer=tokenizer)
     >>> chunks = splitter.split(markdown_text)
     >>> len(chunks)
     3
@@ -65,7 +65,7 @@ class MarkdownTableSplitterUtil:
 
     Args:
         token_limit (int): Maximum tokens per chunk (model tokens, not characters).
-        enc (tiktoken.Encoding): Tokenizer used for counting tokens.
+        tokenizer (Tokenizer): Tokenizer used for counting tokens.
         repeat_header_row (bool, optional): If True, repeat the header row in each chunk. Defaults to True.
 
     Attributes:
@@ -77,10 +77,12 @@ class MarkdownTableSplitterUtil:
 
     """
 
+    # pylint: disable=too-many-instance-attributes
     token_limit: int
-    enc: tiktoken.Encoding
+    tokenizer: Tokenizer
     repeat_header_row: bool = True
     chunks: list[str] = field(default_factory=lambda: [])
+    chunks_token_len: list[int] = field(default_factory=lambda: [])
     buf: list[str] = field(default_factory=lambda: [])
     buf_tok: int = 0
     min_safety_token_limit: int = 10
@@ -92,6 +94,7 @@ class MarkdownTableSplitterUtil:
     def _reset_state(self) -> None:
         """Reset the internal state for a new splitting operation."""
         self.chunks.clear()
+        self.chunks_token_len.clear()
         self.buf.clear()
         self.buf_tok = 0
 
@@ -109,6 +112,7 @@ class MarkdownTableSplitterUtil:
         """Append joined buffer to chunks and clear buffer."""
         if self.buf:
             self.chunks.append("".join(self.buf))
+            self.chunks_token_len.append(self.buf_tok)
             self.buf.clear()
             self.buf_tok = 0
 
@@ -119,7 +123,7 @@ class MarkdownTableSplitterUtil:
             line (str): The line to add to the buffer.
 
         """
-        line_tok = len(self.enc.encode(line))
+        line_tok = len(self.tokenizer.encode(line))
 
         if self.buf_tok + line_tok > self.token_limit:
             self._flush_buffer()
@@ -142,7 +146,7 @@ class MarkdownTableSplitterUtil:
         header_line, sep_line = lines[start_idx], lines[start_idx + 1]
         header_cells = [c.strip() for c in header_line.strip().strip("|").split("|")]
         sep_cells = [c.strip() for c in sep_line.strip().strip("|").split("|")]
-        header_tok = len(self.enc.encode(header_line + sep_line))
+        header_tok = len(self.tokenizer.encode(header_line + sep_line))
 
         return header_line, sep_line, header_cells, sep_cells, header_tok
 
@@ -156,7 +160,7 @@ class MarkdownTableSplitterUtil:
             int: Token count for the rendered row.
 
         """
-        return len(self.enc.encode(make_row(cells)))
+        return len(self.tokenizer.encode(make_row(cells)))
 
     # pylint: disable=too-many-positional-arguments
     def _slice_long_row(
@@ -203,7 +207,7 @@ class MarkdownTableSplitterUtil:
             if col_idx < len(row_cells) and self.repeat_header_row:
                 self.buf.extend([header_line, sep_line])
                 # Update buf_tok for the next iteration
-                self.buf_tok = len(self.enc.encode(header_line + sep_line))
+                self.buf_tok = len(self.tokenizer.encode(header_line + sep_line))
             else:
                 self.buf.clear()
                 self.buf_tok = 0
@@ -350,21 +354,21 @@ class MarkdownTableSplitterUtil:
 
         return i
 
-    def split(self, md: str) -> list[str]:
+    def split(self, md: str) -> tuple[list[str], list[int]]:
         """Split a markdown document into token-bounded chunks while respecting tables.
 
         Args:
-            md : str
+            md: str
                 Markdown document.
 
         Returns:
-            list[str]: Chunks whose token counts are <= token_limit.
+            tuple[list[str], list[int]]: Tuple of chunks whose token counts are <= token_limit and token count of chunks.
 
         """
         self._reset_state()
 
         input_length = len(md)
-        input_tokens = len(self.enc.encode(md))
+        input_tokens = len(self.tokenizer.encode(md))
         table_count = self._count_tables_in_text(md)
 
         lines = md.splitlines(keepends=True)
@@ -395,7 +399,7 @@ class MarkdownTableSplitterUtil:
             },
         )
 
-        return self.chunks.copy()
+        return self.chunks.copy(), self.chunks_token_len.copy()
 
     def _get_metrics(self) -> SplittingOperationMetrics:
         """Get metrics about the last splitting operation.
@@ -407,7 +411,7 @@ class MarkdownTableSplitterUtil:
         if not self.chunks:
             return SplittingOperationMetrics()
 
-        token_counts = [len(self.enc.encode(chunk)) for chunk in self.chunks]
+        token_counts = [len(self.tokenizer.encode(chunk)) for chunk in self.chunks]
         total_chars = sum(len(chunk) for chunk in self.chunks)
         total_tokens = sum(token_counts)
 
