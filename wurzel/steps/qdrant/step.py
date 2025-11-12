@@ -96,7 +96,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         InlineResponse2002: Parsed telemetry response from Qdrant.
         """
         url = f"{self.settings.URI}/telemetry?details_level={details_level}"
-        headers = {"api-key": self.settings.APIKEY}
+        headers = {"api-key": self.settings.APIKEY.get_secret_value()}
         try:
             response = requests.get(url, headers=headers, timeout=self.settings.REQUEST_TIMEOUT)
             response.raise_for_status()

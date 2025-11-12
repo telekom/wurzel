@@ -9,6 +9,7 @@ import unittest.mock
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Union
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -325,7 +326,6 @@ def test_qdrant_connector_true_csv(
     output_file = output_path / step.__name__
     shutil.copy(inpt_file, input_file)
 
-    # mock_telemetry = InlineResponse2002(result=TelemetryData.model_construct(collections=CollectionsTelemetry.model_construct()))
     mock_telemetry = InlineResponse2002.model_construct(
         result=TelemetryData.model_construct(collections=CollectionsTelemetry.model_construct(collections=[]))
     )
@@ -340,3 +340,56 @@ def test_qdrant_connector_true_csv(
         assert res
         for col in expected_cols:
             assert col in data
+
+
+def test_get_telemetry_success(env, dummy_collection):
+    """Test successful telemetry fetch from Qdrant."""
+    env.set("COLLECTION", "dummy")
+
+    client = QdrantClient(location=":memory:")
+    client.close = print
+
+    mock_telemetry_obj = InlineResponse2002.model_construct(
+        result=TelemetryData.model_construct(
+            collections=CollectionsTelemetry.model_construct(
+                collections=[
+                    CollectionTelemetry.model_construct(
+                        id="test_collection",
+                        shards=[
+                            ReplicaSetTelemetry.model_construct(
+                                local=LocalShardTelemetry.model_construct(
+                                    optimizations=OptimizerTelemetry.model_construct(
+                                        optimizations=OperationDurationStatistics.model_construct(last_responded="2025-01-15T10:30:00.000Z")
+                                    )
+                                ),
+                                remote=[],
+                            )
+                        ],
+                    )
+                ]
+            )
+        )
+    )
+    mock_response_data = mock_telemetry_obj.model_dump(mode="json", exclude_unset=False)
+    if "result" in mock_response_data and "write" not in mock_response_data["result"]:
+        mock_response_data["result"]["write"] = False
+    mock_response = MagicMock()
+    mock_response.json.return_value = mock_response_data
+    mock_response.raise_for_status.return_value = None
+
+    with patch("wurzel.steps.qdrant.step.QdrantClient") as mock_client:
+        mock_client.return_value = client
+        with patch("wurzel.steps.qdrant.step.requests.get", return_value=mock_response) as mock_get:
+            step = QdrantConnectorStep()
+            result = step._get_telemetry(details_level=3)
+            mock_get.assert_called_once()
+            call_args = mock_get.call_args
+            assert call_args[0][0] == "http://localhost:6333/telemetry?details_level=3"
+            assert "api-key" in call_args[1]["headers"]
+            assert "timeout" in call_args[1]
+            assert call_args[1]["timeout"] > 0
+            assert isinstance(result, InlineResponse2002)
+            assert hasattr(result, "result")
+            if hasattr(result.result, "collections") and hasattr(result.result.collections, "collections"):
+                assert len(result.result.collections.collections) > 0
+                assert result.result.collections.collections[0].id == "test_collection"
