@@ -3,12 +3,13 @@
 # SPDX-License-Identifier: Apache-2.0
 import pytest
 
-from wurzel.step_executor import BaseStepExecutor
-from wurzel.steps.embedding.step import TruncatedEmbeddingStep
 from wurzel.utils import HAS_LANGCHAIN_CORE, HAS_REQUESTS, HAS_SPACY, HAS_TIKTOKEN
 
 if not HAS_LANGCHAIN_CORE or not HAS_REQUESTS or not HAS_SPACY or not HAS_TIKTOKEN:
     pytest.skip("Embedding dependencies (langchain-core, requests, spacy, tiktoken) are not available", allow_module_level=True)
+
+from wurzel.step_executor import BaseStepExecutor
+from wurzel.steps.embedding.step import TruncatedEmbeddingStep
 
 
 @pytest.mark.parametrize(

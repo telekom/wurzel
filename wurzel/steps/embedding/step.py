@@ -308,8 +308,21 @@ class TruncatedEmbeddingStep(BaseEmbeddingStep):
         """
         plain_text = super().get_embedding_input_from_document(doc)
 
-        encoded_token_ids = self.tokenizer.encode(plain_text)
+        token_ids = self.tokenizer.encode(plain_text)
 
-        truncated_token_ids = encoded_token_ids[: self.settings.TOKEN_COUNT_MAX]
+        if len(token_ids) > self.settings.TOKEN_COUNT_MAX:
+            log.warning(
+                "Truncating %i tokens from embedding input text: %i input tokens > %i max tokens",
+                len(token_ids) - self.settings.TOKEN_COUNT_MAX,
+                len(token_ids),
+                self.settings.TOKEN_COUNT_MAX,
+                extra={
+                    "text": plain_text,
+                    "input_token_count": len(token_ids),
+                    "max_token_count": self.settings.TOKEN_COUNT_MAX,
+                },
+            )
 
-        return self.tokenizer.decode(truncated_token_ids)
+            token_ids = token_ids[: self.settings.TOKEN_COUNT_MAX]
+
+        return self.tokenizer.decode(token_ids)
