@@ -25,8 +25,8 @@ from wurzel.steps.data import EmbeddingResult
         pytest.param(
             DataFrame[EmbeddingResult](
                 [
-                    {"text": "a", "url": "url", "vector": [0.1], "keywords": "kw", "embedding_input_text": "a"},
-                    {"text": "b", "url": "url", "vector": [0.1], "keywords": "kw", "embedding_input_text": "b"},
+                    {"text": "a", "url": "url", "vector": [0.1], "keywords": "kw", "embedding_input_text": "a", "metadata": {"foo": "bar"}},
+                    {"text": "b", "url": "url", "vector": [0.1], "keywords": "kw", "embedding_input_text": "b", "metadata": {"foo": "bar"}},
                 ]
             ),
             id="DataFrame",
@@ -63,14 +63,14 @@ def test_unsorted(run_num, expected):
 def test_unsorted_df():
     unsorted = DataFrame[EmbeddingResult](
         [
-            {"text": "b", "url": "url", "vector": [0.1], "keywords": "kw", "embedding_input_text": "b"},
-            {"text": "a", "url": "url", "vector": [0.1], "keywords": "kw", "embedding_input_text": "a"},
+            {"text": "b", "url": "url", "vector": [0.1], "keywords": "kw", "embedding_input_text": "b", "metadata": {"foo": "bar"}},
+            {"text": "a", "url": "url", "vector": [0.1], "keywords": "kw", "embedding_input_text": "a", "metadata": {"foo": "bar"}},
         ]
     )
     sort = DataFrame[EmbeddingResult](
         [
-            {"text": "a", "url": "url", "vector": [0.1], "keywords": "kw", "embedding_input_text": "a"},
-            {"text": "b", "url": "url", "vector": [0.1], "keywords": "kw", "embedding_input_text": "b"},
+            {"text": "a", "url": "url", "vector": [0.1], "keywords": "kw", "embedding_input_text": "a", "metadata": {"foo": "bar"}},
+            {"text": "b", "url": "url", "vector": [0.1], "keywords": "kw", "embedding_input_text": "b", "metadata": {"foo": "bar"}},
         ]
     )
     assert not sort.equals(unsorted), "sanity check"

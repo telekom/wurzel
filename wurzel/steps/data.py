@@ -18,6 +18,7 @@ class EmbeddingResult(PanderaDataFrameModel):
     embedding_input_text: Series[str] = Field(
         nullable=True, default=None, coerce=True, description="Input text sent to the embedding model"
     )
+    metadata: Series[dict] = Field(nullable=True, default=None, description="Optional metadata (key-value pairs)")
 
 
 class EmbeddingMultiVectorResult(PanderaDataFrameModel):
