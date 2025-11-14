@@ -215,7 +215,7 @@ class BaseEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract],
         return text
 
     def preprocess_inputs(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
-        """Custom preprocessing of inputs (called by `run` before embedding calcualation)."""
+        """Custom preprocessing of inputs (called by `run` before embedding calculation)."""
         raise NotImplementedError
 
     def run(self, inpt: list[MarkdownDataContract]) -> DataFrame[EmbeddingResult]:
