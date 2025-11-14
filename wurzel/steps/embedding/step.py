@@ -270,7 +270,7 @@ class EmbeddingStep(BaseEmbeddingStep, SimpleSplitterStep):
     """
 
     def preprocess_inputs(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
-        """Split inputs into chunks (called by `run` before embedding calcualation)."""
+        """Split inputs into chunks (called by `run` before embedding calculation)."""
         return self._split_markdown(inpt)
 
 
