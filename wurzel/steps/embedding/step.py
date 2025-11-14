@@ -257,7 +257,7 @@ class BaseEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract],
         for k, v in stats.items():
             self.log_statistics(series=np.array(v), name=k)
 
-        return DataFrame[EmbeddingResult](DataFrame[EmbeddingResult](output_rows))
+        return DataFrame[EmbeddingResult](output_rows)
 
 
 class EmbeddingStep(BaseEmbeddingStep, SimpleSplitterStep):
