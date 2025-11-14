@@ -37,6 +37,8 @@ class Embedded(TypedDict):
     text: str
     url: str
     vector: list[float]
+    embedding_input_text: str
+    metadata: dict
 
 
 class BaseEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract], DataFrame[EmbeddingResult]]):
@@ -152,7 +154,7 @@ class BaseEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract],
             "url": doc.url,
             "keywords": context,
             "embedding_input_text": text,
-            "metadata": doc.metadata,
+            "metadata": doc.metadata or {},
         }
 
     def is_stopword(self, word: str) -> bool:
@@ -319,7 +321,7 @@ class TruncatedEmbeddingStep(BaseEmbeddingStep):
 
         if len(token_ids) > self.settings.TOKEN_COUNT_MAX:
             log.warning(
-                "Truncating %i tokens from embedding input text: %i input tokens > %i max tokens",
+                "Truncating tokens from embedding input text: %i truncated tokens; %i input tokens > %i max tokens",
                 len(token_ids) - self.settings.TOKEN_COUNT_MAX,
                 len(token_ids),
                 self.settings.TOKEN_COUNT_MAX,
