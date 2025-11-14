@@ -25,8 +25,8 @@ from wurzel.steps.data import EmbeddingResult
         pytest.param(
             DataFrame[EmbeddingResult](
                 [
-                    {"text": "a", "url": "url", "vector": [0.1], "keywords": "kw"},
-                    {"text": "b", "url": "url", "vector": [0.1], "keywords": "kw"},
+                    {"text": "a", "url": "url", "vector": [0.1], "keywords": "kw", "metadata": {"foo": "bar"}},
+                    {"text": "b", "url": "url", "vector": [0.1], "keywords": "kw", "metadata": {"foo": "bar"}},
                 ]
             ),
             id="DataFrame",
