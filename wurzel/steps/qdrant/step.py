@@ -94,6 +94,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             **self.get_available_hashes(row["text"]),
             "keywords": row["keywords"],
             "history": str(step_history.get()),
+            "metadata": row.get("metadata", None),
         }
         return payload
 
