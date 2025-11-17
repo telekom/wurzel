@@ -66,13 +66,20 @@ def test_expection_on_unsupported_tokenizer_name():
 
 
 @pytest.mark.skipif(transformers_missing, reason="transformers not installed")
-def test_hf_decode_without_special_tokens():
+@pytest.mark.parametrize(
+    "text",
+    [
+        pytest.param("Hello world"),
+        pytest.param("A more complex text with #.-, special chars"),
+        # pytest.param("aa\n\nbb"),  # fails due to missing line breaks
+    ],
+)
+def test_hf_decode_without_special_tokens(text):
     from transformers import AutoTokenizer
 
     hf = AutoTokenizer.from_pretrained("intfloat/multilingual-e5-large")
     tok = HFTokenizer(hf)
 
-    text = "Hello world"
     ids = tok.encode(text)
     decoded_text = tok.decode(ids)
 
