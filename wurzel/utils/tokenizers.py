@@ -52,7 +52,9 @@ class Tokenizer(ABC):
         """Enforces a max. token limit on the input text, i.e., the input text is cut-off at the max. token count.
 
         Args:
-            text: The input text of arbitrary length.
+            text (str): The input text of arbitrary length.
+            max_token_count (int): The output text has at max. this number of tokens.
+            return_discarded_text (bool): If enabled, the function returns also the discarded text (beyond token limit). Defaults to False.
 
         Returns:
             str | tuple[str, str]: Text limited to max. token count (and the discarded text, depending on `return_discarded_text`)
@@ -168,7 +170,9 @@ class HFTokenizer(Tokenizer):
         NOTE: The parent method is overloaded since many HF tokenizers change the text when calling decode(encode()).
 
         Args:
-            text: The input text of arbitrary length.
+            text (str): The input text of arbitrary length.
+            max_token_count (int): The output text has at max. this number of tokens.
+            return_discarded_text (bool): If enabled, the function returns also the discarded text (beyond token limit). Defaults to False.
 
         Returns:
             str | tuple[str, str]: Text limited to max. token count (and the discarded text, depending on `return_discarded_text`)
