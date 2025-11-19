@@ -42,6 +42,10 @@ else
     exit 1
 fi
 
+# Install splitter extras for the test
+echo "Installing wurzel[splitter] for test..."
+su -c "cd /usr/app && pip install -e .[splitter]" appuser
+
 # Initialize Git and DVC (required for wurzel/dvc)
 echo "Initializing Git and DVC..."
 su -c "cd /usr/app && git init" appuser
