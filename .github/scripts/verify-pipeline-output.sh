@@ -32,8 +32,10 @@ if [ -z "$SPLITTER_JSON" ]; then
 else
     echo "✓ Found $(basename $SPLITTER_JSON)"
     echo "File size: $(stat -c%s "$SPLITTER_JSON") bytes"
-    # Copy one output file for PR comment
+    # Copy one output file for PR comment to the mounted /tmp directory
+    # This makes it accessible from the host
     cp "$SPLITTER_JSON" /tmp/sample-output.json
+    chmod 644 /tmp/sample-output.json
 fi
 
 echo "Pipeline test completed successfully!"

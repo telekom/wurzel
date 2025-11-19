@@ -291,8 +291,10 @@ jobs:
         if: matrix.python_version == '3.11'
         run: |
           # The sample output was written to tmp/sample-output.json via the mounted volume
+          # Use sudo cp because the file is owned by root from the container
           if [ -f tmp/sample-output.json ]; then
-            mv tmp/sample-output.json sample-output.json
+            sudo cp tmp/sample-output.json sample-output.json
+            sudo chmod 644 sample-output.json
           fi
 
       - name: Comment PR with sample output
