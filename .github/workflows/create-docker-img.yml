@@ -274,6 +274,7 @@ jobs:
     permissions:
       contents: read
       packages: read
+      pull-requests: write
 
     env:
       REGISTRY: ghcr.io
@@ -285,3 +286,44 @@ jobs:
       - uses: ./.github/actions/test-pipeline
         with:
           image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}:${{ needs.build.outputs.version }}
+
+      - name: Move sample output for PR comment
+        if: matrix.python_version == '3.11'
+        run: |
+          # The sample output was written to tmp/sample-output.json via the mounted volume
+          if [ -f tmp/sample-output.json ]; then
+            mv tmp/sample-output.json sample-output.json
+          fi
+
+      - name: Comment PR with sample output
+        if: matrix.python_version == '3.11' && hashFiles('sample-output.json') != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const sampleOutput = fs.readFileSync('sample-output.json', 'utf8');
+            const output = JSON.parse(sampleOutput);
+
+            // Format the output nicely
+            const comment = `## 🎉 Pipeline Test Results
+
+            The e2e pipeline test completed successfully!
+
+            ### Sample Output Document
+
+            <details>
+            <summary>Click to view sample output from SimpleSplitterStep</summary>
+
+            \`\`\`json
+            ${JSON.stringify(output, null, 2)}
+            \`\`\`
+
+            </details>
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
