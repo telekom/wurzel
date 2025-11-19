@@ -192,7 +192,7 @@ def test_embedding_step_log_statistics(mock_embedding, default_embedding_data, e
 
     # Check values if a small tolerance
     expected_char_length_mean = pytest.approx(609.18, abs=0.1)
-    expected_token_length_mean = pytest.approx(257.18, abs=0.1)
+    expected_token_length_mean = pytest.approx(188.3, abs=0.1)
     expected_chunks_count_mean = pytest.approx(3.18, abs=0.2)
 
     assert char_length_record.count == expected_char_length_count, (

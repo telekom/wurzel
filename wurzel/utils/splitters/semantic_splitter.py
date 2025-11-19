@@ -520,14 +520,19 @@ class SemanticSplitter:
             remaining_snipped = text_w_prev_child
         elif self._is_within_targetlen_w_buffer(text_w_prev_child):
             child["text"] = text_w_prev_child
+
+            # Make sure text in within token limit
+            limited_child_text = self._cut_to_tokenlen(child["text"], self.token_limit)
+
+            # Build document from text and child metadata
             return_doc += [
                 MarkdownDataContract(
-                    md=self._cut_to_tokenlen(child["text"], self.token_limit),
+                    md=limited_child_text,
                     url=child["metadata"]["url"],
                     keywords=child["metadata"]["keywords"],
                     metadata={
-                        "token_len": self.token_limit,
-                        "char_len": len(child["text"]),
+                        "token_len": self._get_token_len(limited_child_text),
+                        "char_len": len(limited_child_text),
                     },
                 )
             ]
@@ -583,7 +588,7 @@ class SemanticSplitter:
             url=doc["metadata"]["url"],
             keywords=doc["metadata"]["keywords"],
             metadata={
-                "token_len": self.token_limit,
+                "token_len": self._get_token_len(text),
                 "char_len": len(text),
             },
         )
@@ -677,14 +682,15 @@ class SemanticSplitter:
 
         # add potential short remaining spillovers
         if self._get_token_len(remaining_snipped) >= self.token_limit_min:
+            limited_remaining_snipped = self._cut_to_tokenlen(remaining_snipped, self.token_limit)
             return_doc += [
                 MarkdownDataContract(
-                    md=self._cut_to_tokenlen(remaining_snipped, self.token_limit),
+                    md=limited_remaining_snipped,
                     url=doc["metadata"]["url"],
                     keywords=doc["metadata"]["keywords"],
                     metadata={
-                        "token_len": self.token_limit,
-                        "char_len": len(remaining_snipped),
+                        "token_len": self._get_token_len(limited_remaining_snipped),
+                        "char_len": len(limited_remaining_snipped),
                     },
                 )
             ]
