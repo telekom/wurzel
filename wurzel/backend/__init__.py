@@ -2,7 +2,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from .backend_argo import ArgoBackend
+from wurzel.utils import HAS_HERA
+
 from .backend_dvc import DvcBackend
 
-__all__ = ["DvcBackend", "ArgoBackend"]
+__all__ = ["DvcBackend"]
+
+if HAS_HERA:
+    from .backend_argo import ArgoBackend  # noqa: F401
+
+    __all__.append("ArgoBackend")

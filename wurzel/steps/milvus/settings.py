@@ -28,12 +28,6 @@ class MilvusSettings(Settings):
     Methods:
         parse_json(cls, v): Validates and parses JSON strings into Python objects for SEARCH_PARAMS and INDEX_PARAMS.
 
-    Args:
-                v (str or dict): The value to validate and parse.
-
-    Returns:
-                dict: The parsed dictionary if the input is a JSON string, or the original value if it is already a dictionary.
-
     """
 
     HOST: str = "localhost"

@@ -26,8 +26,6 @@ build: install
 
 $(VENV)/touchfile: pyproject.toml $(UV)
 	$(UV) --no-progress pip install -r pyproject.toml --all-extras
-	@echo "Installing direct dependencies from DIRECT_REQUIREMENTS.txt..."
-	$(UV) --no-progress pip install -r DIRECT_REQUIREMENTS.txt
 	@$(shell if [ "$(OS)" = "Windows_NT" ]; then echo type nul > $(VENV)\\touchfile; else echo touch $(VENV)/touchfile; fi)
 $(PY):
 	$(SYSTEM_PYTHON) -m venv $(VENV)
@@ -37,6 +35,7 @@ $(UV): $(PY)
 	$(PIP) install uv
 
 install: $(VENV)/touchfile
+	$(UV) run pre-commit install
 
 UNAME_S := $(shell uname)
 
@@ -65,7 +64,7 @@ clean:
 	@rm -rf __pycache__ ${SRC_DIR}/*.egg-info **/__pycache__ .pytest_cache
 	@rm -rf .coverage reports dist
 
-documentation:
+documentation: install
 	@echo "📚 Serving documentation..."
 	$(UV) run mkdocs serve
 

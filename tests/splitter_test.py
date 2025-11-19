@@ -2,8 +2,15 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import mdformat
 import pytest
+
+from wurzel.exceptions import StepFailed
+from wurzel.utils import HAS_SPACY
+
+if not HAS_SPACY:
+    pytest.skip("Spacy is not available", allow_module_level=True)
+
+import mdformat
 
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.steps.splitter import SimpleSplitterStep
@@ -518,6 +525,21 @@ Duis consectetur ex elementum arcu volutpat, vitae rutrum risus vehicula. Donec 
     result = step.run(test_data)
     assert len(result) > 2
     assert isinstance(result[0], MarkdownDataContract)
+
+
+def test_simple_splitter_step_fails_with_no_results():
+    test_data = [
+        MarkdownDataContract(
+            md="Too short",
+            url="www.dummy.url/404",
+            keywords="preserve me",
+        )
+    ]
+
+    step = SimpleSplitterStep()
+
+    with pytest.raises(StepFailed, match="no results"):
+        step.run(test_data)
 
 
 def test_splitter_empty_text(Splitter):

@@ -1,0 +1,293 @@
+name: SFTP E2E Tests
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'wurzel/steps/sftp/**'
+      - 'tests/steps/sftp/**'
+      - '.github/workflows/test-sftp-e2e.yaml'
+  pull_request:
+    paths:
+      - 'wurzel/steps/sftp/**'
+      - 'tests/steps/sftp/**'
+      - '.github/workflows/test-sftp-e2e.yaml'
+  workflow_dispatch:
+
+jobs:
+  sftp-e2e:
+    name: SFTP E2E Tests (${{ matrix.auth-type }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        auth-type: [password, ssh-key]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the latest version of uv and set the python version
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+          python-version: "3.11"
+          activate-environment: true
+
+      - name: Generate SSH key pair (SSH key auth only)
+        if: matrix.auth-type == 'ssh-key'
+        run: |
+          mkdir -p /tmp/ssh_keys
+          ssh-keygen -t ed25519 -f /tmp/ssh_keys/id_ed25519 -N "" -C "test@wurzel"
+          cp /tmp/ssh_keys/id_ed25519.pub /tmp/ssh_keys/authorized_keys
+          chmod 600 /tmp/ssh_keys/id_ed25519
+          chmod 644 /tmp/ssh_keys/authorized_keys
+          chmod 700 /tmp/ssh_keys
+          echo "SSH key pair generated:"
+          ls -lah /tmp/ssh_keys/
+
+      - name: Setup SFTP server
+        run: |
+          if [ "${{ matrix.auth-type }}" = "password" ]; then
+            # Start SFTP server with password authentication
+            docker run -d \
+              --name sftp-server \
+              -p 2222:22 \
+              -e SFTP_USERS=testuser:testpass:1001:100:upload \
+              atmoz/sftp:latest
+          else
+            # Start SFTP server with SSH key authentication
+            docker run -d \
+              --name sftp-server \
+              -p 2222:22 \
+              -v /tmp/ssh_keys:/home/testuser/.ssh:ro \
+              atmoz/sftp:latest \
+              testuser::1001:100:upload
+          fi
+
+          echo "Waiting for SFTP server to be ready..."
+          for i in {1..30}; do
+            if nc -z localhost 2222 2>/dev/null; then
+              echo "SFTP server is ready!"
+              break
+            fi
+            echo "Attempt $i: SFTP server not ready yet, waiting..."
+            sleep 2
+          done
+
+      - name: Set environment variables for SFTP connection
+        run: |
+          echo "SFTPMANUALMARKDOWNSTEP__HOST=localhost" >> $GITHUB_ENV
+          echo "SFTPMANUALMARKDOWNSTEP__PORT=2222" >> $GITHUB_ENV
+          echo "SFTPMANUALMARKDOWNSTEP__USERNAME=testuser" >> $GITHUB_ENV
+          echo "SFTPMANUALMARKDOWNSTEP__REMOTE_PATH=/upload/test_data" >> $GITHUB_ENV
+          echo "SFTPMANUALMARKDOWNSTEP__RECURSIVE=true" >> $GITHUB_ENV
+
+          if [ "${{ matrix.auth-type }}" = "password" ]; then
+            echo "SFTPMANUALMARKDOWNSTEP__PASSWORD=testpass" >> $GITHUB_ENV
+          else
+            echo "SFTPMANUALMARKDOWNSTEP__PRIVATE_KEY_PATH=/tmp/ssh_keys/id_ed25519" >> $GITHUB_ENV
+          fi
+
+      - name: Install dependencies
+        run: |
+          uv lock
+          uv --no-progress pip install -e ".[test, sftp]"
+
+      - name: Setup test data on SFTP server
+        run: |
+          AUTH_TYPE="${{ matrix.auth-type }}"
+
+          uv run python -c "
+          import paramiko
+          import os
+
+          auth_type = os.environ.get('AUTH_TYPE', 'password')
+
+          # Connect to SFTP server
+          transport = paramiko.Transport(('localhost', 2222))
+
+          if auth_type == 'password':
+              transport.connect(username='testuser', password='testpass')
+          else:
+              private_key = paramiko.Ed25519Key.from_private_key_file('/tmp/ssh_keys/id_ed25519')
+              transport.connect(username='testuser', pkey=private_key)
+
+          sftp = paramiko.SFTPClient.from_transport(transport)
+
+          # Create test directory structure
+          base_path = '/upload/test_data'
+          for path in ['/upload', base_path, f'{base_path}/subdir']:
+              try:
+                  sftp.mkdir(path)
+              except:
+                  pass
+
+          # Determine emoji and keywords based on auth type
+          emoji = '🎉' if auth_type == 'password' else '🔑'
+          auth_label = '' if auth_type == 'password' else ' (SSH Key Auth)'
+          auth_keyword = 'simple' if auth_type == 'password' else 'ssh-key'
+
+          # Create test files
+          files = {
+              f'{base_path}/doc1.md': f'''---
+          keywords: \"test,e2e,{auth_keyword}\"
+          url: \"https://example.com/doc1\"
+          ---
+          # Test Document 1{auth_label}
+          This is a test document using {auth_type} authentication.''',
+
+              f'{base_path}/doc2.md': f'''---
+          keywords: \"test,unicode,emoji\"
+          ---
+          # UTF-8 Test Document{auth_label}
+          Content with émojis {emoji} and spëcial çharacters.
+          This tests UTF-8 encoding with {auth_type} auth.''',
+
+              f'{base_path}/doc3.md': f'''# Document Without Metadata{auth_label}
+          This document has no YAML frontmatter and uses {auth_type} auth.''',
+
+              f'{base_path}/subdir/doc4.md': f'''---
+          keywords: \"test,subdirectory,{auth_keyword}\"
+          ---
+          # Subdirectory Document{auth_label}
+          This file is in a subdirectory and uses {auth_type} authentication.'''
+          }
+
+          for file_path, content in files.items():
+              with sftp.open(file_path, 'w') as f:
+                  f.write(content.encode('utf-8'))
+
+          sftp.close()
+          transport.close()
+          print(f'Test data uploaded successfully using {auth_type} authentication!')
+          "
+        env:
+          AUTH_TYPE: ${{ matrix.auth-type }}
+
+      - name: Run SFTP step with wurzel
+        run: |
+          echo "Running SFTP step with output to ./output directory..."
+          mkdir -p output
+
+          # Run wurzel and capture exit code
+          set +e
+          uv run wurzel run wurzel.steps.sftp.SFTPManualMarkdownStep -o output
+          EXIT_CODE=$?
+          set -e
+
+          echo "Wurzel exit code: $EXIT_CODE"
+
+          # Check exit code
+          if [ "$EXIT_CODE" -ne 0 ]; then
+            echo "ERROR: Wurzel command failed with exit code $EXIT_CODE"
+            exit 1
+          fi
+
+          echo "✓ Wurzel command succeeded with exit code 0"
+
+          echo "Checking output directory..."
+          ls -lah output/
+
+          # Check if output directory exists and is not empty
+          if [ ! -d "output" ]; then
+            echo "ERROR: Output directory does not exist!"
+            exit 1
+          fi
+
+          file_count=$(find output -type f -name "*.json" | wc -l | tr -d ' ')
+          echo "Found $file_count JSON files in output directory"
+
+          if [ "$file_count" -eq 0 ]; then
+            echo "ERROR: No output files were created!"
+            exit 1
+          fi
+
+          # Check if any output file contains only "[]" (empty array)
+          for file in output/*.json; do
+            if [ -f "$file" ]; then
+              content=$(cat "$file" | tr -d '[:space:]')
+              if [ "$content" = "[]" ]; then
+                echo "ERROR: Output file $(basename "$file") contains empty JSON array '[]'"
+                exit 1
+              fi
+            fi
+          done
+
+
+
+          echo "✓ SUCCESS: SFTP step executed and created $file_count output files!"
+
+      - name: Verify output files content
+        run: |
+          echo "Verifying output files..."
+
+          # Check each JSON file is not empty and contains expected content
+          file_count=0
+          empty_files=0
+
+          for file in output/*.json; do
+            if [ -f "$file" ]; then
+              file_count=$((file_count + 1))
+              size=$(wc -c < "$file")
+              echo "File: $(basename $file) - Size: $size bytes"
+
+              if [ "$size" -eq 0 ]; then
+                echo "ERROR: File $(basename $file) is empty!"
+                empty_files=$((empty_files + 1))
+              fi
+
+              # Verify it's valid JSON
+              if ! python3 -m json.tool "$file" > /dev/null 2>&1; then
+                echo "ERROR: File $(basename $file) is not valid JSON!"
+                exit 1
+              fi
+
+              # Show first few lines of each file
+              echo "Preview of $(basename $file):"
+              head -n 10 "$file"
+              echo "---"
+            fi
+          done
+
+          if [ "$empty_files" -gt 0 ]; then
+            echo "ERROR: Found $empty_files empty files!"
+            exit 1
+          fi
+
+          if [ "$file_count" -eq 0 ]; then
+            echo "ERROR: No JSON files found in output directory!"
+            exit 1
+          fi
+
+          echo "✓ All $file_count output files are non-empty and valid JSON"
+
+          # Verify UTF-8 content is preserved in JSON files
+          if [ "${{ matrix.auth-type }}" = "password" ]; then
+            EMOJI="🎉"
+          else
+            EMOJI="🔑"
+          fi
+
+          if grep -r "$EMOJI" output/; then
+            echo "✓ UTF-8 emoji ($EMOJI) found in output files"
+          else
+            echo "WARNING: UTF-8 emoji not found in output files"
+          fi
+
+          if grep -r "émojis" output/; then
+            echo "✓ UTF-8 accented characters found in output files"
+          else
+            echo "WARNING: UTF-8 accented characters not found in output files"
+          fi
+
+          echo "✓ All output files verified successfully!"
+
+      - name: Show SFTP server logs on failure
+        if: failure()
+        run: |
+          echo "SFTP server logs:"
+          docker logs sftp-server || echo "Could not retrieve logs"

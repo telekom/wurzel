@@ -2,6 +2,13 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import pytest
+
+from wurzel.utils import HAS_SPACY, HAS_TRANSFORMERS
+
+if not HAS_SPACY:
+    pytest.skip("Spacy is not available", allow_module_level=True)
+
 import logging
 
 from wurzel.utils.splitters.semantic_splitter import DocumentNode, MetaDataDict, SemanticSplitter
@@ -53,3 +60,17 @@ def test_cut_off_logging(caplog):
     # check if logs are correct
     assert caplog.records[0].discarded_text == input_text[44:]
     assert caplog.records[0].text == input_text
+
+
+@pytest.mark.skipif(not HAS_TRANSFORMERS, reason="transformers not installed")
+def test_cut_off_e5():
+    splitter = SemanticSplitter(tokenizer_model="intfloat/multilingual-e5-large")
+    input_text = "This is a very long long text with line breaks\n\n\n\n\n... and many many words that produce a lengthy sentence that is the input for the splitter."  # noqa: E501
+
+    cut_off_text_10 = splitter._cut_to_tokenlen(text=input_text, token_len=10)
+    cut_off_text_20 = splitter._cut_to_tokenlen(text=input_text, token_len=20)
+    cut_off_text_100 = splitter._cut_to_tokenlen(text=input_text, token_len=100)  # no cut off
+
+    assert cut_off_text_10 == input_text[:45]
+    assert cut_off_text_20 == input_text[:96]
+    assert cut_off_text_100 == input_text
