@@ -42,9 +42,18 @@ else
     exit 1
 fi
 
+# Initialize Git and DVC (required for wurzel/dvc)
+echo "Initializing Git and DVC..."
+su -c "cd /usr/app && git init" appuser
+su -c "cd /usr/app && git config --global user.email 'ci@example.com'" appuser
+su -c "cd /usr/app && git config --global user.name 'ci-test'" appuser
+su -c "cd /usr/app && dvc init" appuser
+
 # Run pipeline
 echo "Running pipeline..."
-su -c "cd /usr/app && python pipelinedemo.py" appuser
+# We use the same logic as entrypoint.sh but simplified
+su -c "cd /usr/app && wurzel generate pipelinedemo:pipeline > dvc.yaml" appuser
+su -c "cd /usr/app && dvc repro" appuser
 
 # Verify pipeline output
 echo "Verifying pipeline output..."

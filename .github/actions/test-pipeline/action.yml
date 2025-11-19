@@ -30,6 +30,7 @@ runs:
         # Run the test script inside the container via docker run
         # We mount the workspace to the same path as in the container to simplify script logic
         docker run --rm \
+          --entrypoint /bin/bash \
           -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE \
           -e GITHUB_WORKSPACE=$GITHUB_WORKSPACE \
           -e MANUALMARKDOWNSTEP__FOLDER_PATH=/usr/app/demo-data \
@@ -39,7 +40,7 @@ runs:
           -e DVC_DATA_PATH=/usr/app/output \
           -e DVC_FILE=/usr/app/dvc.yaml \
           ${{ inputs.image }} \
-          /bin/bash -c "$GITHUB_WORKSPACE/.github/scripts/run-pipeline-tests.sh"
+          -c "$GITHUB_WORKSPACE/.github/scripts/run-pipeline-tests.sh"
 
     - name: Run pipeline tests (Container)
       if: github.event_name != 'pull_request'
