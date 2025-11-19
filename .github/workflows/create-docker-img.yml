@@ -278,16 +278,10 @@ jobs:
     env:
       REGISTRY: ghcr.io
 
-    container:
-      image: ${{ github.repository }}-py${{ matrix.python_version }}:${{ needs.build.outputs.version }}
-      options: --user root
-      env:
-        MANUALMARKDOWNSTEP__FOLDER_PATH: /usr/app/demo-data
-        WURZEL_PIPELINE: pipelinedemo:pipeline
-        GIT_USER: ci-test
-        GIT_MAIL: ci@example.com
-        DVC_DATA_PATH: /usr/app/output
-        DVC_FILE: /usr/app/dvc.yaml
-
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - uses: ./.github/actions/test-pipeline
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}:${{ needs.build.outputs.version }}
