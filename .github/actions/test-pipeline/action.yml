@@ -30,6 +30,7 @@ runs:
         # Run the test script inside the container via docker run
         # We mount the workspace to the same path as in the container to simplify script logic
         docker run --rm \
+          --user root \
           --entrypoint /bin/bash \
           -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE \
           -e GITHUB_WORKSPACE=$GITHUB_WORKSPACE \
