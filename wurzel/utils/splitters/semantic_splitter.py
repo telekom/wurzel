@@ -228,18 +228,7 @@ class SemanticSplitter:
             str | tuple[str, str]: Text limited to max. token count (and the discarded text, depending on `return_discarded_text`)
 
         """
-        input_tokens = self.tokenizer.encode(text)
-
-        output_tokens = input_tokens[:token_len]  # ensure token length
-        output_text = self.tokenizer.decode(output_tokens)  # convert back to text
-
-        if return_discarded_text:
-            discarded_tokens = input_tokens[token_len:]  # beyond token length
-            discarded_text = self.tokenizer.decode(discarded_tokens)  # convert back to text
-
-            return output_text, discarded_text
-
-        return output_text
+        return self.tokenizer.limit_token_count(text=text, max_token_count=token_len, return_discarded_text=return_discarded_text)
 
     def _is_short(self, text: str) -> bool:
         """Return True when the text is below the lower token threshold."""
