@@ -23,6 +23,7 @@ from wurzel.step import TypedStep
 from wurzel.steps.data import EmbeddingResult
 from wurzel.steps.embedding.huggingface import HuggingFaceInferenceAPIEmbeddings, PrefixedAPIEmbeddings
 from wurzel.steps.splitter import SimpleSplitterStep
+from wurzel.utils.tokenizers import Tokenizer
 
 # Local application/library specific imports
 from .settings import EmbeddingSettings
@@ -36,15 +37,12 @@ class Embedded(TypedDict):
     text: str
     url: str
     vector: list[float]
+    embedding_input_text: str
+    metadata: dict
 
 
-class EmbeddingStep(
-    SimpleSplitterStep,
-    TypedStep[EmbeddingSettings, list[MarkdownDataContract], DataFrame[EmbeddingResult]],
-):
-    """Step for consuming list[MarkdownDataContract]
-    and returning DataFrame[EmbeddingResult].
-    """
+class BaseEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract], DataFrame[EmbeddingResult]]):
+    """Parent class for embedding-related steps implementing common methods."""
 
     embedding: HuggingFaceInferenceAPIEmbeddings
     n_jobs: int
@@ -60,9 +58,10 @@ class EmbeddingStep(
         Markdown.output_formats["plain"] = self.__md_to_plain  # type: ignore[index]
         self.markdown = Markdown(output_format="plain")  # type: ignore[arg-type]
         self.markdown.stripTopLevelTags = False
-        self.settingstopwords = self._load_stopwords()
+        self.stopwords = self._load_stopwords()
 
     def _load_stopwords(self) -> list[str]:
+        """Load stopwords from path (stop words are used by `get_simple_context`)."""
         path = self.settings.STEPWORDS_PATH
         with path.open(encoding="utf-8") as f:
             stopwords = [w.strip() for w in f.readlines() if not w.startswith(";")]
@@ -78,45 +77,6 @@ class EmbeddingStep(
 
         """
         return PrefixedAPIEmbeddings(self.settings.API, self.settings.PREFIX_MAP)
-
-    def run(self, inpt: list[MarkdownDataContract]) -> DataFrame[EmbeddingResult]:
-        """Executes the embedding step by processing input markdown files, generating embeddings,
-        and saving them to a CSV file.
-        """
-        if len(inpt) == 0:
-            log.info("Got empty result in Embedding - Skipping")
-            return DataFrame[EmbeddingResult]([])
-        splitted_md_rows = self._split_markdown(inpt)
-        rows = []
-        failed = 0
-        stats = defaultdict(list)
-
-        for row in tqdm(splitted_md_rows, desc="Calculate Embeddings"):
-            try:
-                rows.append(self._get_embedding(row))
-
-                # collect statistics
-                if row.metadata is not None:
-                    stats["char length"].append(row.metadata.get("char_len", 0))
-                    stats["token length"].append(row.metadata.get("token_len", 0))
-                    stats["chunks count"].append(row.metadata.get("chunks_count", 0))
-
-            except EmbeddingAPIException as err:
-                log.warning(
-                    f"Skipped because EmbeddingAPIException: {err.message}",
-                    extra={"markdown": str(row)},
-                )
-                failed += 1
-        if failed:
-            log.warning(f"{failed}/{len(splitted_md_rows)} got skipped")
-        if failed == len(splitted_md_rows):
-            raise StepFailed(f"all {len(splitted_md_rows)} embeddings got skipped")
-
-        # log statistics
-        for k, v in stats.items():
-            self.log_statistics(series=np.array(v), name=k)
-
-        return DataFrame[EmbeddingResult](DataFrame[EmbeddingResult](rows))
 
     def log_statistics(self, series: np.ndarray, name: str):
         """Log descriptive statistics for all documents.
@@ -188,11 +148,18 @@ class EmbeddingStep(
         context = self.get_simple_context(doc.keywords)
         text = self.get_embedding_input_from_document(doc) if self.settings.CLEAN_MD_BEFORE_EMBEDDING else doc.md
         vector = self.embedding.embed_query(text)
-        return {"text": doc.md, "vector": vector, "url": doc.url, "keywords": context}
+        return {
+            "text": doc.md,
+            "vector": vector,
+            "url": doc.url,
+            "keywords": context,
+            "embedding_input_text": text,
+            "metadata": doc.metadata or {},
+        }
 
     def is_stopword(self, word: str) -> bool:
         """Stopword Detection Function."""
-        return word.lower() in self.settingstopwords
+        return word.lower() in self.stopwords
 
     @classmethod
     def whitespace_word_tokenizer(cls, text: str) -> list[str]:
@@ -255,3 +222,116 @@ class EmbeddingStep(
         for link in links:
             text = text.replace(link, "LINK")
         return text
+
+    def preprocess_inputs(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
+        """Custom preprocessing of inputs (called by `run` before embedding calculation)."""
+        raise NotImplementedError
+
+    def run(self, inpt: list[MarkdownDataContract]) -> DataFrame[EmbeddingResult]:
+        """Executes the embedding step by processing input markdown files, generating embeddings,
+        and saving them to a CSV file.
+        """
+        if len(inpt) == 0:
+            log.info("Got empty result in Embedding - Skipping")
+            return DataFrame[EmbeddingResult]([])
+
+        preprocessed_inputs = self.preprocess_inputs(inpt)
+
+        output_rows = []
+        failed = 0
+        stats = defaultdict(list)
+
+        for input_row in tqdm(preprocessed_inputs, desc="Calculate Embeddings"):
+            try:
+                output_rows.append(self._get_embedding(input_row))
+
+                # collect statistics
+                if input_row.metadata is not None:
+                    stats["char length"].append(input_row.metadata.get("char_len", 0))
+                    stats["token length"].append(input_row.metadata.get("token_len", 0))
+                    stats["chunks count"].append(input_row.metadata.get("chunks_count", 0))
+
+            except EmbeddingAPIException as err:
+                log.warning(
+                    f"Skipped because EmbeddingAPIException: {err.message}",
+                    extra={"markdown": str(input_row)},
+                )
+                failed += 1
+        if failed:
+            log.warning(f"{failed}/{len(preprocessed_inputs)} got skipped")
+        if failed == len(preprocessed_inputs):
+            raise StepFailed(f"all {len(preprocessed_inputs)} embeddings got skipped")
+
+        # log statistics
+        for k, v in stats.items():
+            self.log_statistics(series=np.array(v), name=k)
+
+        return DataFrame[EmbeddingResult](output_rows)
+
+
+class EmbeddingStep(BaseEmbeddingStep, SimpleSplitterStep):
+    """Step for consuming list[MarkdownDataContract] and returning DataFrame[EmbeddingResult].
+
+    This step inherits both from BaseEmbeddingStep and SimpleSplitterStep, meaning that
+    inputs are first splitted and then embeddings of the splits are generated.
+
+    TODO Due to this, a better name of this step would be "EmbeddingSplitterStep", but keeping the name to avoid breaking changes.
+    """
+
+    def preprocess_inputs(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
+        """Split inputs into chunks (called by `run` before embedding calculation)."""
+        return self._split_markdown(inpt)
+
+
+class TruncatedEmbeddingStep(BaseEmbeddingStep):
+    """Step for consuming list[MarkdownDataContract] and returning DataFrame[EmbeddingResult].
+
+    In contrast to `EmbeddingStep`, this step does not perform any splitting but instead the
+    steps truncates all inputs such that the max. token count is fulfiled.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.tokenizer = Tokenizer.from_name(self.settings.TOKENIZER_MODEL)
+
+    def preprocess_inputs(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
+        """No custom processing is performed."""
+        return inpt
+
+    def get_embedding_input_from_document(self, doc: MarkdownDataContract) -> str:
+        """Clean the document and truncate it to max. token count such that it can be used as input to the embedding model.
+
+        The setting `CLEAN_MD_BEFORE_EMBEDDING` must be enabled.
+
+        Parameters
+        ----------
+        doc : MarkdownDataContract
+            The document containing the page content in Markdown format.
+
+        Returns:
+        -------
+        str
+            Cleaned and truncated text that can be used as input to the embedding model.
+
+        """
+        plain_text = super().get_embedding_input_from_document(doc)
+
+        token_ids = self.tokenizer.encode(plain_text)
+
+        if len(token_ids) > self.settings.TOKEN_COUNT_MAX:
+            log.warning(
+                "Truncating tokens from embedding input text: %i truncated tokens; %i input tokens > %i max tokens",
+                len(token_ids) - self.settings.TOKEN_COUNT_MAX,
+                len(token_ids),
+                self.settings.TOKEN_COUNT_MAX,
+                extra={
+                    "text": plain_text,
+                    "input_token_count": len(token_ids),
+                    "max_token_count": self.settings.TOKEN_COUNT_MAX,
+                },
+            )
+
+            token_ids = token_ids[: self.settings.TOKEN_COUNT_MAX]
+
+        return self.tokenizer.decode(token_ids)

@@ -5,6 +5,7 @@
 """Semantic Markdown Splitter."""
 
 import re
+from hashlib import sha256
 from logging import getLogger
 from typing import Optional, TypedDict
 
@@ -755,16 +756,26 @@ class SemanticSplitter:
 
         return docs
 
-    def _set_metadata(self, doc_chunks: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
+    def _set_metadata(self, doc_chunks: list[MarkdownDataContract], source_sha256_hash: str | None) -> list[MarkdownDataContract]:
         """Set metadata fields for each document chunk.
 
         - This might re-tokenizes the text due to _adopt_splitted_list_to_use_highest_prev_header().
-        - Metadata fields: chunk_index, total_chunks, token_len, char_len.
+        - Metadata fields: chunk_index, total_chunks, token_len, char_len, source_hash.
+
+        Args:
+            doc_chunks (list[MarkdownDataContract]): Document chunks.
+            source_sha256_hash (str | None): A SHA256 hash value representing the source document, from which the chunks are created from.
+
+        Returns:
+            list[MarkdownDataContract]: Markdown chunks with metadata fields.
         """
         for chunk_idx, doc in enumerate(doc_chunks):
             metadata = doc.metadata or {}
 
             # extend metadata (if needed)
+            if source_sha256_hash:
+                metadata["source_sha256_hash"] = source_sha256_hash
+
             if "char_len" not in metadata:
                 metadata["char_len"] = len(doc.md)
 
@@ -789,5 +800,9 @@ class SemanticSplitter:
         doc_snippets: list[MarkdownDataContract] = self._parse_hierarchical(doc_hierarchy)
         improved_snippets: list[MarkdownDataContract] = self._adopt_splitted_list_to_use_highest_prev_header(doc_snippets)
         formatted_snippets: list[MarkdownDataContract] = _format_markdown_docs(improved_snippets)
-        snippets_with_metadata: list[MarkdownDataContract] = self._set_metadata(formatted_snippets)
+        snippets_with_metadata: list[MarkdownDataContract] = self._set_metadata(
+            formatted_snippets,
+            # assign a hash of the source markdown to each generated chunk for future identification (URL might be not unique)
+            source_sha256_hash=sha256(doc.md.encode(encoding="utf-8", errors="ignore")).hexdigest(),
+        )
         return snippets_with_metadata
