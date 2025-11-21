@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-
 import pytest
 
 from wurzel.utils import HAS_SPACY
