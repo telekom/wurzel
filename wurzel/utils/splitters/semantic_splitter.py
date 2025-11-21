@@ -105,7 +105,7 @@ def _format_markdown_docs(
     """Formats the Markdown Document by the standards."""
     return [
         MarkdownDataContract(
-            md=re.sub(r"\n{2,}", "\n", mdformat.text(doc.md).strip()).rstrip("\n"),
+            md=mdformat.text(doc.md).strip(),
             url=doc.url,
             keywords=doc.keywords,
             metadata=doc.metadata if hasattr(doc, "metadata") else None,
@@ -787,8 +787,39 @@ class SemanticSplitter:
 
         return doc_chunks
 
+    def _format_single_chunk_if_within_limit(self, doc: MarkdownDataContract) -> list[MarkdownDataContract]:
+        """If the document fits within token_limit, format it and return a single MarkdownDataContract.
+        Returns an empty list when token_len < token_limit_min (logs warning).
+        """
+        token_len = self._get_token_len(doc.md)
+        if token_len <= self.token_limit:
+            if token_len < self.token_limit_min:
+                log.warning(
+                    "document too short",
+                    extra={"token_len": token_len, "token_limit_min": self.token_limit_min, "url": getattr(doc, "url", None)},
+                )
+                return []
+            formatted_doc = _format_markdown_docs([doc])[0]
+            return [
+                MarkdownDataContract(
+                    md=formatted_doc.md,
+                    url=doc.url,
+                    keywords=doc.keywords,
+                    metadata={
+                        "token_len": token_len,
+                        "char_len": len(formatted_doc.md),
+                        "chunk_index": 0,
+                        "chunks_count": 1,
+                    },
+                )
+            ]
+        return None
+
     def split_markdown_document(self, doc: MarkdownDataContract) -> list[MarkdownDataContract]:
         """Split a Markdown Document into Snippets."""
+        early = self._format_single_chunk_if_within_limit(doc)
+        if early is not None:
+            return early
         metadata = MetaDataDict(url=doc.url, keywords=doc.keywords)
         doc_hierarchy: DocumentNode = self._markdown_hierarchy_parser(doc.md, metadata)
         doc_snippets: list[MarkdownDataContract] = self._parse_hierarchical(doc_hierarchy)
