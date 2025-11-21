@@ -7,7 +7,6 @@ import logging
 import shutil
 from pathlib import Path
 
-import numpy as np
 import pytest
 
 from wurzel.utils import HAS_LANGCHAIN_CORE, HAS_REQUESTS, HAS_SPACY, HAS_TIKTOKEN
@@ -21,59 +20,8 @@ from wurzel.steps import EmbeddingStep
 from wurzel.steps.embedding.huggingface import HuggingFaceInferenceAPIEmbeddings
 from wurzel.steps.embedding.step_multivector import EmbeddingMultiVectorStep
 
-SPLITTER_TOKENIZER_MODEL = "gpt-3.5-turbo"
-SENTENCE_SPLITTER_MODEL = "de_core_news_sm"
 
-
-@pytest.fixture(scope="module")
-def mock_embedding():
-    """A pytest fixture that provides a mock embedding class for testing.
-
-    Overrides the `_select_embedding` method of the `EmbeddingStep` class
-    to return an instance of the mock embedding class, which generates
-    a fixed-size random vector upon calling `embed_query`.
-
-    Returns:
-    -------
-    MockEmbedding
-        An instance of the mock embedding class.
-
-    """
-
-    class MockEmbedding:
-        def embed_query(self, _: str) -> list[float]:
-            """Simulates embedding of a query string into a fixed-size random vector.
-
-            Parameters
-            ----------
-            _ : str
-                The input query string (ignored in this mock implementation).
-
-            Returns:
-            -------
-            np.ndarray
-                A random vector of size 768.
-
-            """
-            return list(np.random.random(768))
-
-    def mock_func(*args, **kwargs):
-        return MockEmbedding()
-
-    return mock_func
-
-
-@pytest.fixture
-def default_embedding_data(tmp_path):
-    mock_file = Path("tests/data/markdown.json")
-    input_folder = tmp_path / "input"
-    input_folder.mkdir()
-    shutil.copy(mock_file, input_folder)
-    output_folder = tmp_path / "out"
-    return (input_folder, output_folder)
-
-
-def test_embedding_step(mock_embedding, default_embedding_data, env):
+def test_embedding_step(mock_embedding, default_embedding_data, env, splitter_tokenizer_model, sentence_splitter_model):
     """Tests the execution of the `EmbeddingStep` with a mock input file.
 
     Parameters
@@ -92,8 +40,8 @@ def test_embedding_step(mock_embedding, default_embedding_data, env):
     env.set("EMBEDDINGSTEP__TOKEN_COUNT_MIN", "64")
     env.set("EMBEDDINGSTEP__TOKEN_COUNT_MAX", "256")
     env.set("EMBEDDINGSTEP__TOKEN_COUNT_BUFFER", "32")
-    env.set("EMBEDDINGSTEP__TOKENIZER_MODEL", SPLITTER_TOKENIZER_MODEL)
-    env.set("EMBEDDINGSTEP__SENTENCE_SPLITTER_MODEL", SENTENCE_SPLITTER_MODEL)
+    env.set("EMBEDDINGSTEP__TOKENIZER_MODEL", splitter_tokenizer_model)
+    env.set("EMBEDDINGSTEP__SENTENCE_SPLITTER_MODEL", sentence_splitter_model)
 
     EmbeddingStep._select_embedding = mock_embedding
     input_folder, output_folder = default_embedding_data
@@ -152,15 +100,17 @@ def test_inheritance(env, default_embedding_data):
     assert sf.value.message.endswith(EXPECTED_EXCEPTION)
 
 
-def test_embedding_step_log_statistics(mock_embedding, default_embedding_data, env, caplog):
+def test_embedding_step_log_statistics(
+    mock_embedding, default_embedding_data, env, caplog, splitter_tokenizer_model, sentence_splitter_model
+):
     """Tests the logging of descriptive statistics in the `EmbeddingStep` with a mock input file."""
     env.set("EMBEDDINGSTEP__API", "https://example-embedding.com/embed")
     env.set("EMBEDDINGSTEP__NUM_THREADS", "1")  # Ensure deterministic behavior with single thread
     env.set("EMBEDDINGSTEP__TOKEN_COUNT_MIN", "64")
     env.set("EMBEDDINGSTEP__TOKEN_COUNT_MAX", "256")
     env.set("EMBEDDINGSTEP__TOKEN_COUNT_BUFFER", "32")
-    env.set("EMBEDDINGSTEP__TOKENIZER_MODEL", SPLITTER_TOKENIZER_MODEL)
-    env.set("EMBEDDINGSTEP__SENTENCE_SPLITTER_MODEL", SENTENCE_SPLITTER_MODEL)
+    env.set("EMBEDDINGSTEP__TOKENIZER_MODEL", splitter_tokenizer_model)
+    env.set("EMBEDDINGSTEP__SENTENCE_SPLITTER_MODEL", sentence_splitter_model)
 
     EmbeddingStep._select_embedding = mock_embedding
     input_folder, output_folder = default_embedding_data
@@ -191,8 +141,8 @@ def test_embedding_step_log_statistics(mock_embedding, default_embedding_data, e
     expected_char_length_count = 11
 
     # Check values if a small tolerance
-    expected_char_length_mean = pytest.approx(609.27, abs=0.1)
-    expected_token_length_mean = pytest.approx(229.91, abs=0.1)
+    expected_char_length_mean = pytest.approx(609.18, abs=0.1)
+    expected_token_length_mean = pytest.approx(187.90, abs=0.1)
     expected_chunks_count_mean = pytest.approx(3.18, abs=0.2)
 
     assert char_length_record.count == expected_char_length_count, (

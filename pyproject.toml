@@ -4,7 +4,7 @@
 [project]
 name = "wurzel"
 
-version = "2.3.0"
+version = "2.4.0"
 
 description = "Pick, choose and chain your RAG tools in a pythonic way"
 authors = [
@@ -100,7 +100,7 @@ lint = [
     "pylint-json2html==0.5.0",
     "pre-commit==4.1.*",
     "reuse==5.0.2",
-    "ruff==0.13.2",
+    "ruff==0.14.4",
 ]
 test = [
     "pytest==8.4.*",
