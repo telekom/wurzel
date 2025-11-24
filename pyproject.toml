@@ -45,7 +45,6 @@ dependencies= [
     "lxml>=5.2,<6.1",
     "pyyaml>=6.0.2",
     "pip<26",
-    "spacy==3.7.5",
 ]
 
 [project.optional-dependencies]
@@ -76,6 +75,7 @@ tlsh = [
 splitter = [
     "wurzel[wtpsplit]",
     "wurzel[transformers]",
+    "spacy==3.7.5",
     "joblib>=1.4.0",
 ]
 wtpsplit = [
@@ -125,7 +125,7 @@ docs = [
     "pygments>=2.16.0",
 ]
 
-all = ["wurzel[qdrant,milvus,tlsh,docling,argo,openai,splitter,embedding,scraperapi]"]
+all = ["wurzel[qdrant,milvus,tlsh,docling,argo,openai,splitter,embedding,scraperapi,transformers]"]
 dev = ["wurzel[lint,test,all]"]
 
 [build-system]
