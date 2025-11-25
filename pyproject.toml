@@ -128,7 +128,7 @@ docs = [
     "pygments>=2.16.0",
 ]
 
-all = ["wurzel[qdrant,milvus,tlsh,docling,argo,openai,splitter,embedding,scraperapi,transformers]"]
+all = ["wurzel[qdrant,milvus,tlsh,docling,argo,openai,splitter,embedding,scraperapi]"]
 dev = ["wurzel[lint,test,all]"]
 
 [build-system]
