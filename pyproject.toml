@@ -111,6 +111,7 @@ test = [
     "pytest-xdist==3.*",
     "pytest-mock==3.*",
     "requests-mock==1.*",
+    "spacy==3.7.5",
     #"milvus-lite==2.*", # used for miluvs mock no support for windows https://github.com/milvus-io/milvus-lite/issues/176
 ]
 
