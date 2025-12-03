@@ -72,6 +72,23 @@ wurzel inspect wurzel.steps.manual_markdown.ManualMarkdownStep
 wurzel inspect wurzel.steps.manual_markdown.ManualMarkdownStep --gen-env
 ```
 
+### Managing Environment Variables
+
+Use the `wurzel env` helper to inspect or validate the variables your pipeline needs:
+
+```bash
+# Show required env vars (toggle optional ones via --only-required)
+wurzel env examples.pipeline.pipelinedemo:pipeline --only-required
+
+# Generate a .env snippet with defaults
+wurzel env examples.pipeline.pipelinedemo:pipeline --gen-env > .env.sample
+
+# Fail fast when something is missing
+wurzel env examples.pipeline.pipelinedemo:pipeline --check
+# Allow dynamically added settings (equivalent to setting ALLOW_EXTRA_SETTINGS)
+wurzel env examples.pipeline.pipelinedemo:pipeline --check --allow-extra-fields
+```
+
 ### Generating Pipelines
 
 The `wurzel generate` command creates backend-specific pipeline configurations from chained pipelines.
