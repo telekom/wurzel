@@ -45,6 +45,21 @@ def test_format_env_snippet_matches_expected_layout():
     )
 
 
+def test_format_env_snippet_prefers_current_env_values():
+    reqs = cmd_env.collect_env_requirements(pipelinedemo.pipeline)
+
+    snippet = cmd_env.format_env_snippet(
+        reqs,
+        current_env={
+            "MANUALMARKDOWNSTEP__FOLDER_PATH": "/tmp/data",
+            "SIMPLESPLITTERSTEP__BATCH_SIZE": "256",
+        },
+    )
+
+    assert "MANUALMARKDOWNSTEP__FOLDER_PATH=/tmp/data" in snippet
+    assert "SIMPLESPLITTERSTEP__BATCH_SIZE=256" in snippet
+
+
 def test_validate_env_vars_reports_missing(env):
     env.clear()
     issues = cmd_env.validate_env_vars(pipelinedemo.pipeline, allow_extra_fields=False)
