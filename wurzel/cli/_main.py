@@ -4,6 +4,8 @@
 
 """CLI Entry."""
 
+from __future__ import annotations
+
 import importlib
 import inspect
 import logging
@@ -12,14 +14,22 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, cast
+from typing import TYPE_CHECKING, Annotated, cast
 
 import typer
+from rich.console import Console
+from rich.table import Table
 
 app = typer.Typer(
     no_args_is_help=True,
 )
 log = logging.getLogger(__name__)
+console = Console()
+
+
+if TYPE_CHECKING:  # pragma: no cover - only for typing
+    from wurzel.cli.cmd_env import EnvValidationIssue
+    from wurzel.step import TypedStep
 
 
 def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: str):
@@ -80,6 +90,71 @@ def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path:
     except AssertionError as ae:
         raise typer.BadParameter(f"Class '{kls}' not a TypedStep") from ae
     return step
+
+
+def _ensure_pipeline_obj(pipeline: TypedStep | str):
+    """Resolve pipeline argument to a WZ pipeline instance."""
+    if isinstance(pipeline, str):
+        return pipeline_callback(None, None, pipeline)
+    return pipeline
+
+
+def _load_requirements(pipeline: TypedStep | str, include_optional: bool):
+    from wurzel.cli.cmd_env import collect_env_requirements  # pylint: disable=import-outside-toplevel
+
+    pipeline_obj = _ensure_pipeline_obj(pipeline)
+    requirements = collect_env_requirements(pipeline_obj)
+    filtered = requirements if include_optional else [req for req in requirements if req.required]
+    return pipeline_obj, requirements, filtered
+
+
+def _build_requirements_table(requirements):
+    table = Table(title="Environment variables", header_style="bold magenta")
+    table.add_column("ENV VAR", style="cyan", overflow="fold")
+    table.add_column("REQ", justify="center", style="bold")
+    table.add_column("STEP", style="green")
+    table.add_column("DEFAULT", overflow="fold")
+    table.add_column("DESCRIPTION", overflow="fold")
+
+    for req in requirements:
+        default = req.default or "-"
+        required_flag = "yes" if req.required else "no"
+        table.add_row(req.env_var, required_flag, req.step_name, default, req.description or "-")
+    return table
+
+
+def _build_missing_table(issues: list[EnvValidationIssue]):
+    table = Table(title="Missing environment variables", header_style="bold red")
+    table.add_column("ENV VAR", style="cyan", overflow="fold")
+    table.add_column("MESSAGE", overflow="fold")
+    for issue in issues:
+        table.add_row(issue.env_var, issue.message)
+    return table
+
+
+def _print_requirements(requirements):
+    if console.is_terminal:
+        console.print(_build_requirements_table(requirements))
+        return
+
+    lines = ["Environment variables"]
+    for req in requirements:
+        default = req.default or "-"
+        required_flag = "required" if req.required else "optional"
+        description = req.description or "-"
+        lines.append(f"{req.env_var} ({required_flag}) step={req.step_name} default={default} desc={description}")
+    typer.echo("\n".join(lines))
+
+
+def _print_missing(issues: list[EnvValidationIssue]):
+    if console.is_terminal:
+        console.print(_build_missing_table(issues))
+        return
+
+    lines = ["Missing environment variables:"]
+    for issue in issues:
+        lines.append(f"- {issue.env_var}: {issue.message}")
+    typer.echo("\n".join(lines))
 
 
 def _process_python_file(py_file: Path, search_path: Path, base_module: str, incomplete: str, hints: list) -> None:
@@ -348,6 +423,87 @@ def inspekt(
     from wurzel.cli.cmd_inspect import main as cmd_inspect  # pylint: disable=import-outside-toplevel
 
     return cmd_inspect(step, gen_env)
+
+
+# Env helpers -----------------------------------------------------------------
+
+
+def _run_with_progress(description: str, func):
+    if not console.is_terminal:
+        return func()
+
+    from rich.progress import Progress, SpinnerColumn, TextColumn  # pylint: disable=import-outside-toplevel
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        transient=True,
+        console=console,
+    ) as progress:
+        progress.add_task(description=description, total=None)
+        return func()
+
+
+@app.command("env", help="Inspect or validate environment variables for a pipeline")
+def env_cmd(
+    pipeline: Annotated[
+        str,
+        typer.Argument(
+            allow_dash=False,
+            help="module path to step or pipeline",
+            autocompletion=complete_step_import,
+        ),
+    ],
+    include_optional: Annotated[
+        bool,
+        typer.Option("--include-optional/--only-required", help="display optional variables as well"),
+    ] = True,
+    gen_env: Annotated[
+        bool,
+        typer.Option("--gen-env", help="emit .env content instead of a table"),
+    ] = False,
+    check: Annotated[
+        bool,
+        typer.Option("--check", help="validate that required env vars are set"),
+    ] = False,
+    allow_extra_fields: Annotated[
+        bool,
+        typer.Option("--allow-extra-fields", help="allow unknown settings when validating"),
+    ] = False,
+):
+    """Inspect or validate pipeline env configuration."""
+    from wurzel.cli.cmd_env import format_env_snippet, validate_env_vars  # pylint: disable=import-outside-toplevel
+
+    pipeline_obj, requirements, to_display = _run_with_progress(
+        "Collecting step settings...",
+        lambda: _load_requirements(pipeline, include_optional),
+    )
+
+    if check:
+        issues = _run_with_progress(
+            "Validating environment variables...",
+            lambda: validate_env_vars(pipeline_obj, allow_extra_fields=allow_extra_fields),
+        )
+        if not issues:
+            console.print("[green]All required environment variables are set.[/green]")
+            return
+        _print_missing(issues)
+        console.print("[yellow]Hint: run 'wurzel env --gen-env <pipeline>' to see the expected values.[/yellow]")
+        raise typer.Exit(code=1)
+
+    if not requirements:
+        console.print("[green]Pipeline does not require any environment variables.[/green]")
+        return
+
+    if not to_display:
+        console.print("[yellow]Pipeline has no required environment variables.[/yellow]")
+        return
+
+    if gen_env:
+        typer.echo(format_env_snippet(to_display))
+        return
+
+    _print_requirements(to_display)
 
 
 def get_available_backends() -> list[str]:

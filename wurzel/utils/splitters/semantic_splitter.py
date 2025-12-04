@@ -5,6 +5,7 @@
 """Semantic Markdown Splitter."""
 
 import re
+from hashlib import sha256
 from logging import getLogger
 from typing import Optional, TypedDict
 
@@ -520,14 +521,19 @@ class SemanticSplitter:
             remaining_snipped = text_w_prev_child
         elif self._is_within_targetlen_w_buffer(text_w_prev_child):
             child["text"] = text_w_prev_child
+
+            # Make sure text in within token limit
+            limited_child_text = self._cut_to_tokenlen(child["text"], self.token_limit)
+
+            # Build document from text and child metadata
             return_doc += [
                 MarkdownDataContract(
-                    md=self._cut_to_tokenlen(child["text"], self.token_limit),
+                    md=limited_child_text,
                     url=child["metadata"]["url"],
                     keywords=child["metadata"]["keywords"],
                     metadata={
-                        "token_len": self.token_limit,
-                        "char_len": len(child["text"]),
+                        "token_len": self._get_token_len(limited_child_text),
+                        "char_len": len(limited_child_text),
                     },
                 )
             ]
@@ -583,7 +589,7 @@ class SemanticSplitter:
             url=doc["metadata"]["url"],
             keywords=doc["metadata"]["keywords"],
             metadata={
-                "token_len": self.token_limit,
+                "token_len": self._get_token_len(text),
                 "char_len": len(text),
             },
         )
@@ -677,14 +683,15 @@ class SemanticSplitter:
 
         # add potential short remaining spillovers
         if self._get_token_len(remaining_snipped) >= self.token_limit_min:
+            limited_remaining_snipped = self._cut_to_tokenlen(remaining_snipped, self.token_limit)
             return_doc += [
                 MarkdownDataContract(
-                    md=self._cut_to_tokenlen(remaining_snipped, self.token_limit),
+                    md=limited_remaining_snipped,
                     url=doc["metadata"]["url"],
                     keywords=doc["metadata"]["keywords"],
                     metadata={
-                        "token_len": self.token_limit,
-                        "char_len": len(remaining_snipped),
+                        "token_len": self._get_token_len(limited_remaining_snipped),
+                        "char_len": len(limited_remaining_snipped),
                     },
                 )
             ]
@@ -749,16 +756,26 @@ class SemanticSplitter:
 
         return docs
 
-    def _set_metadata(self, doc_chunks: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
+    def _set_metadata(self, doc_chunks: list[MarkdownDataContract], source_sha256_hash: str | None) -> list[MarkdownDataContract]:
         """Set metadata fields for each document chunk.
 
         - This might re-tokenizes the text due to _adopt_splitted_list_to_use_highest_prev_header().
-        - Metadata fields: chunk_index, total_chunks, token_len, char_len.
+        - Metadata fields: chunk_index, total_chunks, token_len, char_len, source_hash.
+
+        Args:
+            doc_chunks (list[MarkdownDataContract]): Document chunks.
+            source_sha256_hash (str | None): A SHA256 hash value representing the source document, from which the chunks are created from.
+
+        Returns:
+            list[MarkdownDataContract]: Markdown chunks with metadata fields.
         """
         for chunk_idx, doc in enumerate(doc_chunks):
             metadata = doc.metadata or {}
 
             # extend metadata (if needed)
+            if source_sha256_hash:
+                metadata["source_sha256_hash"] = source_sha256_hash
+
             if "char_len" not in metadata:
                 metadata["char_len"] = len(doc.md)
 
@@ -783,5 +800,9 @@ class SemanticSplitter:
         doc_snippets: list[MarkdownDataContract] = self._parse_hierarchical(doc_hierarchy)
         improved_snippets: list[MarkdownDataContract] = self._adopt_splitted_list_to_use_highest_prev_header(doc_snippets)
         formatted_snippets: list[MarkdownDataContract] = _format_markdown_docs(improved_snippets)
-        snippets_with_metadata: list[MarkdownDataContract] = self._set_metadata(formatted_snippets)
+        snippets_with_metadata: list[MarkdownDataContract] = self._set_metadata(
+            formatted_snippets,
+            # assign a hash of the source markdown to each generated chunk for future identification (URL might be not unique)
+            source_sha256_hash=sha256(doc.md.encode(encoding="utf-8", errors="ignore")).hexdigest(),
+        )
         return snippets_with_metadata

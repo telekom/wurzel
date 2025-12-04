@@ -31,7 +31,17 @@ def test_qdrant_connector_first(input_output_folder: tuple[Path, Path], dummy_co
     input_file = input_path / "qdrant_at.csv"
     output_file = output_path / "QdrantConnectorStep"
     shutil.copy("./tests/data/embedded.csv", input_file)
-    BaseStepExecutor().execute_step(QdrantConnectorStep, {input_path}, output_file)
+
+    with BaseStepExecutor() as ex:
+        step_res = ex(QdrantConnectorStep, {input_path}, output_file)
+
+        step_output, step_report = step_res[0]
+
+        # Validate step output
+        assert step_report.results == 2, "Invalid step results"
+
+        assert step_output["collection"][1] == "dummy_v1", "Invalid step output in collection name"
+        assert step_output["metadata"][0]["foo"] == "bar", "Invalid step output in metadata"
 
 
 def test_qdrant_connector_has_previous(input_output_folder: tuple[Path, Path], dummy_collection):
