@@ -15,6 +15,7 @@ if not HAS_HERA:
 from wurzel.backend.backend_argo import ArgoBackend, ArgoBackendSettings, EnvVar
 from wurzel.datacontract.common import MarkdownDataContract
 from wurzel.step import Settings, TypedStep
+from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.utils.meta_settings import WZ
 
 
@@ -100,6 +101,18 @@ def test_env_vars_in_task_container(argo_backend: ArgoBackend):
     assert templates[2]["container"]["env"][0]["value"] == "user1"
     assert templates[2]["container"]["env"][0]["name"] == "DUMMYFOLLOWSTEP__USERNAME"
     assert len(templates[2]["container"]["env"]) == 3
+
+
+def test_create_envs_from_step_settings_loads_prefixed_env(argo_backend: ArgoBackend, env, tmp_path):
+    step = WZ(ManualMarkdownStep)
+    folder = tmp_path / "docs"
+    folder.mkdir()
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(folder))
+
+    envs = argo_backend._create_envs_from_step_settings(step)
+    env_dict = {e.name: e.value for e in envs}
+
+    assert env_dict["MANUALMARKDOWNSTEP__FOLDER_PATH"] == str(folder)
 
 
 def test_argo_settings(env):
