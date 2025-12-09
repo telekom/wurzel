@@ -175,7 +175,7 @@ class BaseStepExecutor:
         self,
         dont_encapsulate: bool = False,
         middlewares: Optional[Union[list[str], list["BaseMiddleware"]]] = None,
-        load_middlewares_from_env: bool = True,
+        load_middlewares_from_env: bool = False,
     ) -> None:
         """Initialize the step executor.
 
