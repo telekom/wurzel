@@ -26,7 +26,7 @@ wurzel generate examples.pipeline.pipelinedemo.pipeline
 
 ## Glossary
 
-### PIPELINE { #PIPELINE data-toc-label="PIPELINE" }
+### PIPELINE {: #PIPELINE }
 
 Module path to a chained pipeline (multiple steps combined with the `>>` operator). Example: `examples.pipeline.pipelinedemo.pipeline`
 
