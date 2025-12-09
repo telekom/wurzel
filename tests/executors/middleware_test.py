@@ -108,6 +108,60 @@ def test_middleware_from_env(tmp_path: Path, env):
         assert result
 
 
+def test_middleware_env_not_loaded_by_default(tmp_path: Path, env):
+    """Ensure env middlewares are not loaded unless explicitly requested."""
+    registry = get_registry()
+
+    class EnvTrackerMiddleware(BaseMiddleware):
+        created_instances = 0
+
+        def __init__(self):
+            super().__init__()
+            EnvTrackerMiddleware.created_instances += 1
+
+        def __call__(self, call_next, step_cls, inputs, output_dir):
+            return call_next(step_cls, inputs, output_dir)
+
+    middleware_name = "envtrackerdefault"
+    registry.register(middleware_name, EnvTrackerMiddleware)
+    env.set("MIDDLEWARES", middleware_name)
+
+    try:
+        with BaseStepExecutor() as exc:
+            result = exc(DummyStep, None, tmp_path)
+            assert result
+        assert EnvTrackerMiddleware.created_instances == 0
+    finally:
+        registry._middlewares.pop(middleware_name, None)
+
+
+def test_middleware_env_load_flag_preserves_old_behavior(tmp_path: Path, env):
+    """Ensure enabling env loading recreates the previous default behavior."""
+    registry = get_registry()
+
+    class EnvTrackerMiddleware(BaseMiddleware):
+        created_instances = 0
+
+        def __init__(self):
+            super().__init__()
+            EnvTrackerMiddleware.created_instances += 1
+
+        def __call__(self, call_next, step_cls, inputs, output_dir):
+            return call_next(step_cls, inputs, output_dir)
+
+    middleware_name = "envtrackerlegacy"
+    registry.register(middleware_name, EnvTrackerMiddleware)
+    env.set("MIDDLEWARES", middleware_name)
+
+    try:
+        with BaseStepExecutor(load_middlewares_from_env=True) as exc:
+            result = exc(DummyStep, None, tmp_path)
+            assert result
+        assert EnvTrackerMiddleware.created_instances == 1
+    finally:
+        registry._middlewares.pop(middleware_name, None)
+
+
 def test_prometheus_middleware_integration(tmp_path: Path):
     """Test that prometheus middleware works via new pattern."""
     with BaseStepExecutor(middlewares=["prometheus"], load_middlewares_from_env=False) as exc:

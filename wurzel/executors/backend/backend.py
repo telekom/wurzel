@@ -31,7 +31,7 @@ class Backend(BaseStepExecutor):
         *,
         dont_encapsulate: bool = False,
         middlewares: list[str] | list["BaseMiddleware"] | None = None,
-        load_middlewares_from_env: bool = True,
+        load_middlewares_from_env: bool = False,
     ) -> None:
         super().__init__(
             dont_encapsulate=dont_encapsulate,
