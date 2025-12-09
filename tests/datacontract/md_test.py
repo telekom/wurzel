@@ -5,7 +5,7 @@
 import pytest
 
 import wurzel
-from wurzel.step import MarkdownDataContract
+from wurzel.core import MarkdownDataContract
 
 
 @pytest.mark.parametrize(

@@ -57,7 +57,7 @@ Data source steps introduce data into your pipeline. They have `None` as their i
 
 ```python
 from typing import Any
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.meta.settings import Settings
 
@@ -101,7 +101,7 @@ class MyDatasourceStep(TypedStep[MySettings, None, list[MarkdownDataContract]]):
 
 ```python
 import sqlite3
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.meta.settings import Settings
 
@@ -149,7 +149,7 @@ Processing steps transform data from upstream steps. They can filter, validate, 
 ### Filter Step
 
 ```python
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.meta.settings import Settings
 
@@ -191,7 +191,7 @@ class DocumentFilterStep(TypedStep[FilterSettings, list[MarkdownDataContract], l
 
 ```python
 import pandas as pd
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 from wurzel.datacontract import MarkdownDataContract, EmbeddingResult
 from wurzel.meta.settings import Settings
 
@@ -244,7 +244,7 @@ class CustomEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract
 ### Validation Step
 
 ```python
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.meta.settings import Settings
 
@@ -305,7 +305,7 @@ Some steps need to combine data from multiple sources:
 
 ```python
 from typing import Union
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.meta.settings import Settings
 
@@ -355,7 +355,7 @@ For steps that need to maintain state across executions:
 
 ```python
 from collections import defaultdict
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.meta.settings import Settings
 

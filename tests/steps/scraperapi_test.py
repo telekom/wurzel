@@ -20,7 +20,7 @@ if not HAS_JOBLIB:
 import requests
 import requests_mock
 
-from wurzel.step_executor.base_executor import BaseStepExecutor
+from wurzel.executors.base_executor import BaseStepExecutor
 from wurzel.steps.scraperapi.step import ScraperAPIStep, UrlItem
 
 
