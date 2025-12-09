@@ -500,7 +500,7 @@ def env_cmd(
         return
 
     if gen_env:
-        typer.echo(format_env_snippet(to_display))
+        typer.echo(format_env_snippet(to_display, current_env=os.environ))
         return
 
     _print_requirements(to_display)

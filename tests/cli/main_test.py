@@ -199,7 +199,30 @@ def test_env_only_required_filters_optional(capsys, monkeypatch):
     assert "SIMPLESPLITTERSTEP__BATCH_SIZE" not in captured.out
 
 
-def test_env_gen_env_outputs_env_file(capsys, monkeypatch):
+def test_env_gen_env_outputs_env_file(capsys, monkeypatch, env):
+    monkeypatch.setattr(main, "console", main.console.__class__(force_terminal=False, width=200))
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", "/tmp/custom")
+    env.set("SIMPLESPLITTERSTEP__BATCH_SIZE", "256")
+
+    main.env_cmd("examples.pipeline.pipelinedemo:pipeline", gen_env=True)
+    captured = capsys.readouterr()
+    expected = (
+        "# Generated env vars\n\n"
+        "# ManualMarkdownStep\n"
+        "MANUALMARKDOWNSTEP__FOLDER_PATH=/tmp/custom\n\n"  # pragma: allowlist secret
+        "# SimpleSplitterStep\n"
+        "SIMPLESPLITTERSTEP__BATCH_SIZE=256\n"
+        "SIMPLESPLITTERSTEP__NUM_THREADS=4\n"
+        "SIMPLESPLITTERSTEP__TOKEN_COUNT_MIN=64\n"
+        "SIMPLESPLITTERSTEP__TOKEN_COUNT_MAX=1024\n"
+        "SIMPLESPLITTERSTEP__TOKEN_COUNT_BUFFER=32\n"
+        "SIMPLESPLITTERSTEP__TOKENIZER_MODEL=gpt-3.5-turbo\n"
+        "SIMPLESPLITTERSTEP__SENTENCE_SPLITTER_MODEL=de_core_news_sm\n\n\n"
+    )
+    assert captured.out == expected
+
+
+def test_env_gen_env_outputs_env_file_empty(capsys, monkeypatch):
     monkeypatch.setattr(main, "console", main.console.__class__(force_terminal=False, width=200))
     main.env_cmd("examples.pipeline.pipelinedemo:pipeline", gen_env=True)
     captured = capsys.readouterr()
