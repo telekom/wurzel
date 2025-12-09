@@ -11,7 +11,7 @@ from wurzel.utils import HAS_SPACY, HAS_TIKTOKEN
 if not HAS_SPACY or not HAS_TIKTOKEN:
     pytest.skip("Simple splitter dependencies (spacy, tiktoken) are not available", allow_module_level=True)
 
-from wurzel.step_executor import BaseStepExecutor
+from wurzel.executors.base_executor import BaseStepExecutor
 from wurzel.steps.splitter import SimpleSplitterStep
 
 

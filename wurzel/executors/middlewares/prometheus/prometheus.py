@@ -8,7 +8,7 @@ import os
 from logging import getLogger
 from typing import Any, Optional
 
-from prometheus_client import REGISTRY, Counter, Histogram, push_to_gateway
+from prometheus_client import REGISTRY, CollectorRegistry, Counter, Histogram, push_to_gateway
 
 from wurzel.core.typed_step import TypedStep
 from wurzel.path import PathToFolderWithBaseModels
@@ -30,7 +30,12 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
     - Histograms for load, execute, and save times
     """
 
-    def __init__(self, settings: Optional[PrometheusMiddlewareSettings] = None):
+    def __init__(
+        self,
+        settings: Optional[PrometheusMiddlewareSettings] = None,
+        *,
+        registry: CollectorRegistry | None = None,
+    ):
         """Initialize the Prometheus middleware.
 
         Args:
@@ -38,6 +43,7 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
         """
         super().__init__()
         self.settings = settings or PrometheusMiddlewareSettings()
+        self.registry = registry or CollectorRegistry(auto_describe=True)
         self._setup_metrics()
 
     def _setup_metrics(self):
@@ -45,13 +51,18 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
         if self.settings.PROMETHEUS_DISABLE_CREATED_METRIC:
             os.environ["PROMETHEUS_DISABLE_CREATED_SERIES"] = "True"
 
-        self.counter_started = Counter("steps_started", "Total number of TypedSteps started", ("step_name",))
-        self.counter_failed = Counter("steps_failed", "Total number of TypedSteps failed", ("step_name",))
-        self.counter_results = Counter("step_results", "count of result, if its an array, otherwise -1", ("step_name",))
-        self.counter_inputs = Counter("step_inputs", "count of inputs", ("step_name",))
-        self.histogram_save = Histogram("step_hist_save", "Time to save results", ("step_name",))
-        self.histogram_load = Histogram("step_hist_load", "Time to load inputs", ("step_name",))
-        self.histogram_execute = Histogram("step_hist_execute", "Time to execute results", ("step_name",))
+        self.counter_started = Counter("steps_started", "Total number of TypedSteps started", ("step_name",), registry=self.registry)
+        self.counter_failed = Counter("steps_failed", "Total number of TypedSteps failed", ("step_name",), registry=self.registry)
+        self.counter_results = Counter(
+            "step_results",
+            "count of result, if its an array, otherwise -1",
+            ("step_name",),
+            registry=self.registry,
+        )
+        self.counter_inputs = Counter("step_inputs", "count of inputs", ("step_name",), registry=self.registry)
+        self.histogram_save = Histogram("step_hist_save", "Time to save results", ("step_name",), registry=self.registry)
+        self.histogram_load = Histogram("step_hist_load", "Time to load inputs", ("step_name",), registry=self.registry)
+        self.histogram_execute = Histogram("step_hist_execute", "Time to execute results", ("step_name",), registry=self.registry)
 
     def __call__(
         self,
@@ -104,6 +115,6 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
         args = {"gateway": self.settings.PROMETHEUS_GATEWAY, "job": self.settings.PROMETHEUS_JOB}
         log.info("Pushing metrics", extra=args)
         try:
-            push_to_gateway(**args, registry=REGISTRY)
+            push_to_gateway(**args, registry=self.registry or REGISTRY)
         except Exception:  # pylint: disable=broad-exception-caught
             log.warning("Could not push prometheus metrics to gateway", exc_info=True)
