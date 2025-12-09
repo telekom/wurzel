@@ -11,7 +11,7 @@ from pydantic import Field
 
 from wurzel.core import Settings, TypedStep
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.exceptions import MarkdownException, SplittException
+from wurzel.exceptions import MarkdownException, SplittException, StepFailed
 from wurzel.utils import HAS_JOBLIB
 from wurzel.utils.splitters.semantic_splitter import SemanticSplitter
 
@@ -24,7 +24,7 @@ class SplitterSettings(Settings):
     """Anything Embedding-related."""
 
     BATCH_SIZE: int = Field(100, gt=0)
-    NUM_THREADS: int = Field(4, gt=1)
+    NUM_THREADS: int = Field(4, ge=1)
     TOKEN_COUNT_MIN: int = Field(64, gt=0)
     TOKEN_COUNT_MAX: int = Field(1024, gt=1)
     TOKEN_COUNT_BUFFER: int = Field(32, gt=0)
@@ -83,19 +83,24 @@ class SimpleSplitterStep(TypedStep[SplitterSettings, list[MarkdownDataContract],
             results = [self._split_markdown(batch) for batch in batches]
 
         # Flatten the list of lists
-        return [item for sublist in results for item in sublist]
+        results = [item for sublist in results for item in sublist]
+
+        if not results:
+            raise StepFailed("no results from simple splitter step")
+
+        return results
 
     def _split_markdown(self, markdowns: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
         """Creates data rows from a batch of markdown texts by splitting them and counting tokens."""
         rows = []
         skipped = 0
-        for s in markdowns:
+        for md_data_contract in markdowns:
             try:
-                rows.extend(self.splitter.split_markdown_document(s))
+                rows.extend(self.splitter.split_markdown_document(md_data_contract))
             except MarkdownException as err:
                 log.warning(
                     "skipped dokument ",
-                    extra={"reason": err.__class__.__name__, "doc": s},
+                    extra={"reason": err.__class__.__name__, "doc": md_data_contract},
                 )
                 skipped += 1
         if skipped == len(markdowns):

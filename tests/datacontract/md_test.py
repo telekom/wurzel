@@ -50,6 +50,9 @@ def test_manual_step_md_parsing(tmp_path, md, url, bread):
     else:
         assert s.md == "Text"
 
+    # check metadata field
+    assert s.metadata is None
+
 
 class MDCChild(MarkdownDataContract):
     pass
@@ -198,3 +201,54 @@ def test_topics_deprecation_warning(tmp_path):
         s = MarkdownDataContract.from_file(f, url_prefix="SPACE/")
 
         assert s.md.startswith("# Some title")
+
+
+def test_metadata_field_metadata(tmp_path):
+    md = """---
+keywords: "k1"
+url: foo/bar
+metadata:
+ foo: bar
+ bar: 123
+---
+# Title
+
+Text.
+ """
+    f = tmp_path / "file.md"
+    f.write_text(md)
+    s = MarkdownDataContract.from_file(f)
+
+    assert "# Title" in s.md
+    assert s.metadata is not None
+    assert s.metadata["foo"] == "bar"
+    assert s.metadata["bar"] == 123
+    assert s.url == "foo/bar"
+
+    assert s.__hash__() == 21317556317919954558699657768736304700342060298586059611903002870732316103488, "Invalid hash"
+
+    # save and load again
+    f2 = tmp_path / "file2.json"
+
+    MarkdownDataContract.save_to_path(f2, s)
+
+    s2 = MarkdownDataContract.load_from_path(f2, MarkdownDataContract)
+
+    assert s.__hash__() == s2.__hash__(), "Invalid hash after write/load file"
+
+
+def test_utf8_encoding(tmp_path):
+    """Test that UTF-8 encoded files are read correctly, especially on Windows."""
+    f = tmp_path / "file.md"
+    # Write UTF-8 content explicitly
+    utf8_content = "---\nkeywords: test,unicode\n---\n# UTF-8 Test\nContent with émojis 🎉 and spëcial çharacters."
+    f.write_text(utf8_content, encoding="utf-8")
+
+    s = MarkdownDataContract.from_file(f, url_prefix="SPACE/")
+
+    # Verify UTF-8 characters are preserved
+    assert "🎉" in s.md
+    assert "émojis" in s.md
+    assert "spëcial" in s.md
+    assert "çharacters" in s.md
+    assert s.keywords == "test,unicode"

@@ -4,6 +4,7 @@
 
 import pytest
 
+from wurzel.exceptions import StepFailed
 from wurzel.utils import HAS_SPACY
 
 if not HAS_SPACY:
@@ -99,8 +100,17 @@ TV HD Recorder Fehlerbehebung](https://www.lorem-ipsum.com/faq/entry/%7Elorem-tv
     )
 
     result = Splitter.split_markdown_document(contract)
-    assert len(result) > 1
-    assert "TV HD Recorder Fehlerbehebun" in result[-1].md
+    assert len(result) == 5, "Splitter produce invalid number of chunks"
+    assert "TV HD Recorder Fehlerbehebun" in result[-1].md, "Invalid chunk content"
+
+    # Check metadata
+    expected_hash = "1b5098dbc4584f019bb00cbbb42a36ef27e908b216f40e09ae77f30ca1cddc2f"  # pragma: allowlist secret
+    assert result[0].metadata["source_sha256_hash"] == expected_hash, "Invalid source hash"
+
+    assert result[0].metadata["source_sha256_hash"] == result[-1].metadata["source_sha256_hash"], "Source hashes are not the same"
+    assert result[0].metadata["chunks_count"] == 5, "Chunk metadata is invalid"
+    assert result[0].metadata["chunk_index"] == 0, "Chunk metadata is invalid"
+    assert result[-1].metadata["chunk_index"] == 4, "Chunk metadata is invalid"
 
 
 def test_sentence_splitter(Splitter: SemanticSplitter):
@@ -524,6 +534,21 @@ Duis consectetur ex elementum arcu volutpat, vitae rutrum risus vehicula. Donec 
     result = step.run(test_data)
     assert len(result) > 2
     assert isinstance(result[0], MarkdownDataContract)
+
+
+def test_simple_splitter_step_fails_with_no_results():
+    test_data = [
+        MarkdownDataContract(
+            md="Too short",
+            url="www.dummy.url/404",
+            keywords="preserve me",
+        )
+    ]
+
+    step = SimpleSplitterStep()
+
+    with pytest.raises(StepFailed, match="no results"):
+        step.run(test_data)
 
 
 def test_splitter_empty_text(Splitter):

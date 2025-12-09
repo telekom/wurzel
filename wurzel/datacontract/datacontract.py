@@ -52,10 +52,28 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
         """Switch case to find the matching file ending."""
         import pandas as pd  # pylint: disable=import-outside-toplevel
 
+        # Load CSV from path
         read_data = pd.read_csv(path.open(encoding="utf-8"))
+
+        def _literal_eval_or_passthrough(value):
+            """Convert stringified literals to Python objects because pandas keeps CSV cells as strings."""
+            if not isinstance(value, str):
+                return value
+            stripped = value.strip()
+            if stripped == "":
+                return None
+            try:
+                return literal_eval(stripped)
+            except (ValueError, SyntaxError):
+                return value
+
+        # Iterate over coluns and load data
         for key, atr in cls.to_schema().columns.items():
-            if atr.dtype.type is list:
-                read_data[key] = read_data[key].apply(literal_eval)
+            if key not in read_data.columns:
+                continue
+            if atr.dtype.type in {list, dict}:
+                read_data[key] = read_data[key].apply(_literal_eval_or_passthrough)
+
         return patyp.DataFrame[cls](read_data)
 
 
@@ -116,11 +134,12 @@ class PydanticModel(pydantic.BaseModel, DataModel):
         raise NotImplementedError(f"Can not load {model_type}")
 
     def __hash__(self) -> int:
+        """Compute a hash based on all not-none field values."""
         # pylint: disable-next=not-an-iterable
         return int(
             hashlib.sha256(
                 bytes(
-                    "".join([getattr(self, name) for name in sorted(type(self).model_fields)]),
+                    "".join([str(getattr(self, name) or "") for name in sorted(type(self).model_fields)]),
                     encoding="utf-8",
                 ),
                 usedforsecurity=False,

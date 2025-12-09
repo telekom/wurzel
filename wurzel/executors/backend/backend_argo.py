@@ -5,17 +5,19 @@
 import logging
 from functools import cache
 from pathlib import Path
+from types import NoneType
 from typing import TYPE_CHECKING, Any
 
 from hera.workflows import DAG, ConfigMapEnvFrom, Container, CronWorkflow, S3Artifact, SecretEnvFrom, Task, Workflow
 from hera.workflows.archive import NoneArchiveStrategy
 from hera.workflows.models import EnvVar, SecurityContext
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, ValidationError
 from pydantic_settings import SettingsConfigDict
 
 from wurzel.cli import generate_cli_call
 from wurzel.core import TypedStep
 from wurzel.core.settings import SettingsBase, SettingsLeaf
+from wurzel.exceptions import EnvSettingsError
 from wurzel.executors.backend.backend import Backend
 from wurzel.executors.base_executor import BaseStepExecutor
 
@@ -122,7 +124,18 @@ class ArgoBackend(Backend):
 
         env_vars = []
 
-        for field_name, field_value in step.settings_class().model_dump().items():
+        if step.settings_class == NoneType:
+            return env_vars
+
+        settings_cls = step.settings_class.with_prefix(f"{step.__class__.__name__.upper()}__")
+        try:
+            settings_instance = settings_cls()
+        except ValidationError as err:  # type: ignore [attr-defined]
+            e = EnvSettingsError(f"could not create {step.settings_class.__name__} from env for {step.__class__.__name__}")
+            e.add_note("To fix these issues setup env vars in the format <step_name>__<var>")
+            raise e from err
+
+        for field_name, field_value in settings_instance.model_dump().items():
             # Skip fields with sensitive keywords in their names
             if isinstance(field_value, SecretStr):
                 log.info(f"skipped config {field_name} due to secret detection")

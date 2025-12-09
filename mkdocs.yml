@@ -66,6 +66,7 @@ theme:
 plugins:
   - search:
       lang: en
+  - autorefs
   - minify:
       minify_html: true
   - mkdocs-typer2:
@@ -151,6 +152,7 @@ nav:
     - Milvus: steps/milvus.md
     - ScraperAPI: steps/scraperapi.md
     - Splitter: steps/splitter.md
+    - SFTP Manual Markdown: steps/sftp.md
 
 
 # Custom CSS and JavaScript

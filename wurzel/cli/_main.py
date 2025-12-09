@@ -4,6 +4,8 @@
 
 """CLI Entry."""
 
+from __future__ import annotations
+
 import importlib
 import inspect
 import logging
@@ -12,9 +14,11 @@ import os
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Annotated, cast
+from typing import TYPE_CHECKING, Annotated, cast
 
 import typer
+from rich.console import Console
+from rich.table import Table
 
 app = typer.Typer(
     no_args_is_help=True,
@@ -28,6 +32,12 @@ from wurzel.cli import cmd_middlewares  # pylint: disable=wrong-import-position
 app.add_typer(cmd_middlewares.app, name="middlewares")
 
 log = logging.getLogger(__name__)
+console = Console()
+
+
+if TYPE_CHECKING:  # pragma: no cover - only for typing
+    from wurzel.cli.cmd_env import EnvValidationIssue
+    from wurzel.core import TypedStep
 
 
 def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: str):
@@ -102,6 +112,71 @@ def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path:
     except AssertionError as ae:
         raise typer.BadParameter(f"Class '{kls}' not a TypedStep") from ae
     return step
+
+
+def _ensure_pipeline_obj(pipeline: TypedStep | str):
+    """Resolve pipeline argument to a WZ pipeline instance."""
+    if isinstance(pipeline, str):
+        return pipeline_callback(None, None, pipeline)
+    return pipeline
+
+
+def _load_requirements(pipeline: TypedStep | str, include_optional: bool):
+    from wurzel.cli.cmd_env import collect_env_requirements  # pylint: disable=import-outside-toplevel
+
+    pipeline_obj = _ensure_pipeline_obj(pipeline)
+    requirements = collect_env_requirements(pipeline_obj)
+    filtered = requirements if include_optional else [req for req in requirements if req.required]
+    return pipeline_obj, requirements, filtered
+
+
+def _build_requirements_table(requirements):
+    table = Table(title="Environment variables", header_style="bold magenta")
+    table.add_column("ENV VAR", style="cyan", overflow="fold")
+    table.add_column("REQ", justify="center", style="bold")
+    table.add_column("STEP", style="green")
+    table.add_column("DEFAULT", overflow="fold")
+    table.add_column("DESCRIPTION", overflow="fold")
+
+    for req in requirements:
+        default = req.default or "-"
+        required_flag = "yes" if req.required else "no"
+        table.add_row(req.env_var, required_flag, req.step_name, default, req.description or "-")
+    return table
+
+
+def _build_missing_table(issues: list[EnvValidationIssue]):
+    table = Table(title="Missing environment variables", header_style="bold red")
+    table.add_column("ENV VAR", style="cyan", overflow="fold")
+    table.add_column("MESSAGE", overflow="fold")
+    for issue in issues:
+        table.add_row(issue.env_var, issue.message)
+    return table
+
+
+def _print_requirements(requirements):
+    if console.is_terminal:
+        console.print(_build_requirements_table(requirements))
+        return
+
+    lines = ["Environment variables"]
+    for req in requirements:
+        default = req.default or "-"
+        required_flag = "required" if req.required else "optional"
+        description = req.description or "-"
+        lines.append(f"{req.env_var} ({required_flag}) step={req.step_name} default={default} desc={description}")
+    typer.echo("\n".join(lines))
+
+
+def _print_missing(issues: list[EnvValidationIssue]):
+    if console.is_terminal:
+        console.print(_build_missing_table(issues))
+        return
+
+    lines = ["Missing environment variables:"]
+    for issue in issues:
+        lines.append(f"- {issue.env_var}: {issue.message}")
+    typer.echo("\n".join(lines))
 
 
 def _process_python_file(py_file: Path, search_path: Path, base_module: str, incomplete: str, hints: list) -> None:
@@ -406,28 +481,121 @@ def inspekt(
     return cmd_inspect(step, gen_env)
 
 
-def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str):
-    """Validates input and returns fitting backend. Currently always DVCBackend."""
-    from wurzel.executors.backend.backend_dvc import DvcBackend  # pylint: disable=import-outside-toplevel
+# Env helpers -----------------------------------------------------------------
+
+
+def _run_with_progress(description: str, func):
+    if not console.is_terminal:
+        return func()
+
+    from rich.progress import Progress, SpinnerColumn, TextColumn  # pylint: disable=import-outside-toplevel
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        transient=True,
+        console=console,
+    ) as progress:
+        progress.add_task(description=description, total=None)
+        return func()
+
+
+@app.command("env", help="Inspect or validate environment variables for a pipeline")
+def env_cmd(
+    pipeline: Annotated[
+        str,
+        typer.Argument(
+            allow_dash=False,
+            help="module path to step or pipeline",
+            autocompletion=complete_step_import,
+        ),
+    ],
+    include_optional: Annotated[
+        bool,
+        typer.Option("--include-optional/--only-required", help="display optional variables as well"),
+    ] = True,
+    gen_env: Annotated[
+        bool,
+        typer.Option("--gen-env", help="emit .env content instead of a table"),
+    ] = False,
+    check: Annotated[
+        bool,
+        typer.Option("--check", help="validate that required env vars are set"),
+    ] = False,
+    allow_extra_fields: Annotated[
+        bool,
+        typer.Option("--allow-extra-fields", help="allow unknown settings when validating"),
+    ] = False,
+):
+    """Inspect or validate pipeline env configuration."""
+    from wurzel.cli.cmd_env import format_env_snippet, validate_env_vars  # pylint: disable=import-outside-toplevel
+
+    pipeline_obj, requirements, to_display = _run_with_progress(
+        "Collecting step settings...",
+        lambda: _load_requirements(pipeline, include_optional),
+    )
+
+    if check:
+        issues = _run_with_progress(
+            "Validating environment variables...",
+            lambda: validate_env_vars(pipeline_obj, allow_extra_fields=allow_extra_fields),
+        )
+        if not issues:
+            console.print("[green]All required environment variables are set.[/green]")
+            return
+        _print_missing(issues)
+        console.print("[yellow]Hint: run 'wurzel env --gen-env <pipeline>' to see the expected values.[/yellow]")
+        raise typer.Exit(code=1)
+
+    if not requirements:
+        console.print("[green]Pipeline does not require any environment variables.[/green]")
+        return
+
+    if not to_display:
+        console.print("[yellow]Pipeline has no required environment variables.[/yellow]")
+        return
+
+    if gen_env:
+        typer.echo(format_env_snippet(to_display))
+        return
+
+    _print_requirements(to_display)
+
+
+def get_available_backends() -> list[str]:
+    """Get list of available backend names.
+
+    Returns:
+        list[str]: List of available backend names (e.g., ['DvcBackend', 'ArgoBackend'])
+    """
     from wurzel.utils import HAS_HERA  # pylint: disable=import-outside-toplevel
 
-    match backend:
-        case DvcBackend.__name__:
-            return DvcBackend
-        case "ArgoBackend":
-            if HAS_HERA:
-                from wurzel.executors.backend.backend_argo import ArgoBackend  # pylint: disable=import-outside-toplevel
+    backends = ["DvcBackend"]
+    if HAS_HERA:
+        backends.append("ArgoBackend")
+    return backends
 
-                return ArgoBackend
-            supported_backends = ["DvcBackend"]
-            raise typer.BadParameter(
-                f"Backend {backend} not supported. choose from {', '.join(supported_backends)} or install wurzel[argo]"
-            )
-        case _:
-            supported_backends = ["DvcBackend"]
-            if HAS_HERA:
-                supported_backends.append("ArgoBackend")
-            raise typer.BadParameter(f"Backend {backend} not supported. choose from {', '.join(supported_backends)}")
+
+def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str):
+    """Validates input and returns fitting backend. Case-insensitive."""
+    from wurzel.executors.backend.backend_dvc import DvcBackend  # pylint: disable=import-outside-toplevel
+
+    backend_normalized = backend.lower()
+    available_backends = get_available_backends()
+    available_backends_lower = [b.lower() for b in available_backends]
+
+    # Map normalized backend names to their classes
+    if backend_normalized == "dvcbackend":
+        if "dvcbackend" in available_backends_lower:
+            return DvcBackend
+    elif backend_normalized == "argobackend":
+        if "argobackend" in available_backends_lower:
+            from wurzel.executors.backend.backend_argo import ArgoBackend  # pylint: disable=import-outside-toplevel
+
+            return ArgoBackend
+        raise typer.BadParameter(f"Backend {backend} not supported. Choose from {', '.join(available_backends)} or install wurzel[argo]")
+
+    raise typer.BadParameter(f"Backend {backend} not supported. Choose from {', '.join(available_backends)}")
 
 
 def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str):
@@ -440,45 +608,64 @@ def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_p
     return step
 
 
-@app.command(no_args_is_help=True, help="generate a pipeline")
+@app.command(help="generate a pipeline")
 # pylint: disable-next=dangerous-default-value
 def generate(
     pipeline: Annotated[
-        str,
+        str | None,
         typer.Argument(
             allow_dash=False,
             help="module path to step or pipeline(which is a chained step)",
             autocompletion=complete_step_import,
-            callback=pipeline_callback,
         ),
-    ],
+    ] = None,
     backend: Annotated[
         str,
         typer.Option(
             "-b",
             "--backend",
-            callback=backend_callback,
             help="backend to use",
         ),
     ] = "DvcBackend",
+    list_backends: Annotated[
+        bool,
+        typer.Option(
+            "--list-backends",
+            help="List all available backends and exit",
+        ),
+    ] = False,
 ):
-    """Run."""
+    """Generate pipeline or list available backends."""
+    if list_backends:
+        backends = get_available_backends()
+        print("Available backends:")  # noqa: T201
+        for backend_name in backends:
+            print(f"  - {backend_name}")  # noqa: T201
+        return None
+
+    if pipeline is None:
+        raise typer.BadParameter("pipeline argument is required when not using --list-backends")
+
+    # Process pipeline and backend
+    pipeline_obj = pipeline_callback(None, None, pipeline)
+    backend_obj = backend_callback(None, None, backend)
+
     from wurzel.cli.cmd_generate import main as cmd_generate  # pylint: disable=import-outside-toplevel
-    from wurzel.executors.backend.backend import Backend  # pylint: disable=import-outside-toplevel
+    from wurzel.executors.backend import Backend  # pylint: disable=import-outside-toplevel
 
     log.debug(
         "generate pipeline",
         extra={
             "parsed_args": {
-                "pipeline": pipeline,
-                "backend": backend,
+                "pipeline": pipeline_obj,
+                "backend": backend_obj,
             }
         },
     )
     return print(  # noqa: T201
         cmd_generate(
-            pipeline,
-            backend=cast(type[Backend], backend),
+            pipeline_obj,
+            backend=cast(type[Backend], backend_obj),
         )
     )
 
@@ -506,7 +693,7 @@ def main_args(
         str,
         typer.Option(
             "--log-level",
-            autocompletion=lambda: ["CRITICAL", "FATAL", "ERROR", "WARN", "INFO"],
+            autocompletion=lambda: ["CRITICAL", "FATAL", "ERROR", "WARN", "INFO", "DEBUG"],
         ),
     ] = "INFO",
 ):

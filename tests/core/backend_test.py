@@ -12,9 +12,10 @@ from wurzel.utils import HAS_HERA
 if not HAS_HERA:
     pytest.skip("Hera is not available", allow_module_level=True)
 
-from wurzel.core import Settings, TypedStep
+from wurzel.core import NoSettings, Settings, TypedStep
 from wurzel.datacontract.common import MarkdownDataContract
 from wurzel.executors.backend.backend_argo import ArgoBackend, ArgoBackendSettings, EnvVar
+from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.utils.meta_settings import WZ
 
 
@@ -100,6 +101,34 @@ def test_env_vars_in_task_container(argo_backend: ArgoBackend):
     assert templates[2]["container"]["env"][0]["value"] == "user1"
     assert templates[2]["container"]["env"][0]["name"] == "DUMMYFOLLOWSTEP__USERNAME"
     assert len(templates[2]["container"]["env"]) == 3
+
+
+def test_create_envs_from_step_settings_loads_prefixed_env(argo_backend: ArgoBackend, env, tmp_path):
+    step = WZ(ManualMarkdownStep)
+    folder = tmp_path / "docs"
+    folder.mkdir()
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(folder))
+
+    envs = argo_backend._create_envs_from_step_settings(step)
+    env_dict = {e.name: e.value for e in envs}
+
+    assert env_dict["MANUALMARKDOWNSTEP__FOLDER_PATH"] == str(folder)
+
+
+def test_create_envs_from_step_with_no_settings(argo_backend: ArgoBackend):
+    """Verify that steps with NoSettings don't cause a crash and return no envs."""
+
+    class NoSettingsStep(TypedStep[NoSettings, None, MarkdownDataContract]):
+        def run(self, inpt: None) -> MarkdownDataContract:
+            return super().run(inpt)
+
+    step = WZ(NoSettingsStep)
+
+    # This call should not raise an exception
+    envs = argo_backend._create_envs_from_step_settings(step)
+
+    # Expect an empty list of environment variables
+    assert envs == []
 
 
 def test_argo_settings(env):

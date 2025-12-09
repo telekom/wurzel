@@ -4,7 +4,7 @@
 [project]
 name = "wurzel"
 
-version = "2.2.0"
+version = "2.4.0"
 
 description = "Pick, choose and chain your RAG tools in a pythonic way"
 authors = [
@@ -31,16 +31,16 @@ classifiers = [
     'Topic :: Software Development :: Version Control',
 ]
 dependencies= [
-    "tqdm==4.66.5",
+    "tqdm==4.67.1",
     "pandas==2.3.3",
     "numpy < 2.0.0",
-    "dvc==3.53.1",
+    "dvc==3.63.0",
     "Markdown==3.6",
     "pydantic-settings==2.5.2",
     "pydantic>=2.6.4, == 2.*",
     "asgi-correlation-id>=4.3.1, == 4.*",
-    "prometheus-client==0.21.1",
-    "mistletoe==1.4.0",
+    "prometheus-client==0.23.1",
+    "mistletoe==1.5.0",
     "pandera==0.20.3",
     "mdformat==0.7.22",
     "lxml>=5.2,<6.1",
@@ -56,10 +56,10 @@ docling = [
     "docling==2.30.0"
 ]
 milvus = [
-    "pymilvus==2.5.14",
+    "pymilvus==2.6.3",
 ]
 openai = [
-    "tiktoken==0.11.0",
+    "tiktoken==0.12.0",
 ]
 transformers = [
     "transformers",
@@ -90,6 +90,9 @@ scraperapi = [
     "requests",
     "joblib>=1.4.0",
 ]
+sftp = [
+    "paramiko>=3.0.0",
+]
 argo = [
     "hera >=5.20.1",
 ]
@@ -98,7 +101,7 @@ lint = [
     "pylint-json2html==0.5.0",
     "pre-commit==4.1.*",
     "reuse==5.0.2",
-    "ruff==0.13.2",
+    "ruff==0.14.4",
 ]
 test = [
     "pytest==8.4.*",
