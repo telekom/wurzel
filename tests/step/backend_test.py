@@ -103,6 +103,43 @@ def test_env_vars_in_task_container(argo_backend: ArgoBackend):
     assert len(templates[2]["container"]["env"]) == 3
 
 
+def _extract_container_templates(backend: ArgoBackend, step: TypedStep) -> list[dict]:
+    yaml_output = backend.generate_artifact(step)
+    parsed = yaml.safe_load(yaml_output)
+    return parsed.get("spec", {}).get("workflowSpec", {}).get("templates", [])
+
+
+def test_env_from_sources_only_included_when_configured():
+    base_settings = ArgoBackendSettings()
+    base_settings.INLINE_STEP_SETTINGS = True
+    backend_without_refs = ArgoBackend(settings=base_settings)
+    step = WZ(DummyStep)
+
+    templates = _extract_container_templates(backend_without_refs, step)
+    assert not templates[1]["container"].get("envFrom")
+
+    configured_settings = ArgoBackendSettings()
+    configured_settings.INLINE_STEP_SETTINGS = True
+    configured_settings.SECRET_NAME = "custom-secret"  # pragma: allowlist secret
+    configured_settings.CONFIG_MAP = "custom-config"
+    backend_with_refs = ArgoBackend(settings=configured_settings)
+
+    templates = _extract_container_templates(backend_with_refs, step)
+    env_from = templates[1]["container"].get("envFrom") or []
+
+    secret_ref = {
+        "prefix": "",
+        "secretRef": {"name": "custom-secret", "optional": True},
+    }
+    configmap_ref = {
+        "prefix": "",
+        "configMapRef": {"name": "custom-config", "optional": True},
+    }
+
+    assert secret_ref in env_from
+    assert configmap_ref in env_from
+
+
 def test_create_envs_from_step_settings_loads_prefixed_env(argo_backend: ArgoBackend, env, tmp_path):
     step = WZ(ManualMarkdownStep)
     folder = tmp_path / "docs"
