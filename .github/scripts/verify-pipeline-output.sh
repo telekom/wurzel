@@ -17,19 +17,25 @@ if [ ! -d "/usr/app/data/ManualMarkdownStep" ] || [ ! -d "/usr/app/data/SimpleSp
     exit 1
 fi
 
-# Check for specific expected outputs
-if [ ! -f "/usr/app/data/ManualMarkdownStep/ManualMarkdown.json" ]; then
-    echo "WARNING: ManualMarkdown.json not found"
+# Check for specific expected outputs (search recursively)
+MANUAL_JSON=$(find /usr/app/data/ManualMarkdownStep -name "*.json" -type f | head -n 1)
+if [ -z "$MANUAL_JSON" ]; then
+    echo "WARNING: No JSON files found in ManualMarkdownStep"
 else
-    echo "✓ Found ManualMarkdown.json"
-    echo "File size: $(stat -c%s '/usr/app/data/ManualMarkdownStep/ManualMarkdown.json') bytes"
+    echo "✓ Found $(basename $MANUAL_JSON)"
+    echo "File size: $(stat -c%s "$MANUAL_JSON") bytes"
 fi
 
-if [ ! -f "/usr/app/data/SimpleSplitterStep/SimpleSplitter.json" ]; then
-    echo "WARNING: SimpleSplitter.json not found"
+SPLITTER_JSON=$(find /usr/app/data/SimpleSplitterStep -name "*.json" -type f | head -n 1)
+if [ -z "$SPLITTER_JSON" ]; then
+    echo "WARNING: No JSON files found in SimpleSplitterStep"
 else
-    echo "✓ Found SimpleSplitter.json"
-    echo "File size: $(stat -c%s '/usr/app/data/SimpleSplitterStep/SimpleSplitter.json') bytes"
+    echo "✓ Found $(basename $SPLITTER_JSON)"
+    echo "File size: $(stat -c%s "$SPLITTER_JSON") bytes"
+    # Copy one output file for PR comment to the mounted /tmp directory
+    # This makes it accessible from the host
+    cp "$SPLITTER_JSON" /tmp/sample-output.json
+    chmod 644 /tmp/sample-output.json
 fi
 
 echo "Pipeline test completed successfully!"

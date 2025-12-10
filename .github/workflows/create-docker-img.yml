@@ -13,6 +13,9 @@ on:
   push:
     branches:
       - "!main"
+  pull_request:
+    branches:
+      - main
 
 
 
@@ -32,6 +35,9 @@ jobs:
         platform:
           - linux/amd64
           - linux/arm64
+        python_version:
+          - '3.11'
+          - '3.12'
 
     permissions:
       contents: read
@@ -89,7 +95,10 @@ jobs:
         id: cache
         with:
           path: cache-mount
-          key: cache-mount-${{ matrix.platform }}-${{ hashFiles('Dockerfile') }}
+          key: cache-mount-${{ matrix.python_version }}-${{ matrix.platform }}
+          restore-keys: |
+            cache-mount-${{ matrix.python_version }}-
+            cache-mount-
 
       - name: Restore Docker cache mounts
         uses: reproducible-containers/buildkit-cache-dance@v3.3.0
@@ -107,7 +116,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
 
@@ -117,31 +126,59 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
+          build-args: PYTHON_VERSION=${{ matrix.python_version }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          cache-from: type=gha,scope=${{ github.workflow }}-${{ matrix.platform }}
-          cache-to: type=gha,mode=${{ matrix.platform == 'linux/amd64' && 'min' || 'max' }},scope=${{ github.workflow }}-${{ matrix.platform }}
-          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha,scope=${{ github.workflow }}-${{ matrix.python_version }}-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=${{ github.workflow }}-${{ matrix.python_version }}-${{ matrix.platform }}
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
           provenance: false
           sbom: false
 
       - name: Export digest
+        if: github.event_name != 'pull_request'
         run: |
           mkdir -p ${{ runner.temp }}/digests
           digest="${{ steps.build.outputs.digest }}"
           touch "${{ runner.temp }}/digests/${digest#sha256:}"
 
       - name: Upload digest
+        if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: digests-${{ env.PLATFORM_PAIR }}
+          name: digests-${{ matrix.python_version }}-${{ env.PLATFORM_PAIR }}
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
 
+      - name: Tag image with version
+        if: github.event_name == 'pull_request' && matrix.platform == 'linux/amd64'
+        run: |
+          docker tag ${{ steps.meta.outputs.tags }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}:${{ env.version }}
+
+      - name: Save image for testing
+        if: github.event_name == 'pull_request' && matrix.platform == 'linux/amd64'
+        run: |
+          docker save ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}:${{ env.version }} -o image.tar
+
+      - name: Upload image
+        if: github.event_name == 'pull_request' && matrix.platform == 'linux/amd64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-${{ matrix.python_version }}
+          path: image.tar
+          retention-days: 1
+
   merge:
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request'
+    strategy:
+      matrix:
+        python_version:
+          - '3.11'
+          - '3.12'
     needs:
       - build
     permissions:
@@ -155,7 +192,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ${{ runner.temp }}/digests
-          pattern: digests-*
+          pattern: digests-${{ matrix.python_version }}-*
           merge-multiple: true
 
       - name: Set up Docker Buildx
@@ -172,7 +209,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ needs.build.outputs.version }},enable={{is_default_branch}}
@@ -184,22 +221,31 @@ jobs:
         working-directory: ${{ runner.temp }}/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@sha256:%s ' *)
+            $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}@sha256:%s ' *)
 
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.version }}
+          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}:${{ steps.meta.outputs.version }}
 
   test-demo-pipeline:
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python_version:
+          - '3.11'
+          - '3.12'
     needs:
-      - merge
+      - build
     permissions:
       contents: read
       packages: read
 
+    env:
+      REGISTRY: ghcr.io
+
     container:
-      image: ghcr.io/${{ github.repository }}:${{ needs.merge.outputs.version }}
+      image: ghcr.io/${{ github.repository }}-py${{ matrix.python_version }}:${{ needs.build.outputs.version }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -213,50 +259,73 @@ jobs:
         DVC_FILE: /usr/app/dvc.yaml
 
     steps:
+      - uses: ./.github/actions/test-pipeline
+
+  test-demo-pipeline-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python_version:
+          - '3.11'
+          - '3.12'
+    needs:
+      - build
+    permissions:
+      contents: read
+      packages: read
+      pull-requests: write
+
+    env:
+      REGISTRY: ghcr.io
+
+    steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Fix ownership and switch to appuser
-        run: |
-          # Change ownership of the workspace to appuser
-          chown -R appuser:appgroup $GITHUB_WORKSPACE
-          # Ensure appuser has read/write access to output directory
-          mkdir -p /usr/app/data
-          chown -R appuser:appgroup /usr/app/data
-          # Switch to appuser for remaining steps
-          echo "USER_ID=$(id -u appuser)" >> $GITHUB_ENV
-          echo "GROUP_ID=$(id -g appuser)" >> $GITHUB_ENV
-
-      - name: Copy pipeline configuration
-        run: |
-          if [ -f "$GITHUB_WORKSPACE/examples/pipeline/pipelinedemo.py" ]; then
-            su -c "cp $GITHUB_WORKSPACE/examples/pipeline/pipelinedemo.py /usr/app/" appuser
-          else
-            echo "ERROR: pipelinedemo.py not found!"
-            exit 1
-          fi
-          if [ -d "$GITHUB_WORKSPACE/examples/pipeline/demo-data" ]; then
-            su -c "cp -r $GITHUB_WORKSPACE/examples/pipeline/demo-data /usr/app/demo-data" appuser
-          else
-            echo "ERROR: demo-data directory not found!"
-            exit 1
-          fi
-          echo "Files in /usr/app after copy:"
-          su -c "pwd && ls -l /usr/app" appuser
-
-
-      - name: Run demo pipeline
-        working-directory: /usr/app
-        run: su -c "/usr/app/entrypoint.sh" appuser
-
-      - name: Verify pipeline output
-        run: |
-          chmod +x $GITHUB_WORKSPACE/.github/scripts/verify-pipeline-output.sh
-          $GITHUB_WORKSPACE/.github/scripts/verify-pipeline-output.sh
-
-      - name: Upload pipeline outputs as artifacts
-        uses: actions/upload-artifact@v4
+      - uses: ./.github/actions/test-pipeline
         with:
-          name: pipeline-outputs
-          path: /usr/app/data/
-          retention-days: 7
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}:${{ needs.build.outputs.version }}
+
+      - name: Move sample output for PR comment
+        if: matrix.python_version == '3.11'
+        run: |
+          # The sample output was written to tmp/sample-output.json via the mounted volume
+          # Use sudo cp because the file is owned by root from the container
+          if [ -f tmp/sample-output.json ]; then
+            sudo cp tmp/sample-output.json sample-output.json
+            sudo chmod 644 sample-output.json
+          fi
+
+      - name: Comment PR with sample output
+        if: matrix.python_version == '3.11' && hashFiles('sample-output.json') != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const sampleOutput = fs.readFileSync('sample-output.json', 'utf8');
+            const output = JSON.parse(sampleOutput);
+
+            // Format the output nicely
+            const comment = `## 🎉 Pipeline Test Results
+
+            The e2e pipeline test completed successfully!
+
+            ### Sample Output Document
+
+            <details>
+            <summary>Click to view sample output from SimpleSplitterStep</summary>
+
+            \`\`\`json
+            ${JSON.stringify(output, null, 2)}
+            \`\`\`
+
+            </details>
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

@@ -31,17 +31,30 @@ jobs:
         run: |
           git reset --hard ${{ github.sha }}
 
-
-      - name: Python Semantic Release
-        id: release
-        uses: python-semantic-release/python-semantic-release@v10.0.2
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          changelog: false
-          git_committer_name: "github-actions"
-          git_committer_email: "actions@users.noreply.github.com"
-          prerelease: true
-          vcs_release: false
+          python-version: '3.11'
+
+
+      - name: Generate version
+        id: version
+        run: |
+          BASE_VERSION=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'], end='')")
+          VERSION="${BASE_VERSION}.dev.$(date +%Y%m%d%H%M%S)"
+          echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+
+      - name: Update version in pyproject.toml
+        run: |
+          sed -i "s/version = \".*\"/version = \"${{ steps.version.outputs.version }}\"/" pyproject.toml
+
+
+      - name: Build package
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          uv build
 
 
 
