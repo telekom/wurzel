@@ -1,0 +1,60 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+#
+# SPDX-License-Identifier: Apache-2.0
+name: 'Test Pipeline'
+description: 'Run the demo pipeline in the container'
+
+inputs:
+  image:
+    description: 'Docker image to use for testing (required for PRs)'
+    required: false
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Download image
+      if: github.event_name == 'pull_request'
+      uses: actions/download-artifact@v4
+      with:
+        name: docker-image-${{ matrix.python_version }}
+
+    - name: Load image
+      if: github.event_name == 'pull_request'
+      shell: bash
+      run: docker load -i image.tar
+
+    - name: Run pipeline tests (PR)
+      if: github.event_name == 'pull_request'
+      shell: bash
+      run: |
+        # Run the test script inside the container via docker run
+        # We mount the workspace to the same path as in the container to simplify script logic
+        # We also mount /tmp to extract the sample output file
+        docker run --rm \
+          --user root \
+          --entrypoint /bin/bash \
+          -v $GITHUB_WORKSPACE:$GITHUB_WORKSPACE \
+          -v $(pwd)/tmp:/tmp \
+          -e GITHUB_WORKSPACE=$GITHUB_WORKSPACE \
+          -e MANUALMARKDOWNSTEP__FOLDER_PATH=/usr/app/demo-data \
+          -e WURZEL_PIPELINE=pipelinedemo:pipeline \
+          -e GIT_USER=ci-test \
+          -e GIT_MAIL=ci@example.com \
+          -e DVC_DATA_PATH=/usr/app/output \
+          -e DVC_FILE=/usr/app/dvc.yaml \
+          ${{ inputs.image }} \
+          -c "$GITHUB_WORKSPACE/.github/scripts/run-pipeline-tests.sh"
+
+    - name: Run pipeline tests (Container)
+      if: github.event_name != 'pull_request'
+      shell: bash
+      run: |
+        # Run the test script directly (we are already in the container)
+        $GITHUB_WORKSPACE/.github/scripts/run-pipeline-tests.sh
+
+    - name: Upload pipeline outputs as artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: pipeline-outputs-${{ matrix.python_version }}
+        path: /usr/app/data/
+        retention-days: 7
