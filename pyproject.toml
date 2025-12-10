@@ -76,7 +76,7 @@ splitter = [
     "wurzel[wtpsplit]",
     "wurzel[transformers]",
     "wurzel[openai]",
-    "spacy==3.7.5",
+    "spacy==3.8.11",
     "joblib>=1.4.0",
 ]
 wtpsplit = [
