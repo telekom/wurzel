@@ -31,11 +31,18 @@ jobs:
         run: |
           git reset --hard ${{ github.sha }}
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
 
       - name: Generate version
         id: version
         run: |
-          VERSION="0.0.0.dev.$(date +%Y%m%d%H%M%S)"
+          BASE_VERSION=$(python3 -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'], end='')")
+          VERSION="${BASE_VERSION}.dev.$(date +%Y%m%d%H%M%S)"
+          echo "base_version=$BASE_VERSION" >> $GITHUB_OUTPUT
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
 
