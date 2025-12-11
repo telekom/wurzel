@@ -571,6 +571,35 @@ def generate(
             help="backend to use",
         ),
     ] = "DvcBackend",
+    values: Annotated[
+        list[Path] | None,
+        typer.Option(
+            "--values",
+            "-f",
+            help="YAML values file(s) merged in order (Helm-style)",
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            resolve_path=True,
+        ),
+    ] = None,
+    workflow: Annotated[
+        str | None,
+        typer.Option("--workflow", help="workflow name to render from the provided values files"),
+    ] = None,
+    output: Annotated[
+        Path | None,
+        typer.Option(
+            "-o",
+            "--output",
+            help="write generated manifests to this file (stdout when omitted)",
+            file_okay=True,
+            dir_okay=False,
+            writable=True,
+            resolve_path=True,
+        ),
+    ] = None,
     list_backends: Annotated[
         bool,
         typer.Option(
@@ -603,15 +632,22 @@ def generate(
             "parsed_args": {
                 "pipeline": pipeline_obj,
                 "backend": backend_obj,
+                "values": values,
+                "workflow": workflow,
+                "output": output,
             }
         },
     )
-    return print(  # noqa: T201
-        cmd_generate(
-            pipeline_obj,
-            backend=cast(type[Backend], backend_obj),
-        )
+    rendered = cmd_generate(
+        pipeline_obj,
+        backend=cast(type[Backend], backend_obj),
+        values=values or [],
+        workflow=workflow,
+        output=output,
     )
+    if output is None:
+        print(rendered)  # noqa: T201
+    return None
 
 
 def update_log_level(log_level: str):

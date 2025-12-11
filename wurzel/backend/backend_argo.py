@@ -2,151 +2,245 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+"""Argo backend that renders workflows, secrets and config maps from YAML values."""
+
+from __future__ import annotations
+
 import logging
+from copy import deepcopy
 from functools import cache
 from pathlib import Path
-from types import NoneType
-from typing import Any
+from typing import Any, Iterable, Literal
 
-from hera.workflows import DAG, ConfigMapEnvFrom, Container, CronWorkflow, S3Artifact, SecretEnvFrom, Task, Workflow
+import yaml
+from hera.workflows import (
+    ConfigMapEnvFrom,
+    Container,
+    CronWorkflow,
+    DAG,
+    S3Artifact,
+    SecretEnvFrom,
+    Task,
+    Volume,
+    Workflow,
+)
 from hera.workflows.archive import NoneArchiveStrategy
-from hera.workflows.models import EnvVar, SecurityContext
-from pydantic import Field, SecretStr, ValidationError
-from pydantic_settings import SettingsConfigDict
+from hera.workflows.models import EnvVar, SecretVolumeSource, SecurityContext, VolumeMount
+from pydantic import BaseModel, Field
 
 from wurzel.backend.backend import Backend
 from wurzel.cli import generate_cli_call
-from wurzel.exceptions import EnvSettingsError
 from wurzel.step import TypedStep
-from wurzel.step.settings import SettingsBase, SettingsLeaf
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 
 log = logging.getLogger(__name__)
 
 
-class S3ArtifactTemplate(SettingsLeaf):
-    """Leaf settings used to define the S3 artifact configuration for input/output persistence in Argo.
+# ---------------------------------------------------------------------------
+# Values schema
+# ---------------------------------------------------------------------------
 
-    Attributes:
-        bucket (str): Name of the S3 bucket used to store pipeline artifacts.
-        endpoint (str): Endpoint URL of the S3-compatible storage service.
 
-    """
+class SecretMapping(BaseModel):
+    key: str
+    value: str
 
+
+class SecretMount(BaseModel):
+    source: str = Field(..., alias="from")
+    destination: Path = Field(..., alias="to")
+    mappings: list[SecretMapping]
+
+
+class EnvFromConfig(BaseModel):
+    kind: Literal["secret", "configMap"] = "secret"
+    name: str
+    prefix: str | None = None
+    optional: bool = True
+
+
+class ContainerConfig(BaseModel):
+    image: str = "ghcr.io/telekom/wurzel"
+    env: dict[str, str] = Field(default_factory=dict)
+    envFrom: list[EnvFromConfig] = Field(default_factory=list)
+    mountSecrets: list[SecretMount] = Field(default_factory=list)
+    annotations: dict[str, str] = Field(default_factory=lambda: {"sidecar.istio.io/inject": "false"})
+
+
+class S3ArtifactConfig(BaseModel):
     bucket: str = "wurzel-bucket"
     endpoint: str = "s3.amazonaws.com"
 
 
-DNS_LABEL_REGEX = r"^[a-z0-9]([-a-z0-9]*[a-z0-9])?$"
+class WorkflowConfig(BaseModel):
+    name: str = "wurzel"
+    namespace: str = "argo-workflows"
+    schedule: str | None = "0 4 * * *"
+    entrypoint: str = "wurzel-pipeline"
+    serviceAccountName: str = "wurzel-service-account"
+    dataDir: Path = Path("/usr/app")
+    annotations: dict[str, str] = Field(default_factory=lambda: {"sidecar.istio.io/inject": "false"})
+    container: ContainerConfig = Field(default_factory=ContainerConfig)
+    artifacts: S3ArtifactConfig = Field(default_factory=S3ArtifactConfig)
 
 
-class ArgoBackendSettings(SettingsBase):
-    """Settings object for the Argo Workflows backend, configurable via environment variables.
+class ConfigMapConfig(BaseModel):
+    data: dict[str, str]
 
-    Environment Variables:
-        Prefix: ARGOWORKFLOWBACKEND__
 
-    Attributes:
-        IMAGE (str): Docker image used to run pipeline steps.
-        INLINE_STEP_SETTINGS (bool): if STEP environment variables have to get loaded based on settings and passed directly to it's step.
-        SCHEDULE (str): Cron expression for scheduling the workflow.
-        DATA_DIR (Path): Base directory inside the container where step data is written.
-        ENCAPSULATE_ENV (bool): Whether to encapsulate step execution with environment variables.
-        S3_ARTIFACT_TEMPLATE (S3ArtifactTemplate): S3 configuration used for input/output mapping.
-        SERVICE_ACCOUNT_NAME (str): Kubernetes service account used for Argo workflow execution.
-        SECRET_NAME (str): Name of the Kubernetes Secret passed into the workflow container.
-        CONFIG_MAP (str): Name of the ConfigMap passed into the container environment.
-        ANNOTATIONS (dict): Custom annotations to be applied to workflow tasks.
-        NAMESPACE (str): Kubernetes namespace to run the workflow in.
-        PIPELINE_NAME (str): Name of the Argo workflow pipeline (must comply with DNS label rules).
+class SecretConfig(BaseModel):
+    type: str = "Opaque"
+    data: dict[str, str] | None = None
+    stringData: dict[str, str] | None = None
 
-    """
 
-    model_config = SettingsConfigDict(env_prefix="ARGOWORKFLOWBACKEND__")
-    INLINE_STEP_SETTINGS: bool = False
-    IMAGE: str = "ghcr.io/telekom/wurzel"
-    SCHEDULE: str = "0 4 * * *"
-    DATA_DIR: Path = Path("/usr/app")
-    ENCAPSULATE_ENV: bool = True
-    S3_ARTIFACT_TEMPLATE: S3ArtifactTemplate = S3ArtifactTemplate()
-    SERVICE_ACCOUNT_NAME: str = "wurzel-service-account"
-    SECRET_NAME: str = "wurzel-secret"
-    CONFIG_MAP: str = "wurzel-config"
-    ANNOTATIONS: dict[str, str] = {"sidecar.istio.io/inject": "false"}
-    NAMESPACE: str = "argo-workflows"
-    PIPELINE_NAME: str = Field(
-        default="wurzel",
-        max_length=63,
-        description="Kubernetes-compliant name: lowercase alphanumeric, '-' allowed, must start and end with alphanumeric.",
-        pattern=DNS_LABEL_REGEX,
-    )
+class TemplateValues(BaseModel):
+    workflows: dict[str, WorkflowConfig] = Field(default_factory=dict)
+    configMaps: dict[str, ConfigMapConfig] = Field(default_factory=dict)
+    secrets: dict[str, SecretConfig] = Field(default_factory=dict)
+
+
+def deep_merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
+    """Recursively merge override into base."""
+
+    def _merge(dst: dict[str, Any], src: dict[str, Any]) -> dict[str, Any]:
+        merged = deepcopy(dst)
+        for key, value in src.items():
+            if key not in merged:
+                merged[key] = value
+                continue
+            if isinstance(merged[key], dict) and isinstance(value, dict):
+                merged[key] = _merge(merged[key], value)
+            else:
+                merged[key] = value
+        return merged
+
+    return _merge(base, override)
+
+
+def _load_values_file(path: Path) -> dict[str, Any]:
+    with path.open("r", encoding="utf-8") as handle:
+        data = yaml.safe_load(handle) or {}
+        if not isinstance(data, dict):
+            raise ValueError(f"Values file '{path}' must start with a mapping.")
+        return data
+
+
+def load_values(files: Iterable[Path]) -> TemplateValues:
+    """Load and merge Helm-like values files."""
+    merged: dict[str, Any] = {}
+    for file_path in files:
+        file_data = _load_values_file(Path(file_path))
+        merged = deep_merge_dicts(merged, file_data)
+    return TemplateValues.model_validate(merged or {})
+
+
+def select_workflow(values: TemplateValues, workflow_name: str | None) -> WorkflowConfig:
+    """Select a workflow configuration either by name or falling back to the first entry."""
+    if workflow_name:
+        try:
+            return values.workflows[workflow_name]
+        except KeyError as exc:  # pragma: no cover - validated via tests
+            raise ValueError(f"workflow '{workflow_name}' not found in values") from exc
+    if values.workflows:
+        first_key = next(iter(values.workflows))
+        return values.workflows[first_key]
+    return WorkflowConfig()
+
+
+def build_configmap_manifest(name: str, config: ConfigMapConfig) -> dict[str, Any]:
+    return {
+        "apiVersion": "v1",
+        "kind": "ConfigMap",
+        "metadata": {"name": name},
+        "data": config.data,
+    }
+
+
+def build_secret_manifest(name: str, config: SecretConfig) -> dict[str, Any]:
+    manifest: dict[str, Any] = {
+        "apiVersion": "v1",
+        "kind": "Secret",
+        "metadata": {"name": name},
+        "type": config.type,
+    }
+    if config.data:
+        manifest["data"] = config.data
+    if config.stringData:
+        manifest["stringData"] = config.stringData
+    return manifest
 
 
 class ArgoBackend(Backend):
-    """Backend implementation for generating Argo Workflow YAML using the Hera Python SDK.
+    """Render Argo workflows from typed steps based on declarative YAML values."""
 
-    This backend converts a graph of `TypedStep` instances into a CronWorkflow definition
-    with DAG-structured task execution and artifact-based I/O between steps.
-    """
-
-    def __init__(self, settings: ArgoBackendSettings | None = None, executer: type[BaseStepExecutor] = PrometheusStepExecutor) -> None:
-        self.executor: type[BaseStepExecutor] = executer
-        self.settings = settings if settings else ArgoBackendSettings()
+    def __init__(
+        self,
+        config: WorkflowConfig | None = None,
+        *,
+        values: TemplateValues | None = None,
+        workflow_name: str | None = None,
+        executor: type[BaseStepExecutor] = PrometheusStepExecutor,
+    ) -> None:
         super().__init__()
+        self.executor: type[BaseStepExecutor] = executor
+        self.values = values or TemplateValues()
+        self.config = config or select_workflow(self.values, workflow_name)
+        self._volumes, self._volume_mounts = self._build_secret_mounts()
 
-    def _create_envs_from_step_settings(self, step: "TypedStep[Any, Any, Any]") -> list[EnvVar]:
-        if not self.settings.INLINE_STEP_SETTINGS:
-            return []
+    @classmethod
+    def from_values(cls, files: Iterable[Path], workflow_name: str | None = None) -> "ArgoBackend":
+        """Instantiate the backend from values files."""
+        values = load_values(files)
+        return cls(values=values, workflow_name=workflow_name)
 
-        env_vars = []
+    # ------------------------------------------------------------------ helpers
+    def _build_secret_mounts(self) -> tuple[list[Volume], list[VolumeMount]]:
+        volumes: list[Volume] = []
+        mounts: list[VolumeMount] = []
 
-        if step.settings_class == NoneType:
-            return env_vars
+        for idx, secret_mount in enumerate(self.config.container.mountSecrets):
+            volume_name = f"secret-mount-{idx}"
+            volumes.append(
+                Volume(
+                    name=volume_name,
+                    secret=SecretVolumeSource(secret_name=secret_mount.source),
+                )
+            )
+            for mapping in secret_mount.mappings:
+                mount_path = secret_mount.destination / mapping.value
+                mounts.append(
+                    VolumeMount(
+                        name=volume_name,
+                        mount_path=str(mount_path),
+                        sub_path=mapping.key,
+                    )
+                )
 
-        settings_cls = step.settings_class.with_prefix(f"{step.__class__.__name__.upper()}__")
-        try:
-            settings_instance = settings_cls()
-        except ValidationError as err:  # type: ignore [attr-defined]
-            e = EnvSettingsError(f"could not create {step.settings_class.__name__} from env for {step.__class__.__name__}")
-            e.add_note("To fix these issues setup env vars in the format <step_name>__<var>")
-            raise e from err
+        return volumes, mounts
 
-        for field_name, field_value in settings_instance.model_dump().items():
-            # Skip fields with sensitive keywords in their names
-            if isinstance(field_value, SecretStr):
-                log.info(f"skipped config {field_name} due to secret detection")
-                continue
-            # Add as Env object with uppercase name and stringified value
-            if self.settings.ENCAPSULATE_ENV:
-                env_vars.append(EnvVar(name=f"{step.__class__.__name__.upper()}__{field_name.upper()}", value=str(field_value)))
+    def _build_env_from(self) -> list[ConfigMapEnvFrom | SecretEnvFrom]:
+        env_from: list[ConfigMapEnvFrom | SecretEnvFrom] = []
+        for value in self.config.container.envFrom:
+            prefix = value.prefix or ""
+            if value.kind == "configMap":
+                env_from.append(ConfigMapEnvFrom(name=value.name, prefix=prefix, optional=value.optional))
             else:
-                env_vars.append(EnvVar(name=field_name.upper(), value=str(field_value)))
-
-        return env_vars
-
-    def _generate_dict(self, step: "TypedStep[Any, Any, Any]"):
-        """Returns the workflow as a Python dictionary representation.
-
-        Args:
-            step (TypedStep): Root step of the pipeline.
-
-        Returns:
-            dict: Dictionary representing the Argo workflow.
-
-        """
-        return self._generate_workflow(step).to_dict()
+                env_from.append(SecretEnvFrom(name=value.name, prefix=prefix, optional=value.optional))
+        return env_from
 
     def generate_artifact(self, step: "TypedStep[Any, Any, Any]"):
-        """Returns the workflow serialized to a valid Argo YAML definition.
+        """Return YAML manifest(s) for workflow + optional dependent resources."""
+        workflow_manifest = self._generate_workflow(step).to_dict()
 
-        Args:
-            step (TypedStep): Root step of the pipeline.
+        manifests: list[dict[str, Any]] = []
+        if self.values.configMaps:
+            manifests.extend(build_configmap_manifest(name, cfg) for name, cfg in self.values.configMaps.items())
+        if self.values.secrets:
+            manifests.extend(build_secret_manifest(name, cfg) for name, cfg in self.values.secrets.items())
 
-        Returns:
-            str: YAML string suitable for Argo submission.
-
-        """
-        return self._generate_workflow(step).to_yaml()
+        manifests.append(workflow_manifest)
+        return yaml.safe_dump_all(manifests, sort_keys=False).strip()
 
     def _generate_workflow(self, step: "TypedStep[Any, Any, Any]") -> Workflow:
         """Creates a CronWorkflow with the full pipeline DAG constructed from the root step.
@@ -158,16 +252,23 @@ class ArgoBackend(Backend):
             Workflow: A Hera `Workflow` object representing the pipeline.
 
         """
-        with CronWorkflow(
-            schedule=self.settings.SCHEDULE,
-            name=self.settings.PIPELINE_NAME,
-            entrypoint="wurzel-pipeline",
-            annotations=self.settings.ANNOTATIONS,
-            namespace=self.settings.NAMESPACE,
-            service_account_name=self.settings.SERVICE_ACCOUNT_NAME,
-        ) as w:
+        workflow_kwargs = dict(
+            name=self.config.name,
+            namespace=self.config.namespace,
+            entrypoint=self.config.entrypoint,
+            annotations=self.config.annotations,
+            service_account_name=self.config.serviceAccountName,
+            volumes=self._volumes or None,
+        )
+
+        if self.config.schedule:
+            context = CronWorkflow(schedule=self.config.schedule, **workflow_kwargs)
+        else:
+            context = Workflow(**workflow_kwargs)
+
+        with context as workflow:
             self.__generate_dag(step)
-        return w
+        return workflow
 
     @cache  # pylint: disable=method-cache-max-size-none
     def _create_artifact_from_step(self, step: "TypedStep[Any, Any, Any]") -> S3Artifact:
@@ -186,9 +287,9 @@ class ArgoBackend(Backend):
             recurse_mode=True,
             archive=NoneArchiveStrategy(),
             key=step.__class__.__name__.lower(),
-            path=str((self.settings.DATA_DIR / step.__class__.__name__).absolute()),
-            bucket=self.settings.S3_ARTIFACT_TEMPLATE.bucket,
-            endpoint=self.settings.S3_ARTIFACT_TEMPLATE.endpoint,
+            path=str((self.config.dataDir / step.__class__.__name__).absolute()),
+            bucket=self.config.artifacts.bucket,
+            endpoint=self.config.artifacts.endpoint,
         )
 
     def _create_task(self, dag: DAG, step: "TypedStep[Any, Any, Any]") -> Task:
@@ -212,25 +313,23 @@ class ArgoBackend(Backend):
             for entry in generate_cli_call(
                 step.__class__,
                 inputs=[Path(inpt.path) for inpt in inputs if inpt.path],
-                output=self.settings.DATA_DIR / step.__class__.__name__,
+                output=self.config.dataDir / step.__class__.__name__,
             ).split(" ")
             if entry.strip()
         ]
 
         dag.__exit__()
-        env_vars = self._create_envs_from_step_settings(step)
+        env_vars = [EnvVar(name=name, value=str(value)) for name, value in self.config.container.env.items()]
         wurzel_call = Container(
             name=f"wurzel-run-template-{step.__class__.__name__.lower()}",
-            image=self.settings.IMAGE,
+            image=self.config.container.image,
             security_context=SecurityContext(run_as_non_root=True),
             command=commands,
-            annotations=self.settings.ANNOTATIONS,
+            annotations=self.config.container.annotations,
             inputs=inputs,
             env=env_vars,
-            env_from=[
-                SecretEnvFrom(prefix="", name=self.settings.SECRET_NAME, optional=True),
-                ConfigMapEnvFrom(prefix="", name=self.settings.CONFIG_MAP, optional=True),
-            ],
+            env_from=self._build_env_from(),
+            volume_mounts=self._volume_mounts or None,
             outputs=self._create_artifact_from_step(step),
         )
 
