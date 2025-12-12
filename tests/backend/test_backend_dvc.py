@@ -213,7 +213,7 @@ class TestDvcBackendFromEnvVars:
 
 class TestDvcBackendFromValues:
     def test_factory_method(self, sample_dvc_values_file: Path):
-        backend = DvcBackend.from_values([sample_dvc_values_file], pipeline_name="test-pipeline")
+        backend = DvcBackend.from_values([sample_dvc_values_file], workflow_name="test-pipeline")
         assert backend.config.dataDir == Path("./custom-data")
         assert backend.config.encapsulateEnv is False
 
@@ -222,7 +222,7 @@ class TestDvcBackendFromValues:
         assert backend.config.dataDir == Path("./custom-data")
 
     def test_factory_with_multiple_files(self, sample_dvc_values_file: Path, override_dvc_values_file: Path):
-        backend = DvcBackend.from_values([sample_dvc_values_file, override_dvc_values_file], pipeline_name="test-pipeline")
+        backend = DvcBackend.from_values([sample_dvc_values_file, override_dvc_values_file], workflow_name="test-pipeline")
         assert backend.config.dataDir == Path("./override-data")
 
 
@@ -262,7 +262,7 @@ class TestDvcBackendGenerateArtifact:
 class TestDvcBackendIntegration:
     def test_full_workflow_from_yaml(self, sample_dvc_values_file: Path):
         """Test complete workflow: load from YAML and generate artifact."""
-        backend = DvcBackend.from_values([sample_dvc_values_file], pipeline_name="test-pipeline")
+        backend = DvcBackend.from_values([sample_dvc_values_file], workflow_name="test-pipeline")
         step = DummyStep()
 
         yaml_output = backend.generate_artifact(step)
