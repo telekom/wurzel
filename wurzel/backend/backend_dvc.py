@@ -95,6 +95,11 @@ class DvcBackend(Backend):
 
     """
 
+    @classmethod
+    def is_available(cls) -> bool:
+        """DVC backend has no optional dependencies."""
+        return True
+
     def __init__(
         self,
         config: DvcConfig | None = None,

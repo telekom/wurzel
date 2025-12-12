@@ -121,6 +121,13 @@ def select_workflow(values: TemplateValues, workflow_name: str | None) -> Workfl
 class ArgoBackend(Backend):
     """Render Argo workflows from typed steps based on declarative YAML values."""
 
+    @classmethod
+    def is_available(cls) -> bool:
+        """Check if Hera is installed."""
+        from wurzel.utils import HAS_HERA  # pylint: disable=import-outside-toplevel
+
+        return HAS_HERA
+
     def __init__(
         self,
         config: WorkflowConfig | None = None,

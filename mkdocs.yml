@@ -134,6 +134,7 @@ nav:
     - Getting Started: developer-guide/getting-started.md
     - Cli Reference: developer-guide/cli.md
     - Building Pipelines: developer-guide/building-pipelines.md
+    - Runtime vs. Generate Time: developer-guide/runtime_vs_generatetime.md
     - Creating Custom Steps: developer-guide/creating-steps.md
     - Data Contracts: developer-guide/data-contracts.md
   - Backends:

@@ -18,12 +18,9 @@ def _resolve_backend_instance(
     values: list[Path] | None,
     workflow: str | None,
 ) -> Backend:
-    from wurzel.backend.backend_argo import ArgoBackend  # pylint: disable=import-outside-toplevel
-
-    if issubclass(backend, ArgoBackend):
-        if values:
-            return backend.from_values(values, workflow_name=workflow)  # type: ignore[call-arg]
-        return backend()  # type: ignore[call-arg]
+    # Check if backend has from_values method (like ArgoBackend and DvcBackend)
+    if hasattr(backend, "from_values") and values:
+        return backend.from_values(values, workflow_name=workflow)  # type: ignore[call-arg]
     return backend()
 
 

@@ -512,34 +512,23 @@ def get_available_backends() -> list[str]:
     Returns:
         list[str]: List of available backend names (e.g., ['DvcBackend', 'ArgoBackend'])
     """
-    from wurzel.utils import HAS_HERA  # pylint: disable=import-outside-toplevel
+    from wurzel.backend import get_available_backends as _get_backends  # pylint: disable=import-outside-toplevel
 
-    backends = ["DvcBackend"]
-    if HAS_HERA:
-        backends.append("ArgoBackend")
-    return backends
+    return list(_get_backends().keys())
 
 
 def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str):
     """Validates input and returns fitting backend. Case-insensitive."""
-    from wurzel.backend.backend_dvc import DvcBackend  # pylint: disable=import-outside-toplevel
+    from wurzel.backend import get_backend_by_name  # pylint: disable=import-outside-toplevel
 
-    backend_normalized = backend.lower()
-    available_backends = get_available_backends()
-    available_backends_lower = [b.lower() for b in available_backends]
+    backend_cls = get_backend_by_name(backend)
+    if backend_cls is not None:
+        return backend_cls
 
-    # Map normalized backend names to their classes
-    if backend_normalized == "dvcbackend":
-        if "dvcbackend" in available_backends_lower:
-            return DvcBackend
-    elif backend_normalized == "argobackend":
-        if "argobackend" in available_backends_lower:
-            from wurzel.backend.backend_argo import ArgoBackend  # pylint: disable=import-outside-toplevel
-
-            return ArgoBackend
-        raise typer.BadParameter(f"Backend {backend} not supported. Choose from {', '.join(available_backends)} or install wurzel[argo]")
-
-    raise typer.BadParameter(f"Backend {backend} not supported. Choose from {', '.join(available_backends)}")
+    available = get_available_backends()
+    if backend.lower() == "argobackend":
+        raise typer.BadParameter(f"Backend {backend} not supported. Choose from {', '.join(available)} or install wurzel[argo]")
+    raise typer.BadParameter(f"Backend {backend} not supported. Choose from {', '.join(available)}")
 
 
 def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str):
