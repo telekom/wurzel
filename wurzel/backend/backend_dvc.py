@@ -116,10 +116,10 @@ class DvcBackend(Backend):
         )
 
     @classmethod
-    def from_values(cls, files: Iterable[Path], pipeline_name: str | None = None) -> "DvcBackend":
+    def from_values(cls, files: Iterable[Path], workflow_name: str | None = None) -> "DvcBackend":
         """Instantiate the backend from values files."""
         values = load_values(files, DvcTemplateValues)
-        config = select_pipeline(values, pipeline_name)
+        config = select_pipeline(values, workflow_name)
         return cls(config=config)
 
     def _generate_dict(
