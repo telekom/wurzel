@@ -67,7 +67,8 @@ plugins:
   - search:
       lang: en
   - autorefs
-  - mermaid2
+  - mermaid2:
+      javascript: https://unpkg.com/mermaid@10/dist/mermaid.esm.min.mjs
   - minify:
       minify_html: false
   - mkdocs-typer2:
