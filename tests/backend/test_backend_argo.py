@@ -216,6 +216,30 @@ class TestDeepMergeDicts:
         deep_merge_dicts(base, override)
         assert base == {"a": {"b": 1}}
 
+    def test_merge_list_replaces(self):
+        base = {"items": [1, 2, 3]}
+        override = {"items": [4, 5]}
+        result = deep_merge_dicts(base, override)
+        assert result == {"items": [4, 5]}
+
+    def test_merge_list_in_nested_dict(self):
+        base = {"outer": {"list": [1, 2], "keep": "value"}}
+        override = {"outer": {"list": [3, 4, 5]}}
+        result = deep_merge_dicts(base, override)
+        assert result == {"outer": {"list": [3, 4, 5], "keep": "value"}}
+
+    def test_merge_new_list_key(self):
+        base = {"a": 1}
+        override = {"b": [1, 2, 3]}
+        result = deep_merge_dicts(base, override)
+        assert result == {"a": 1, "b": [1, 2, 3]}
+
+    def test_merge_list_does_not_mutate_original(self):
+        base = {"items": [1, 2, 3]}
+        override = {"items": [4, 5]}
+        deep_merge_dicts(base, override)
+        assert base == {"items": [1, 2, 3]}
+
 
 class TestLoadValues:
     def test_single_file(self, sample_values_file: Path):
