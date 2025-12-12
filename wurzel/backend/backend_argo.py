@@ -18,6 +18,7 @@ from hera.workflows import (
     ConfigMapEnvFrom,
     Container,
     CronWorkflow,
+    Resources,
     S3Artifact,
     SecretEnvFrom,
     SecretVolume,
@@ -25,7 +26,14 @@ from hera.workflows import (
     Workflow,
 )
 from hera.workflows.archive import NoneArchiveStrategy
-from hera.workflows.models import EnvVar, SecurityContext, VolumeMount
+from hera.workflows.models import (
+    Capabilities,
+    EnvVar,
+    PodSecurityContext,
+    SeccompProfile,
+    SecurityContext,
+    VolumeMount,
+)
 from pydantic import BaseModel, Field
 
 from wurzel.backend.backend import Backend
@@ -66,6 +74,33 @@ class EnvFromConfig(BaseModel):
     optional: bool = True
 
 
+class SecurityContextConfig(BaseModel):
+    """Security context configuration for pods and containers.
+
+    This supports the Kubernetes security context fields needed to satisfy
+    policies like require-run-as-nonroot.
+    """
+
+    runAsNonRoot: bool = True
+    runAsUser: int | None = None
+    runAsGroup: int | None = None
+    fsGroup: int | None = None
+    allowPrivilegeEscalation: bool | None = False
+    readOnlyRootFilesystem: bool | None = None
+    dropCapabilities: list[str] = Field(default_factory=lambda: ["ALL"])
+    seccompProfileType: Literal["RuntimeDefault", "Localhost"] = "RuntimeDefault"
+    seccompLocalhostProfile: str | None = None
+
+
+class ResourcesConfig(BaseModel):
+    """Container resource requests/limits using Hera's Resources API."""
+
+    cpu_request: str = "100m"
+    cpu_limit: str = "500m"
+    memory_request: str = "128Mi"
+    memory_limit: str = "512Mi"
+
+
 class ContainerConfig(BaseModel):
     """Runtime configuration applied to workflow containers."""
 
@@ -76,6 +111,8 @@ class ContainerConfig(BaseModel):
     configMapRef: list[str] = Field(default_factory=list)
     mountSecrets: list[SecretMount] = Field(default_factory=list)
     annotations: dict[str, str] = Field(default_factory=lambda: {"sidecar.istio.io/inject": "false"})
+    securityContext: SecurityContextConfig = Field(default_factory=SecurityContextConfig)
+    resources: ResourcesConfig = Field(default_factory=ResourcesConfig)
 
 
 class S3ArtifactConfig(BaseModel):
@@ -97,6 +134,8 @@ class WorkflowConfig(BaseModel):
     annotations: dict[str, str] = Field(default_factory=lambda: {"sidecar.istio.io/inject": "false"})
     container: ContainerConfig = Field(default_factory=ContainerConfig)
     artifacts: S3ArtifactConfig = Field(default_factory=S3ArtifactConfig)
+    podSecurityContext: SecurityContextConfig = Field(default_factory=SecurityContextConfig)
+    podSpecPatch: str | None = None
 
 
 class TemplateValues(BaseModel):
@@ -188,6 +227,81 @@ class ArgoBackend(Backend):
             env_from.append(ConfigMapEnvFrom(name=configmap_name, prefix="", optional=True))
         return env_from
 
+    def _build_pod_security_context(self) -> PodSecurityContext:
+        """Build pod-level security context from configuration."""
+        ctx = self.config.podSecurityContext
+        return PodSecurityContext(
+            run_as_non_root=ctx.runAsNonRoot,
+            run_as_user=ctx.runAsUser,
+            run_as_group=ctx.runAsGroup,
+            fs_group=ctx.fsGroup,
+            seccomp_profile=SeccompProfile(
+                type=ctx.seccompProfileType,
+                localhost_profile=ctx.seccompLocalhostProfile,
+            ),
+        )
+
+    def _build_container_security_context(self) -> SecurityContext:
+        """Build container-level security context from configuration."""
+        ctx = self.config.container.securityContext
+        return SecurityContext(
+            run_as_non_root=ctx.runAsNonRoot,
+            run_as_user=ctx.runAsUser,
+            run_as_group=ctx.runAsGroup,
+            allow_privilege_escalation=ctx.allowPrivilegeEscalation,
+            read_only_root_filesystem=ctx.readOnlyRootFilesystem,
+            capabilities=Capabilities(drop=ctx.dropCapabilities),
+            seccomp_profile=SeccompProfile(
+                type=ctx.seccompProfileType,
+                localhost_profile=ctx.seccompLocalhostProfile,
+            ),
+        )
+
+    def _build_container_resources(self) -> Resources:
+        """Build container resources using Hera's Resources class."""
+        res = self.config.container.resources
+        return Resources(
+            cpu_request=res.cpu_request,
+            cpu_limit=res.cpu_limit,
+            memory_request=res.memory_request,
+            memory_limit=res.memory_limit,
+        )
+
+    def _build_pod_spec_patch(self) -> str | None:
+        if self.config.podSpecPatch is not None:
+            return self.config.podSpecPatch
+
+        ctx = self.config.container.securityContext
+        resources = self.config.container.resources
+
+        init_container_patch = {
+            "securityContext": {
+                "runAsNonRoot": ctx.runAsNonRoot,
+                "runAsUser": ctx.runAsUser,
+                "runAsGroup": ctx.runAsGroup,
+                "allowPrivilegeEscalation": ctx.allowPrivilegeEscalation,
+                "readOnlyRootFilesystem": ctx.readOnlyRootFilesystem,
+                "capabilities": {"drop": ctx.dropCapabilities},
+                "seccompProfile": {
+                    "type": ctx.seccompProfileType,
+                    "localhostProfile": ctx.seccompLocalhostProfile,
+                },
+            },
+            "resources": {
+                "requests": {"cpu": resources.cpu_request, "memory": resources.memory_request},
+                "limits": {"cpu": resources.cpu_limit, "memory": resources.memory_limit},
+            },
+        }
+
+        patch = {
+            "initContainers": [
+                {"name": "init", **init_container_patch},
+                {"name": "wait", **init_container_patch},
+            ],
+        }
+
+        return yaml.safe_dump(patch, sort_keys=False)
+
     def generate_artifact(self, step: TypedStep[Any, Any, Any]):
         """Return YAML manifest(s) for workflow + optional dependent resources."""
         workflow_manifest = self._generate_workflow(step).to_dict()
@@ -211,6 +325,8 @@ class ArgoBackend(Backend):
             "annotations": self.config.annotations,
             "service_account_name": self.config.serviceAccountName,
             "volumes": self._volumes or None,
+            "security_context": self._build_pod_security_context(),
+            "pod_spec_patch": self._build_pod_spec_patch(),
         }
 
         if self.config.schedule:
@@ -275,7 +391,8 @@ class ArgoBackend(Backend):
         wurzel_call = Container(
             name=f"wurzel-run-template-{step.__class__.__name__.lower()}",
             image=self.config.container.image,
-            security_context=SecurityContext(run_as_non_root=True),
+            security_context=self._build_container_security_context(),
+            resources=self._build_container_resources(),
             command=commands,
             annotations=self.config.container.annotations,
             inputs=inputs,

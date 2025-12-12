@@ -18,9 +18,11 @@ from wurzel.backend.backend_argo import (
     ArgoBackend,
     ContainerConfig,
     EnvFromConfig,
+    ResourcesConfig,
     S3ArtifactConfig,
     SecretMapping,
     SecretMount,
+    SecurityContextConfig,
     TemplateValues,
     WorkflowConfig,
     select_workflow,
@@ -122,6 +124,57 @@ class TestEnvFromConfig:
         assert config.prefix == "APP_"
 
 
+class TestSecurityContextConfig:
+    def test_defaults(self):
+        config = SecurityContextConfig()
+        assert config.runAsNonRoot is True
+        assert config.runAsUser is None
+        assert config.runAsGroup is None
+        assert config.fsGroup is None
+        assert config.allowPrivilegeEscalation is False
+        assert config.readOnlyRootFilesystem is None
+        assert config.dropCapabilities == ["ALL"]
+        assert config.seccompProfileType == "RuntimeDefault"
+        assert config.seccompLocalhostProfile is None
+
+    def test_custom_values(self):
+        config = SecurityContextConfig(
+            runAsNonRoot=True,
+            runAsUser=1000,
+            runAsGroup=1000,
+            fsGroup=2000,
+            allowPrivilegeEscalation=False,
+            readOnlyRootFilesystem=True,
+            dropCapabilities=["ALL"],
+            seccompProfileType="RuntimeDefault",
+        )
+        assert config.runAsUser == 1000
+        assert config.runAsGroup == 1000
+        assert config.fsGroup == 2000
+        assert config.readOnlyRootFilesystem is True
+
+
+class TestResourcesConfig:
+    def test_defaults(self):
+        config = ResourcesConfig()
+        assert config.cpu_request == "100m"
+        assert config.cpu_limit == "500m"
+        assert config.memory_request == "128Mi"
+        assert config.memory_limit == "512Mi"
+
+    def test_custom_values(self):
+        config = ResourcesConfig(
+            cpu_request="200m",
+            cpu_limit="1",
+            memory_request="256Mi",
+            memory_limit="1Gi",
+        )
+        assert config.cpu_request == "200m"
+        assert config.cpu_limit == "1"
+        assert config.memory_request == "256Mi"
+        assert config.memory_limit == "1Gi"
+
+
 class TestContainerConfig:
     def test_defaults(self):
         config = ContainerConfig()
@@ -130,6 +183,9 @@ class TestContainerConfig:
         assert config.envFrom == []
         assert config.mountSecrets == []
         assert "sidecar.istio.io/inject" in config.annotations
+        assert isinstance(config.securityContext, SecurityContextConfig)
+        assert config.securityContext.runAsNonRoot is True
+        assert isinstance(config.resources, ResourcesConfig)
 
     def test_custom_values(self):
         config = ContainerConfig(
@@ -140,6 +196,13 @@ class TestContainerConfig:
         assert config.image == "custom:latest"
         assert config.env == {"KEY": "value"}
         assert config.annotations == {"custom": "annotation"}
+
+    def test_custom_security_context(self):
+        config = ContainerConfig(
+            securityContext=SecurityContextConfig(runAsUser=1000, runAsNonRoot=True),
+        )
+        assert config.securityContext.runAsUser == 1000
+        assert config.securityContext.runAsNonRoot is True
 
 
 class TestS3ArtifactConfig:
@@ -164,10 +227,19 @@ class TestWorkflowConfig:
         assert config.dataDir == Path("/usr/app")
         assert isinstance(config.container, ContainerConfig)
         assert isinstance(config.artifacts, S3ArtifactConfig)
+        assert isinstance(config.podSecurityContext, SecurityContextConfig)
+        assert config.podSecurityContext.runAsNonRoot is True
 
     def test_no_schedule(self):
         config = WorkflowConfig(schedule=None)
         assert config.schedule is None
+
+    def test_custom_pod_security_context(self):
+        config = WorkflowConfig(
+            podSecurityContext=SecurityContextConfig(runAsUser=1000, fsGroup=2000),
+        )
+        assert config.podSecurityContext.runAsUser == 1000
+        assert config.podSecurityContext.fsGroup == 2000
 
 
 class TestTemplateValues:
@@ -697,6 +769,123 @@ class TestArgoBackendCreateTask:
 
             # Task should have input artifacts from dependency
             assert task is not None
+
+
+class TestArgoBackendSecurityContext:
+    def test_default_security_context_in_workflow(self):
+        """Test that default security context is applied to workflow."""
+        backend = ArgoBackend()
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        # Check pod-level security context
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            security_context = spec["workflowSpec"].get("securityContext", {})
+            pod_spec_patch = spec["workflowSpec"].get("podSpecPatch")
+        else:
+            security_context = spec.get("securityContext", {})
+            pod_spec_patch = spec.get("podSpecPatch")
+
+        assert security_context.get("runAsNonRoot") is True
+        assert security_context.get("seccompProfile", {}).get("type") == "RuntimeDefault"
+        assert isinstance(pod_spec_patch, str)
+        assert "initContainers" in pod_spec_patch
+
+    def test_custom_security_context_in_workflow(self):
+        """Test that custom security context is applied to workflow."""
+        config = WorkflowConfig(
+            podSecurityContext=SecurityContextConfig(
+                runAsNonRoot=True,
+                runAsUser=1000,
+                runAsGroup=1000,
+                fsGroup=2000,
+            ),
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            security_context = spec["workflowSpec"].get("securityContext", {})
+        else:
+            security_context = spec.get("securityContext", {})
+
+        assert security_context.get("runAsNonRoot") is True
+        assert security_context.get("runAsUser") == 1000
+        assert security_context.get("runAsGroup") == 1000
+        assert security_context.get("fsGroup") == 2000
+
+    def test_container_security_context(self):
+        """Test that container-level security context is applied."""
+        config = WorkflowConfig(
+            container=ContainerConfig(
+                securityContext=SecurityContextConfig(
+                    runAsNonRoot=True,
+                    runAsUser=1000,
+                    allowPrivilegeEscalation=False,
+                ),
+            ),
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            templates = spec["workflowSpec"].get("templates", [])
+        else:
+            templates = spec.get("templates", [])
+
+        container_templates = [t for t in templates if "container" in t]
+        assert len(container_templates) > 0
+
+        for template in container_templates:
+            sec_ctx = template["container"].get("securityContext", {})
+            assert sec_ctx.get("runAsNonRoot") is True
+            assert sec_ctx.get("runAsUser") == 1000
+            assert sec_ctx.get("allowPrivilegeEscalation") is False
+            assert sec_ctx.get("capabilities", {}).get("drop") == ["ALL"]
+            assert sec_ctx.get("seccompProfile", {}).get("type") == "RuntimeDefault"
+
+            resources = template["container"].get("resources", {})
+            assert resources.get("requests", {}).get("cpu")
+            assert resources.get("requests", {}).get("memory")
+            assert resources.get("limits", {}).get("cpu")
+            assert resources.get("limits", {}).get("memory")
+
+    def test_security_context_from_values_file(self, tmp_path: Path):
+        """Test that security context can be configured via values file."""
+        content = {
+            "workflows": {
+                "secure-workflow": {
+                    "name": "secure-wf",
+                    "podSecurityContext": {
+                        "runAsNonRoot": True,
+                        "runAsUser": 1000,
+                        "fsGroup": 2000,
+                    },
+                    "container": {
+                        "securityContext": {
+                            "runAsNonRoot": True,
+                            "runAsUser": 1000,
+                            "allowPrivilegeEscalation": False,
+                        },
+                    },
+                }
+            },
+        }
+        file_path = tmp_path / "security-values.yaml"
+        file_path.write_text(yaml.safe_dump(content))
+
+        backend = ArgoBackend.from_values([file_path], workflow_name="secure-workflow")
+        assert backend.config.podSecurityContext.runAsUser == 1000
+        assert backend.config.podSecurityContext.fsGroup == 2000
+        assert backend.config.container.securityContext.allowPrivilegeEscalation is False
 
 
 class TestArgoBackendIntegration:
