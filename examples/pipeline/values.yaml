@@ -32,14 +32,14 @@ workflows:
       configMapRef:
         - "wurzel-config"
       # Mount secrets as files (optional)
-      # mountSecrets:
-      #   - from: "tls-secret"
-      #     to: "/etc/ssl"
-      #     mappings:
-      #       - key: "tls.crt"
-      #         value: "cert.pem"
-      #       - key: "tls.key"
-      #         value: "key.pem"
+      mountSecrets:
+        - from: "tls-secret"
+          to: "/etc/ssl"
+          mappings:
+            - key: "tls.crt"
+              value: "cert.pem"
+            - key: "tls.key"
+              value: "key.pem"
     artifacts:
       bucket: wurzel-bucket-test
       endpoint: s3.amazonaws.com

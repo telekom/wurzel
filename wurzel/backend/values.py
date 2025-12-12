@@ -35,13 +35,20 @@ def deep_merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str
     return _merge(base, override)
 
 
+class ValuesFileError(Exception):
+    """Raised when a values file cannot be loaded or parsed."""
+
+
 def _load_values_file(path: Path) -> dict[str, Any]:
     """Load a single YAML values file."""
-    with path.open("r", encoding="utf-8") as handle:
-        data = yaml.safe_load(handle) or {}
-        if not isinstance(data, dict):
-            raise ValueError(f"Values file '{path}' must start with a mapping.")
-        return data
+    try:
+        with path.open("r", encoding="utf-8") as handle:
+            data = yaml.safe_load(handle) or {}
+    except yaml.YAMLError as exc:
+        raise ValuesFileError(f"Failed to parse YAML in '{path}': {exc}") from exc
+    if not isinstance(data, dict):
+        raise ValuesFileError(f"Values file '{path}' must start with a mapping.")
+    return data
 
 
 def load_values(files: Iterable[Path], model: type[T]) -> T:

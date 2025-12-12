@@ -613,6 +613,7 @@ def generate(  # pylint: disable=too-many-positional-arguments
     backend_obj = backend_callback(None, None, backend)
 
     from wurzel.backend.backend import Backend  # pylint: disable=import-outside-toplevel
+    from wurzel.backend.values import ValuesFileError  # pylint: disable=import-outside-toplevel
     from wurzel.cli.cmd_generate import main as cmd_generate  # pylint: disable=import-outside-toplevel
 
     log.debug(
@@ -627,13 +628,16 @@ def generate(  # pylint: disable=too-many-positional-arguments
             }
         },
     )
-    rendered = cmd_generate(
-        pipeline_obj,
-        backend=cast(type[Backend], backend_obj),
-        values=values or [],
-        workflow=workflow,
-        output=output,
-    )
+    try:
+        rendered = cmd_generate(
+            pipeline_obj,
+            backend=cast(type[Backend], backend_obj),
+            values=values or [],
+            workflow=workflow,
+            output=output,
+        )
+    except ValuesFileError as exc:
+        raise typer.BadParameter(str(exc)) from exc
     if output is None:
         print(rendered)  # noqa: T201
     return None

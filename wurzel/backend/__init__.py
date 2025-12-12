@@ -6,8 +6,9 @@ from wurzel.utils import HAS_HERA
 
 from .backend import Backend
 from .backend_dvc import DvcBackend
+from .values import ValuesFileError
 
-__all__ = ["Backend", "DvcBackend", "get_all_backends", "get_available_backends", "get_backend_by_name"]
+__all__ = ["Backend", "DvcBackend", "ValuesFileError", "get_all_backends", "get_available_backends", "get_backend_by_name"]
 
 if HAS_HERA:
     from .backend_argo import ArgoBackend  # noqa: F401

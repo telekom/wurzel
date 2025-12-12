@@ -25,7 +25,7 @@ from wurzel.backend.backend_argo import (
     WorkflowConfig,
     select_workflow,
 )
-from wurzel.backend.values import deep_merge_dicts, load_values
+from wurzel.backend.values import ValuesFileError, deep_merge_dicts, load_values
 from wurzel.datacontract.common import MarkdownDataContract
 from wurzel.step import NoSettings, TypedStep
 
@@ -412,8 +412,14 @@ class TestLoadValues:
     def test_non_dict_yaml_raises(self, tmp_path: Path):
         invalid_file = tmp_path / "invalid.yaml"
         invalid_file.write_text("- item1\n- item2")
-        with pytest.raises(ValueError, match="must start with a mapping"):
+        with pytest.raises(ValuesFileError, match="must start with a mapping"):
             load_values([invalid_file], TemplateValues)
+
+    def test_malformed_yaml_raises(self, tmp_path: Path):
+        malformed_file = tmp_path / "malformed.yaml"
+        malformed_file.write_text("key: value\n  bad_indent: oops")
+        with pytest.raises(ValuesFileError, match="Failed to parse YAML"):
+            load_values([malformed_file], TemplateValues)
 
 
 class TestSelectWorkflow:
