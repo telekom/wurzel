@@ -40,6 +40,16 @@ HAS_REQUESTS = _opt_deps["requests"]
 HAS_JOBLIB = _opt_deps["joblib"]
 HAS_HERA = _opt_deps["hera"]
 HAS_SPACY = _opt_deps["spacy"]
+
+
+def has_spacy_model(model_name: str) -> bool:
+    """Check if a specific SpaCy model is installed."""
+    if not HAS_SPACY:
+        return False
+    return _find_spec(model_name) is not None
+
+
+HAS_SPACY_DE_CORE_NEWS_SM = has_spacy_model("de_core_news_sm")
 HAS_TIKTOKEN = _opt_deps["tiktoken"]
 HAS_TRANSFORMERS = _opt_deps["transformers"]
 HAS_PARAMIKO = _opt_deps["paramiko"]
