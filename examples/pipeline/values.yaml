@@ -1,6 +1,13 @@
 # SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
 # SPDX-License-Identifier: Apache-2.0
 
+# DVC Backend Configuration
+dvc:
+  pipelinedemo:
+    dataDir: "./data"
+    encapsulateEnv: true
+
+# Argo Workflows Backend Configuration
 workflows:
   pipelinedemo:
     name: wurzel-hallo

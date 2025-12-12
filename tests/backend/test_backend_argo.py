@@ -23,10 +23,9 @@ from wurzel.backend.backend_argo import (
     SecretMount,
     TemplateValues,
     WorkflowConfig,
-    deep_merge_dicts,
-    load_values,
     select_workflow,
 )
+from wurzel.backend.values import deep_merge_dicts, load_values
 from wurzel.datacontract.common import MarkdownDataContract
 from wurzel.step import NoSettings, TypedStep
 
@@ -220,12 +219,12 @@ class TestDeepMergeDicts:
 
 class TestLoadValues:
     def test_single_file(self, sample_values_file: Path):
-        values = load_values([sample_values_file])
+        values = load_values([sample_values_file], TemplateValues)
         assert "test-workflow" in values.workflows
         assert values.workflows["test-workflow"].name == "test-wf"
 
     def test_multiple_files_merge(self, sample_values_file: Path, override_values_file: Path):
-        values = load_values([sample_values_file, override_values_file])
+        values = load_values([sample_values_file, override_values_file], TemplateValues)
         wf = values.workflows["test-workflow"]
         assert wf.name == "test-wf"  # From base
         assert wf.namespace == "override-ns"  # Overridden
@@ -234,14 +233,14 @@ class TestLoadValues:
     def test_empty_file(self, tmp_path: Path):
         empty_file = tmp_path / "empty.yaml"
         empty_file.write_text("")
-        values = load_values([empty_file])
+        values = load_values([empty_file], TemplateValues)
         assert values.workflows == {}
 
     def test_non_dict_yaml_raises(self, tmp_path: Path):
         invalid_file = tmp_path / "invalid.yaml"
         invalid_file.write_text("- item1\n- item2")
         with pytest.raises(ValueError, match="must start with a mapping"):
-            load_values([invalid_file])
+            load_values([invalid_file], TemplateValues)
 
 
 class TestSelectWorkflow:

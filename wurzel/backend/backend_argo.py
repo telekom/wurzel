@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable
-from copy import deepcopy
 from functools import cache
 from pathlib import Path
 from typing import Any, Literal
@@ -30,6 +29,7 @@ from hera.workflows.models import EnvVar, SecurityContext, VolumeMount
 from pydantic import BaseModel, Field
 
 from wurzel.backend.backend import Backend
+from wurzel.backend.values import load_values
 from wurzel.cli import generate_cli_call
 from wurzel.step import TypedStep
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
@@ -105,41 +105,6 @@ class TemplateValues(BaseModel):
     workflows: dict[str, WorkflowConfig] = Field(default_factory=dict)
 
 
-def deep_merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]:
-    """Recursively merge override into base."""
-
-    def _merge(dst: dict[str, Any], src: dict[str, Any]) -> dict[str, Any]:
-        merged = deepcopy(dst)
-        for key, value in src.items():
-            if key not in merged:
-                merged[key] = value
-                continue
-            if isinstance(merged[key], dict) and isinstance(value, dict):
-                merged[key] = _merge(merged[key], value)
-            else:
-                merged[key] = value
-        return merged
-
-    return _merge(base, override)
-
-
-def _load_values_file(path: Path) -> dict[str, Any]:
-    with path.open("r", encoding="utf-8") as handle:
-        data = yaml.safe_load(handle) or {}
-        if not isinstance(data, dict):
-            raise ValueError(f"Values file '{path}' must start with a mapping.")
-        return data
-
-
-def load_values(files: Iterable[Path]) -> TemplateValues:
-    """Load and merge Helm-like values files."""
-    merged: dict[str, Any] = {}
-    for file_path in files:
-        file_data = _load_values_file(Path(file_path))
-        merged = deep_merge_dicts(merged, file_data)
-    return TemplateValues.model_validate(merged or {})
-
-
 def select_workflow(values: TemplateValues, workflow_name: str | None) -> WorkflowConfig:
     """Select a workflow configuration either by name or falling back to the first entry."""
     if workflow_name:
@@ -173,7 +138,7 @@ class ArgoBackend(Backend):
     @classmethod
     def from_values(cls, files: Iterable[Path], workflow_name: str | None = None) -> ArgoBackend:
         """Instantiate the backend from values files."""
-        values = load_values(files)
+        values = load_values(files, TemplateValues)
         return cls(values=values, workflow_name=workflow_name)
 
     # ------------------------------------------------------------------ helpers
