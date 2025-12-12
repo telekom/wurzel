@@ -167,7 +167,7 @@ class ArgoBackend(Backend):
                 mounts.append(
                     VolumeMount(
                         name=volume_name,
-                        mount_path=str(mount_path),
+                        mount_path=mount_path.as_posix(),
                         sub_path=mapping.key,
                     )
                 )
