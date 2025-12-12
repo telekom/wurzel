@@ -243,7 +243,8 @@ class TestDvcBackendGenerateArtifact:
         yaml_output = backend.generate_artifact(step)
 
         data = yaml.safe_load(yaml_output)
-        assert "custom-output/DummyStep" in data["stages"]["DummyStep"]["outs"][0]
+        expected_path = str(Path("custom-output/DummyStep"))
+        assert expected_path in data["stages"]["DummyStep"]["outs"][0]
 
     def test_pipeline_with_dependencies(self):
         backend = DvcBackend()
@@ -268,7 +269,8 @@ class TestDvcBackendIntegration:
         data = yaml.safe_load(yaml_output)
 
         assert "stages" in data
-        assert "custom-data/DummyStep" in data["stages"]["DummyStep"]["outs"][0]
+        expected_path = str(Path("custom-data/DummyStep"))
+        assert expected_path in data["stages"]["DummyStep"]["outs"][0]
 
     def test_full_workflow_from_env(self, monkeypatch):
         """Test complete workflow: load from env vars and generate artifact."""
@@ -281,4 +283,5 @@ class TestDvcBackendIntegration:
         data = yaml.safe_load(yaml_output)
 
         assert "stages" in data
-        assert "env-output/DummyStep" in data["stages"]["DummyStep"]["outs"][0]
+        expected_path = str(Path("env-output/DummyStep"))
+        assert expected_path in data["stages"]["DummyStep"]["outs"][0]
