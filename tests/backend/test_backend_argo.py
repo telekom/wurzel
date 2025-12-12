@@ -188,57 +188,206 @@ class TestTemplateValues:
 
 
 class TestDeepMergeDicts:
-    def test_merge_empty_dicts(self):
-        result = deep_merge_dicts({}, {})
-        assert result == {}
+    """Tests for deep_merge_dicts function."""
 
-    def test_merge_non_overlapping(self):
-        base = {"a": 1}
-        override = {"b": 2}
+    # -------------------------------------------------------------------------
+    # Basic merge scenarios (parametrized)
+    # -------------------------------------------------------------------------
+    @pytest.mark.parametrize(
+        "base,override,expected",
+        [
+            pytest.param({}, {}, {}, id="empty_dicts"),
+            pytest.param({"a": 1}, {}, {"a": 1}, id="empty_override"),
+            pytest.param({}, {"b": 2}, {"b": 2}, id="empty_base"),
+            pytest.param({"a": 1}, {"b": 2}, {"a": 1, "b": 2}, id="non_overlapping_keys"),
+            pytest.param({"a": 1, "b": 2}, {"b": 3}, {"a": 1, "b": 3}, id="overlapping_scalar_replaced"),
+            pytest.param({"a": "foo"}, {"a": "bar"}, {"a": "bar"}, id="overlapping_string_replaced"),
+            pytest.param({"a": True}, {"a": False}, {"a": False}, id="overlapping_bool_replaced"),
+        ],
+    )
+    def test_basic_merge(self, base: dict, override: dict, expected: dict):
         result = deep_merge_dicts(base, override)
-        assert result == {"a": 1, "b": 2}
+        assert result == expected
 
-    def test_merge_overlapping_scalar(self):
-        base = {"a": 1, "b": 2}
-        override = {"b": 3}
+    # -------------------------------------------------------------------------
+    # Nested dict merge scenarios
+    # -------------------------------------------------------------------------
+    @pytest.mark.parametrize(
+        "base,override,expected",
+        [
+            pytest.param(
+                {"outer": {"inner1": 1, "inner2": 2}},
+                {"outer": {"inner2": 20, "inner3": 3}},
+                {"outer": {"inner1": 1, "inner2": 20, "inner3": 3}},
+                id="nested_dict_merge",
+            ),
+            pytest.param(
+                {"a": {"b": {"c": 1}}},
+                {"a": {"b": {"c": 2, "d": 3}}},
+                {"a": {"b": {"c": 2, "d": 3}}},
+                id="deeply_nested_3_levels",
+            ),
+            pytest.param(
+                {"a": {"b": {"c": {"d": 1}}}},
+                {"a": {"b": {"c": {"d": 2, "e": 3}}}},
+                {"a": {"b": {"c": {"d": 2, "e": 3}}}},
+                id="deeply_nested_4_levels",
+            ),
+            pytest.param(
+                {"outer": {}},
+                {"outer": {"key": "value"}},
+                {"outer": {"key": "value"}},
+                id="empty_nested_dict_in_base",
+            ),
+            pytest.param(
+                {"outer": {"key": "value"}},
+                {"outer": {}},
+                {"outer": {"key": "value"}},
+                id="empty_nested_dict_in_override",
+            ),
+            pytest.param(
+                {"a": {"x": 1}, "b": {"y": 2}},
+                {"a": {"x": 10}, "c": {"z": 3}},
+                {"a": {"x": 10}, "b": {"y": 2}, "c": {"z": 3}},
+                id="multiple_nested_dicts",
+            ),
+        ],
+    )
+    def test_nested_dict_merge(self, base: dict, override: dict, expected: dict):
         result = deep_merge_dicts(base, override)
-        assert result == {"a": 1, "b": 3}
+        assert result == expected
 
-    def test_merge_nested_dicts(self):
-        base = {"outer": {"inner1": 1, "inner2": 2}}
-        override = {"outer": {"inner2": 20, "inner3": 3}}
+    # -------------------------------------------------------------------------
+    # Type coercion scenarios (dict <-> scalar)
+    # -------------------------------------------------------------------------
+    @pytest.mark.parametrize(
+        "base,override,expected",
+        [
+            pytest.param(
+                {"a": {"nested": 1}},
+                {"a": "scalar"},
+                {"a": "scalar"},
+                id="dict_replaced_by_scalar",
+            ),
+            pytest.param(
+                {"a": "scalar"},
+                {"a": {"nested": 1}},
+                {"a": {"nested": 1}},
+                id="scalar_replaced_by_dict",
+            ),
+            pytest.param(
+                {"a": [1, 2, 3]},
+                {"a": {"nested": 1}},
+                {"a": {"nested": 1}},
+                id="list_replaced_by_dict",
+            ),
+            pytest.param(
+                {"a": {"nested": 1}},
+                {"a": [1, 2, 3]},
+                {"a": [1, 2, 3]},
+                id="dict_replaced_by_list",
+            ),
+        ],
+    )
+    def test_type_coercion(self, base: dict, override: dict, expected: dict):
         result = deep_merge_dicts(base, override)
-        assert result == {"outer": {"inner1": 1, "inner2": 20, "inner3": 3}}
+        assert result == expected
 
-    def test_does_not_mutate_original(self):
+    # -------------------------------------------------------------------------
+    # None value handling
+    # -------------------------------------------------------------------------
+    @pytest.mark.parametrize(
+        "base,override,expected",
+        [
+            pytest.param({"a": None}, {"a": 1}, {"a": 1}, id="none_replaced_by_value"),
+            pytest.param({"a": 1}, {"a": None}, {"a": None}, id="value_replaced_by_none"),
+            pytest.param({"a": None}, {"a": None}, {"a": None}, id="none_replaced_by_none"),
+            pytest.param({"a": None}, {}, {"a": None}, id="none_preserved_when_no_override"),
+            pytest.param({}, {"a": None}, {"a": None}, id="none_added_from_override"),
+            pytest.param(
+                {"a": {"b": None}},
+                {"a": {"b": "value"}},
+                {"a": {"b": "value"}},
+                id="nested_none_replaced",
+            ),
+        ],
+    )
+    def test_none_handling(self, base: dict, override: dict, expected: dict):
+        result = deep_merge_dicts(base, override)
+        assert result == expected
+
+    # -------------------------------------------------------------------------
+    # List handling (lists are replaced, not merged)
+    # -------------------------------------------------------------------------
+    @pytest.mark.parametrize(
+        "base,override,expected",
+        [
+            pytest.param(
+                {"items": [1, 2, 3]},
+                {"items": [4, 5]},
+                {"items": [4, 5]},
+                id="list_replaced",
+            ),
+            pytest.param(
+                {"outer": {"list": [1, 2], "keep": "value"}},
+                {"outer": {"list": [3, 4, 5]}},
+                {"outer": {"list": [3, 4, 5], "keep": "value"}},
+                id="list_in_nested_dict_replaced",
+            ),
+            pytest.param({"a": 1}, {"b": [1, 2, 3]}, {"a": 1, "b": [1, 2, 3]}, id="new_list_key_added"),
+            pytest.param({"items": []}, {"items": [1, 2]}, {"items": [1, 2]}, id="empty_list_replaced"),
+            pytest.param({"items": [1, 2]}, {"items": []}, {"items": []}, id="list_replaced_by_empty"),
+            pytest.param(
+                {"items": [{"a": 1}, {"b": 2}]},
+                {"items": [{"c": 3}]},
+                {"items": [{"c": 3}]},
+                id="list_of_dicts_replaced",
+            ),
+        ],
+    )
+    def test_list_handling(self, base: dict, override: dict, expected: dict):
+        result = deep_merge_dicts(base, override)
+        assert result == expected
+
+    # -------------------------------------------------------------------------
+    # Immutability tests (originals not mutated)
+    # -------------------------------------------------------------------------
+    def test_base_not_mutated(self):
         base = {"a": {"b": 1}}
+        base_copy = {"a": {"b": 1}}
         override = {"a": {"b": 2}}
         deep_merge_dicts(base, override)
-        assert base == {"a": {"b": 1}}
+        assert base == base_copy
 
-    def test_merge_list_replaces(self):
+    def test_override_not_mutated(self):
+        base = {"a": {"b": 1}}
+        override = {"a": {"b": 2, "c": 3}}
+        override_copy = {"a": {"b": 2, "c": 3}}
+        deep_merge_dicts(base, override)
+        assert override == override_copy
+
+    def test_base_list_not_mutated(self):
         base = {"items": [1, 2, 3]}
-        override = {"items": [4, 5]}
-        result = deep_merge_dicts(base, override)
-        assert result == {"items": [4, 5]}
-
-    def test_merge_list_in_nested_dict(self):
-        base = {"outer": {"list": [1, 2], "keep": "value"}}
-        override = {"outer": {"list": [3, 4, 5]}}
-        result = deep_merge_dicts(base, override)
-        assert result == {"outer": {"list": [3, 4, 5], "keep": "value"}}
-
-    def test_merge_new_list_key(self):
-        base = {"a": 1}
-        override = {"b": [1, 2, 3]}
-        result = deep_merge_dicts(base, override)
-        assert result == {"a": 1, "b": [1, 2, 3]}
-
-    def test_merge_list_does_not_mutate_original(self):
-        base = {"items": [1, 2, 3]}
+        base_copy = {"items": [1, 2, 3]}
         override = {"items": [4, 5]}
         deep_merge_dicts(base, override)
-        assert base == {"items": [1, 2, 3]}
+        assert base == base_copy
+
+    def test_nested_structure_not_mutated(self):
+        base = {"a": {"b": {"c": [1, 2, 3]}}}
+        base_copy = {"a": {"b": {"c": [1, 2, 3]}}}
+        override = {"a": {"b": {"c": [4, 5], "d": 6}}}
+        deep_merge_dicts(base, override)
+        assert base == base_copy
+
+    def test_result_is_independent_copy(self):
+        base = {"a": {"b": 1}}
+        override = {"a": {"c": 2}}
+        result = deep_merge_dicts(base, override)
+        result["a"]["b"] = 999
+        result["a"]["c"] = 888
+        assert base == {"a": {"b": 1}}
+        assert override == {"a": {"c": 2}}
 
 
 class TestLoadValues:
