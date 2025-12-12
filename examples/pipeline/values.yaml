@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+# SPDX-License-Identifier: Apache-2.0
+
+workflows:
+  pipelinedemo:
+    name: wurzel-hallo
+    namespace: argo-workflows-gude
+    schedule: "0 4 * * 1"
+    serviceAccountName: wurzel-service-account-test
+    container:
+      image: ghcr.io/telekom/wurzel-test
+      env:
+        MANUALMARKDOWNSTEP__FOLDER_PATH: "examples/pipeline/demo-data"
+        SIMPLESPLITTERSTEP__BATCH_SIZE: "100"
+        SIMPLESPLITTERSTEP__NUM_THREADS: "4"
+        SIMPLESPLITTERSTEP__TOKEN_COUNT_MIN: "64"
+        SIMPLESPLITTERSTEP__TOKEN_COUNT_MAX: "1024"
+        SIMPLESPLITTERSTEP__TOKEN_COUNT_BUFFER: "32"
+        SIMPLESPLITTERSTEP__TOKENIZER_MODEL: "gpt-3.5-turbo"
+        SIMPLESPLITTERSTEP__SENTENCE_SPLITTER_MODEL: "de_core_news_sm"
+      # Reference existing secrets (env vars from secrets)
+      secretRef:
+        - "wurzel-secrets"
+      # Reference existing configmaps (env vars from configmaps)
+      configMapRef:
+        - "wurzel-config"
+      # Mount secrets as files (optional)
+      # mountSecrets:
+      #   - from: "tls-secret"
+      #     to: "/etc/ssl"
+      #     mappings:
+      #       - key: "tls.crt"
+      #         value: "cert.pem"
+      #       - key: "tls.key"
+      #         value: "key.pem"
+    artifacts:
+      bucket: wurzel-bucket-test
+      endpoint: s3.amazonaws.com

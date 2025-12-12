@@ -554,7 +554,7 @@ def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_p
 
 @app.command(help="generate a pipeline")
 # pylint: disable-next=dangerous-default-value
-def generate(
+def generate(  # pylint: disable=too-many-positional-arguments
     pipeline: Annotated[
         str | None,
         typer.Argument(

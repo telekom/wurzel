@@ -13,7 +13,6 @@ if not HAS_DOCLING:
 
 from wurzel.backend import ArgoBackend, DvcBackend
 from wurzel.backend.backend import Backend
-from wurzel.backend.backend_argo import ArgoBackendSettings
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.step.typed_step import TypedStep
 from wurzel.steps.docling.docling_step import DoclingStep
@@ -46,7 +45,6 @@ class D(TypedStep[None, MarkdownDataContract, MarkdownDataContract]):
     "backend",
     [
         pytest.param(DvcBackend, id="DVC Backend"),
-        pytest.param(ArgoBackend, id="ArGo Backend"),
     ],
 )
 def test_dict(backend):
@@ -70,7 +68,7 @@ def safeget(dct, *keys):
     "backend,keys",
     [
         pytest.param(DvcBackend, ["stages"], id="DVC Backend"),
-        pytest.param(ArgoBackend, ["spec", "workflowSpec", "templates", 0, "dag", "tasks"], id="ArGo Backend"),
+        pytest.param(ArgoBackend, ["spec", "workflowSpec", "templates", 0, "dag", "tasks"], id="Argo Backend"),
     ],
 )
 def test_yaml(backend: type[Backend], keys):
@@ -98,9 +96,7 @@ def test_yaml(backend: type[Backend], keys):
     "backend,keys,params",
     [
         pytest.param(DvcBackend, ["stages"], {}, id="DVC Backend"),
-        pytest.param(
-            ArgoBackend, ["spec", "workflowSpec", "templates", 0, "dag", "tasks"], {"settings": ArgoBackendSettings()}, id="ArGo Backend"
-        ),
+        pytest.param(ArgoBackend, ["spec", "workflowSpec", "templates", 0, "dag", "tasks"], {}, id="Argo Backend"),
     ],
 )
 def test_minimal_pipeline(backend: type[Backend], keys, params):

@@ -4,8 +4,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from wurzel.backend.backend import Backend
@@ -13,10 +14,10 @@ if TYPE_CHECKING:
 
 
 def _resolve_backend_instance(
-    backend: "type[Backend]",
+    backend: type[Backend],
     values: list[Path] | None,
     workflow: str | None,
-) -> "Backend":
+) -> Backend:
     from wurzel.backend.backend_argo import ArgoBackend  # pylint: disable=import-outside-toplevel
 
     if issubclass(backend, ArgoBackend):
@@ -32,8 +33,8 @@ def _write_output(content: str, output: Path) -> None:
 
 
 def main(
-    step: "TypedStep",
-    backend: "type[Backend]",
+    step: TypedStep,
+    backend: type[Backend],
     *,
     values: Iterable[Path] | None = None,
     workflow: str | None = None,
