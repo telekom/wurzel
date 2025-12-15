@@ -5,10 +5,10 @@
 import pytest
 
 from wurzel.exceptions import StepFailed
-from wurzel.utils import HAS_SPACY_DE_CORE_NEWS_SM
+from wurzel.utils import HAS_SPACY
 
-if not HAS_SPACY_DE_CORE_NEWS_SM:
-    pytest.skip("SpaCy model de_core_news_sm is not available", allow_module_level=True)
+if not HAS_SPACY:
+    pytest.skip("Spacy is not available", allow_module_level=True)
 
 import mdformat
 

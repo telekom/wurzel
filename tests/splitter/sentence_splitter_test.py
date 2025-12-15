@@ -6,14 +6,13 @@ import importlib.util
 import pytest
 
 from wurzel.steps.splitter import SimpleSplitterStep
-from wurzel.utils import HAS_SPACY, HAS_SPACY_DE_CORE_NEWS_SM, HAS_TIKTOKEN, HAS_TRANSFORMERS
+from wurzel.utils import HAS_SPACY, HAS_TIKTOKEN, HAS_TRANSFORMERS
 from wurzel.utils.splitters.sentence_splitter import RegexSentenceSplitter, SentenceSplitter, SpacySentenceSplitter
 
 from .sentence_splitter_test_cases import BASIC_TEST_CASES, DE_TEST_CASES, EL_TEST_CASES, HR_TEST_CASES, PL_TEST_CASES, REGEX_TEST_CASES
 
 # Helpers for skip conditions
 spacy_missing = not HAS_SPACY
-spacy_model_missing = not HAS_SPACY_DE_CORE_NEWS_SM
 tokenizer_missing = not HAS_TIKTOKEN and not HAS_TRANSFORMERS
 spacy_default_model_name = "de_core_news_sm"
 spacy_multilingual_model_name = "xx_ent_wiki_sm"
@@ -21,7 +20,7 @@ wtpsplit_missing = importlib.util.find_spec("wtpsplit") is None
 
 
 @pytest.fixture(scope="function")
-@pytest.mark.skipif(spacy_model_missing, reason="SpaCy model de_core_news_sm not installed")
+@pytest.mark.skipif(spacy_missing, reason="spacy or model not installed")
 def spacy_splitter():
     yield SentenceSplitter.from_name(spacy_default_model_name)
 
@@ -78,13 +77,13 @@ def test_from_name_routes_to_regex():
     assert isinstance(splitter, RegexSentenceSplitter)
 
 
-@pytest.mark.skipif(spacy_model_missing, reason="SpaCy model de_core_news_sm not installed")
+@pytest.mark.skipif(spacy_missing, reason="spacy or model not installed")
 def test_from_name_routes_to_spacy():
     splitter = SentenceSplitter.from_name(spacy_default_model_name)
     assert isinstance(splitter, SpacySentenceSplitter)
 
 
-@pytest.mark.skipif(spacy_model_missing, reason="SpaCy model de_core_news_sm not installed")
+@pytest.mark.skipif(spacy_missing, reason="spacy or model not installed")
 def test_spacy_sentence_splitter_simple():
     # Simple test
     splitter = SentenceSplitter.from_name(spacy_default_model_name)
@@ -109,7 +108,7 @@ def test_simple_splitter_step_settings(env):
     assert step.settings.SENTENCE_SPLITTER_MODEL == "regex"
 
 
-@pytest.mark.skipif(spacy_model_missing, reason="SpaCy model de_core_news_sm not installed")
+@pytest.mark.skipif(spacy_missing, reason="spacy or model not installed")
 @pytest.mark.parametrize(
     "test_cases",
     [
