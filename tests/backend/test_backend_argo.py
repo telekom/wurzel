@@ -728,7 +728,8 @@ class TestArgoBackendCreateArtifactFromStep:
         artifact = backend._create_artifact_from_step(step)
 
         assert artifact.name == "wurzel-artifact-dummystep"
-        assert artifact.key == "dummystep"
+        # Key includes workflow.name template for unique paths per run
+        assert artifact.key == "{{workflow.name}}/dummystep"
         assert artifact.bucket == "wurzel-bucket"
         assert "DummyStep" in artifact.path
 

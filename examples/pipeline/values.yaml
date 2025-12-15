@@ -15,7 +15,7 @@ workflows:
     schedule: "0 4 * * 1"
     entrypoint: wurzel-pipeline
     serviceAccountName: wurzel-service-account-test
-    dataDir: /usr/app
+    dataDir: /data
     annotations:
       sidecar.istio.io/inject: "false"
 
