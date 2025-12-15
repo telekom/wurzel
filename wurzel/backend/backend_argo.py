@@ -351,7 +351,6 @@ class ArgoBackend(Backend):
         """
         return S3Artifact(
             name=f"wurzel-artifact-{step.__class__.__name__.lower()}",
-            mode=775,
             recurse_mode=True,
             archive=NoneArchiveStrategy(),
             key=step.__class__.__name__.lower(),
