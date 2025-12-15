@@ -7,7 +7,7 @@ import json
 from pydantic import Field, SecretStr, field_validator
 from qdrant_client.models import Distance
 
-from wurzel.step.settings import Settings
+from wurzel.core.settings import Settings
 
 
 # pylint: disable=duplicate-code

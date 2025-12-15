@@ -8,8 +8,8 @@ from typing import Union
 from pydantic import BaseModel
 from pydantic import create_model as py_create_model
 
-from wurzel.step.settings import Settings, SettingsBase
-from wurzel.step.typed_step import TypedStep
+from wurzel.core.settings import Settings, SettingsBase
+from wurzel.core.typed_step import TypedStep
 
 
 # pylint: disable-next=invalid-name
