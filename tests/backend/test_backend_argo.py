@@ -1138,4 +1138,5 @@ class TestArgoBackendS3Artifact:
         step = DummyStep()
         artifact = backend._create_artifact_from_step(step)
 
-        assert "/custom/data/DummyStep" in artifact.path
+        expected_path = Path("/custom/data/DummyStep").as_posix()
+        assert expected_path in artifact.path
