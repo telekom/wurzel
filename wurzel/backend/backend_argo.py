@@ -274,13 +274,16 @@ class ArgoBackend(Backend):
         ctx = self.config.container.securityContext
         resources = self.config.container.resources
 
+        # Init containers need readOnlyRootFilesystem: false because Argo's
+        # executor runs chmod on artifact files during download, which fails
+        # on a read-only filesystem. See: https://github.com/argoproj/argo-workflows/issues/14114
         init_container_patch = {
             "securityContext": {
                 "runAsNonRoot": ctx.runAsNonRoot,
                 "runAsUser": ctx.runAsUser,
                 "runAsGroup": ctx.runAsGroup,
                 "allowPrivilegeEscalation": ctx.allowPrivilegeEscalation,
-                "readOnlyRootFilesystem": ctx.readOnlyRootFilesystem,
+                "readOnlyRootFilesystem": False,
                 "capabilities": {"drop": ctx.dropCapabilities},
                 "seccompProfile": {
                     "type": ctx.seccompProfileType,
