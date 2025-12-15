@@ -14,6 +14,8 @@ from typing import Any, TypeVar
 import yaml
 from pydantic import BaseModel
 
+from wurzel.exceptions import ValuesFileError
+
 T = TypeVar("T", bound=BaseModel)
 
 
@@ -33,10 +35,6 @@ def deep_merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str
         return merged
 
     return _merge(base, override)
-
-
-class ValuesFileError(Exception):
-    """Raised when a values file cannot be loaded or parsed."""
 
 
 def _load_values_file(path: Path) -> dict[str, Any]:

@@ -954,3 +954,187 @@ class TestArgoBackendIntegration:
         # Workflow should use values from file
         assert workflow["metadata"]["name"] == "test-wf"
         assert workflow["metadata"]["namespace"] == "test-ns"
+
+
+class TestArgoBackendPodSpecPatch:
+    """Tests for podSpecPatch generation, especially init container security settings."""
+
+    def test_init_containers_have_readonly_root_filesystem_false(self):
+        """Test that init containers have readOnlyRootFilesystem: false.
+
+        This is required because Argo's executor runs chmod on artifact files
+        during download, which fails on a read-only filesystem.
+        See: https://github.com/argoproj/argo-workflows/issues/14114
+        """
+        config = WorkflowConfig(
+            container=ContainerConfig(
+                securityContext=SecurityContextConfig(
+                    runAsNonRoot=True,
+                    runAsUser=1000,
+                    readOnlyRootFilesystem=True,  # Main container can be read-only
+                ),
+            ),
+        )
+        backend = ArgoBackend(config=config)
+        pod_spec_patch = backend._build_pod_spec_patch()
+
+        assert pod_spec_patch is not None
+        patch_dict = yaml.safe_load(pod_spec_patch)
+
+        # Verify init containers exist
+        assert "initContainers" in patch_dict
+        init_containers = patch_dict["initContainers"]
+        assert len(init_containers) == 2
+
+        # Verify each init container has readOnlyRootFilesystem: false
+        for container in init_containers:
+            assert container["name"] in ("init", "wait")
+            sec_ctx = container.get("securityContext", {})
+            assert sec_ctx.get("readOnlyRootFilesystem") is False, (
+                f"Init container '{container['name']}' must have readOnlyRootFilesystem: false to allow Argo's chmod operation on artifacts"
+            )
+
+    def test_init_containers_inherit_security_settings(self):
+        """Test that init containers inherit other security settings from container config."""
+        config = WorkflowConfig(
+            container=ContainerConfig(
+                securityContext=SecurityContextConfig(
+                    runAsNonRoot=True,
+                    runAsUser=999,
+                    runAsGroup=999,
+                    allowPrivilegeEscalation=False,
+                    dropCapabilities=["ALL"],
+                    seccompProfileType="RuntimeDefault",
+                ),
+            ),
+        )
+        backend = ArgoBackend(config=config)
+        pod_spec_patch = backend._build_pod_spec_patch()
+
+        patch_dict = yaml.safe_load(pod_spec_patch)
+        for container in patch_dict["initContainers"]:
+            sec_ctx = container["securityContext"]
+            assert sec_ctx["runAsNonRoot"] is True
+            assert sec_ctx["runAsUser"] == 999
+            assert sec_ctx["runAsGroup"] == 999
+            assert sec_ctx["allowPrivilegeEscalation"] is False
+            assert sec_ctx["capabilities"]["drop"] == ["ALL"]
+            assert sec_ctx["seccompProfile"]["type"] == "RuntimeDefault"
+
+    def test_init_containers_have_resource_limits(self):
+        """Test that init containers have proper resource limits for policy compliance."""
+        config = WorkflowConfig(
+            container=ContainerConfig(
+                resources=ResourcesConfig(
+                    cpu_request="100m",
+                    cpu_limit="500m",
+                    memory_request="128Mi",
+                    memory_limit="512Mi",
+                ),
+            ),
+        )
+        backend = ArgoBackend(config=config)
+        pod_spec_patch = backend._build_pod_spec_patch()
+
+        patch_dict = yaml.safe_load(pod_spec_patch)
+        for container in patch_dict["initContainers"]:
+            resources = container["resources"]
+            assert resources["requests"]["cpu"] == "100m"
+            assert resources["requests"]["memory"] == "128Mi"
+            assert resources["limits"]["cpu"] == "500m"
+            assert resources["limits"]["memory"] == "512Mi"
+
+    def test_custom_pod_spec_patch_overrides_default(self):
+        """Test that custom podSpecPatch in config overrides the auto-generated one."""
+        custom_patch = """
+initContainers:
+  - name: custom-init
+    securityContext:
+      runAsUser: 1234
+"""
+        config = WorkflowConfig(podSpecPatch=custom_patch)
+        backend = ArgoBackend(config=config)
+        pod_spec_patch = backend._build_pod_spec_patch()
+
+        assert pod_spec_patch == custom_patch
+
+    def test_pod_spec_patch_in_generated_workflow(self):
+        """Test that podSpecPatch is included in the generated workflow YAML."""
+        config = WorkflowConfig(
+            container=ContainerConfig(
+                securityContext=SecurityContextConfig(
+                    runAsNonRoot=True,
+                    runAsUser=1000,
+                ),
+            ),
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            pod_spec_patch = spec["workflowSpec"].get("podSpecPatch")
+        else:
+            pod_spec_patch = spec.get("podSpecPatch")
+
+        assert pod_spec_patch is not None
+        patch_dict = yaml.safe_load(pod_spec_patch)
+        assert "initContainers" in patch_dict
+
+        # Verify init containers have readOnlyRootFilesystem: false
+        for container in patch_dict["initContainers"]:
+            assert container["securityContext"]["readOnlyRootFilesystem"] is False
+
+
+class TestArgoBackendS3Artifact:
+    """Tests for S3Artifact configuration."""
+
+    def test_artifact_has_no_mode_parameter(self):
+        """Test that S3Artifact does not set mode parameter.
+
+        Setting mode causes Argo to chmod artifact files, which fails when
+        running as non-root user. Files should use default permissions.
+        """
+        backend = ArgoBackend()
+        step = DummyStep()
+        artifact = backend._create_artifact_from_step(step)
+
+        # The artifact should not have a mode set (or mode should be None)
+        # This prevents chmod permission denied errors
+        assert artifact.mode is None, (
+            "S3Artifact should not have mode set to avoid chmod permission denied errors when running as non-root user"
+        )
+
+    def test_artifact_has_recurse_mode(self):
+        """Test that S3Artifact has recurse_mode enabled for directory artifacts."""
+        backend = ArgoBackend()
+        step = DummyStep()
+        artifact = backend._create_artifact_from_step(step)
+
+        assert artifact.recurse_mode is True
+
+    def test_artifact_uses_config_bucket_and_endpoint(self):
+        """Test that S3Artifact uses bucket and endpoint from config."""
+        config = WorkflowConfig(
+            artifacts=S3ArtifactConfig(
+                bucket="custom-bucket",
+                endpoint="minio.local:9000",
+            ),
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        artifact = backend._create_artifact_from_step(step)
+
+        assert artifact.bucket == "custom-bucket"
+        assert artifact.endpoint == "minio.local:9000"
+
+    def test_artifact_path_uses_data_dir(self):
+        """Test that S3Artifact path is based on dataDir config."""
+        config = WorkflowConfig(dataDir=Path("/custom/data"))
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        artifact = backend._create_artifact_from_step(step)
+
+        assert "/custom/data/DummyStep" in artifact.path

@@ -352,11 +352,14 @@ class ArgoBackend(Backend):
             S3Artifact: Hera object for artifact input/output.
 
         """
+        # Use {{workflow.name}} to create unique artifact paths per workflow run.
+        # For CronWorkflows, workflow.name includes a unique timestamp suffix (e.g., "my-workflow-1702656000").
+        # This prevents data from different runs or pipelines from mixing in the same S3 location.
         return S3Artifact(
             name=f"wurzel-artifact-{step.__class__.__name__.lower()}",
             recurse_mode=True,
             archive=NoneArchiveStrategy(),
-            key=step.__class__.__name__.lower(),
+            key="{{workflow.name}}/" + step.__class__.__name__.lower(),
             path=str((self.config.dataDir / step.__class__.__name__).absolute()),
             bucket=self.config.artifacts.bucket,
             endpoint=self.config.artifacts.endpoint,
