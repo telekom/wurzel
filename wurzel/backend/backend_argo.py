@@ -85,6 +85,8 @@ class SecurityContextConfig(BaseModel):
     runAsUser: int | None = None
     runAsGroup: int | None = None
     fsGroup: int | None = None
+    fsGroupChangePolicy: Literal["OnRootMismatch", "Always"] | None = None
+    supplementalGroups: list[int] = Field(default_factory=list)
     allowPrivilegeEscalation: bool | None = False
     readOnlyRootFilesystem: bool | None = None
     dropCapabilities: list[str] = Field(default_factory=lambda: ["ALL"])
@@ -235,6 +237,8 @@ class ArgoBackend(Backend):
             run_as_user=ctx.runAsUser,
             run_as_group=ctx.runAsGroup,
             fs_group=ctx.fsGroup,
+            fs_group_change_policy=ctx.fsGroupChangePolicy,
+            supplemental_groups=ctx.supplementalGroups or None,
             seccomp_profile=SeccompProfile(
                 type=ctx.seccompProfileType,
                 localhost_profile=ctx.seccompLocalhostProfile,
