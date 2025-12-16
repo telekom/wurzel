@@ -302,7 +302,7 @@ class ArgoBackend(Backend):
 
         patch = {
             "initContainers": [
-                {"name": "init", "image": self.config.container.image, **init_container_patch},
+                {"name": "init", **init_container_patch},
             ],
         }
 
