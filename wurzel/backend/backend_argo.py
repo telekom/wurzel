@@ -386,6 +386,7 @@ class ArgoBackend(Backend):
             inputs=[Path(inpt.path) for inpt in inputs if inpt.path],
             output=self.config.dataDir / step.__class__.__name__,
         )
+        commands: list[str] = [entry for entry in cli_call.split(" ") if entry.strip()]
 
         dag.__exit__()
         env_vars = [EnvVar(name=name, value=str(value)) for name, value in self.config.container.env.items()]
@@ -394,8 +395,7 @@ class ArgoBackend(Backend):
             image=self.config.container.image,
             security_context=self._build_container_security_context(),
             resources=self._build_container_resources(),
-            command=["/bin/sh", "-c"],
-            args=[cli_call],
+            command=commands,
             annotations=self.config.container.annotations,
             inputs=inputs,
             env=env_vars,
