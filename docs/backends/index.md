@@ -37,6 +37,48 @@ Start with simple local execution and seamlessly scale to enterprise-grade orche
 3. **Code Generation**: The backend generates platform-specific configuration files
 4. **Execution**: Deploy and run using the native tools of your chosen platform
 
+## Generate-Time vs Runtime Configuration
+
+Wurzel backends use a **two-phase configuration model** that separates concerns:
+
+### Generate-Time Configuration (YAML)
+
+At generate-time (`wurzel generate`), a `values.yaml` file configures the **infrastructure and workflow structure**:
+
+- Container images and registries
+- Kubernetes namespaces and service accounts
+- Cron schedules and triggers
+- Security contexts and resource limits
+- Artifact storage (S3 buckets, endpoints)
+- Data directories
+
+This configuration is baked into the generated artifacts (e.g., `cronworkflow.yaml`, `dvc.yaml`).
+
+### Runtime Configuration (Environment Variables)
+
+At runtime (when the pipeline executes), **step settings** are read from environment variables:
+
+- `MANUALMARKDOWNSTEP__FOLDER_PATH` - where to read markdown files
+- `SIMPLESPLITTERSTEP__BATCH_SIZE` - processing batch size
+- `EMBEDDINGSTEP__MODEL_NAME` - which embedding model to use
+
+These can be changed without regenerating the workflow artifacts.
+
+### Why This Separation?
+
+| Aspect | Generate-Time (YAML) | Runtime (Env Vars) |
+|--------|---------------------|--------------------|
+| **When applied** | `wurzel generate` | Pipeline execution |
+| **What it configures** | Infrastructure, workflow structure | Step behavior, business logic |
+| **Change frequency** | Rarely (infra changes) | Often (per environment) |
+| **Examples** | Container image, namespace, schedule | Model paths, batch sizes, API keys |
+
+This allows you to:
+
+- Generate workflow artifacts once and deploy to multiple environments
+- Store sensitive runtime config in Kubernetes Secrets
+- Change step behavior without rebuilding containers or regenerating workflows
+
 ## Available Backends
 
 - **[DVC Backend](dvc.md)**: For data versioning and ML experiment tracking
