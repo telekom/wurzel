@@ -275,38 +275,10 @@ class ArgoBackend(Backend):
         if self.config.podSpecPatch is not None:
             return self.config.podSpecPatch
 
-        ctx = self.config.container.securityContext
-        resources = self.config.container.resources
-
-        # Init containers need readOnlyRootFilesystem: false because Argo's
-        # executor runs chmod on artifact files during download, which fails
-        # on a read-only filesystem. See: https://github.com/argoproj/argo-workflows/issues/14114
-        init_container_patch = {
-            "securityContext": {
-                "runAsNonRoot": ctx.runAsNonRoot,
-                "runAsUser": ctx.runAsUser,
-                "runAsGroup": ctx.runAsGroup,
-                "allowPrivilegeEscalation": ctx.allowPrivilegeEscalation,
-                "readOnlyRootFilesystem": False,
-                "capabilities": {"drop": ctx.dropCapabilities},
-                "seccompProfile": {
-                    "type": ctx.seccompProfileType,
-                    "localhostProfile": ctx.seccompLocalhostProfile,
-                },
-            },
-            "resources": {
-                "requests": {"cpu": resources.cpu_request, "memory": resources.memory_request},
-                "limits": {"cpu": resources.cpu_limit, "memory": resources.memory_limit},
-            },
-        }
-
-        patch = {
-            "initContainers": [
-                {"name": "init", **init_container_patch},
-            ],
-        }
-
-        return yaml.safe_dump(patch, sort_keys=False)
+        # Don't generate podSpecPatch - let Argo Workflows handle init containers
+        # with the pod-level security context. Generating a podSpecPatch with init
+        # container names can conflict with Argo's built-in init containers (init, wait).
+        return None
 
     def generate_artifact(self, step: TypedStep[Any, Any, Any]):
         """Return YAML manifest(s) for workflow + optional dependent resources."""
