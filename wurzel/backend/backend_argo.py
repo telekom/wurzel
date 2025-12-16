@@ -112,7 +112,7 @@ class ContainerConfig(BaseModel):
     secretRef: list[str] = Field(default_factory=list)
     configMapRef: list[str] = Field(default_factory=list)
     mountSecrets: list[SecretMount] = Field(default_factory=list)
-    annotations: dict[str, str] = Field(default_factory=lambda: {"sidecar.istio.io/inject": "false"})
+    annotations: dict[str, str] = Field(default_factory=lambda: {})
     securityContext: SecurityContextConfig = Field(default_factory=SecurityContextConfig)
     resources: ResourcesConfig = Field(default_factory=ResourcesConfig)
 
@@ -122,6 +122,7 @@ class S3ArtifactConfig(BaseModel):
 
     bucket: str = "wurzel-bucket"
     endpoint: str = "s3.amazonaws.com"
+    defaultMode: int | None = None
 
 
 class WorkflowConfig(BaseModel):
@@ -133,7 +134,7 @@ class WorkflowConfig(BaseModel):
     entrypoint: str = "wurzel-pipeline"
     serviceAccountName: str = "wurzel-service-account"
     dataDir: Path = Path("/usr/app")
-    annotations: dict[str, str] = Field(default_factory=lambda: {"sidecar.istio.io/inject": "false"})
+    annotations: dict[str, str] = Field(default_factory=lambda: {})
     container: ContainerConfig = Field(default_factory=ContainerConfig)
     artifacts: S3ArtifactConfig = Field(default_factory=S3ArtifactConfig)
     podSecurityContext: SecurityContextConfig = Field(default_factory=SecurityContextConfig)
@@ -338,6 +339,7 @@ class ArgoBackend(Backend):
             path=str((self.config.dataDir / step.__class__.__name__).absolute()),
             bucket=self.config.artifacts.bucket,
             endpoint=self.config.artifacts.endpoint,
+            mode=self.config.artifacts.defaultMode,
         )
 
     def _create_task(self, dag: DAG, step: TypedStep[Any, Any, Any]) -> Task:
