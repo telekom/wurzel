@@ -784,15 +784,11 @@ class TestArgoBackendSecurityContext:
         spec = workflow.get("spec", {})
         if "workflowSpec" in spec:
             security_context = spec["workflowSpec"].get("securityContext", {})
-            pod_spec_patch = spec["workflowSpec"].get("podSpecPatch")
         else:
             security_context = spec.get("securityContext", {})
-            pod_spec_patch = spec.get("podSpecPatch")
 
         assert security_context.get("runAsNonRoot") is True
         assert security_context.get("seccompProfile", {}).get("type") == "RuntimeDefault"
-        assert isinstance(pod_spec_patch, str)
-        assert "initContainers" in pod_spec_patch
 
     def test_custom_security_context_in_workflow(self):
         """Test that custom security context is applied to workflow."""

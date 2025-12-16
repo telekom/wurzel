@@ -25,6 +25,9 @@ workflows:
       runAsUser: 1000
       runAsGroup: 1000
       fsGroup: 2000
+      fsGroupChangePolicy: Always  # or "OnRootMismatch"
+      supplementalGroups:
+        - 1000
       seccompProfileType: RuntimeDefault
       # seccompLocalhostProfile: null  # Only used when seccompProfileType is "Localhost"
 
@@ -102,3 +105,4 @@ workflows:
     artifacts:
       bucket: wurzel-bucket-test
       endpoint: s3.amazonaws.com
+      defaultMode: 509  # File permissions (decimal), e.g., 509 = 0o775
