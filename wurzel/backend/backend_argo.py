@@ -381,15 +381,11 @@ class ArgoBackend(Backend):
         else:
             inputs = []
 
-        commands: list[str] = [
-            entry
-            for entry in generate_cli_call(
-                step.__class__,
-                inputs=[Path(inpt.path) for inpt in inputs if inpt.path],
-                output=self.config.dataDir / step.__class__.__name__,
-            ).split(" ")
-            if entry.strip()
-        ]
+        cli_call = generate_cli_call(
+            step.__class__,
+            inputs=[Path(inpt.path) for inpt in inputs if inpt.path],
+            output=self.config.dataDir / step.__class__.__name__,
+        )
 
         dag.__exit__()
         env_vars = [EnvVar(name=name, value=str(value)) for name, value in self.config.container.env.items()]
@@ -398,7 +394,8 @@ class ArgoBackend(Backend):
             image=self.config.container.image,
             security_context=self._build_container_security_context(),
             resources=self._build_container_resources(),
-            command=commands,
+            command=["/bin/sh", "-c"],
+            args=[cli_call],
             annotations=self.config.container.annotations,
             inputs=inputs,
             env=env_vars,
