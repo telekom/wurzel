@@ -335,7 +335,7 @@ class ArgoBackend(Backend):
             name=f"wurzel-artifact-{step.__class__.__name__.lower()}",
             recurse_mode=True,
             archive=NoneArchiveStrategy(),
-            key="{{workflow.name}}/" + step.__class__.__name__.lower(),
+            key="argo-workflows/{{workflow.name}}/" + step.__class__.__name__.lower(),
             path=str((self.config.dataDir / step.__class__.__name__).absolute()),
             bucket=self.config.artifacts.bucket,
             endpoint=self.config.artifacts.endpoint,
