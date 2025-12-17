@@ -142,6 +142,13 @@ workflows:
             - key: "tls.key"
               value: "key.pem"
 
+      # Tokenizer cache volume (for HuggingFace models)
+      tokenizerCache:
+        enabled: true
+        claimName: tokenizer-cache-pvc
+        mountPath: /cache/huggingface
+        readOnly: true
+
     # S3 artifact storage configuration
     artifacts:
       bucket: wurzel-bucket
@@ -196,6 +203,23 @@ workflows:
 | `cpu_limit` | string | `500m` | CPU limit |
 | `memory_request` | string | `128Mi` | Memory request |
 | `memory_limit` | string | `512Mi` | Memory limit |
+
+#### Tokenizer Cache Options
+
+The tokenizer cache configuration allows you to mount a PersistentVolumeClaim (PVC) containing pre-downloaded HuggingFace tokenizer models. This is useful for:
+
+- Avoiding repeated model downloads in air-gapped environments
+- Reducing startup time by using cached models
+- Sharing model cache across workflow runs
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | bool | `false` | Enable tokenizer cache volume mount |
+| `claimName` | string | `tokenizer-cache-pvc` | PVC name containing cached models |
+| `mountPath` | string | `/cache/huggingface` | Mount path inside container |
+| `readOnly` | bool | `true` | Mount as read-only |
+
+When enabled, the `HF_HOME` environment variable is automatically set to the `mountPath`, directing HuggingFace libraries to use the cached models.
 
 #### S3 Artifact Options
 
