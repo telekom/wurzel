@@ -24,6 +24,7 @@ from wurzel.backend.backend_argo import (
     SecretMount,
     SecurityContextConfig,
     TemplateValues,
+    TokenizerCacheConfig,
     WorkflowConfig,
     select_workflow,
 )
@@ -556,10 +557,10 @@ class TestArgoBackendFromValues:
         assert backend.config.namespace == "test-ns"
 
 
-class TestArgoBackendBuildSecretMounts:
+class TestArgoBackendBuildVolumes:
     def test_no_mounts(self):
         backend = ArgoBackend()
-        volumes, mounts = backend._build_secret_mounts()
+        volumes, mounts = backend._build_volumes()
         assert volumes == []
         assert mounts == []
 
@@ -605,6 +606,59 @@ class TestArgoBackendBuildSecretMounts:
         )
         backend = ArgoBackend(config=config)
         assert len(backend._volume_mounts) == 2
+
+    def test_tokenizer_cache_disabled_by_default(self):
+        backend = ArgoBackend()
+        volumes, mounts = backend._build_volumes()
+        # No tokenizer cache volume when disabled
+        assert not any(getattr(v, "claim_name", None) == "tokenizer-cache-pvc" for v in volumes)
+
+    def test_tokenizer_cache_enabled(self):
+        config = WorkflowConfig(
+            container=ContainerConfig(
+                tokenizerCache=TokenizerCacheConfig(
+                    enabled=True,
+                    claimName="my-tokenizer-pvc",
+                    mountPath="/cache/hf",
+                    readOnly=True,
+                )
+            )
+        )
+        backend = ArgoBackend(config=config)
+        volumes, mounts = backend._build_volumes()
+
+        # Should have one volume for tokenizer cache
+        assert len(volumes) == 1
+        assert volumes[0].claim_name == "my-tokenizer-pvc"
+        assert volumes[0].name == "tokenizer-cache"
+
+        # Should have one mount
+        assert len(mounts) == 1
+        assert mounts[0].mount_path == "/cache/hf"
+        assert mounts[0].read_only is True
+
+    def test_tokenizer_cache_with_secret_mounts(self):
+        config = WorkflowConfig(
+            container=ContainerConfig(
+                mountSecrets=[
+                    SecretMount(
+                        **{
+                            "from": "tls-secret",
+                            "to": "/etc/ssl",
+                            "mappings": [{"key": "tls.crt", "value": "cert.pem"}],
+                        }
+                    )
+                ],
+                tokenizerCache=TokenizerCacheConfig(enabled=True),
+            )
+        )
+        backend = ArgoBackend(config=config)
+        volumes, mounts = backend._build_volumes()
+
+        # Should have 2 volumes: secret + tokenizer cache
+        assert len(volumes) == 2
+        # Should have 2 mounts: secret mapping + tokenizer cache
+        assert len(mounts) == 2
 
 
 class TestArgoBackendBuildEnvFrom:
@@ -770,6 +824,84 @@ class TestArgoBackendCreateTask:
 
             # Task should have input artifacts from dependency
             assert task is not None
+
+
+class TestArgoBackendTokenizerCache:
+    def test_hf_home_env_var_set_when_enabled(self):
+        """Test that HF_HOME env var is set when tokenizer cache is enabled."""
+        config = WorkflowConfig(
+            container=ContainerConfig(
+                tokenizerCache=TokenizerCacheConfig(
+                    enabled=True,
+                    mountPath="/cache/huggingface",
+                )
+            )
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            templates = spec["workflowSpec"].get("templates", [])
+        else:
+            templates = spec.get("templates", [])
+
+        container_templates = [t for t in templates if "container" in t]
+        assert len(container_templates) > 0
+
+        for template in container_templates:
+            env_vars = template["container"].get("env", [])
+            hf_home_vars = [e for e in env_vars if e.get("name") == "HF_HOME"]
+            assert len(hf_home_vars) == 1
+            assert hf_home_vars[0]["value"] == "/cache/huggingface"
+
+    def test_hf_home_env_var_not_set_when_disabled(self):
+        """Test that HF_HOME env var is not set when tokenizer cache is disabled."""
+        backend = ArgoBackend()
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            templates = spec["workflowSpec"].get("templates", [])
+        else:
+            templates = spec.get("templates", [])
+
+        container_templates = [t for t in templates if "container" in t]
+        for template in container_templates:
+            env_vars = template["container"].get("env", [])
+            hf_home_vars = [e for e in env_vars if e.get("name") == "HF_HOME"]
+            assert len(hf_home_vars) == 0
+
+    def test_tokenizer_cache_volume_in_workflow(self):
+        """Test that tokenizer cache volume is included in workflow manifest."""
+        config = WorkflowConfig(
+            container=ContainerConfig(
+                tokenizerCache=TokenizerCacheConfig(
+                    enabled=True,
+                    claimName="my-tokenizer-pvc",
+                    mountPath="/cache/hf",
+                )
+            )
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            volumes = spec["workflowSpec"].get("volumes", [])
+        else:
+            volumes = spec.get("volumes", [])
+
+        # Should have tokenizer cache volume
+        tokenizer_volumes = [v for v in volumes if v.get("name") == "tokenizer-cache"]
+        assert len(tokenizer_volumes) == 1
+        assert tokenizer_volumes[0]["persistentVolumeClaim"]["claimName"] == "my-tokenizer-pvc"
 
 
 class TestArgoBackendSecurityContext:

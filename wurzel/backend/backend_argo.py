@@ -18,6 +18,7 @@ from hera.workflows import (
     ConfigMapEnvFrom,
     Container,
     CronWorkflow,
+    ExistingVolume,
     Resources,
     S3Artifact,
     SecretEnvFrom,
@@ -103,6 +104,19 @@ class ResourcesConfig(BaseModel):
     memory_limit: str = "512Mi"
 
 
+class TokenizerCacheConfig(BaseModel):
+    """Configuration for mounting a persistent volume for tokenizer model cache.
+
+    When enabled, mounts a PVC to the container and sets the HF_HOME environment
+    variable so HuggingFace tokenizers use the shared cache.
+    """
+
+    enabled: bool = False
+    claimName: str = "tokenizer-cache-pvc"
+    mountPath: str = "/cache/huggingface"
+    readOnly: bool = True
+
+
 class ContainerConfig(BaseModel):
     """Runtime configuration applied to workflow containers."""
 
@@ -112,6 +126,7 @@ class ContainerConfig(BaseModel):
     secretRef: list[str] = Field(default_factory=list)
     configMapRef: list[str] = Field(default_factory=list)
     mountSecrets: list[SecretMount] = Field(default_factory=list)
+    tokenizerCache: TokenizerCacheConfig = Field(default_factory=TokenizerCacheConfig)
     annotations: dict[str, str] = Field(default_factory=lambda: {})
     securityContext: SecurityContextConfig = Field(default_factory=SecurityContextConfig)
     resources: ResourcesConfig = Field(default_factory=ResourcesConfig)
@@ -182,7 +197,7 @@ class ArgoBackend(Backend):
         self.executor: type[BaseStepExecutor] = executor
         self.values = values or TemplateValues()
         self.config = config or select_workflow(self.values, workflow_name)
-        self._volumes, self._volume_mounts = self._build_secret_mounts()
+        self._volumes, self._volume_mounts = self._build_volumes()
 
     @classmethod
     def from_values(cls, files: Iterable[Path], workflow_name: str | None = None) -> ArgoBackend:
@@ -191,8 +206,8 @@ class ArgoBackend(Backend):
         return cls(values=values, workflow_name=workflow_name)
 
     # ------------------------------------------------------------------ helpers
-    def _build_secret_mounts(self) -> tuple[list[SecretVolume], list[VolumeMount]]:
-        volumes: list[SecretVolume] = []
+    def _build_volumes(self) -> tuple[list[SecretVolume | ExistingVolume], list[VolumeMount]]:
+        volumes: list[SecretVolume | ExistingVolume] = []
         mounts: list[VolumeMount] = []
 
         for idx, secret_mount in enumerate(self.config.container.mountSecrets):
@@ -213,6 +228,24 @@ class ArgoBackend(Backend):
                         sub_path=mapping.key,
                     )
                 )
+
+        # Add tokenizer cache volume if enabled
+        tokenizer_cache = self.config.container.tokenizerCache
+        if tokenizer_cache.enabled:
+            volume_name = "tokenizer-cache"
+            volumes.append(
+                ExistingVolume(
+                    name=volume_name,
+                    claim_name=tokenizer_cache.claimName,
+                )
+            )
+            mounts.append(
+                VolumeMount(
+                    name=volume_name,
+                    mount_path=tokenizer_cache.mountPath,
+                    read_only=tokenizer_cache.readOnly,
+                )
+            )
 
         return volumes, mounts
 
@@ -367,6 +400,11 @@ class ArgoBackend(Backend):
 
         dag.__exit__()
         env_vars = [EnvVar(name=name, value=str(value)) for name, value in self.config.container.env.items()]
+
+        # Add HF_HOME env var if tokenizer cache is enabled
+        tokenizer_cache = self.config.container.tokenizerCache
+        if tokenizer_cache.enabled:
+            env_vars.append(EnvVar(name="HF_HOME", value=tokenizer_cache.mountPath))
         wurzel_call = Container(
             name=f"wurzel-run-template-{step.__class__.__name__.lower()}",
             image=self.config.container.image,
