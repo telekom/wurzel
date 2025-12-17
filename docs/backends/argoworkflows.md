@@ -145,9 +145,14 @@ workflows:
       # Tokenizer cache volume (for HuggingFace models)
       tokenizerCache:
         enabled: true
-        claimName: tokenizer-cache-pvc
+        claimName: tokenizer-cache-pvc  # Used when createPvc: false
         mountPath: /cache/huggingface
         readOnly: true
+        # To auto-create a workflow-scoped PVC:
+        # createPvc: true
+        # storageSize: 10Gi
+        # storageClassName: standard
+        # accessModes: ["ReadWriteOnce"]
 
     # S3 artifact storage configuration
     artifacts:
@@ -215,11 +220,19 @@ The tokenizer cache configuration allows you to mount a PersistentVolumeClaim (P
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `enabled` | bool | `false` | Enable tokenizer cache volume mount |
-| `claimName` | string | `tokenizer-cache-pvc` | PVC name containing cached models |
+| `claimName` | string | `tokenizer-cache-pvc` | PVC name for existing PVC (when `createPvc: false`) |
 | `mountPath` | string | `/cache/huggingface` | Mount path inside container |
 | `readOnly` | bool | `true` | Mount as read-only |
+| `createPvc` | bool | `false` | Create PVC via `volumeClaimTemplates` (workflow-scoped) |
+| `storageSize` | string | `10Gi` | Storage size (when `createPvc: true`) |
+| `storageClassName` | string | `null` | Storage class name (when `createPvc: true`) |
+| `accessModes` | list[str] | `["ReadWriteOnce"]` | Access modes (when `createPvc: true`) |
 
 When enabled, the `HF_HOME` environment variable is automatically set to the `mountPath`, directing HuggingFace libraries to use the cached models.
+
+!!! note "createPvc vs claimName"
+    - **`createPvc: false`** (default): Uses an existing PVC specified by `claimName`. You must create the PVC separately.
+    - **`createPvc: true`**: Creates a workflow-scoped PVC via Argo's `volumeClaimTemplates`. The PVC is created when the workflow starts and deleted when it completes. This is useful for temporary caches but **not** for persistent model storage across runs.
 
 #### S3 Artifact Options
 

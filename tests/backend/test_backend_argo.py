@@ -903,6 +903,96 @@ class TestArgoBackendTokenizerCache:
         assert len(tokenizer_volumes) == 1
         assert tokenizer_volumes[0]["persistentVolumeClaim"]["claimName"] == "my-tokenizer-pvc"
 
+    def test_create_pvc_uses_volume_claim_templates(self):
+        """Test that createPvc uses volumeClaimTemplates in workflow spec."""
+        config = WorkflowConfig(
+            container=ContainerConfig(
+                tokenizerCache=TokenizerCacheConfig(
+                    enabled=True,
+                    createPvc=True,
+                    storageSize="20Gi",
+                    storageClassName="fast-storage",
+                    accessModes=["ReadWriteMany"],
+                )
+            ),
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        # Should have volumeClaimTemplates in workflow spec
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            volume_claim_templates = spec["workflowSpec"].get("volumeClaimTemplates", [])
+        else:
+            volume_claim_templates = spec.get("volumeClaimTemplates", [])
+
+        assert len(volume_claim_templates) == 1
+        vct = volume_claim_templates[0]
+        assert vct["metadata"]["name"] == "tokenizer-cache"
+        assert vct["spec"]["accessModes"] == ["ReadWriteMany"]
+        assert vct["spec"]["resources"]["requests"]["storage"] == "20Gi"
+        assert vct["spec"]["storageClassName"] == "fast-storage"
+
+    def test_create_pvc_without_storage_class(self):
+        """Test that createPvc works without storageClassName."""
+        config = WorkflowConfig(
+            container=ContainerConfig(
+                tokenizerCache=TokenizerCacheConfig(
+                    enabled=True,
+                    createPvc=True,
+                )
+            ),
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            volume_claim_templates = spec["workflowSpec"].get("volumeClaimTemplates", [])
+        else:
+            volume_claim_templates = spec.get("volumeClaimTemplates", [])
+
+        assert len(volume_claim_templates) == 1
+        vct = volume_claim_templates[0]
+        assert "storageClassName" not in vct["spec"] or vct["spec"]["storageClassName"] is None
+        assert vct["spec"]["resources"]["requests"]["storage"] == "10Gi"  # default
+
+    def test_no_volume_claim_templates_when_create_pvc_disabled(self):
+        """Test that no volumeClaimTemplates when createPvc is False (uses existing PVC)."""
+        config = WorkflowConfig(
+            container=ContainerConfig(
+                tokenizerCache=TokenizerCacheConfig(
+                    enabled=True,
+                    createPvc=False,
+                    claimName="existing-pvc",
+                )
+            ),
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            volume_claim_templates = spec["workflowSpec"].get("volumeClaimTemplates", [])
+            volumes = spec["workflowSpec"].get("volumes", [])
+        else:
+            volume_claim_templates = spec.get("volumeClaimTemplates", [])
+            volumes = spec.get("volumes", [])
+
+        # Should have no volumeClaimTemplates
+        assert len(volume_claim_templates) == 0
+
+        # Should have existing volume reference
+        tokenizer_volumes = [v for v in volumes if v.get("name") == "tokenizer-cache"]
+        assert len(tokenizer_volumes) == 1
+        assert tokenizer_volumes[0]["persistentVolumeClaim"]["claimName"] == "existing-pvc"
+
 
 class TestArgoBackendSecurityContext:
     def test_default_security_context_in_workflow(self):

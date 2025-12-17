@@ -24,6 +24,7 @@ from hera.workflows import (
     SecretEnvFrom,
     SecretVolume,
     Task,
+    Volume,
     Workflow,
 )
 from hera.workflows.archive import NoneArchiveStrategy
@@ -115,6 +116,10 @@ class TokenizerCacheConfig(BaseModel):
     claimName: str = "tokenizer-cache-pvc"
     mountPath: str = "/cache/huggingface"
     readOnly: bool = True
+    createPvc: bool = False
+    storageSize: str = "10Gi"
+    storageClassName: str | None = None
+    accessModes: list[str] = Field(default_factory=lambda: ["ReadWriteOnce"])
 
 
 class ContainerConfig(BaseModel):
@@ -206,8 +211,8 @@ class ArgoBackend(Backend):
         return cls(values=values, workflow_name=workflow_name)
 
     # ------------------------------------------------------------------ helpers
-    def _build_volumes(self) -> tuple[list[SecretVolume | ExistingVolume], list[VolumeMount]]:
-        volumes: list[SecretVolume | ExistingVolume] = []
+    def _build_volumes(self) -> tuple[list[SecretVolume | ExistingVolume | Volume], list[VolumeMount]]:
+        volumes: list[SecretVolume | ExistingVolume | Volume] = []
         mounts: list[VolumeMount] = []
 
         for idx, secret_mount in enumerate(self.config.container.mountSecrets):
@@ -233,12 +238,25 @@ class ArgoBackend(Backend):
         tokenizer_cache = self.config.container.tokenizerCache
         if tokenizer_cache.enabled:
             volume_name = "tokenizer-cache"
-            volumes.append(
-                ExistingVolume(
-                    name=volume_name,
-                    claim_name=tokenizer_cache.claimName,
+            if tokenizer_cache.createPvc:
+                # Use Hera's Volume class to create PVC via volumeClaimTemplates
+                volumes.append(
+                    Volume(
+                        name=volume_name,
+                        size=tokenizer_cache.storageSize,
+                        mount_path=tokenizer_cache.mountPath,
+                        storage_class_name=tokenizer_cache.storageClassName,
+                        access_modes=tokenizer_cache.accessModes,
+                    )
                 )
-            )
+            else:
+                # Use existing PVC
+                volumes.append(
+                    ExistingVolume(
+                        name=volume_name,
+                        claim_name=tokenizer_cache.claimName,
+                    )
+                )
             mounts.append(
                 VolumeMount(
                     name=volume_name,
@@ -317,7 +335,6 @@ class ArgoBackend(Backend):
     def generate_artifact(self, step: TypedStep[Any, Any, Any]):
         """Return YAML manifest(s) for workflow + optional dependent resources."""
         workflow_manifest = self._generate_workflow(step).to_dict()
-
         return yaml.safe_dump(workflow_manifest, sort_keys=False).strip()
 
     def _generate_workflow(self, step: TypedStep[Any, Any, Any]) -> Workflow:
