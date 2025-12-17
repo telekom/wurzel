@@ -2,15 +2,11 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
-
-from wurzel.utils import HAS_SPACY, HAS_TRANSFORMERS
-
-if not HAS_SPACY:
-    pytest.skip("Spacy is not available", allow_module_level=True)
-
 import logging
 
+import pytest
+
+from wurzel.utils import HAS_TRANSFORMERS
 from wurzel.utils.splitters.semantic_splitter import DocumentNode, MetaDataDict, SemanticSplitter
 
 

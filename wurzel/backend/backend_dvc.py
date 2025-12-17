@@ -3,15 +3,18 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import inspect
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, TypedDict
 
 import yaml
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 import wurzel
 import wurzel.cli
 from wurzel.backend.backend import Backend
+from wurzel.backend.values import load_values
 from wurzel.step import TypedStep
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 
@@ -52,6 +55,32 @@ class DvcBackendSettings(BaseSettings):
     ENCAPSULATE_ENV: bool = True
 
 
+class DvcConfig(BaseModel):
+    """DVC pipeline configuration from YAML values."""
+
+    dataDir: Path = Path("./data")
+    encapsulateEnv: bool = True
+
+
+class DvcTemplateValues(BaseModel):
+    """YAML values file parsed into strongly typed configuration for DVC."""
+
+    dvc: dict[str, DvcConfig] = Field(default_factory=dict)
+
+
+def select_pipeline(values: DvcTemplateValues, pipeline_name: str | None) -> DvcConfig:
+    """Select a pipeline configuration either by name or falling back to the first entry."""
+    if pipeline_name:
+        try:
+            return values.dvc[pipeline_name]
+        except KeyError as exc:
+            raise ValueError(f"pipeline '{pipeline_name}' not found in values") from exc
+    if values.dvc:
+        first_key = next(iter(values.dvc))
+        return values.dvc[first_key]
+    return DvcConfig()
+
+
 class DvcBackend(Backend):
     """DVC-specific backend implementation for the Wurzel abstraction layer.
 
@@ -59,20 +88,39 @@ class DvcBackend(Backend):
     It recursively resolves all step dependencies and constructs CLI commands for DVC execution.
 
     Args:
+        config (DvcConfig | None): Optional config from YAML values.
         settings (DvcBackendSettings | None): Optional settings object; if not provided,
             defaults will be loaded from environment or defaults.
-        executer (BaseStepExecutor): Executor class used to wrap the CLI call.
+        executor (BaseStepExecutor): Executor class used to wrap the CLI call.
 
     """
 
+    @classmethod
+    def is_available(cls) -> bool:
+        """DVC backend has no optional dependencies."""
+        return True
+
     def __init__(
         self,
+        config: DvcConfig | None = None,
+        *,
         settings: DvcBackendSettings | None = None,
-        executer: type[BaseStepExecutor] = PrometheusStepExecutor,
+        executor: type[BaseStepExecutor] = PrometheusStepExecutor,
     ) -> None:
-        self.executor: type[BaseStepExecutor] = executer
-        self.settings = settings if settings else DvcBackendSettings()
         super().__init__()
+        self.executor: type[BaseStepExecutor] = executor
+        self.settings = settings or DvcBackendSettings()
+        self.config = config or DvcConfig(
+            dataDir=self.settings.DATA_DIR,
+            encapsulateEnv=self.settings.ENCAPSULATE_ENV,
+        )
+
+    @classmethod
+    def from_values(cls, files: Iterable[Path], workflow_name: str | None = None) -> "DvcBackend":
+        """Instantiate the backend from values files."""
+        values = load_values(files, DvcTemplateValues)
+        config = select_pipeline(values, workflow_name)
+        return cls(config=config)
 
     def _generate_dict(
         self,
@@ -99,14 +147,14 @@ class DvcBackend(Backend):
             result |= dep_result
             outputs_of_deps += dep_result[o_step.__class__.__name__]["outs"]
 
-        output_path = self.settings.DATA_DIR / step.__class__.__name__
+        output_path = self.config.dataDir / step.__class__.__name__
 
         cmd = wurzel.cli.generate_cli_call(
             step.__class__,
             inputs=outputs_of_deps,
             output=output_path,
             executor=self.executor,
-            encapsulate_env=self.settings.ENCAPSULATE_ENV,
+            encapsulate_env=self.config.encapsulateEnv,
         )
 
         return result | {
