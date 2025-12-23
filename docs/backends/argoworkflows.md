@@ -46,8 +46,9 @@ export ARGOWORKFLOWBACKEND__ENCAPSULATE_ENV=true
 export ARGOWORKFLOWBACKEND__S3_ARTIFACT_TEMPLATE__BUCKET=wurzel-bucket
 export ARGOWORKFLOWBACKEND__S3_ARTIFACT_TEMPLATE__ENDPOINT=s3.amazonaws.com
 export ARGOWORKFLOWBACKEND__SERVICE_ACCOUNT_NAME=wurzel-service-account
-export ARGOWORKFLOWBACKEND__SECRET_NAME=wurzel-secret
-export ARGOWORKFLOWBACKEND__CONFIG_MAP=wurzel-config
+# Optional – only set when you have corresponding Kubernetes resources:
+# export ARGOWORKFLOWBACKEND__SECRET_NAME=my-existing-secret
+# export ARGOWORKFLOWBACKEND__CONFIG_MAP=my-existing-configmap
 export ARGOWORKFLOWBACKEND__PIPELINE_NAME=my-wurzel-pipeline
 ```
 
@@ -60,8 +61,8 @@ Available configuration options:
 - `S3_ARTIFACT_TEMPLATE__BUCKET`: S3 bucket for artifact storage
 - `S3_ARTIFACT_TEMPLATE__ENDPOINT`: S3 endpoint URL
 - `SERVICE_ACCOUNT_NAME`: Kubernetes service account for pipeline execution
-- `SECRET_NAME`: Kubernetes secret containing credentials
-- `CONFIG_MAP`: Kubernetes ConfigMap for configuration
+- `SECRET_NAME`: (optional) Kubernetes secret containing credentials
+- `CONFIG_MAP`: (optional) Kubernetes ConfigMap for configuration
 - `PIPELINE_NAME`: Name for the generated CronWorkflow
 
 ### Programmatic Usage
