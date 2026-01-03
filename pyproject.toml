@@ -101,7 +101,7 @@ lint = [
     "pylint-json2html==0.5.0",
     "pre-commit>=4.1,<4.6",
     "reuse==6.2.0",
-    "ruff==0.14.4",
+    "ruff==0.14.10",
 ]
 test = [
     "pytest>=8.4,<9.1",
