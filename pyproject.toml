@@ -52,7 +52,7 @@ qdrant = [
     "qdrant-client==1.15.1"
 ]
 docling = [
-    "docling==2.30.0"
+    "docling==2.65.0"
 ]
 milvus = [
     "pymilvus==2.6.3",
