@@ -70,8 +70,8 @@ class ArgoBackendSettings(SettingsBase):
     ENCAPSULATE_ENV: bool = True
     S3_ARTIFACT_TEMPLATE: S3ArtifactTemplate = S3ArtifactTemplate()
     SERVICE_ACCOUNT_NAME: str = "wurzel-service-account"
-    SECRET_NAME: str = "wurzel-secret"
-    CONFIG_MAP: str = "wurzel-config"
+    SECRET_NAME: str | None = None
+    CONFIG_MAP: str | None = None
     ANNOTATIONS: dict[str, str] = {"sidecar.istio.io/inject": "false"}
     NAMESPACE: str = "argo-workflows"
     PIPELINE_NAME: str = Field(
@@ -219,6 +219,11 @@ class ArgoBackend(Backend):
 
         dag.__exit__()
         env_vars = self._create_envs_from_step_settings(step)
+        env_from_sources = []
+        if self.settings.SECRET_NAME:
+            env_from_sources.append(SecretEnvFrom(prefix="", name=self.settings.SECRET_NAME, optional=True))
+        if self.settings.CONFIG_MAP:
+            env_from_sources.append(ConfigMapEnvFrom(prefix="", name=self.settings.CONFIG_MAP, optional=True))
         wurzel_call = Container(
             name=f"wurzel-run-template-{step.__class__.__name__.lower()}",
             image=self.settings.IMAGE,
@@ -227,10 +232,7 @@ class ArgoBackend(Backend):
             annotations=self.settings.ANNOTATIONS,
             inputs=inputs,
             env=env_vars,
-            env_from=[
-                SecretEnvFrom(prefix="", name=self.settings.SECRET_NAME, optional=True),
-                ConfigMapEnvFrom(prefix="", name=self.settings.CONFIG_MAP, optional=True),
-            ],
+            env_from=env_from_sources,
             outputs=self._create_artifact_from_step(step),
         )
 
