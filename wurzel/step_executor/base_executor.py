@@ -77,9 +77,9 @@ def _try_sort(x: StepReturnType) -> StepReturnType:
             return x
     # pylint: disable-next=bare-except
     except:  # noqa: E722
-        log.warning("Could not sort output", extra={"type": type(x).__name__})
+        log.warning("Could not sort output", extra={"extra": {"type": type(x).__name__}})
         return x
-    log.warning("Can't sort objects of this type", extra={"type": type(x).__name__})
+    log.warning("Can't sort objects of this type", extra={"extra": {"type": type(x).__name__}})
     return x
 
 

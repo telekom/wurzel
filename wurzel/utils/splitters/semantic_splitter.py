@@ -22,7 +22,7 @@ from wurzel.utils.to_markdown.html2md import MD_RENDER_LOCK
 from wurzel.utils.tokenizers import Tokenizer
 
 # Precompile regex pattern for performance
-_SENTENCE_SPLIT_PATTERN = re.compile(r"\.(?=\s|\\n)")
+_SENTENCE_SPLIT_PATTERN = re.compile(r"\.(?=\s|\n)")
 
 LEVEL_MAPPING = {
     block_token.Heading: 0,  # actually 1-6
