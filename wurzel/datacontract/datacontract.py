@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import abc
+import hashlib
 import json
 import types
 import typing
@@ -139,11 +140,8 @@ class PydanticModel(pydantic.BaseModel, DataModel):
         """Compute a hash based on all not-none field values."""
         # pylint: disable-next=not-an-iterable
         # Use SHA256 for deterministic hashing (Python's hash() is randomized)
-        # Optimized by building tuple first instead of string concatenation
-        import hashlib  # pylint: disable=import-outside-toplevel
-
-        field_values = tuple(str(getattr(self, name) or "") for name in sorted(type(self).model_fields))
-        hash_input = "".join(field_values).encode("utf-8")
+        # Join generator directly instead of building intermediate tuple
+        hash_input = "".join(str(getattr(self, name) or "") for name in sorted(type(self).model_fields)).encode("utf-8")
         return int(hashlib.sha256(hash_input, usedforsecurity=False).hexdigest(), 16)
 
     def __eq__(self, other: object) -> bool:
