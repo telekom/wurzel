@@ -32,9 +32,7 @@ log = getLogger(__name__)
 
 # Precompile regex patterns for performance
 _WHITESPACE_PATTERN = re.compile(r"([.,!?]+)?\s+")
-_URL_PATTERN = re.compile(
-    r"https?://(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_+.~#?&/=]*)"
-)
+_URL_PATTERN = re.compile(r"https?://(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_+.~#?&/=]*)")
 
 
 class Embedded(TypedDict):
