@@ -73,7 +73,7 @@ class EnvFromConfig(BaseModel):
     kind: Literal["secret", "configMap"] = "secret"
     name: str
     prefix: str | None = None
-    optional: bool = True
+    optional: bool = False
 
 
 class SecurityContextConfig(BaseModel):
