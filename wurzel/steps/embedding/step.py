@@ -17,6 +17,12 @@ from markdown import Markdown
 from pandera.typing import DataFrame
 from tqdm.auto import tqdm
 
+# Precompile regex patterns for performance
+_WHITESPACE_PATTERN = re.compile(r"([.,!?]+)?\s+")
+_URL_PATTERN = re.compile(
+    r"https?://(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_+.~#?&/=]*)"
+)
+
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import EmbeddingAPIException, StepFailed
 from wurzel.step import TypedStep
@@ -164,7 +170,7 @@ class BaseEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract],
     @classmethod
     def whitespace_word_tokenizer(cls, text: str) -> list[str]:
         """Simple Regex based whitespace word tokenizer."""
-        return [x for x in re.split(r"([.,!?]+)?\s+", text) if x]
+        return [x for x in _WHITESPACE_PATTERN.split(text) if x]
 
     def get_simple_context(self, text):
         """Simple function to create a context from a text."""
@@ -214,11 +220,8 @@ class BaseEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract],
             The text with URLs replaced by 'LINK'.
 
         """
-        # Extract URL from a string
-        url_extract_pattern = (
-            "https?:\\/\\/(?:www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b(?:[-a-zA-Z0-9()@:%_\\+.~#?&\\/=]*)"  # pylint: disable=line-too-long
-        )
-        links = sorted(re.findall(url_extract_pattern, text), key=len, reverse=True)
+        # Use precompiled pattern for better performance
+        links = sorted(_URL_PATTERN.findall(text), key=len, reverse=True)
         for link in links:
             text = text.replace(link, "LINK")
         return text

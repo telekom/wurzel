@@ -21,6 +21,9 @@ from wurzel.utils.splitters.sentence_splitter import SentenceSplitter
 from wurzel.utils.to_markdown.html2md import MD_RENDER_LOCK
 from wurzel.utils.tokenizers import Tokenizer
 
+# Precompile regex pattern for performance
+_SENTENCE_SPLIT_PATTERN = re.compile(r"\.(?=\s|\\n)")
+
 LEVEL_MAPPING = {
     block_token.Heading: 0,  # actually 1-6
     block_token.List: 7,
@@ -452,7 +455,7 @@ class SemanticSplitter:
         needed_splits = lenth // token_limit
         if not needed_splits:
             return [text]
-        sentences = [(self._get_token_len(sent), f"{sent}. ") for sent in re.split(r"\.(?=\s|\\n)", text) if sent.strip()]
+        sentences = [(self._get_token_len(sent), f"{sent}. ") for sent in _SENTENCE_SPLIT_PATTERN.split(text) if sent.strip()]
         chunks: list[str] = []
         chunk = ""
         chunk_len = 0

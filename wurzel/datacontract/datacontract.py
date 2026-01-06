@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import abc
-import hashlib
 import json
 import types
 import typing
@@ -53,7 +52,8 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
         import pandas as pd  # pylint: disable=import-outside-toplevel
 
         # Load CSV from path
-        read_data = pd.read_csv(path.open(encoding="utf-8"))
+        with path.open(encoding="utf-8") as f:
+            read_data = pd.read_csv(f)
 
         def _literal_eval_or_passthrough(value):
             """Convert stringified literals to Python objects because pandas keeps CSV cells as strings."""
@@ -124,9 +124,11 @@ class PydanticModel(pydantic.BaseModel, DataModel):
             model_type = [ty for ty in typing.get_args(model_type) if ty][0]
         if get_origin(model_type) is None:
             if issubclass(model_type, pydantic.BaseModel):
-                return cls(**json.load(path.open(encoding="utf-8")))
+                with path.open(encoding="utf-8") as f:
+                    return cls(**json.load(f))
         elif get_origin(model_type) is list:
-            data = json.load(path.open(encoding="utf-8"))
+            with path.open(encoding="utf-8") as f:
+                data = json.load(f)
             for i, entry in enumerate(data):
                 data[i] = cls(**entry)
             return data
@@ -136,16 +138,11 @@ class PydanticModel(pydantic.BaseModel, DataModel):
     def __hash__(self) -> int:
         """Compute a hash based on all not-none field values."""
         # pylint: disable-next=not-an-iterable
-        return int(
-            hashlib.sha256(
-                bytes(
-                    "".join([str(getattr(self, name) or "") for name in sorted(type(self).model_fields)]),
-                    encoding="utf-8",
-                ),
-                usedforsecurity=False,
-            ).hexdigest(),
-            16,
+        # Optimize by building a tuple instead of string concatenation
+        field_values = tuple(
+            str(getattr(self, name) or "") for name in sorted(type(self).model_fields)
         )
+        return hash(field_values)
 
     def __eq__(self, other: object) -> bool:
         # pylint: disable-next=not-an-iterable
