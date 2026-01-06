@@ -139,9 +139,7 @@ class PydanticModel(pydantic.BaseModel, DataModel):
         """Compute a hash based on all not-none field values."""
         # pylint: disable-next=not-an-iterable
         # Optimize by building a tuple instead of string concatenation
-        field_values = tuple(
-            str(getattr(self, name) or "") for name in sorted(type(self).model_fields)
-        )
+        field_values = tuple(str(getattr(self, name) or "") for name in sorted(type(self).model_fields))
         return hash(field_values)
 
     def __eq__(self, other: object) -> bool:

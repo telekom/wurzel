@@ -17,12 +17,6 @@ from markdown import Markdown
 from pandera.typing import DataFrame
 from tqdm.auto import tqdm
 
-# Precompile regex patterns for performance
-_WHITESPACE_PATTERN = re.compile(r"([.,!?]+)?\s+")
-_URL_PATTERN = re.compile(
-    r"https?://(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_+.~#?&/=]*)"
-)
-
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import EmbeddingAPIException, StepFailed
 from wurzel.step import TypedStep
@@ -35,6 +29,12 @@ from wurzel.utils.tokenizers import Tokenizer
 from .settings import EmbeddingSettings
 
 log = getLogger(__name__)
+
+# Precompile regex patterns for performance
+_WHITESPACE_PATTERN = re.compile(r"([.,!?]+)?\s+")
+_URL_PATTERN = re.compile(
+    r"https?://(?:www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_+.~#?&/=]*)"
+)
 
 
 class Embedded(TypedDict):
