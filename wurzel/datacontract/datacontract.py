@@ -138,9 +138,13 @@ class PydanticModel(pydantic.BaseModel, DataModel):
     def __hash__(self) -> int:
         """Compute a hash based on all not-none field values."""
         # pylint: disable-next=not-an-iterable
-        # Optimize by building a tuple instead of string concatenation
+        # Use SHA256 for deterministic hashing (Python's hash() is randomized)
+        # Optimized by building tuple first instead of string concatenation
+        import hashlib  # pylint: disable=import-outside-toplevel
+
         field_values = tuple(str(getattr(self, name) or "") for name in sorted(type(self).model_fields))
-        return hash(field_values)
+        hash_input = "".join(field_values).encode("utf-8")
+        return int(hashlib.sha256(hash_input, usedforsecurity=False).hexdigest(), 16)
 
     def __eq__(self, other: object) -> bool:
         # pylint: disable-next=not-an-iterable
