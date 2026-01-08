@@ -80,7 +80,7 @@ Use the `wurzel env` helper to inspect or validate the variables your pipeline n
 # Show required env vars (toggle optional ones via --only-required)
 wurzel env examples.pipeline.pipelinedemo:pipeline --only-required
 
-# Generate a .env snippet with defaults
+# Generate a .env snippet (prefers values already present in your shell)
 wurzel env examples.pipeline.pipelinedemo:pipeline --gen-env > .env.sample
 
 # Fail fast when something is missing

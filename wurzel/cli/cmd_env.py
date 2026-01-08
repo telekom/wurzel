@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from json import dumps
 from types import NoneType
 from typing import TYPE_CHECKING
@@ -74,19 +75,23 @@ def collect_env_requirements(pipeline: TypedStep) -> list[EnvVarRequirement]:
     return sorted(requirements, key=lambda req: (req.step_index, req.field_index))
 
 
-def format_env_snippet(requirements: list[EnvVarRequirement]) -> str:
+def format_env_snippet(
+    requirements: list[EnvVarRequirement],
+    current_env: Mapping[str, str] | None = None,
+) -> str:
     """Return .env-style representation of requirements grouped by step."""
     lines: list[str] = ["# Generated env vars"]
     current_step = None
+    env_values = current_env or {}
     for req in requirements:
         if req.step_name != current_step:
             lines.append("")
             lines.append(f"# {req.step_name}")
             current_step = req.step_name
-        default = req.default
-        if not default:
-            default = ""
-        lines.append(f"{req.env_var}={default}")
+        value = req.default or ""
+        if current_env is not None and req.env_var in env_values:
+            value = env_values[req.env_var]
+        lines.append(f"{req.env_var}={value}")
     lines.append("")
     return "\n".join(lines) + "\n"
 
