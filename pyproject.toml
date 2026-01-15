@@ -32,7 +32,7 @@ classifiers = [
 dependencies= [
     "tqdm==4.67.1",
     "pandas==2.3.3",
-    "numpy < 2.0.0",
+    "numpy<3.0.0",
     "dvc==3.63.0",
     "pathspec<0.13", # needed for dvc
     "Markdown==3.6",
