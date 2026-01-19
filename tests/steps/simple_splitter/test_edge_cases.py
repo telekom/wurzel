@@ -16,7 +16,7 @@ if not HAS_SPACY or not HAS_TIKTOKEN:
 
 
 def test_link_preservation_inline(splitter, markdown_contract_factory):
-    """Test that inline links in paragraphs are preserved."""
+    """Test that inline links in paragraphs are preserved and not split."""
     text = """# Links Test
 
 This is a paragraph with an [inline link](https://github.com/telekom/wurzel)
@@ -28,12 +28,26 @@ Visit [example.com](https://www.example.com) for more info."""
     result = splitter.split_markdown_document(contract)
 
     all_text = " ".join([chunk.md for chunk in result])
-    assert "[inline link]" in all_text or "inline link" in all_text
+
+    # Verify both link URL and text are present
     assert "https://github.com/telekom/wurzel" in all_text
+    assert "https://www.example.com" in all_text
+
+    # Verify link syntax is intact - check each chunk
+    import re
+
+    for chunk in result:
+        # If chunk contains a URL, verify link syntax is not broken
+        if "github.com" in chunk.md or "example.com" in chunk.md:
+            # Check for proper link format [text](url)
+            links = re.findall(r"\[([^\]]+)\]\(([^\)]+)\)", chunk.md)
+            # If we find the URL, we should also find it in a proper link
+            if "github.com/telekom/wurzel" in chunk.md:
+                assert any("github.com/telekom/wurzel" in url for _, url in links), "GitHub link is not properly formatted"
 
 
 def test_link_preservation_reference_style(splitter, markdown_contract_factory):
-    """Test that reference-style links are preserved."""
+    """Test that reference-style links are preserved and not split."""
     text = """# Reference Links
 
 Check out [this repo][1] and [that site][2].
@@ -45,8 +59,24 @@ Check out [this repo][1] and [that site][2].
     result = splitter.split_markdown_document(contract)
 
     all_text = " ".join([chunk.md for chunk in result])
-    # Links should be present somewhere
+
+    # Verify both URLs are present
     assert "https://github.com/telekom/wurzel" in all_text
+    assert "https://www.example.com" in all_text
+
+    # Verify reference markers are present
+    assert "[1]" in all_text or "repo" in all_text
+    assert "[2]" in all_text or "site" in all_text
+
+    # Check that reference definitions are intact
+    import re
+
+    for chunk in result:
+        # Look for reference definitions like [1]: url
+        refs = re.findall(r"\[(\d+)\]:\s*(\S+)", chunk.md)
+        for ref_num, ref_url in refs:
+            # If we find a reference, verify it's a complete URL
+            assert ref_url.startswith("http"), f"Incomplete reference URL: {ref_url}"
 
 
 def test_very_short_document(splitter, markdown_contract_factory):

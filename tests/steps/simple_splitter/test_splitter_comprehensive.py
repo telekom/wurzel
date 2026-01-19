@@ -82,10 +82,27 @@ def test_text_with_links_preserved(splitter, text_with_links, markdown_contract_
     # Collect all text from chunks
     all_text = " ".join([chunk.md for chunk in result])
 
-    # Check that important links are present
+    # Check that important links are present and intact
     assert "https://github.com/telekom/wurzel" in all_text
-    assert "[GitHub Repository]" in all_text or "GitHub Repository" in all_text
     assert "https://docs.example.com/api/v1/reference" in all_text
+    assert "https://www.telekom.com" in all_text
+
+    # Verify link syntax is preserved (not split across chunks)
+    import re
+
+    for chunk in result:
+        # Check for broken link patterns like "] (" with space
+        assert not re.search(r"\]\s{2,}\(", chunk.md), "Link appears to be split"
+        # Check that if we have [ we also have matching ]
+        lines = chunk.md.split("\n")
+        for line in lines:
+            if "[" in line and "http" in line:
+                # Line contains potential link, verify it's well-formed
+                if "(" in line:
+                    # Inline link style - should have [text](url) pattern
+                    links = re.findall(r"\[([^\]]+)\]\(([^\)]+)\)", line)
+                    if "github" in line or "docs" in line:
+                        assert len(links) > 0, f"Malformed link in: {line}"
 
 
 def test_empty_document(splitter, empty_document, markdown_contract_factory):
@@ -112,11 +129,16 @@ def test_chunk_metadata_consistency(small_splitter, long_text_en, markdown_contr
 
     # All chunks should have the same source hash
     source_hashes = {chunk.metadata.get("source_sha256_hash") for chunk in result}
-    assert len(source_hashes) == 1
+    assert len(source_hashes) == 1, "All chunks must have identical source hash"
+
+    # Verify source hash is deterministic - run again
+    result2 = small_splitter.split_markdown_document(contract)
+    source_hashes2 = {chunk.metadata.get("source_sha256_hash") for chunk in result2}
+    assert source_hashes == source_hashes2, "Source hash must be deterministic"
 
     # Chunk indices should be sequential
     indices = [chunk.metadata["chunk_index"] for chunk in result]
-    assert indices == list(range(len(result)))
+    assert indices == list(range(len(result))), "Chunk indices must be sequential"
 
     # All chunks should have token_len and char_len
     for chunk in result:
@@ -124,6 +146,11 @@ def test_chunk_metadata_consistency(small_splitter, long_text_en, markdown_contr
         assert "char_len" in chunk.metadata
         assert chunk.metadata["token_len"] > 0
         assert chunk.metadata["char_len"] > 0
+
+    # Verify split is deterministic - compare content
+    combined1 = "|||".join([c.md for c in result])
+    combined2 = "|||".join([c.md for c in result2])
+    assert combined1 == combined2, "Split output must be deterministic"
 
 
 @pytest.mark.parametrize(

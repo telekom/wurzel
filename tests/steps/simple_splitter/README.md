@@ -16,21 +16,29 @@ Contains reusable fixtures for all tests:
 1. **`test_splitter_comprehensive.py`**
    - Multi-language support tests (EN, DE, FR, ES, ZH, EL, CS)
    - Short and long document handling
-   - Link preservation tests
-   - Metadata consistency tests
+   - Link preservation tests with validation
+   - Metadata consistency tests with deterministic checks
    - Different token limit configurations
    - Code blocks and lists
    - URL and keywords preservation
 
-2. **`test_edge_cases.py`**
-   - Link preservation (inline and reference-style)
+2. **`test_concrete_outputs.py`**
+   - Deterministic output validation using SHA256 hashes
+   - Concrete link preservation tests (inline and reference-style)
+   - Link syntax validation to ensure links are not split
+   - Long URL preservation tests
+   - Tables and code blocks with links
+   - Reproducibility tests for same inputs
+
+3. **`test_edge_cases.py`**
+   - Link preservation (inline and reference-style) with syntax checks
    - Very short documents
    - Tables, blockquotes, horizontal rules
    - Special characters and unicode
    - Edge case formats
    - Mixed content documents
 
-3. **`e2e_simple_splitter_test.py`**
+4. **`e2e_simple_splitter_test.py`**
    - End-to-end integration test
    - Uses file-based input
    - Tests complete step execution
@@ -70,12 +78,16 @@ The tests cover:
 - ✅ Multiple languages (English, German, French, Spanish, Chinese, Greek, Czech)
 - ✅ Short documents (below minimum token length)
 - ✅ Long documents (requiring multiple chunks)
-- ✅ Link preservation (inline and reference-style)
+- ✅ Link preservation (inline and reference-style) with concrete validation
+- ✅ Link syntax validation (ensures links are NOT split)
+- ✅ Deterministic output validation using SHA256 hashes
 - ✅ Edge cases (empty, headers-only, special characters)
 - ✅ Different markdown elements (code blocks, lists, tables, blockquotes)
 - ✅ Metadata consistency across chunks
 - ✅ Different token limit configurations
 - ✅ URL and keyword preservation
+- ✅ Long URL handling without breakage
+- ✅ Tables and code blocks containing links
 
 ## Design Principles
 
