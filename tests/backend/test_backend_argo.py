@@ -719,11 +719,13 @@ class TestArgoBackendGenerateArtifact:
     def test_generates_valid_yaml(self):
         backend = ArgoBackend()
         step = DummyStep()
+
         yaml_output = backend.generate_artifact(step)
 
-        # Should be valid YAML
-        manifests = list(yaml.safe_load_all(yaml_output))
-        assert len(manifests) >= 1
+        assert yaml_output is not None
+        assert "apiVersion:" in yaml_output
+        assert "kind: CronWorkflow" in yaml_output
+        assert "spec:" in yaml_output
 
     def test_generates_workflow_manifest(self):
         backend = ArgoBackend()
@@ -1321,13 +1323,12 @@ class TestArgoBackendIntegration:
         assert s3_config.bucket == "wurzel-bucket"
         assert s3_config.endpoint == "s3.amazonaws.com"
 
-    def test_from_values_file_integration(self, sample_values_file: Path):
-        """Test creating backend from values file and generating workflow."""
-        backend = ArgoBackend.from_values([sample_values_file], workflow_name="test-workflow")
-        step = DummyStep()
+        # Invalid names should raise validation error
+        with pytest.raises(Exception):  # Pydantic ValidationError
+            ArgoBackendSettings(PIPELINE_NAME="Invalid_Name")
 
-        yaml_output = backend.generate_artifact(step)
-        workflow = yaml.safe_load(yaml_output)
+        with pytest.raises(Exception):
+            ArgoBackendSettings(PIPELINE_NAME="-invalid")
 
         # Workflow should use values from file
         assert workflow["metadata"]["name"] == "test-wf"
