@@ -6,9 +6,10 @@ from wurzel.utils import HAS_HERA
 
 from .backend import Backend
 from .backend_dvc import DvcBackend
+from .backend_gitlab import GitlabBackend
 from .values import ValuesFileError
 
-__all__ = ["Backend", "DvcBackend", "ValuesFileError", "get_all_backends", "get_available_backends", "get_backend_by_name"]
+__all__ = ["Backend", "DvcBackend", "GitlabBackend", "ValuesFileError", "get_all_backends", "get_available_backends", "get_backend_by_name"]
 
 if HAS_HERA:
     from .backend_argo import ArgoBackend  # noqa: F401
@@ -23,7 +24,7 @@ def get_all_backends() -> dict[str, type[Backend]]:
         dict[str, type[Backend]]: Mapping of backend name to backend class.
 
     """
-    backends: dict[str, type[Backend]] = {"DvcBackend": DvcBackend}
+    backends: dict[str, type[Backend]] = {"DvcBackend": DvcBackend, "GitlabBackend": GitlabBackend}
     if HAS_HERA:
         backends["ArgoBackend"] = ArgoBackend
     return backends

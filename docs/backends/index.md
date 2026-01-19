@@ -16,6 +16,7 @@ Each backend is specifically designed to leverage the unique capabilities of its
 
 - **DVC Backend**: Optimizes for data versioning, experiment tracking, and reproducible ML workflows
 - **Argo Backend**: Leverages Kubernetes-native features like horizontal scaling, resource management, and cloud-native scheduling
+- **GitLab Backend**: Integrates seamlessly with GitLab CI/CD for native pipeline orchestration with parallel execution and artifact management
 
 ### 🎯 **Environment-Aware Configuration**
 
@@ -83,12 +84,12 @@ This allows you to:
 
 - **[DVC Backend](dvc.md)**: For data versioning and ML experiment tracking
 - **[Argo Workflows Backend](argoworkflows.md)**: For Kubernetes-native pipeline orchestration
+- **[GitLab CI/CD Backend](gitlab.md)**: For GitLab-native pipeline orchestration and CI/CD integration
 
 ## Future Backends
 
 Wurzel's extensible architecture supports adding new backends for:
 
-- **GitLab CI/CD**: For generating `.gitlab-ci.yml` pipelines
 - **GitHub Actions**: To produce `workflow.yml` for GitHub-native automation
 - **Apache Airflow**: For DAG-based orchestration and scheduling
 - **LocalBackend**: Execute steps locally without an external orchestrator

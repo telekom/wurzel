@@ -143,6 +143,7 @@ nav:
       - Overview: backends/index.md
       - Argo Workflows: backends/argoworkflows.md
       - DVC: backends/dvc.md
+      - GitLab CI/CD: backends/gitlab.md
   - Steps:
     - Docling: steps/docling.md
     - Deduplication: steps/duplication.md
