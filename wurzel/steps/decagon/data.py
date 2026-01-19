@@ -9,6 +9,8 @@ from dataclasses import dataclass
 import pandera as pa
 from pandera.typing import Series
 
+from wurzel.datacontract import PanderaDataFrameModel
+
 
 @dataclass
 class ChunkResultInfo:
@@ -21,7 +23,7 @@ class ChunkResultInfo:
     error: str | None
 
 
-class DecagonArticleResult(pa.DataFrameModel):
+class DecagonArticleResult(PanderaDataFrameModel):
     """Result schema for articles pushed to Decagon Knowledge Base.
 
     This data contract represents the output of the DecagonKnowledgeBaseStep,
