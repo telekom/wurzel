@@ -197,18 +197,20 @@ class ArgoBackend(Backend):
         values: TemplateValues | None = None,
         workflow_name: str | None = None,
         executor: type[BaseStepExecutor] = PrometheusStepExecutor,
+        as_cron: bool | None = None,
     ) -> None:
         super().__init__()
         self.executor: type[BaseStepExecutor] = executor
         self.values = values or TemplateValues()
         self.config = config or select_workflow(self.values, workflow_name)
         self._volumes, self._volume_mounts = self._build_volumes()
+        self._as_cron = as_cron
 
     @classmethod
-    def from_values(cls, files: Iterable[Path], workflow_name: str | None = None) -> ArgoBackend:
+    def from_values(cls, files: Iterable[Path], workflow_name: str | None = None, as_cron: bool | None = None) -> ArgoBackend:
         """Instantiate the backend from values files."""
         values = load_values(files, TemplateValues)
-        return cls(values=values, workflow_name=workflow_name)
+        return cls(values=values, workflow_name=workflow_name, as_cron=as_cron)
 
     # ------------------------------------------------------------------ helpers
     def _build_volumes(self) -> tuple[list[SecretVolume | ExistingVolume | Volume], list[VolumeMount]]:
@@ -358,8 +360,14 @@ class ArgoBackend(Backend):
             "pod_spec_patch": self._build_pod_spec_patch(),
         }
 
-        if self.config.schedule:
-            context = CronWorkflow(schedule=self.config.schedule, **workflow_kwargs)
+        # Determine if we should generate as CronWorkflow
+        # Priority: CLI flag (as_cron) > config.schedule
+        should_generate_cron = self._as_cron if self._as_cron is not None else bool(self.config.schedule)
+
+        if should_generate_cron:
+            # Use schedule from config if available, otherwise use a default
+            schedule = self.config.schedule if self.config.schedule else "0 0 * * *"
+            context = CronWorkflow(schedule=schedule, **workflow_kwargs)
         else:
             context = Workflow(**workflow_kwargs)
 

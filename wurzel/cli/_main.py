@@ -596,6 +596,13 @@ def generate(  # pylint: disable=too-many-positional-arguments
             help="List all available backends and exit",
         ),
     ] = False,
+    as_cron: Annotated[
+        bool | None,
+        typer.Option(
+            "--as-cron/--no-cron",
+            help="Generate as CronWorkflow (--as-cron) or regular Workflow (--no-cron). If not specified, uses schedule from values file.",
+        ),
+    ] = None,
 ):
     """Generate pipeline or list available backends."""
     if list_backends:
@@ -625,6 +632,7 @@ def generate(  # pylint: disable=too-many-positional-arguments
                 "values": values,
                 "pipeline_name": pipeline_name,
                 "output": output,
+                "as_cron": as_cron,
             }
         },
     )
@@ -635,6 +643,7 @@ def generate(  # pylint: disable=too-many-positional-arguments
             values=values or [],
             pipeline_name=pipeline_name,
             output=output,
+            as_cron=as_cron,
         )
     except ValuesFileError as exc:
         raise typer.BadParameter(str(exc)) from exc

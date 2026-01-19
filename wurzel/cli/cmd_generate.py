@@ -17,10 +17,18 @@ def _resolve_backend_instance(
     backend: type[Backend],
     values: list[Path] | None,
     pipeline_name: str | None,
+    as_cron: bool | None = None,
 ) -> Backend:
     # Check if backend has from_values method (like ArgoBackend and DvcBackend)
     if hasattr(backend, "from_values") and values:
-        return backend.from_values(values, workflow_name=pipeline_name)  # type: ignore[call-arg]
+        kwargs = {"workflow_name": pipeline_name}
+        # Pass as_cron only if it's not None and backend accepts it
+        if as_cron is not None and hasattr(backend, "__init__"):
+            import inspect  # noqa: PLC0415
+            sig = inspect.signature(backend.__init__)
+            if "as_cron" in sig.parameters:
+                kwargs["as_cron"] = as_cron
+        return backend.from_values(values, **kwargs)  # type: ignore[call-arg]
     return backend()
 
 
@@ -36,9 +44,10 @@ def main(
     values: Iterable[Path] | None = None,
     pipeline_name: str | None = None,
     output: Path | None = None,
+    as_cron: bool | None = None,
 ) -> str:
     """Generate backend-specific YAML for a pipeline."""
-    adapter = _resolve_backend_instance(backend, list(values or []), pipeline_name)
+    adapter = _resolve_backend_instance(backend, list(values or []), pipeline_name, as_cron)
     yaml_content = adapter.generate_artifact(step)
 
     if output:
