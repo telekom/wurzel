@@ -1,0 +1,108 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+# SPDX-License-Identifier: Apache-2.0
+
+# DVC Backend Configuration
+dvc:
+  pipelinedemo:
+    dataDir: "./data"
+    encapsulateEnv: true
+
+# Argo Workflows Backend Configuration
+workflows:
+  pipelinedemo:
+    name: wurzel-hallo
+    namespace: argo-workflows-gude
+    schedule: "0 4 * * 1"
+    entrypoint: wurzel-pipeline
+    serviceAccountName: wurzel-service-account-test
+    dataDir: /data
+    annotations:
+      sidecar.istio.io/inject: "false"
+
+    # Pod-level security context (applied to all pods)
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 1000
+      runAsGroup: 1000
+      fsGroup: 2000
+      fsGroupChangePolicy: Always  # or "OnRootMismatch"
+      supplementalGroups:
+        - 1000
+      seccompProfileType: RuntimeDefault
+      # seccompLocalhostProfile: null  # Only used when seccompProfileType is "Localhost"
+
+    # Optional: Custom podSpecPatch for init containers (auto-generated if not set)
+    # podSpecPatch: |
+    #   initContainers:
+    #     - name: init
+    #       securityContext:
+    #         runAsNonRoot: true
+
+    container:
+      image: ghcr.io/telekom/wurzel-test
+      annotations:
+        sidecar.istio.io/inject: "false"
+
+      # Container-level security context
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        dropCapabilities:
+          - ALL
+        seccompProfileType: RuntimeDefault
+
+      # Container resource requests and limits
+      resources:
+        cpu_request: "100m"
+        cpu_limit: "500m"
+        memory_request: "128Mi"
+        memory_limit: "512Mi"
+
+      # Environment variables
+      env:
+        MANUALMARKDOWNSTEP__FOLDER_PATH: "examples/pipeline/demo-data"
+        SIMPLESPLITTERSTEP__BATCH_SIZE: "100"
+        SIMPLESPLITTERSTEP__NUM_THREADS: "4"
+        SIMPLESPLITTERSTEP__TOKEN_COUNT_MIN: "64"
+        SIMPLESPLITTERSTEP__TOKEN_COUNT_MAX: "1024"
+        SIMPLESPLITTERSTEP__TOKEN_COUNT_BUFFER: "32"
+        SIMPLESPLITTERSTEP__TOKENIZER_MODEL: "gpt-3.5-turbo"
+        SIMPLESPLITTERSTEP__SENTENCE_SPLITTER_MODEL: "de_core_news_sm"
+
+      # Environment from external sources
+      envFrom:
+        - kind: secret
+          name: wurzel-env-secret
+          prefix: ""
+          optional: true
+        - kind: configMap
+          name: wurzel-env-config
+          prefix: APP_
+          optional: true
+
+      # Reference existing secrets (env vars from secrets)
+      secretRef:
+        - "wurzel-secrets"
+
+      # Reference existing configmaps (env vars from configmaps)
+      configMapRef:
+        - "wurzel-config"
+
+      # Mount secrets as files (optional)
+      mountSecrets:
+        - from: "tls-secret"
+          to: "/etc/ssl"
+          mappings:
+            - key: "tls.crt"
+              value: "cert.pem"
+            - key: "tls.key"
+              value: "key.pem"
+
+    # S3 artifact storage configuration
+    artifacts:
+      bucket: wurzel-bucket-test
+      endpoint: s3.amazonaws.com
+      defaultMode: 509  # File permissions (decimal), e.g., 509 = 0o775

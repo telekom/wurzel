@@ -4,7 +4,7 @@
 [project]
 name = "wurzel"
 
-version = "2.4.0"
+version = "2.5.0"
 
 description = "Pick, choose and chain your RAG tools in a pythonic way"
 authors = [
@@ -34,6 +34,7 @@ dependencies= [
     "pandas==2.3.3",
     "numpy < 2.0.0",
     "dvc==3.63.0",
+    "pathspec<0.13", # needed for dvc
     "Markdown==3.6",
     "pydantic-settings==2.5.2",
     "pydantic>=2.6.4, == 2.*",
@@ -97,7 +98,7 @@ argo = [
     "hera >=5.20.1",
 ]
 lint = [
-    "pylint[spelling]==3.3.7",
+    "pylint[spelling]==4.0.4",
     "pylint-json2html==0.5.0",
     "pre-commit>=4.1,<4.6",
     "reuse==6.2.0",
@@ -126,7 +127,7 @@ docs = [
     "pygments>=2.16.0",
 ]
 
-all = ["wurzel[qdrant,milvus,tlsh,docling,argo,openai,splitter,embedding,scraperapi]"]
+all = ["wurzel[qdrant,milvus,tlsh,docling,argo,openai,splitter,embedding,scraperapi,sftp]"]
 dev = ["wurzel[lint,test,all]"]
 
 [build-system]
