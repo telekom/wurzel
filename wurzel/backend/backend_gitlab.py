@@ -13,9 +13,9 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, Field
 
+import wurzel.cli
 from wurzel.backend.backend import Backend
 from wurzel.backend.values import load_values
-from wurzel.cli import generate_cli_call
 from wurzel.step import TypedStep
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 
@@ -158,7 +158,7 @@ class GitlabBackend(Backend):
         output_path = self.config.dataDir / step.__class__.__name__
 
         # Generate CLI command
-        cmd = generate_cli_call(
+        cmd = wurzel.cli.generate_cli_call(
             step.__class__,
             inputs=[self.config.dataDir / dep for dep in dependencies],
             output=output_path,
@@ -232,12 +232,13 @@ class GitlabBackend(Backend):
 
         # Add image configuration
         if self.config.image:
-            pipeline["image"] = self.config.image.name
             if self.config.image.pull_policy:
                 pipeline["image"] = {
                     "name": self.config.image.name,
                     "pull_policy": self.config.image.pull_policy,
                 }
+            else:
+                pipeline["image"] = self.config.image.name
 
         # Add variables
         if self.config.variables:
