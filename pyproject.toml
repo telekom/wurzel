@@ -34,6 +34,7 @@ dependencies= [
     "pandas==2.3.3",
     "numpy < 2.0.0",
     "dvc==3.63.0",
+    "pathspec<0.13", # needed for dvc
     "Markdown==3.6",
     "pydantic-settings==2.5.2",
     "pydantic>=2.6.4, == 2.*",
@@ -101,7 +102,7 @@ lint = [
     "pylint-json2html==0.5.0",
     "pre-commit>=4.1,<4.6",
     "reuse==6.2.0",
-    "ruff==0.14.4",
+    "ruff==0.14.10",
 ]
 test = [
     "pytest>=8.4,<9.1",
