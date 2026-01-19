@@ -179,7 +179,7 @@ def test_special_characters(splitter, markdown_contract_factory):
     """Test handling of special characters and unicode."""
     text = """# Special Characters Test
 
-Text with émojis 🎉 and unicode: ñ, ü, ö, 中文, العربية
+Text with emojis 🎉 and unicode: ñ, ü, ö, 中文, العربية
 
 Math symbols: ∑, ∏, ∫, √
 

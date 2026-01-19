@@ -11,6 +11,8 @@ from wurzel.utils import HAS_SPACY, HAS_TIKTOKEN
 if not HAS_SPACY or not HAS_TIKTOKEN:
     pytest.skip("Simple splitter dependencies (spacy, tiktoken) are not available", allow_module_level=True)
 
+from wurzel.utils.splitters.semantic_splitter import SemanticSplitter
+
 
 @pytest.mark.parametrize(
     "text_fixture,expected_chunks",
@@ -219,8 +221,6 @@ Items to buy:
 )
 def test_different_token_limits(token_min, token_max, token_buffer, long_text_en, markdown_contract_factory):
     """Test splitter with different token limit configurations."""
-    from wurzel.utils.splitters.semantic_splitter import SemanticSplitter
-
     splitter = SemanticSplitter(
         token_limit=token_max,
         token_limit_buffer=token_buffer,
