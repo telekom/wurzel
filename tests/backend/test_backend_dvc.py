@@ -4,6 +4,8 @@
 
 """Tests for DvcBackend with refactored structure."""
 
+from pathlib import Path
+
 from wurzel.core import NoSettings, TypedStep
 from wurzel.datacontract.common import MarkdownDataContract
 from wurzel.executors.backend.backend_dvc import DvcBackend, DvcBackendSettings
@@ -69,7 +71,7 @@ class TestDvcBackend:
         monkeypatch.setenv("DVCBACKEND__ENCAPSULATE_ENV", "false")
 
         settings = DvcBackendSettings()
-        assert str(settings.DATA_DIR) == "/custom/path"
+        assert settings.DATA_DIR == Path("/custom/path")
         assert settings.ENCAPSULATE_ENV is False
 
     def test_is_available(self):
