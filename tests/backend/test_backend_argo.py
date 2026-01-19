@@ -745,34 +745,112 @@ class TestArgoBackendGenerateArtifact:
 
 
 class TestArgoBackendGenerateWorkflow:
-    def test_cron_workflow_with_schedule(self):
-        config = WorkflowConfig(schedule="0 0 * * *")
+    """Tests for _generate_workflow method covering both CronWorkflow and normal Workflow creation."""
+
+    @pytest.mark.parametrize(
+        "schedule,expected_kind,test_id",
+        [
+            pytest.param("0 0 * * *", "CronWorkflow", "daily_midnight_cron"),
+            pytest.param("0 4 * * *", "CronWorkflow", "daily_4am_cron"),
+            pytest.param("*/15 * * * *", "CronWorkflow", "every_15min_cron"),
+            pytest.param("0 0 1 * *", "CronWorkflow", "monthly_cron"),
+            pytest.param(None, "Workflow", "no_schedule_normal_workflow"),
+        ],
+    )
+    def test_workflow_kind_based_on_schedule(self, schedule, expected_kind, test_id):
+        """Test that correct workflow type is created based on schedule configuration.
+
+        When schedule is set, creates a CronWorkflow.
+        When schedule is None, creates a normal Workflow.
+        """
+        config = WorkflowConfig(schedule=schedule)
         backend = ArgoBackend(config=config)
         step = DummyStep()
         workflow = backend._generate_workflow(step)
 
-        assert workflow.kind == "CronWorkflow"
+        assert workflow.kind == expected_kind, f"Failed for test case: {test_id}"
 
-    def test_workflow_without_schedule(self):
+    @pytest.mark.parametrize(
+        "workflow_name,namespace,service_account",
+        [
+            pytest.param("test-wf", "test-ns", "test-sa", id="basic_metadata"),
+            pytest.param("my-pipeline", "production", "prod-sa", id="production_metadata"),
+            pytest.param("dev-workflow", "development", "dev-service-account", id="dev_metadata"),
+        ],
+    )
+    def test_workflow_metadata(self, workflow_name, namespace, service_account):
+        """Test that workflow metadata is correctly applied from configuration."""
+        config = WorkflowConfig(
+            name=workflow_name,
+            namespace=namespace,
+            serviceAccountName=service_account,
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        workflow = backend._generate_workflow(step)
+
+        assert workflow.name == workflow_name
+        assert workflow.namespace == namespace
+
+    def test_workflow_without_schedule_is_not_cron(self):
+        """Explicit test that schedule=None creates a normal Workflow, not CronWorkflow.
+
+        This is important for manual workflows or workflows triggered by other workflows.
+        """
         config = WorkflowConfig(schedule=None)
         backend = ArgoBackend(config=config)
         step = DummyStep()
         workflow = backend._generate_workflow(step)
 
         assert workflow.kind == "Workflow"
+        assert workflow.kind != "CronWorkflow"
 
-    def test_workflow_metadata(self):
-        config = WorkflowConfig(
-            name="test-wf",
-            namespace="test-ns",
-            serviceAccountName="test-sa",
-        )
+    def test_workflow_with_schedule_is_cron(self):
+        """Explicit test that schedule parameter creates a CronWorkflow."""
+        config = WorkflowConfig(schedule="0 0 * * *")
         backend = ArgoBackend(config=config)
         step = DummyStep()
         workflow = backend._generate_workflow(step)
 
-        assert workflow.name == "test-wf"
-        assert workflow.namespace == "test-ns"
+        assert workflow.kind == "CronWorkflow"
+        assert workflow.kind != "Workflow"
+
+    def test_workflow_contains_dag(self):
+        """Test that generated workflow contains the expected DAG."""
+        backend = ArgoBackend()
+        step = DummyStep()
+        workflow = backend._generate_workflow(step)
+
+        # Workflow should be properly initialized
+        assert workflow is not None
+        assert hasattr(workflow, "entrypoint")
+
+    @pytest.mark.parametrize(
+        "schedule",
+        [
+            pytest.param(None, id="normal_workflow"),
+            pytest.param("0 0 * * *", id="cron_workflow"),
+        ],
+    )
+    def test_workflow_yaml_generation(self, schedule):
+        """Test that both workflow types can be converted to valid YAML."""
+        config = WorkflowConfig(schedule=schedule)
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+
+        yaml_output = backend.generate_artifact(step)
+        workflow_dict = yaml.safe_load(yaml_output)
+
+        assert "kind" in workflow_dict
+        assert "metadata" in workflow_dict
+        assert "spec" in workflow_dict
+
+        if schedule:
+            assert workflow_dict["kind"] == "CronWorkflow"
+            assert "schedule" in workflow_dict["spec"]
+        else:
+            assert workflow_dict["kind"] == "Workflow"
+            assert "schedule" not in workflow_dict["spec"]
 
 
 class TestArgoBackendCreateArtifactFromStep:
@@ -1274,3 +1352,232 @@ class TestArgoBackendS3Artifact:
         assert "custom" in artifact.path
         assert "data" in artifact.path
         assert "DummyStep" in artifact.path
+
+
+class TestArgoBackendWorkflowCreationCornerCases:
+    """Comprehensive tests for workflow creation covering edge cases and corner cases."""
+
+    @pytest.mark.parametrize(
+        "config_kwargs,expected_workflow_kind,test_description",
+        [
+            pytest.param(
+                {"schedule": "0 0 * * *", "name": "cron-wf"},
+                "CronWorkflow",
+                "cron_with_custom_name",
+                id="cron_custom_name",
+            ),
+            pytest.param(
+                {"schedule": None, "name": "manual-wf"},
+                "Workflow",
+                "normal_with_custom_name",
+                id="normal_custom_name",
+            ),
+            pytest.param(
+                {"schedule": "*/5 * * * *"},
+                "CronWorkflow",
+                "cron_every_5_minutes",
+                id="cron_5min",
+            ),
+            pytest.param(
+                {"schedule": None, "namespace": "custom-namespace"},
+                "Workflow",
+                "normal_custom_namespace",
+                id="normal_custom_ns",
+            ),
+        ],
+    )
+    def test_workflow_creation_with_various_configs(self, config_kwargs, expected_workflow_kind, test_description):
+        """Test workflow creation with various configuration combinations."""
+        config = WorkflowConfig(**config_kwargs)
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+
+        workflow = backend._generate_workflow(step)
+
+        assert workflow.kind == expected_workflow_kind, f"Failed for: {test_description}"
+
+    def test_normal_workflow_yaml_structure(self):
+        """Test that normal Workflow (schedule=None) has correct YAML structure."""
+        config = WorkflowConfig(
+            name="test-normal-workflow",
+            namespace="test-ns",
+            schedule=None,  # Explicitly no schedule
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+
+        yaml_output = backend.generate_artifact(step)
+        workflow_dict = yaml.safe_load(yaml_output)
+
+        # Verify it's a normal Workflow
+        assert workflow_dict["kind"] == "Workflow"
+        assert workflow_dict["metadata"]["name"] == "test-normal-workflow"
+        assert workflow_dict["metadata"]["namespace"] == "test-ns"
+
+        # Normal Workflow should NOT have schedule in spec
+        spec = workflow_dict.get("spec", {})
+        assert "schedule" not in spec
+
+        # Should have required workflow fields
+        assert "entrypoint" in spec
+        assert "templates" in spec
+
+    def test_cron_workflow_yaml_structure(self):
+        """Test that CronWorkflow has correct YAML structure with schedule."""
+        config = WorkflowConfig(
+            name="test-cron-workflow",
+            namespace="test-ns",
+            schedule="0 4 * * *",
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+
+        yaml_output = backend.generate_artifact(step)
+        workflow_dict = yaml.safe_load(yaml_output)
+
+        # Verify it's a CronWorkflow
+        assert workflow_dict["kind"] == "CronWorkflow"
+        assert workflow_dict["metadata"]["name"] == "test-cron-workflow"
+
+        # CronWorkflow should have schedule in spec
+        spec = workflow_dict.get("spec", {})
+        assert "schedule" in spec
+        assert spec["schedule"] == "0 4 * * *"
+
+        # Should have workflowSpec nested inside
+        assert "workflowSpec" in spec
+
+    @pytest.mark.parametrize(
+        "schedule,expected_in_yaml",
+        [
+            pytest.param("0 0 * * *", True, id="schedule_present"),
+            pytest.param(None, False, id="schedule_absent"),
+        ],
+    )
+    def test_schedule_presence_in_yaml(self, schedule, expected_in_yaml):
+        """Test that schedule is correctly present/absent in generated YAML."""
+        config = WorkflowConfig(schedule=schedule)
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+
+        yaml_output = backend.generate_artifact(step)
+
+        if expected_in_yaml:
+            assert "schedule:" in yaml_output
+        else:
+            # Normal Workflow shouldn't have schedule field
+            workflow_dict = yaml.safe_load(yaml_output)
+            spec = workflow_dict.get("spec", {})
+            assert "schedule" not in spec
+
+    def test_workflow_with_complex_dag(self):
+        """Test workflow creation with multi-step DAG (normal Workflow)."""
+        config = WorkflowConfig(schedule=None)  # Normal Workflow
+        backend = ArgoBackend(config=config)
+
+        step1 = DummyStep()
+        step2 = DummyFollowStep()
+        step1 >> step2
+
+        workflow = backend._generate_workflow(step2)
+
+        assert workflow.kind == "Workflow"
+
+        yaml_output = backend.generate_artifact(step2)
+        workflow_dict = yaml.safe_load(yaml_output)
+
+        # Should have templates for both steps
+        templates = workflow_dict["spec"]["templates"]
+        template_names = [t.get("name", "") for t in templates]
+
+        # Check that both step types are present
+        assert any("dummystep" in name for name in template_names)
+        assert any("dummyfollowstep" in name for name in template_names)
+
+    def test_workflow_entrypoint_configuration(self):
+        """Test that entrypoint is correctly set for both workflow types."""
+        for schedule in [None, "0 0 * * *"]:
+            config = WorkflowConfig(
+                schedule=schedule,
+                entrypoint="custom-entrypoint",
+            )
+            backend = ArgoBackend(config=config)
+            step = DummyStep()
+
+            yaml_output = backend.generate_artifact(step)
+            workflow_dict = yaml.safe_load(yaml_output)
+
+            if schedule:
+                # CronWorkflow has nested workflowSpec
+                assert workflow_dict["spec"]["workflowSpec"]["entrypoint"] == "custom-entrypoint"
+            else:
+                # Normal Workflow has direct spec
+                assert workflow_dict["spec"]["entrypoint"] == "custom-entrypoint"
+
+    def test_workflow_service_account_configuration(self):
+        """Test that service account is correctly set for both workflow types."""
+        for schedule in [None, "0 0 * * *"]:
+            config = WorkflowConfig(
+                schedule=schedule,
+                serviceAccountName="custom-sa",
+            )
+            backend = ArgoBackend(config=config)
+            step = DummyStep()
+
+            yaml_output = backend.generate_artifact(step)
+            workflow_dict = yaml.safe_load(yaml_output)
+
+            if schedule:
+                # CronWorkflow
+                service_account = workflow_dict["spec"]["workflowSpec"]["serviceAccountName"]
+            else:
+                # Normal Workflow
+                service_account = workflow_dict["spec"]["serviceAccountName"]
+
+            assert service_account == "custom-sa"
+
+    def test_normal_workflow_from_values_file(self, tmp_path):
+        """Test creating normal Workflow from values file with schedule=null."""
+        values_content = {
+            "workflows": {
+                "no-schedule-workflow": {
+                    "name": "no-schedule-wf",
+                    "namespace": "test-ns",
+                    "schedule": None,  # Explicitly null/None
+                    "container": {
+                        "image": "test-image:latest",
+                    },
+                }
+            }
+        }
+        values_file = tmp_path / "values.yaml"
+        values_file.write_text(yaml.safe_dump(values_content))
+
+        backend = ArgoBackend.from_values([values_file], workflow_name="no-schedule-workflow")
+        step = DummyStep()
+
+        workflow = backend._generate_workflow(step)
+        assert workflow.kind == "Workflow"
+
+        yaml_output = backend.generate_artifact(step)
+        workflow_dict = yaml.safe_load(yaml_output)
+        assert workflow_dict["kind"] == "Workflow"
+        assert "schedule" not in workflow_dict["spec"]
+
+    def test_workflow_annotations(self):
+        """Test that annotations are correctly applied to both workflow types."""
+        annotations = {"annotation-key": "annotation-value"}
+
+        for schedule in [None, "0 0 * * *"]:
+            config = WorkflowConfig(
+                schedule=schedule,
+                annotations=annotations,
+            )
+            backend = ArgoBackend(config=config)
+            step = DummyStep()
+
+            yaml_output = backend.generate_artifact(step)
+            workflow_dict = yaml.safe_load(yaml_output)
+
+            # Annotations should be in metadata
+            assert workflow_dict["metadata"]["annotations"]["annotation-key"] == "annotation-value"
