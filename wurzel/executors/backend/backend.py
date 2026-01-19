@@ -40,6 +40,16 @@ class Backend(BaseStepExecutor):
         )
         self.executor: type[BaseStepExecutor] | None = executer
 
+    @classmethod
+    def is_available(cls) -> bool:
+        """Check if this backend's dependencies are installed.
+
+        Returns:
+            bool: True if the backend is available, False otherwise.
+
+        """
+        return True
+
     def generate_artifact(self, step: TypedStep) -> str:
         """Abstract method to generate a backend-specific YAML string representation of a pipeline step.
 

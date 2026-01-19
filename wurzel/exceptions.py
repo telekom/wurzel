@@ -93,3 +93,7 @@ class MarkdownConvertFailed(LoggedCustomException):
 
 class InvalidPlatform(LoggedCustomException):
     """raised when Platform is not supported."""
+
+
+class ValuesFileError(Exception):
+    """Raised when a values file cannot be loaded or parsed."""

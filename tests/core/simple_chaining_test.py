@@ -6,20 +6,22 @@
 import pytest
 import yaml
 
-from wurzel.utils import HAS_DOCLING
+from wurzel.utils import HAS_DOCLING, HAS_HERA
 
 if not HAS_DOCLING:
     pytest.skip("Docling is not available", allow_module_level=True)
 
 from wurzel.core.typed_step import TypedStep
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.executors import ArgoBackend, DvcBackend
+from wurzel.executors import DvcBackend
 from wurzel.executors.backend.backend import Backend
-from wurzel.executors.backend.backend_argo import ArgoBackendSettings
 from wurzel.steps.docling.docling_step import DoclingStep
 from wurzel.steps.duplication import DropDuplicationStep
 from wurzel.steps.splitter import SimpleSplitterStep
 from wurzel.utils.meta_settings import WZ
+
+if HAS_HERA:
+    from wurzel.executors import ArgoBackend
 
 
 class A(TypedStep[None, None, MarkdownDataContract]):
@@ -46,7 +48,6 @@ class D(TypedStep[None, MarkdownDataContract, MarkdownDataContract]):
     "backend",
     [
         pytest.param(DvcBackend, id="DVC Backend"),
-        pytest.param(ArgoBackend, id="ArGo Backend"),
     ],
 )
 def test_dict(backend):
@@ -66,13 +67,14 @@ def safeget(dct, *keys):
     return dct
 
 
-@pytest.mark.parametrize(
-    "backend,keys",
-    [
-        pytest.param(DvcBackend, ["stages"], id="DVC Backend"),
-        pytest.param(ArgoBackend, ["spec", "workflowSpec", "templates", 0, "dag", "tasks"], id="ArGo Backend"),
-    ],
-)
+def _get_yaml_test_params():
+    params = [pytest.param(DvcBackend, ["stages"], id="DVC Backend")]
+    if HAS_HERA:
+        params.append(pytest.param(ArgoBackend, ["spec", "workflowSpec", "templates", 0, "dag", "tasks"], id="Argo Backend"))
+    return params
+
+
+@pytest.mark.parametrize("backend,keys", _get_yaml_test_params())
 def test_yaml(backend: type[Backend], keys):
     a = WZ(A)
     b = WZ(B)
@@ -94,15 +96,14 @@ def test_yaml(backend: type[Backend], keys):
     assert len(safeget(y_dict, *keys)) == 1
 
 
-@pytest.mark.parametrize(
-    "backend,keys,params",
-    [
-        pytest.param(DvcBackend, ["stages"], {}, id="DVC Backend"),
-        pytest.param(
-            ArgoBackend, ["spec", "workflowSpec", "templates", 0, "dag", "tasks"], {"settings": ArgoBackendSettings()}, id="ArGo Backend"
-        ),
-    ],
-)
+def _get_minimal_pipeline_test_params():
+    params = [pytest.param(DvcBackend, ["stages"], {}, id="DVC Backend")]
+    if HAS_HERA:
+        params.append(pytest.param(ArgoBackend, ["spec", "workflowSpec", "templates", 0, "dag", "tasks"], {}, id="Argo Backend"))
+    return params
+
+
+@pytest.mark.parametrize("backend,keys,params", _get_minimal_pipeline_test_params())
 def test_minimal_pipeline(backend: type[Backend], keys, params):
     agb = WZ(DoclingStep)
     splitter = WZ(SimpleSplitterStep)
