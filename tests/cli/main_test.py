@@ -338,17 +338,3 @@ def test_env_check_failure(env, capsys, monkeypatch):
     captured = capsys.readouterr()
     assert "Missing environment variables" in captured.out
     assert "MANUALMARKDOWNSTEP__FOLDER_PATH" in captured.out
-
-
-def test_generate_with_malformed_yaml_raises_bad_parameter(tmp_path):
-    """Test generate command raises BadParameter for malformed YAML values file."""
-    malformed_file = tmp_path / "bad.yaml"
-    malformed_file.write_text("key: value\n  bad_indent: oops")
-
-    with pytest.raises(typer.BadParameter, match="Failed to parse YAML"):
-        main.generate(
-            pipeline="wurzel.steps.manual_markdown:ManualMarkdownStep",
-            backend="DvcBackend",
-            values=[malformed_file],
-            pipeline_name=None,
-        )

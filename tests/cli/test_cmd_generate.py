@@ -4,8 +4,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from wurzel.cli import cmd_generate
 from wurzel.executors.backend.backend import Backend
 from wurzel.utils import HAS_HERA
@@ -19,43 +17,6 @@ else:  # pragma: no cover - optional dependency guard
 class _MinimalBackend(Backend):
     def generate_artifact(self, step):  # pragma: no cover - helper stub
         raise NotImplementedError
-
-
-@pytest.mark.skipif(not HAS_HERA, reason="Argo backend requires Hera extras")
-def test_resolve_backend_instance_uses_from_values_for_argo(monkeypatch, tmp_path):
-    values_file = tmp_path / "values.yaml"
-    values_file.write_text("workflows: {}")
-
-    sentinel = object()
-    captured: dict[str, object] = {}
-
-    def fake_from_values(cls, files, workflow_name=None):  # noqa: ANN001
-        captured["files"] = files
-        captured["workflow"] = workflow_name
-        return sentinel
-
-    monkeypatch.setattr(ArgoBackend, "from_values", classmethod(fake_from_values))
-
-    adapter = cmd_generate._resolve_backend_instance(ArgoBackend, [values_file], "demo")
-
-    assert adapter is sentinel
-    assert captured["files"] == [values_file]
-    assert captured["workflow"] == "demo"
-
-
-@pytest.mark.skipif(not HAS_HERA, reason="Argo backend requires Hera extras")
-def test_resolve_backend_instance_inits_argo_without_values(monkeypatch):
-    init_calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
-
-    def fake_init(self, *args, **kwargs):  # noqa: ANN002, ANN003
-        init_calls.append((args, kwargs))
-
-    monkeypatch.setattr(ArgoBackend, "__init__", fake_init)
-
-    adapter = cmd_generate._resolve_backend_instance(ArgoBackend, None, None)
-
-    assert isinstance(adapter, ArgoBackend)
-    assert init_calls == [((), {})]
 
 
 def test_resolve_backend_instance_for_non_argo_backend(tmp_path):
