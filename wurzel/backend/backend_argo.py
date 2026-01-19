@@ -338,13 +338,45 @@ class ArgoBackend(Backend):
         return yaml.safe_dump(workflow_manifest, sort_keys=False).strip()
 
     def _generate_workflow(self, step: TypedStep[Any, Any, Any]) -> Workflow:
-        """Creates a CronWorkflow with the full pipeline DAG constructed from the root step.
+        """Creates an Argo Workflow or CronWorkflow based on the schedule configuration.
+
+        This method generates the appropriate Argo workflow type:
+        - If `config.schedule` is set (e.g., "0 4 * * *"), creates a CronWorkflow
+          that runs on the specified schedule.
+        - If `config.schedule` is None, creates a normal Workflow that can be
+          triggered manually or by other workflows.
+
+        The workflow includes:
+        - Complete DAG constructed from the root step and its dependencies
+        - Security contexts (pod and container level)
+        - Volume mounts for secrets and tokenizer cache
+        - Service account and namespace configuration
+        - Artifact storage configuration (S3)
 
         Args:
             step (TypedStep): The root step to generate the workflow from.
+                All required steps will be recursively included in the DAG.
 
         Returns:
-            Workflow: A Hera `Workflow` object representing the pipeline.
+            Workflow: A Hera `Workflow` or `CronWorkflow` object representing
+                the complete pipeline with all tasks and dependencies.
+
+        Examples:
+            Create a CronWorkflow that runs daily at 4 AM:
+
+            >>> from wurzel.backend.backend_argo import ArgoBackend, WorkflowConfig
+            >>> config = WorkflowConfig(schedule="0 4 * * *")
+            >>> backend = ArgoBackend(config=config)
+            >>> # Assuming 'step' is a TypedStep instance
+            >>> workflow = backend._generate_workflow(step)
+            >>> assert workflow.kind == "CronWorkflow"
+
+            Create a normal Workflow for manual execution:
+
+            >>> config = WorkflowConfig(schedule=None)
+            >>> backend = ArgoBackend(config=config)
+            >>> workflow = backend._generate_workflow(step)
+            >>> assert workflow.kind == "Workflow"
 
         """
         workflow_kwargs = {
