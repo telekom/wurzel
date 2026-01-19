@@ -7,14 +7,14 @@ This directory contains comprehensive tests for the `SimpleSplitterStep` and `Se
 ### Configuration (`conftest.py`)
 Contains reusable fixtures for all tests:
 - **Splitter fixtures**: `splitter`, `small_splitter` with different token limits
-- **Text fixtures**: Multiple languages (EN, DE, FR, ES, ZH)
+- **Text fixtures**: Multiple languages (EN, DE, FR, ES, ZH, EL, CS)
 - **Document fixtures**: Short, long, with links, edge cases
 - **Factory fixture**: `markdown_contract_factory` for creating test contracts
 
 ### Test Files
 
 1. **`test_splitter_comprehensive.py`**
-   - Multi-language support tests (EN, DE, FR, ES, ZH)
+   - Multi-language support tests (EN, DE, FR, ES, ZH, EL, CS)
    - Short and long document handling
    - Link preservation tests
    - Metadata consistency tests
@@ -67,7 +67,7 @@ Run specific test:
 ## Test Coverage
 
 The tests cover:
-- ✅ Multiple languages (English, German, French, Spanish, Chinese)
+- ✅ Multiple languages (English, German, French, Spanish, Chinese, Greek, Czech)
 - ✅ Short documents (below minimum token length)
 - ✅ Long documents (requiring multiple chunks)
 - ✅ Link preservation (inline and reference-style)
@@ -82,6 +82,6 @@ The tests cover:
 Following the problem statement requirements:
 - **Slim tests**: Parameterized to avoid duplication
 - **Reusable fixtures**: Defined in `conftest.py`
-- **Multiple languages**: Tests include EN, DE, FR, ES, ZH
+- **Multiple languages**: Tests include EN, DE, FR, ES, ZH, EL, CS
 - **Link handling**: Tests ensure links are not broken during splitting
 - **No code changes**: Tests work with existing splitter implementation

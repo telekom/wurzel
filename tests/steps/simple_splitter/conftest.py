@@ -172,6 +172,8 @@ def text_multilang_short():
         "fr": "Bonjour le monde. Ceci est un test.",
         "es": "Hola mundo. Esta es una prueba.",
         "zh": "你好世界。这是一个测试。",
+        "el": "Γεια σου κόσμε. Αυτό είναι ένα τεστ.",
+        "cs": "Ahoj světe. Toto je test.",
     }
 
 
@@ -226,6 +228,29 @@ la próxima ola de avance tecnológico.
 
 El futuro promete desarrollos aún más emocionantes en computación cuántica,
 energía renovable y biotecnología.""",
+        "el": """# Επισκόπηση Τεχνολογίας
+
+Η σύγχρονη τεχνολογία έχει μεταμορφώσει τον τρόπο που επικοινωνούμε
+και εργαζόμαστε. Από τα smartphones έως το cloud computing, οι
+καινοτομίες συνεχίζουν να αναδιαμορφώνουν την καθημερινή μας ζωή.
+Η μηχανική μάθηση και η τεχνητή νοημοσύνη οδηγούν το επόμενο κύμα
+τεχνολογικής προόδου.
+
+## Μελλοντικές Τάσεις
+
+Το μέλλον υπόσχεται ακόμη πιο συναρπαστικές εξελίξεις στον κβαντικό
+υπολογισμό, τις ανανεώσιμες πηγές ενέργειας και τη βιοτεχνολογία.""",
+        "cs": """# Přehled technologií
+
+Moderní technologie změnily způsob, jakým komunikujeme a pracujeme.
+Od chytrých telefonů po cloud computing, inovace neustále přetvářejí
+náš každodenní život. Strojové učení a umělá inteligence pohánějí
+další vlnu technologického pokroku.
+
+## Budoucí trendy
+
+Budoucnost slibuje ještě vzrušivější vývoj v kvantovém počítání,
+obnovitelných zdrojích energie a biotechnologii.""",
     }
 
 

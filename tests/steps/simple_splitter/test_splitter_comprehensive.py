@@ -29,7 +29,7 @@ def test_short_documents_not_split(splitter, text_fixture, expected_chunks, requ
     assert len(result) == expected_chunks
 
 
-@pytest.mark.parametrize("lang", ["en", "de", "fr", "es", "zh"])
+@pytest.mark.parametrize("lang", ["en", "de", "fr", "es", "zh", "el", "cs"])
 def test_multilang_short_texts(splitter, text_multilang_short, lang, markdown_contract_factory):
     """Test that short texts in multiple languages are handled correctly."""
     text = text_multilang_short[lang]
@@ -39,7 +39,7 @@ def test_multilang_short_texts(splitter, text_multilang_short, lang, markdown_co
     assert len(result) <= 1
 
 
-@pytest.mark.parametrize("lang", ["en", "de", "fr", "es"])
+@pytest.mark.parametrize("lang", ["en", "de", "fr", "es", "el", "cs"])
 def test_multilang_long_texts(small_splitter, text_multilang_long, lang, markdown_contract_factory):
     """Test that longer texts in multiple languages are split properly."""
     text = text_multilang_long[lang]
