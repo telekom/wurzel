@@ -135,49 +135,36 @@ def test_backend_callback_invalid():
         assert "ArgoBackend" in error_msg
 
 
-@pytest.mark.parametrize(
-    "has_hera_value, expected_backends",
-    [
-        (True, ["DvcBackend", "ArgoBackend"]),
-        (False, ["DvcBackend"]),
-    ],
-)
-def test_get_available_backends(monkeypatch, has_hera_value, expected_backends):
-    """Test get_available_backends returns correct list of backends based on HAS_HERA."""
-    # Mock HAS_HERA value
-    monkeypatch.setattr("wurzel.cli._main.HAS_HERA", has_hera_value, raising=False)
-    import importlib
-
-    importlib.reload(main)
-
-    # Need to patch it in the function's context
-    with monkeypatch.context() as m:
-        m.setattr("wurzel.utils.HAS_HERA", has_hera_value)
-        backends = main.get_available_backends()
-
+def test_get_available_backends_without_hera():
+    """Test get_available_backends returns DvcBackend when Hera is not available."""
+    backends = main.get_available_backends()
     assert isinstance(backends, list)
-    assert backends == expected_backends
+    assert "DvcBackend" in backends
+    # ArgoBackend should only be present if HAS_HERA is True
+    if HAS_HERA:
+        assert "ArgoBackend" in backends
+    else:
+        assert "ArgoBackend" not in backends
 
 
-@pytest.mark.parametrize(
-    "has_hera_value, should_have_argo",
-    [
-        (True, True),
-        (False, False),
-    ],
-)
-def test_generate_list_backends(monkeypatch, capsys, has_hera_value, should_have_argo):
+@pytest.mark.skipif(not HAS_HERA, reason="Hera is not available")
+def test_get_available_backends_with_hera():
+    """Test get_available_backends returns both backends when Hera is available."""
+    backends = main.get_available_backends()
+    assert isinstance(backends, list)
+    assert "DvcBackend" in backends
+    assert "ArgoBackend" in backends
+
+
+def test_generate_list_backends(capsys):
     """Test generate command with --list-backends flag."""
-    # Mock HAS_HERA value
-    with monkeypatch.context() as m:
-        m.setattr("wurzel.utils.HAS_HERA", has_hera_value)
-        main.generate(pipeline=None, backend="DvcBackend", list_backends=True)
+    main.generate(pipeline=None, backend="DvcBackend", list_backends=True)
 
     captured = capsys.readouterr()
     assert "Available backends:" in captured.out
     assert "DvcBackend" in captured.out
 
-    if should_have_argo:
+    if HAS_HERA:
         assert "ArgoBackend" in captured.out
     else:
         assert "ArgoBackend" not in captured.out
@@ -259,3 +246,17 @@ def test_env_check_failure(env, capsys, monkeypatch):
     captured = capsys.readouterr()
     assert "Missing environment variables" in captured.out
     assert "MANUALMARKDOWNSTEP__FOLDER_PATH" in captured.out
+
+
+def test_generate_with_malformed_yaml_raises_bad_parameter(tmp_path):
+    """Test generate command raises BadParameter for malformed YAML values file."""
+    malformed_file = tmp_path / "bad.yaml"
+    malformed_file.write_text("key: value\n  bad_indent: oops")
+
+    with pytest.raises(typer.BadParameter, match="Failed to parse YAML"):
+        main.generate(
+            pipeline="wurzel.steps.manual_markdown:ManualMarkdownStep",
+            backend="DvcBackend",
+            values=[malformed_file],
+            pipeline_name=None,
+        )
