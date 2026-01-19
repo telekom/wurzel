@@ -50,7 +50,7 @@ def generate_cli_call(
             "wurzel run",
             f"{step_cls.__module__}:{step_cls.__qualname__}",
             "-o",
-            str(output.absolute()),
+            str(output),
             "" if executor is None else f"-e {executor.__qualname__}",
             inputs_str,
             "--encapsulate-env" if encapsulate_env else "--no-encapsulate-env",
