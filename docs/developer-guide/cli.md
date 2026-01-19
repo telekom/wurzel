@@ -99,6 +99,7 @@ The `wurzel generate` command creates backend-specific pipeline configurations f
 **Options:**
 - `-b, --backend` - Backend to use (default: DvcBackend). Case-insensitive.
 - `--list-backends` - List all available backends and exit
+- `--as-cron` / `--no-cron` - Control Argo Workflow type (CronWorkflow vs Workflow)
 
 ```bash
 # List all available backends
@@ -114,6 +115,12 @@ wurzel generate myproject.pipelines.MyPipeline -b dvcbackend
 # Generate Argo Workflows pipeline (requires wurzel[argo])
 wurzel generate myproject.pipelines.MyPipeline --backend ArgoBackend
 wurzel generate myproject.pipelines.MyPipeline -b argobackend
+
+# Generate regular Workflow instead of CronWorkflow (Argo backend only)
+wurzel generate myproject.pipelines.MyPipeline -b ArgoBackend --no-cron
+
+# Force CronWorkflow even if no schedule in values file (Argo backend only)
+wurzel generate myproject.pipelines.MyPipeline -b ArgoBackend --as-cron
 ```
 
 **Creating a Chained Pipeline:**

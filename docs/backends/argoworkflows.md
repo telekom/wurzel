@@ -49,6 +49,32 @@ wurzel generate --backend ArgoBackend \
 !!! note
     The `--values` flag is **required** for the Argo backend. It specifies the YAML configuration file that defines the workflow structure.
 
+#### Controlling Workflow Type
+
+You can override whether to generate a CronWorkflow or a regular Workflow using CLI flags:
+
+```bash
+# Force generation as CronWorkflow (even if schedule is null in values.yaml)
+wurzel generate --backend ArgoBackend \
+    --values values.yaml \
+    --as-cron \
+    --output cronworkflow.yaml \
+    examples.pipeline.pipelinedemo:pipeline
+
+# Force generation as regular Workflow (ignores schedule from values.yaml)
+wurzel generate --backend ArgoBackend \
+    --values values.yaml \
+    --no-cron \
+    --output workflow.yaml \
+    examples.pipeline.pipelinedemo:pipeline
+```
+
+**Priority**: CLI flags (`--as-cron` / `--no-cron`) take precedence over the `schedule` field in `values.yaml`:
+
+- `--as-cron`: Forces CronWorkflow generation (uses schedule from config or defaults to "0 0 * * *")
+- `--no-cron`: Forces regular Workflow generation (ignores schedule from config)
+- No flag: Uses existing behavior (CronWorkflow if schedule is present, Workflow if schedule is null)
+
 ### Values File Configuration (Generate-Time)
 
 The `values.yaml` file configures the workflow structure at generate-time. Here's a complete example:
