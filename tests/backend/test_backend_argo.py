@@ -29,26 +29,13 @@ from wurzel.backend.backend_argo import (
     select_workflow,
 )
 from wurzel.backend.values import ValuesFileError, deep_merge_dicts, load_values
-from wurzel.datacontract.common import MarkdownDataContract
-from wurzel.step import NoSettings, TypedStep
+
+# Import test step classes from conftest
+from .conftest import DummyFollowStep, DummyStep
 
 # ---------------------------------------------------------------------------
 # Test Fixtures
 # ---------------------------------------------------------------------------
-
-
-class DummyStep(TypedStep[NoSettings, None, MarkdownDataContract]):
-    """A simple step with no dependencies for testing."""
-
-    def run(self, inpt: None) -> MarkdownDataContract:
-        return MarkdownDataContract(content="test")
-
-
-class DummyFollowStep(TypedStep[NoSettings, MarkdownDataContract, MarkdownDataContract]):
-    """A step that depends on another step."""
-
-    def run(self, inpt: MarkdownDataContract) -> MarkdownDataContract:
-        return inpt
 
 
 @pytest.fixture
@@ -1536,24 +1523,9 @@ class TestArgoBackendWorkflowCreationCornerCases:
 
             assert service_account == "custom-sa"
 
-    def test_normal_workflow_from_values_file(self, tmp_path):
+    def test_normal_workflow_from_values_file(self, sample_values_yaml):
         """Test creating normal Workflow from values file with schedule=null."""
-        values_content = {
-            "workflows": {
-                "no-schedule-workflow": {
-                    "name": "no-schedule-wf",
-                    "namespace": "test-ns",
-                    "schedule": None,  # Explicitly null/None
-                    "container": {
-                        "image": "test-image:latest",
-                    },
-                }
-            }
-        }
-        values_file = tmp_path / "values.yaml"
-        values_file.write_text(yaml.safe_dump(values_content))
-
-        backend = ArgoBackend.from_values([values_file], workflow_name="no-schedule-workflow")
+        backend = ArgoBackend.from_values([sample_values_yaml], workflow_name="no-schedule-workflow")
         step = DummyStep()
 
         workflow = backend._generate_workflow(step)
