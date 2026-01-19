@@ -75,3 +75,40 @@ class TestDvcBackend:
     def test_is_available(self):
         """Test DvcBackend.is_available() returns True."""
         assert DvcBackend.is_available() is True
+
+    def test_backend_with_middlewares(self):
+        """Test DvcBackend can be initialized with middlewares."""
+        backend = DvcBackend(middlewares=["prometheus"])
+        assert backend is not None
+
+    def test_backend_dont_encapsulate(self):
+        """Test DvcBackend with dont_encapsulate flag."""
+        backend = DvcBackend(dont_encapsulate=True)
+        assert backend is not None
+
+    def test_backend_load_middlewares_from_env(self, monkeypatch):
+        """Test DvcBackend can load middlewares from environment."""
+        monkeypatch.setenv("MIDDLEWARES", "prometheus")
+        backend = DvcBackend(load_middlewares_from_env=True)
+        assert backend is not None
+
+    def test_generate_artifact_with_custom_data_dir(self, tmp_path):
+        """Test DvcBackend respects custom DATA_DIR setting."""
+        custom_dir = tmp_path / "custom_data"
+        settings = DvcBackendSettings(DATA_DIR=custom_dir)
+        backend = DvcBackend(settings=settings)
+        step = DummyStep()
+
+        yaml_output = backend.generate_artifact(step)
+
+        assert str(custom_dir) in yaml_output
+
+    def test_generate_artifact_without_encapsulation(self):
+        """Test DvcBackend with ENCAPSULATE_ENV disabled."""
+        settings = DvcBackendSettings(ENCAPSULATE_ENV=False)
+        backend = DvcBackend(settings=settings)
+        step = DummyStep()
+
+        yaml_output = backend.generate_artifact(step)
+
+        assert "wurzel run" in yaml_output

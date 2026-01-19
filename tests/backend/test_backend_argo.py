@@ -117,3 +117,50 @@ class TestArgoBackend:
 
         with pytest.raises(Exception):
             ArgoBackendSettings(PIPELINE_NAME="invalid-")
+
+    def test_generate_dict_method(self):
+        """Test _generate_dict returns a dictionary."""
+        backend = ArgoBackend()
+        step = DummyStep()
+
+        result = backend._generate_dict(step)
+
+        assert isinstance(result, dict)
+        assert "metadata" in result
+        assert "spec" in result
+
+    def test_create_envs_from_step_settings_disabled(self):
+        """Test _create_envs_from_step_settings returns empty list when disabled."""
+        settings = ArgoBackendSettings(INLINE_STEP_SETTINGS=False)
+        backend = ArgoBackend(settings=settings)
+        step = DummyStep()
+
+        envs = backend._create_envs_from_step_settings(step)
+
+        assert envs == []
+
+    def test_create_envs_from_step_settings_with_no_settings(self):
+        """Test _create_envs_from_step_settings with NoSettings step."""
+        settings = ArgoBackendSettings(INLINE_STEP_SETTINGS=True)
+        backend = ArgoBackend(settings=settings)
+        step = DummyStep()  # Has NoSettings
+
+        envs = backend._create_envs_from_step_settings(step)
+
+        assert envs == []
+
+    def test_backend_with_middlewares(self):
+        """Test ArgoBackend can be initialized with middlewares."""
+        backend = ArgoBackend(middlewares=["prometheus"])
+        assert backend is not None
+
+    def test_backend_dont_encapsulate(self):
+        """Test ArgoBackend with dont_encapsulate flag."""
+        backend = ArgoBackend(dont_encapsulate=True)
+        assert backend is not None
+
+    def test_s3_artifact_template_defaults(self):
+        """Test S3ArtifactTemplate has correct defaults."""
+        s3_config = S3ArtifactTemplate()
+        assert s3_config.bucket == "wurzel-bucket"
+        assert s3_config.endpoint == "s3.amazonaws.com"
