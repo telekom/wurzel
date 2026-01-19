@@ -362,16 +362,20 @@ class ArgoBackend(Backend):
                 the complete pipeline with all tasks and dependencies.
 
         Examples:
-            >>> # Create a CronWorkflow that runs daily at 4 AM
+            Create a CronWorkflow that runs daily at 4 AM:
+
+            >>> from wurzel.backend.backend_argo import ArgoBackend, WorkflowConfig
             >>> config = WorkflowConfig(schedule="0 4 * * *")
             >>> backend = ArgoBackend(config=config)
-            >>> workflow = backend._generate_workflow(my_step)
+            >>> # Assuming 'step' is a TypedStep instance
+            >>> workflow = backend._generate_workflow(step)
             >>> assert workflow.kind == "CronWorkflow"
-            >>>
-            >>> # Create a normal Workflow for manual execution
+
+            Create a normal Workflow for manual execution:
+
             >>> config = WorkflowConfig(schedule=None)
             >>> backend = ArgoBackend(config=config)
-            >>> workflow = backend._generate_workflow(my_step)
+            >>> workflow = backend._generate_workflow(step)
             >>> assert workflow.kind == "Workflow"
 
         """

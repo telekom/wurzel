@@ -30,7 +30,6 @@ from wurzel.backend.backend_argo import (
 )
 from wurzel.backend.values import ValuesFileError, deep_merge_dicts, load_values
 
-# Import test step classes from conftest
 from .conftest import DummyFollowStep, DummyStep
 
 # ---------------------------------------------------------------------------
