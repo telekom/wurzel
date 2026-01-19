@@ -29,9 +29,10 @@ def test_resolve_backend_instance_uses_from_values_for_argo(monkeypatch, tmp_pat
     sentinel = object()
     captured: dict[str, object] = {}
 
-    def fake_from_values(cls, files, workflow_name=None):  # noqa: ANN001
+    def fake_from_values(cls, files, workflow_name=None, as_cron=None):  # noqa: ANN001
         captured["files"] = files
         captured["workflow"] = workflow_name
+        captured["as_cron"] = as_cron
         return sentinel
 
     monkeypatch.setattr(ArgoBackend, "from_values", classmethod(fake_from_values))
@@ -41,6 +42,31 @@ def test_resolve_backend_instance_uses_from_values_for_argo(monkeypatch, tmp_pat
     assert adapter is sentinel
     assert captured["files"] == [values_file]
     assert captured["workflow"] == "demo"
+    assert captured["as_cron"] is None
+
+
+@pytest.mark.skipif(not HAS_HERA, reason="Argo backend requires Hera extras")
+def test_resolve_backend_instance_passes_as_cron_to_argo(monkeypatch, tmp_path):
+    values_file = tmp_path / "values.yaml"
+    values_file.write_text("workflows: {}")
+
+    sentinel = object()
+    captured: dict[str, object] = {}
+
+    def fake_from_values(cls, files, workflow_name=None, as_cron=None):  # noqa: ANN001
+        captured["files"] = files
+        captured["workflow"] = workflow_name
+        captured["as_cron"] = as_cron
+        return sentinel
+
+    monkeypatch.setattr(ArgoBackend, "from_values", classmethod(fake_from_values))
+
+    adapter = cmd_generate._resolve_backend_instance(ArgoBackend, [values_file], "demo", as_cron=True)
+
+    assert adapter is sentinel
+    assert captured["files"] == [values_file]
+    assert captured["workflow"] == "demo"
+    assert captured["as_cron"] is True
 
 
 @pytest.mark.skipif(not HAS_HERA, reason="Argo backend requires Hera extras")
@@ -87,10 +113,11 @@ def test_cmd_generate_main_resolves_backend_with_iterable_values(monkeypatch, tm
 
     captured: dict[str, object] = {}
 
-    def fake_resolve(backend, values, pipeline_name):  # noqa: ANN001, ANN002, ANN003
+    def fake_resolve(backend, values, pipeline_name, as_cron=None):  # noqa: ANN001, ANN002, ANN003
         captured["backend"] = backend
         captured["values"] = values
         captured["pipeline_name"] = pipeline_name
+        captured["as_cron"] = as_cron
         return Adapter()
 
     monkeypatch.setattr(cmd_generate, "_resolve_backend_instance", fake_resolve)
@@ -102,6 +129,7 @@ def test_cmd_generate_main_resolves_backend_with_iterable_values(monkeypatch, tm
     assert captured["backend"] is _MinimalBackend
     assert captured["values"] == [values_file]
     assert captured["pipeline_name"] == "wf-name"
+    assert captured["as_cron"] is None
 
 
 def test_cmd_generate_main_writes_to_output(monkeypatch, tmp_path):
@@ -109,10 +137,11 @@ def test_cmd_generate_main_writes_to_output(monkeypatch, tmp_path):
         def generate_artifact(self, step):  # noqa: ARG002
             return "artifact-yaml"
 
-    def fake_resolve(backend, values, pipeline_name):  # noqa: ANN001, ANN002, ANN003
+    def fake_resolve(backend, values, pipeline_name, as_cron=None):  # noqa: ANN001, ANN002, ANN003
         assert backend is _MinimalBackend
         assert values == []
         assert pipeline_name is None
+        assert as_cron is None
         return Adapter()
 
     monkeypatch.setattr(cmd_generate, "_resolve_backend_instance", fake_resolve)
@@ -123,3 +152,32 @@ def test_cmd_generate_main_writes_to_output(monkeypatch, tmp_path):
 
     assert result == "artifact-yaml"
     assert output_path.read_text(encoding="utf-8") == "artifact-yaml"
+
+
+def test_cmd_generate_main_passes_as_cron_parameter(monkeypatch, tmp_path):
+    class Adapter:
+        def generate_artifact(self, step):  # noqa: ARG002
+            return "artifact-yaml"
+
+    captured: dict[str, object] = {}
+
+    def fake_resolve(backend, values, pipeline_name, as_cron=None):  # noqa: ANN001, ANN002, ANN003
+        captured["backend"] = backend
+        captured["values"] = values
+        captured["pipeline_name"] = pipeline_name
+        captured["as_cron"] = as_cron
+        return Adapter()
+
+    monkeypatch.setattr(cmd_generate, "_resolve_backend_instance", fake_resolve)
+
+    output_path = tmp_path / "manifest.yaml"
+
+    # Test with as_cron=True
+    result = cmd_generate.main("pipeline", _MinimalBackend, output=output_path, as_cron=True)
+    assert result == "artifact-yaml"
+    assert captured["as_cron"] is True
+
+    # Test with as_cron=False
+    result = cmd_generate.main("pipeline", _MinimalBackend, output=output_path, as_cron=False)
+    assert result == "artifact-yaml"
+    assert captured["as_cron"] is False

@@ -761,6 +761,43 @@ class TestArgoBackendGenerateWorkflow:
 
         assert workflow.kind == "Workflow"
 
+    def test_workflow_with_as_cron_flag_true(self):
+        """Test that --as-cron flag forces CronWorkflow generation."""
+        config = WorkflowConfig(schedule=None)
+        backend = ArgoBackend(config=config, as_cron=True)
+        step = DummyStep()
+        workflow = backend._generate_workflow(step)
+
+        assert workflow.kind == "CronWorkflow"
+        # Should use default schedule when none is provided in config
+        assert workflow.schedule == "0 0 * * *"
+
+    def test_workflow_with_as_cron_flag_false(self):
+        """Test that --no-cron flag forces regular Workflow generation."""
+        config = WorkflowConfig(schedule="0 4 * * *")
+        backend = ArgoBackend(config=config, as_cron=False)
+        step = DummyStep()
+        workflow = backend._generate_workflow(step)
+
+        assert workflow.kind == "Workflow"
+
+    def test_workflow_as_cron_flag_overrides_schedule(self):
+        """Test that as_cron flag has priority over config schedule."""
+        # Test True flag with schedule present
+        config = WorkflowConfig(schedule="0 4 * * *")
+        backend = ArgoBackend(config=config, as_cron=True)
+        step = DummyStep()
+        workflow = backend._generate_workflow(step)
+        assert workflow.kind == "CronWorkflow"
+        assert workflow.schedule == "0 4 * * *"
+
+        # Test False flag with schedule present
+        config = WorkflowConfig(schedule="0 4 * * *")
+        backend = ArgoBackend(config=config, as_cron=False)
+        step = DummyStep()
+        workflow = backend._generate_workflow(step)
+        assert workflow.kind == "Workflow"
+
     def test_workflow_metadata(self):
         config = WorkflowConfig(
             name="test-wf",
