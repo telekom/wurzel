@@ -87,21 +87,21 @@ def test_cmd_generate_main_resolves_backend_with_iterable_values(monkeypatch, tm
 
     captured: dict[str, object] = {}
 
-    def fake_resolve(backend, values, workflow):  # noqa: ANN001, ANN002, ANN003
+    def fake_resolve(backend, values, pipeline_name):  # noqa: ANN001, ANN002, ANN003
         captured["backend"] = backend
         captured["values"] = values
-        captured["workflow"] = workflow
+        captured["pipeline_name"] = pipeline_name
         return Adapter()
 
     monkeypatch.setattr(cmd_generate, "_resolve_backend_instance", fake_resolve)
 
     step = object()
-    result = cmd_generate.main(step, _MinimalBackend, values=values_iterable, workflow="wf-name")
+    result = cmd_generate.main(step, _MinimalBackend, values=values_iterable, pipeline_name="wf-name")
 
     assert result == "rendered"
     assert captured["backend"] is _MinimalBackend
     assert captured["values"] == [values_file]
-    assert captured["workflow"] == "wf-name"
+    assert captured["pipeline_name"] == "wf-name"
 
 
 def test_cmd_generate_main_writes_to_output(monkeypatch, tmp_path):
@@ -109,10 +109,10 @@ def test_cmd_generate_main_writes_to_output(monkeypatch, tmp_path):
         def generate_artifact(self, step):  # noqa: ARG002
             return "artifact-yaml"
 
-    def fake_resolve(backend, values, workflow):  # noqa: ANN001, ANN002, ANN003
+    def fake_resolve(backend, values, pipeline_name):  # noqa: ANN001, ANN002, ANN003
         assert backend is _MinimalBackend
         assert values == []
-        assert workflow is None
+        assert pipeline_name is None
         return Adapter()
 
     monkeypatch.setattr(cmd_generate, "_resolve_backend_instance", fake_resolve)

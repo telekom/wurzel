@@ -41,7 +41,7 @@ wurzel generate --backend DvcBackend --output dvc.yaml examples.pipeline.pipelin
 # Generate using a values file (recommended)
 wurzel generate --backend DvcBackend \
     --values values.yaml \
-    --workflow pipelinedemo \
+    --pipeline_name pipelinedemo \
     --output dvc.yaml \
     examples.pipeline.pipelinedemo:pipeline
 ```

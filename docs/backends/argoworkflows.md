@@ -41,7 +41,7 @@ Generate an Argo Workflows CronWorkflow configuration using a `values.yaml` file
 # Generate cronworkflow.yaml using Argo backend with values file
 wurzel generate --backend ArgoBackend \
     --values values.yaml \
-    --workflow pipelinedemo \
+    --pipeline_name pipelinedemo \
     --output cronworkflow.yaml \
     examples.pipeline.pipelinedemo:pipeline
 ```
@@ -354,7 +354,7 @@ You can use multiple values files for environment-specific overrides:
 wurzel generate --backend ArgoBackend \
     --values base-values.yaml \
     --values production-values.yaml \
-    --workflow pipelinedemo \
+    --pipeline_name pipelinedemo \
     --output cronworkflow.yaml \
     examples.pipeline.pipelinedemo:pipeline
 ```

@@ -258,4 +258,5 @@ def test_generate_with_malformed_yaml_raises_bad_parameter(tmp_path):
             pipeline="wurzel.steps.manual_markdown:ManualMarkdownStep",
             backend="DvcBackend",
             values=[malformed_file],
+            pipeline_name=None,
         )

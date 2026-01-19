@@ -573,9 +573,9 @@ def generate(  # pylint: disable=too-many-positional-arguments
             resolve_path=True,
         ),
     ] = None,
-    workflow: Annotated[
+    pipeline_name: Annotated[
         str | None,
-        typer.Option("--workflow", help="workflow name to render from the provided values files"),
+        typer.Option("--pipeline-name", help="pipeline name to render from the provided values files"),
     ] = None,
     output: Annotated[
         Path | None,
@@ -623,7 +623,7 @@ def generate(  # pylint: disable=too-many-positional-arguments
                 "pipeline": pipeline_obj,
                 "backend": backend_obj,
                 "values": values,
-                "workflow": workflow,
+                "pipeline_name": pipeline_name,
                 "output": output,
             }
         },
@@ -633,7 +633,7 @@ def generate(  # pylint: disable=too-many-positional-arguments
             pipeline_obj,
             backend=cast(type[Backend], backend_obj),
             values=values or [],
-            workflow=workflow,
+            pipeline_name=pipeline_name,
             output=output,
         )
     except ValuesFileError as exc:

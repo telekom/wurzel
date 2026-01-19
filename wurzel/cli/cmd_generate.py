@@ -16,11 +16,11 @@ if TYPE_CHECKING:
 def _resolve_backend_instance(
     backend: type[Backend],
     values: list[Path] | None,
-    workflow: str | None,
+    pipeline_name: str | None,
 ) -> Backend:
     # Check if backend has from_values method (like ArgoBackend and DvcBackend)
     if hasattr(backend, "from_values") and values:
-        return backend.from_values(values, workflow_name=workflow)  # type: ignore[call-arg]
+        return backend.from_values(values, workflow_name=pipeline_name)  # type: ignore[call-arg]
     return backend()
 
 
@@ -34,11 +34,11 @@ def main(
     backend: type[Backend],
     *,
     values: Iterable[Path] | None = None,
-    workflow: str | None = None,
+    pipeline_name: str | None = None,
     output: Path | None = None,
 ) -> str:
     """Generate backend-specific YAML for a pipeline."""
-    adapter = _resolve_backend_instance(backend, list(values or []), workflow)
+    adapter = _resolve_backend_instance(backend, list(values or []), pipeline_name)
     yaml_content = adapter.generate_artifact(step)
 
     if output:
