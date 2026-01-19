@@ -5,6 +5,7 @@
 """Additional edge case tests for the SimpleSplitter."""
 
 import pytest
+from urllib.parse import urlparse
 
 from wurzel.utils import HAS_SPACY, HAS_TIKTOKEN
 
@@ -37,13 +38,16 @@ Visit [example.com](https://www.example.com) for more info."""
     import re
 
     for chunk in result:
-        # If chunk contains a URL, verify link syntax is not broken
-        if "github.com" in chunk.md or "example.com" in chunk.md:
-            # Check for proper link format [text](url)
-            links = re.findall(r"\[([^\]]+)\]\(([^\)]+)\)", chunk.md)
-            # If we find the URL, we should also find it in a proper link
-            if "github.com/telekom/wurzel" in chunk.md:
-                assert any("github.com/telekom/wurzel" in url for _, url in links), "GitHub link is not properly formatted"
+        # Find all markdown links in the chunk
+        links = re.findall(r"\[([^\]]+)\]\(([^\)]+)\)", chunk.md)
+        for _, url in links:
+            parsed = urlparse(url)
+            # If this is the GitHub URL, ensure it's properly formatted
+            if parsed.hostname == "github.com":
+                assert "github.com/telekom/wurzel" in url, "GitHub link is not properly formatted"
+            # If this is the example.com URL, ensure it's properly formatted
+            if parsed.hostname == "www.example.com":
+                assert url.startswith("https://www.example.com"), "Example.com link is not properly formatted"
 
 
 def test_link_preservation_reference_style(splitter, markdown_contract_factory):
