@@ -65,19 +65,21 @@ def _try_sort(x: StepReturnType) -> StepReturnType:
 
     Returns either a sorted x or x itself
     """
-    _log_extra = {"extra": {"type": type(x)}}
     if isinstance(x, PydanticModel):
         return x
     try:
         if isinstance(x, (list, set)):
             return sorted(x)
         if isinstance(x, pandas.DataFrame):
-            return x.sort_values(x.columns[0])
+            # Only sort if DataFrame has columns and is not empty
+            if not x.empty and len(x.columns) > 0:
+                return x.sort_values(x.columns[0])
+            return x
     # pylint: disable-next=bare-except
     except:  # noqa: E722
-        log.warning("Could not sort output", **_log_extra)
+        log.warning("Could not sort output", extra={"extra": {"type": type(x).__name__}})
         return x
-    log.warning("Can't sort objects of this type", **_log_extra)
+    log.warning("Can't sort objects of this type", extra={"extra": {"type": type(x).__name__}})
     return x
 
 

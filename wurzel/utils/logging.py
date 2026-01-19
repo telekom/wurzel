@@ -42,9 +42,11 @@ def warnings_to_logger(message: str, category: str, filename: str, lineno: str, 
 
     """
     # pylint: disable=unused-argument
+    # Optimize by computing absolute path once
+    abs_filename = os.path.abspath(filename)
     for module_name, module in sys.modules.items():
         module_path = getattr(module, "__file__", None)
-        if module_path and os.path.abspath(module_path) == os.path.abspath(filename):
+        if module_path and os.path.abspath(module_path) == abs_filename:
             break
     else:
         module_name = os.path.splitext(os.path.split(filename)[1])[0]
@@ -69,9 +71,12 @@ def _make_dict_serializable(item: Any):
                 key = k if isinstance(k, str) else repr(k)
                 new_dict[key] = _make_dict_serializable(v)
             return new_dict
-        case str() | int() | float():
+        case str() | int() | float() | bool():
             return item
-        case list() | set():
+        case list():
+            return [_make_dict_serializable(i) for i in item]
+        case set():
+            # Convert set to list for JSON serialization
             return [_make_dict_serializable(i) for i in item]
         case _:
             return repr(item)
