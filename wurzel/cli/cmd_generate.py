@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Iterable
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -24,7 +25,6 @@ def _resolve_backend_instance(
         kwargs = {"workflow_name": pipeline_name}
         # Pass as_cron only if it's not None and backend accepts it
         if as_cron is not None and hasattr(backend, "__init__"):
-            import inspect  # noqa: PLC0415
             sig = inspect.signature(backend.__init__)
             if "as_cron" in sig.parameters:
                 kwargs["as_cron"] = as_cron

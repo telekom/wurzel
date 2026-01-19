@@ -362,9 +362,10 @@ class ArgoBackend(Backend):
 
         # Determine if we should generate as CronWorkflow
         # Priority: CLI flag (as_cron) > config.schedule
-        should_generate_cron = self._as_cron if self._as_cron is not None else bool(self.config.schedule)
+        # This allows CLI users to override the values file behavior
+        is_cron_workflow_requested = self._as_cron if self._as_cron is not None else bool(self.config.schedule)
 
-        if should_generate_cron:
+        if is_cron_workflow_requested:
             # Use schedule from config if available, otherwise use a default
             schedule = self.config.schedule if self.config.schedule else "0 0 * * *"
             context = CronWorkflow(schedule=schedule, **workflow_kwargs)
