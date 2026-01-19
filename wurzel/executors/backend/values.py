@@ -39,6 +39,8 @@ def deep_merge_dicts(base: dict[str, Any], override: dict[str, Any]) -> dict[str
 
 def _load_values_file(path: Path) -> dict[str, Any]:
     """Load a single YAML values file."""
+    if not path.exists():
+        raise ValuesFileError(f"Values file '{path}' does not exist.")
     try:
         with path.open("r", encoding="utf-8") as handle:
             data = yaml.safe_load(handle) or {}
