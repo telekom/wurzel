@@ -31,9 +31,10 @@ def test_middlewares_inspect_prometheus():
     assert "Class:" in result.stdout
     assert "PrometheusMiddleware" in result.stdout
     assert "Configuration:" in result.stdout
-    assert "PROMETHEUS_GATEWAY" in result.stdout
-    assert "PROMETHEUS_JOB" in result.stdout
-    assert "PROMETHEUS_DISABLE_CREATED_METRIC" in result.stdout
+    # Check for actual field names (without PROMETHEUS_ prefix since env_prefix handles that)
+    assert "GATEWAY" in result.stdout
+    assert "JOB" in result.stdout
+    assert "DISABLE_CREATED_METRIC" in result.stdout
     assert "Usage:" in result.stdout
     assert "wurzel run --middlewares prometheus" in result.stdout
 

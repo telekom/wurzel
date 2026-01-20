@@ -172,6 +172,9 @@ The middleware configuration will be embedded in the generated CronWorkflow YAML
 
 The Prometheus middleware pushes metrics to a Prometheus Pushgateway for monitoring pipeline execution.
 
+!!! note "Environment Variable Prefix"
+    The Prometheus middleware uses the `PROMETHEUS__` prefix for all environment variables. This is configured via `model_config = SettingsConfigDict(env_prefix="PROMETHEUS__")` in the settings class. The field names in the settings class are `GATEWAY`, `JOB`, and `DISABLE_CREATED_METRIC` (without the `PROMETHEUS_` prefix), and pydantic-settings automatically adds the prefix when reading from environment variables.
+
 **Configuration:**
 
 ```bash

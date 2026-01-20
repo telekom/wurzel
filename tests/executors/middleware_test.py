@@ -194,10 +194,18 @@ def test_registry_list_available():
 
 def test_prometheus_middleware_with_settings(tmp_path: Path, env):
     """Test prometheus middleware respects settings."""
-    # Set prometheus settings
-    env.set("PROMETHEUS_GATEWAY", "http://localhost:9091")
-    env.set("PROMETHEUS_JOB", "test-job")
-    env.set("PROMETHEUS_DISABLE_CREATED_METRIC", "True")
+    # Set prometheus settings with correct PROMETHEUS__ prefix
+    env.set("PROMETHEUS__GATEWAY", "http://localhost:9091")
+    env.set("PROMETHEUS__JOB", "test-job")
+    env.set("PROMETHEUS__DISABLE_CREATED_METRIC", "True")
+
+    # Verify settings are loaded correctly
+    from wurzel.executors.middlewares.prometheus.settings import PrometheusMiddlewareSettings
+
+    settings = PrometheusMiddlewareSettings()
+    assert settings.GATEWAY == "http://localhost:9091", f"Expected 'http://localhost:9091', got '{settings.GATEWAY}'"
+    assert settings.JOB == "test-job", f"Expected 'test-job', got '{settings.JOB}'"
+    assert settings.DISABLE_CREATED_METRIC is True, f"Expected True, got {settings.DISABLE_CREATED_METRIC}"
 
     with BaseStepExecutor(middlewares=["prometheus"], load_middlewares_from_env=False) as exc:
         result = exc(DummyStep, None, tmp_path)
