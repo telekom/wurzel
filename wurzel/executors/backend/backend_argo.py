@@ -486,6 +486,11 @@ class ArgoBackend(Backend):
         tokenizer_cache = self.config.container.tokenizerCache
         if tokenizer_cache.enabled:
             env_vars.append(EnvVar(name="HF_HOME", value=tokenizer_cache.mountPath))
+
+        # Add WURZEL_RUN_ID environment variable using Argo's workflow.uid
+        # This provides a unique identifier for each pipeline run
+        env_vars.append(EnvVar(name="WURZEL_RUN_ID", value="{{workflow.uid}}"))
+
         wurzel_call = Container(
             name=f"wurzel-run-template-{step.__class__.__name__.lower()}",
             image=self.config.container.image,
