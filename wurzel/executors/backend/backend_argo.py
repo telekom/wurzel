@@ -244,6 +244,11 @@ class ArgoBackend(Backend):
 
         dag.__exit__()
         env_vars = self._create_envs_from_step_settings(step)
+
+        # Add WURZEL_RUN_ID environment variable using Argo's workflow.uid
+        # This provides a unique identifier for each pipeline run
+        env_vars.append(EnvVar(name="WURZEL_RUN_ID", value="{{workflow.uid}}"))
+
         wurzel_call = Container(
             name=f"wurzel-run-template-{step.__class__.__name__.lower()}",
             image=self.settings.IMAGE,

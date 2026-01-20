@@ -115,7 +115,9 @@ def test_generate():
     for step in steps:
         data: dict = res.get(step.__class__.__name__, None)
         assert data is not None
-        assert data["cmd"].startswith("wurzel run")
+        # Command now includes WURZEL_RUN_ID environment variable
+        assert "wurzel run" in data["cmd"]
+        assert "WURZEL_RUN_ID=" in data["cmd"]
     assert res[a.__class__.__name__]["outs"][0] == Path("data/Step0")
     assert res[a.__class__.__name__]["outs"][0] in res[b.__class__.__name__]["deps"]
     assert res[b.__class__.__name__]["outs"][0] == Path("data/Step1")

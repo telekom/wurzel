@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
+import os
 from typing import TYPE_CHECKING
 
 from wurzel.core.typed_step import TypedStep
@@ -23,6 +24,11 @@ class Backend(BaseStepExecutor):
     Each backend implementation should subclass this and implement the generate_artifact method
     to convert a `TypedStep` into the appropriate format required by the target framework,
     while also inheriting all step execution functionality from BaseStepExecutor.
+
+    The backend implementations must set the WURZEL_RUN_ID environment variable in their
+    generated artifacts. This provides a unique identifier for each pipeline run that can
+    be used for Prometheus job names, logging, and other runtime identification needs.
+    For Argo Workflows, this should be set to {{workflow.uid}}.
     """
 
     def __init__(
@@ -39,6 +45,20 @@ class Backend(BaseStepExecutor):
             load_middlewares_from_env=load_middlewares_from_env,
         )
         self.executor: type[BaseStepExecutor] | None = executer
+
+    @property
+    def run_id(self) -> str:
+        """Get the unique run ID for the current pipeline execution.
+
+        This ID is set by the workflow orchestrator via the WURZEL_RUN_ID environment variable.
+        For Argo Workflows, this is typically the workflow.uid.
+        For DVC, this is generated at pipeline execution time.
+
+        Returns:
+            str: The unique run ID, or empty string if not set.
+
+        """
+        return os.environ.get("WURZEL_RUN_ID", "")
 
     @classmethod
     def is_available(cls) -> bool:
