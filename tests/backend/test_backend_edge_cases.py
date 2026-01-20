@@ -15,7 +15,7 @@ from wurzel.executors.backend.backend_dvc import DvcBackend, DvcBackendSettings
 from wurzel.utils import HAS_HERA
 
 if HAS_HERA:
-    from wurzel.executors.backend.backend_argo import ArgoBackend, ArgoBackendSettings
+    from wurzel.executors.backend.backend_argo import ArgoBackend, WorkflowConfig
 
 
 class DummyStep(TypedStep[NoSettings, None, MarkdownDataContract]):
@@ -142,16 +142,16 @@ class TestArgoBackendEdgeCases:
         """Test ArgoBackend with maximum allowed pipeline name length."""
         # DNS labels can be up to 63 characters
         max_name = "a" * 63
-        settings = ArgoBackendSettings(PIPELINE_NAME=max_name)
-        backend = ArgoBackend(settings=settings)
-        assert backend.settings.PIPELINE_NAME == max_name
+        config = WorkflowConfig(name=max_name)
+        backend = ArgoBackend(config=config)
+        assert backend.config.name == max_name
 
     def test_multiple_s3_artifact_configurations(self):
         """Test creating multiple S3 artifact configurations."""
-        from wurzel.executors.backend.backend_argo import S3ArtifactTemplate
+        from wurzel.executors.backend.backend_argo import S3ArtifactConfig
 
-        s3_config1 = S3ArtifactTemplate(bucket="bucket1", endpoint="s3.region1.com")
-        s3_config2 = S3ArtifactTemplate(bucket="bucket2", endpoint="s3.region2.com")
+        s3_config1 = S3ArtifactConfig(bucket="bucket1", endpoint="s3.region1.com")
+        s3_config2 = S3ArtifactConfig(bucket="bucket2", endpoint="s3.region2.com")
 
         assert s3_config1.bucket != s3_config2.bucket
         assert s3_config1.endpoint != s3_config2.endpoint
@@ -172,13 +172,11 @@ class TestBackendSettingsValidation:
         assert settings.ENCAPSULATE_ENV is False
 
     @pytest.mark.skipif(not HAS_HERA, reason="Hera not available")
-    def test_argo_settings_inline_step_settings_type_validation(self):
-        """Test ArgoBackendSettings validates INLINE_STEP_SETTINGS type."""
-        settings = ArgoBackendSettings(INLINE_STEP_SETTINGS=True)
-        assert settings.INLINE_STEP_SETTINGS is True
-
-        settings = ArgoBackendSettings(INLINE_STEP_SETTINGS=False)
-        assert settings.INLINE_STEP_SETTINGS is False
+    def test_argo_workflow_config_validation(self):
+        """Test WorkflowConfig validates fields correctly."""
+        config = WorkflowConfig(name="test", namespace="test-ns")
+        assert config.name == "test"
+        assert config.namespace == "test-ns"
 
 
 class TestBackendEnvironmentVariableHandling:
@@ -202,18 +200,18 @@ class TestBackendEnvironmentVariableHandling:
         assert settings.DATA_DIR == custom_path
 
     @pytest.mark.skipif(not HAS_HERA, reason="Hera not available")
-    def test_argo_backend_multiple_env_vars(self, monkeypatch):
-        """Test ArgoBackend with multiple environment variables set."""
-        monkeypatch.setenv("ARGOWORKFLOWBACKEND__IMAGE", "custom:v1")
-        monkeypatch.setenv("ARGOWORKFLOWBACKEND__NAMESPACE", "prod")
-        monkeypatch.setenv("ARGOWORKFLOWBACKEND__PIPELINE_NAME", "my-pipeline")
-        monkeypatch.setenv("ARGOWORKFLOWBACKEND__INLINE_STEP_SETTINGS", "true")
+    def test_argo_backend_custom_config(self):
+        """Test ArgoBackend with custom WorkflowConfig."""
+        config = WorkflowConfig(
+            name="my-pipeline",
+            namespace="prod",
+        )
+        config.container.image = "custom:v1"
 
-        settings = ArgoBackendSettings()
-        assert settings.IMAGE == "custom:v1"
-        assert settings.NAMESPACE == "prod"
-        assert settings.PIPELINE_NAME == "my-pipeline"
-        assert settings.INLINE_STEP_SETTINGS is True
+        backend = ArgoBackend(config=config)
+        assert backend.config.name == "my-pipeline"
+        assert backend.config.namespace == "prod"
+        assert backend.config.container.image == "custom:v1"
 
 
 class TestBackendOutputFormat:

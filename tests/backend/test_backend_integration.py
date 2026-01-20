@@ -70,16 +70,6 @@ class TestBackendWithMiddlewares:
 
         assert yaml_output is not None
 
-    @pytest.mark.skipif(not HAS_HERA, reason="Hera not available")
-    def test_argo_backend_with_prometheus_middleware(self):
-        """Test ArgoBackend with Prometheus middleware enabled."""
-        backend = ArgoBackend(middlewares=["prometheus"])
-        step = SimpleStep()
-        yaml_output = backend.generate_artifact(step)
-
-        assert yaml_output is not None
-        assert "kind:" in yaml_output
-
 
 class TestBackendWithComplexPipelines:
     def test_dvc_backend_with_linear_pipeline(self):
@@ -181,16 +171,6 @@ class TestBackendEncapsulation:
     def test_dvc_backend_dont_encapsulate_parameter(self):
         """Test DvcBackend with dont_encapsulate constructor parameter."""
         backend = DvcBackend(dont_encapsulate=True)
-        step = SimpleStep()
-
-        yaml_output = backend.generate_artifact(step)
-
-        assert yaml_output is not None
-
-    @pytest.mark.skipif(not HAS_HERA, reason="Hera not available")
-    def test_argo_backend_dont_encapsulate_parameter(self):
-        """Test ArgoBackend with dont_encapsulate constructor parameter."""
-        backend = ArgoBackend(dont_encapsulate=True)
         step = SimpleStep()
 
         yaml_output = backend.generate_artifact(step)
