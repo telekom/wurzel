@@ -188,18 +188,19 @@ class DvcBackend(Backend, backend_name="dvc"):
         return env_file
 
     @classmethod
-    def from_values(cls, files: "Iterable[Path]", workflow_name: str | None = None) -> "DvcBackend":  # pylint: disable=unused-argument
+    def from_values(cls, files: "Iterable[Path]", workflow_name: str | None = None) -> "DvcBackend":
         """Instantiate the backend from values files.
 
         Args:
             files: Iterable of paths to YAML values files
-            workflow_name: Optional workflow name (currently not used, kept for API compatibility)
+            workflow_name: Optional workflow name to select from values file
 
         Returns:
             DvcBackend: Instance configured from the merged values files
         """
-        settings = load_values(files, DvcBackendSettings)
-        return cls(settings=settings)
+        values = load_values(files, DvcTemplateValues)
+        config = select_pipeline(values, workflow_name)
+        return cls(config=config)
 
     def _generate_dict(
         self,
@@ -251,7 +252,7 @@ class DvcBackend(Backend, backend_name="dvc"):
 
         # Prepend WURZEL_RUN_ID environment variable to the command
         # DVC will generate a unique ID at runtime using timestamp
-        cmd = f'WURZEL_RUN_ID="${{WURZEL_RUN_ID:-dvc-$(date +%Y%m%d-%H%M%S)-$$}}" {cmd}'
+        cmd = f'WURZEL_RUN_ID="${{WURZEL_RUN_ID:-dvc-$(date +%Y%m%d-%H%M%S)-$$}}" {cli_call}'
 
         return result | {
             step.__class__.__name__: {
