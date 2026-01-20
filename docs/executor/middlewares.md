@@ -133,9 +133,71 @@ with BaseStepExecutor(middlewares=middlewares) as exc:
     exc(MyStep, set(), Path("output"))
 ```
 
+## Using Middlewares with Backends
+
+### DVC Backend
+
+For DVC pipelines, set middleware environment variables before running:
+
+```bash
+export MIDDLEWARES=prometheus
+export PROMETHEUS__PROMETHEUS_GATEWAY=localhost:9091
+dvc repro
+```
+
+### Argo Workflows Backend
+
+For Argo Workflows, configure middlewares in your `values.yaml` file under `container.env`:
+
+```yaml
+workflows:
+  pipelinedemo:
+    container:
+      env:
+        # Enable Prometheus middleware
+        MIDDLEWARES: "prometheus"
+        PROMETHEUS__PROMETHEUS_GATEWAY: "prometheus-pushgateway.monitoring.svc.cluster.local:9091"
+        PROMETHEUS__PROMETHEUS_JOB: "wurzel-pipeline"
+```
+
+Then generate the workflow:
+
+```bash
+wurzel generate --backend ArgoBackend --values values.yaml examples.pipeline.pipelinedemo:pipeline
+```
+
+The middleware configuration will be embedded in the generated CronWorkflow YAML as environment variables.
+
+## Prometheus Middleware
+
+The Prometheus middleware pushes metrics to a Prometheus Pushgateway for monitoring pipeline execution.
+
+**Configuration:**
+
+```bash
+# Required
+export MIDDLEWARES=prometheus
+export PROMETHEUS__PROMETHEUS_GATEWAY=pushgateway:9091
+
+# Optional
+export PROMETHEUS__PROMETHEUS_JOB=my-pipeline
+export PROMETHEUS__PROMETHEUS_DISABLE_CREATED_METRIC=false
+```
+
+**Metrics:**
+
+- `step_duration_seconds{step_name, run_id}` - Histogram of execution duration
+- `step_executions_total{step_name, run_id}` - Counter of executions
+
+**Labels:**
+
+- `step_name` - Name of the step being executed
+- `run_id` - Unique run identifier (from `WURZEL_RUN_ID`)
+
 ## Best practices
 
 1. Order matters: middlewares execute in the order specified.
 2. Fail gracefully: middlewares should handle errors and avoid breaking step execution.
 3. Keep lightweight: middlewares should add minimal runtime overhead.
 4. Use settings: store configuration in Settings classes loaded from environment variables.
+5. For production deployments, always configure middleware settings in your values.yaml file.
