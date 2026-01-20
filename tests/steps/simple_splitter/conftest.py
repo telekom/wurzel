@@ -19,7 +19,7 @@ def splitter():
     return SemanticSplitter(
         token_limit=256,
         token_limit_buffer=32,
-        token_limit_min=64,
+        token_limit_min=1,
         tokenizer_model="gpt-3.5-turbo",
         sentence_splitter_model="de_core_news_sm",
     )
@@ -29,9 +29,9 @@ def splitter():
 def small_splitter():
     """Fixture for SemanticSplitter with smaller token limits for testing."""
     return SemanticSplitter(
-        token_limit=128,
-        token_limit_buffer=16,
-        token_limit_min=32,
+        token_limit=64,
+        token_limit_buffer=8,
+        token_limit_min=1,
         tokenizer_model="gpt-3.5-turbo",
         sentence_splitter_model="de_core_news_sm",
     )

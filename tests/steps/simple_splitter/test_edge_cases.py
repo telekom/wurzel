@@ -4,8 +4,9 @@
 
 """Additional edge case tests for the SimpleSplitter."""
 
-import pytest
 from urllib.parse import urlparse
+
+import pytest
 
 from wurzel.utils import HAS_SPACY, HAS_TIKTOKEN
 
