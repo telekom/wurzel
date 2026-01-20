@@ -145,6 +145,20 @@ class Backend(BaseStepExecutor):
         """
         return os.environ.get(WURZEL_RUN_ID_ENV, "")
 
+    @property
+    def run_id(self) -> str:
+        """Get the unique run ID for the current pipeline execution.
+
+        This ID is set by the workflow orchestrator via the WURZEL_RUN_ID environment variable.
+        For Argo Workflows, this is typically the workflow.uid.
+        For DVC, this is generated at pipeline execution time.
+
+        Returns:
+            str: The unique run ID, or empty string if not set.
+
+        """
+        return os.environ.get("WURZEL_RUN_ID", "")
+
     @classmethod
     def is_available(cls) -> bool:
         """Check if this backend's dependencies are installed.

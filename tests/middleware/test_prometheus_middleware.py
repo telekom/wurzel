@@ -7,6 +7,8 @@ from typing import Any
 
 import pytest
 
+import pytest
+
 from wurzel.executors.middlewares.prometheus import PrometheusMiddleware
 
 

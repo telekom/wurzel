@@ -235,6 +235,10 @@ class DvcBackend(Backend, backend_name="dvc"):
             f'&& echo "${WURZEL_RUN_ID_ENV}" &&  {cli_call}'
         )
 
+        # Prepend WURZEL_RUN_ID environment variable to the command
+        # DVC will generate a unique ID at runtime using timestamp
+        cmd = f'WURZEL_RUN_ID="${{WURZEL_RUN_ID:-dvc-$(date +%Y%m%d-%H%M%S)-$$}}" {cmd}'
+
         return result | {
             step.__class__.__name__: {
                 "cmd": cmd,
