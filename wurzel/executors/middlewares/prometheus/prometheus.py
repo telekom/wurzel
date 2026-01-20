@@ -55,7 +55,7 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
 
     def _setup_metrics(self):
         """Set up Prometheus metrics collectors."""
-        if self.settings.PROMETHEUS_DISABLE_CREATED_METRIC:
+        if self.settings.DISABLE_CREATED_METRIC:
             os.environ["PROMETHEUS_DISABLE_CREATED_SERIES"] = "True"
 
         # Add run_id as a label to all metrics for identifying pipeline runs
@@ -124,7 +124,7 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
 
     def __exit__(self, *exc_details):
         """Context manager exit - push metrics to gateway."""
-        args = {"gateway": self.settings.PROMETHEUS_GATEWAY, "job": self.settings.PROMETHEUS_JOB}
+        args = {"gateway": self.settings.GATEWAY, "job": self.settings.JOB}
         log.info("Pushing metrics", extra=args)
         try:
             push_to_gateway(**args, registry=self.registry or REGISTRY)

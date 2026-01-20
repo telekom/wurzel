@@ -171,8 +171,8 @@ def test_cli_run_with_prometheus_settings(tmp_path: Path, env):
     inp.mkdir()
     (inp / "file.md").write_text("#Test\n content")
     env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
-    env.set("PROMETHEUS_GATEWAY", "http://localhost:9091")
-    env.set("PROMETHEUS_JOB", "test-job")
+    env.set("PROMETHEUS__PROMETHEUS_GATEWAY", "http://localhost:9091")
+    env.set("PROMETHEUS__PROMETHEUS_JOB", "test-job")
 
     # Run with prometheus and custom settings
     main.run(
