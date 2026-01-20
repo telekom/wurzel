@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypedDict
 
 import yaml
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 import wurzel
@@ -40,6 +41,32 @@ class DvcDict(TypedDict):
     always_changed: bool
 
 
+class DvcConfig(BaseModel):
+    """DVC pipeline configuration from YAML values."""
+
+    dataDir: Path = Path("./data")
+    encapsulateEnv: bool = True
+
+
+class DvcTemplateValues(BaseModel):
+    """YAML values file parsed into strongly typed configuration for DVC."""
+
+    dvc: dict[str, DvcConfig] = Field(default_factory=dict)
+
+
+def select_pipeline(values: DvcTemplateValues, pipeline_name: str | None) -> DvcConfig:
+    """Select a pipeline configuration either by name or falling back to the first entry."""
+    if pipeline_name:
+        try:
+            return values.dvc[pipeline_name]
+        except KeyError as exc:
+            raise ValueError(f"pipeline '{pipeline_name}' not found in values") from exc
+    if values.dvc:
+        first_key = next(iter(values.dvc))
+        return values.dvc[first_key]
+    return DvcConfig()
+
+
 class DvcBackendSettings(BaseSettings):
     """Settings object for DVC backend configuration, injectable via environment variables.
 
@@ -68,6 +95,7 @@ class DvcBackend(Backend):
     execution capabilities and artifact generation for DVC pipelines.
 
     Args:
+        config (DvcConfig | None): Optional config from YAML values.
         settings (DvcBackendSettings | None): Optional settings object; if not provided,
             defaults will be loaded from environment or defaults.
         executer (BaseStepExecutor): Executor class used to wrap the CLI call (deprecated, kept for compatibility).
@@ -77,10 +105,16 @@ class DvcBackend(Backend):
 
     """
 
+    @classmethod
+    def is_available(cls) -> bool:
+        """DVC backend has no optional dependencies."""
+        return True
+
     def __init__(
         self,
-        settings: DvcBackendSettings | None = None,
+        config: DvcConfig | None = None,
         *,
+        settings: DvcBackendSettings | None = None,
         executer: type[BaseStepExecutor] = BaseStepExecutor,
         dont_encapsulate: bool = False,
         middlewares: list[str] | list["BaseMiddleware"] | None = None,
@@ -89,6 +123,7 @@ class DvcBackend(Backend):
         """Initialize DvcBackend.
 
         Args:
+            config: DVC-specific config from YAML values
             settings: DVC-specific settings for pipeline generation
             executer: Executor class used for CLI generation (deprecated, kept for compatibility)
             dont_encapsulate: If True, don't encapsulate environment variables
@@ -98,21 +133,27 @@ class DvcBackend(Backend):
         super().__init__(
             executer, dont_encapsulate=dont_encapsulate, middlewares=middlewares, load_middlewares_from_env=load_middlewares_from_env
         )
-        self.settings = settings if settings else DvcBackendSettings()
+        self.settings = settings or DvcBackendSettings()
+        self.config = config or DvcConfig(
+            dataDir=self.settings.DATA_DIR,
+            encapsulateEnv=self.settings.ENCAPSULATE_ENV,
+        )
+        self.executor: type[BaseStepExecutor] = executer
 
     @classmethod
-    def from_values(cls, files: "Iterable[Path]", workflow_name: str | None = None) -> "DvcBackend":  # pylint: disable=unused-argument
+    def from_values(cls, files: "Iterable[Path]", workflow_name: str | None = None) -> "DvcBackend":
         """Instantiate the backend from values files.
 
         Args:
             files: Iterable of paths to YAML values files
-            workflow_name: Optional workflow name (currently not used, kept for API compatibility)
+            workflow_name: Optional workflow name to select from values file
 
         Returns:
             DvcBackend: Instance configured from the merged values files
         """
-        settings = load_values(files, DvcBackendSettings)
-        return cls(settings=settings)
+        values = load_values(files, DvcTemplateValues)
+        config = select_pipeline(values, workflow_name)
+        return cls(config=config)
 
     def _generate_dict(
         self,
@@ -128,7 +169,7 @@ class DvcBackend(Backend):
             step (TypedStep): The root step from which to generate the pipeline DAG.
 
         Returns:
-            dict[str, DvcDict]: A dictionary mapping step names to their DVC-compatible stage configurations.
+            dict[str, DvcDict]: A dictionary mapping step names to their DVC stage definitions.
 
         """
         result: dict[str, Any] = {}
@@ -139,19 +180,19 @@ class DvcBackend(Backend):
             result |= dep_result
             outputs_of_deps += dep_result[o_step.__class__.__name__]["outs"]
 
-        output_path = self.settings.DATA_DIR / step.__class__.__name__
+        output_path = self.config.dataDir / step.__class__.__name__
 
-        cmd = wurzel.cli.generate_cli_call(
+        cli_call = wurzel.cli.generate_cli_call(
             step.__class__,
             inputs=outputs_of_deps,
             output=output_path,
             backend=self.__class__,
-            encapsulate_env=self.settings.ENCAPSULATE_ENV,
+            encapsulate_env=self.config.encapsulateEnv,
         )
 
         # Prepend WURZEL_RUN_ID environment variable to the command
         # DVC will generate a unique ID at runtime using timestamp
-        cmd = f'WURZEL_RUN_ID="${{WURZEL_RUN_ID:-dvc-$(date +%Y%m%d-%H%M%S)-$$}}" {cmd}'
+        cmd = f'WURZEL_RUN_ID="${{WURZEL_RUN_ID:-dvc-$(date +%Y%m%d-%H%M%S)-$$}}" {cli_call}'
 
         return result | {
             step.__class__.__name__: {
