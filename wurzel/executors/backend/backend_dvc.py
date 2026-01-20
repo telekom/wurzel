@@ -121,6 +121,16 @@ class DvcBackend(Backend):
         middlewares: list[str] | list["BaseMiddleware"] | None = None,
         load_middlewares_from_env: bool = False,
     ) -> None:
+        """Initialize DvcBackend.
+
+        Args:
+            config: DVC-specific config from YAML values
+            settings: DVC-specific settings for pipeline generation
+            executor: Executor class used for CLI generation
+            dont_encapsulate: If True, don't encapsulate environment variables
+            middlewares: List of middleware names or instances to use
+            load_middlewares_from_env: Whether to load middlewares from MIDDLEWARES env var
+        """
         super().__init__(
             executor=executor,
             dont_encapsulate=dont_encapsulate,
@@ -148,20 +158,6 @@ class DvcBackend(Backend):
             return cls(config=config, executor=executor)
         return cls(config=config)
 
-    @classmethod
-    def from_values(cls, files: "Iterable[Path]", workflow_name: str | None = None) -> "DvcBackend":  # pylint: disable=unused-argument
-        """Instantiate the backend from values files.
-
-        Args:
-            files: Iterable of paths to YAML values files
-            workflow_name: Optional workflow name (currently not used, kept for API compatibility)
-
-        Returns:
-            DvcBackend: Instance configured from the merged values files
-        """
-        settings = load_values(files, DvcBackendSettings)
-        return cls(settings=settings)
-
     def _generate_dict(
         self,
         step: TypedStep,
@@ -176,7 +172,7 @@ class DvcBackend(Backend):
             step (TypedStep): The root step from which to generate the pipeline DAG.
 
         Returns:
-            dict[str, DvcDict]: A dictionary mapping step names to their DVC-compatible stage configurations.
+            dict[str, DvcDict]: A dictionary mapping step names to their DVC stage definitions.
 
         """
         result: dict[str, Any] = {}
@@ -189,7 +185,7 @@ class DvcBackend(Backend):
 
         output_path = self.config.dataDir / step.__class__.__name__
 
-        cmd = wurzel.cli.generate_cli_call(
+        cli_call = wurzel.cli.generate_cli_call(
             step.__class__,
             inputs=outputs_of_deps,
             output=output_path,
@@ -199,7 +195,7 @@ class DvcBackend(Backend):
 
         # Prepend WURZEL_RUN_ID environment variable to the command
         # DVC will generate a unique ID at runtime using timestamp
-        cmd = f'WURZEL_RUN_ID="${{WURZEL_RUN_ID:-dvc-$(date +%Y%m%d-%H%M%S)-$$}}" {cmd}'
+        cmd = f'WURZEL_RUN_ID="${{WURZEL_RUN_ID:-dvc-$(date +%Y%m%d-%H%M%S)-$$}}" {cli_call}'
 
         return result | {
             step.__class__.__name__: {

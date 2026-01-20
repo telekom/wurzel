@@ -36,55 +36,59 @@ class TestDvcBackendFromValues:
         """Test DvcBackend.from_values with basic configuration."""
         values_file = tmp_path / "values.yaml"
         values_data = {
-            "DATA_DIR": "./custom-data",
-            "ENCAPSULATE_ENV": False,
+            "dvc": {
+                "test-pipeline": {
+                    "dataDir": "./custom-data",
+                    "encapsulateEnv": False,
+                }
+            }
         }
         values_file.write_text(yaml.dump(values_data))
 
         backend = DvcBackend.from_values([values_file])
 
-        assert backend.settings.DATA_DIR == Path("./custom-data")
-        assert backend.settings.ENCAPSULATE_ENV is False
+        assert backend.config.dataDir == Path("./custom-data")
+        assert backend.config.encapsulateEnv is False
 
     def test_from_values_with_defaults(self, tmp_path):
         """Test DvcBackend.from_values with empty values file uses defaults."""
         values_file = tmp_path / "values.yaml"
-        values_file.write_text(yaml.dump({}))
+        values_file.write_text(yaml.dump({"dvc": {}}))
 
         backend = DvcBackend.from_values([values_file])
 
-        assert backend.settings.DATA_DIR == Path("./data")
-        assert backend.settings.ENCAPSULATE_ENV is True
+        assert backend.config.dataDir == Path("./data")
+        assert backend.config.encapsulateEnv is True
 
     def test_from_values_multiple_files(self, tmp_path):
         """Test DvcBackend.from_values merges multiple values files."""
         values_file1 = tmp_path / "values1.yaml"
-        values_file1.write_text(yaml.dump({"DATA_DIR": "./data1"}))
+        values_file1.write_text(yaml.dump({"dvc": {"test": {"dataDir": "./data1"}}}))
 
         values_file2 = tmp_path / "values2.yaml"
-        values_file2.write_text(yaml.dump({"ENCAPSULATE_ENV": False}))
+        values_file2.write_text(yaml.dump({"dvc": {"test": {"encapsulateEnv": False}}}))
 
         backend = DvcBackend.from_values([values_file1, values_file2])
 
-        assert backend.settings.DATA_DIR == Path("./data1")
-        assert backend.settings.ENCAPSULATE_ENV is False
+        assert backend.config.dataDir == Path("./data1")
+        assert backend.config.encapsulateEnv is False
 
     def test_from_values_override(self, tmp_path):
         """Test DvcBackend.from_values with later files overriding earlier ones."""
         values_file1 = tmp_path / "values1.yaml"
-        values_file1.write_text(yaml.dump({"DATA_DIR": "./data1"}))
+        values_file1.write_text(yaml.dump({"dvc": {"test": {"dataDir": "./data1"}}}))
 
         values_file2 = tmp_path / "values2.yaml"
-        values_file2.write_text(yaml.dump({"DATA_DIR": "./data2"}))
+        values_file2.write_text(yaml.dump({"dvc": {"test": {"dataDir": "./data2"}}}))
 
         backend = DvcBackend.from_values([values_file1, values_file2])
 
-        assert backend.settings.DATA_DIR == Path("./data2")
+        assert backend.config.dataDir == Path("./data2")
 
     def test_from_values_generate_artifact(self, tmp_path):
         """Test that backend created from values can generate artifacts."""
         values_file = tmp_path / "values.yaml"
-        values_file.write_text(yaml.dump({"DATA_DIR": "./test-output"}))
+        values_file.write_text(yaml.dump({"dvc": {"test": {"dataDir": "./test-output"}}}))
 
         backend = DvcBackend.from_values([values_file])
         step = DummyStep()
@@ -396,8 +400,12 @@ class TestBackendFromValuesIntegration:
         values_file.write_text(
             yaml.dump(
                 {
-                    "DATA_DIR": str(tmp_path / "output"),
-                    "ENCAPSULATE_ENV": True,
+                    "dvc": {
+                        "test": {
+                            "dataDir": str(tmp_path / "output"),
+                            "encapsulateEnv": True,
+                        }
+                    }
                 }
             )
         )
