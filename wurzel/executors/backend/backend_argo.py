@@ -157,6 +157,63 @@ class SecretKeyRef(BaseModel):
 class S3ArtifactConfig(BaseModel):
     """Storage destination for artifacts exchanged between steps."""
 
+    runAsNonRoot: bool = True
+    runAsUser: int | None = None
+    runAsGroup: int | None = None
+    fsGroup: int | None = None
+    fsGroupChangePolicy: Literal["OnRootMismatch", "Always"] | None = None
+    supplementalGroups: list[int] = Field(default_factory=list)
+    allowPrivilegeEscalation: bool | None = False
+    readOnlyRootFilesystem: bool | None = None
+    dropCapabilities: list[str] = Field(default_factory=lambda: ["ALL"])
+    seccompProfileType: Literal["RuntimeDefault", "Localhost"] = "RuntimeDefault"
+    seccompLocalhostProfile: str | None = None
+
+
+class ResourcesConfig(BaseModel):
+    """Container resource requests/limits using Hera's Resources API."""
+
+    cpu_request: str = "100m"
+    cpu_limit: str = "500m"
+    memory_request: str = "128Mi"
+    memory_limit: str = "512Mi"
+
+
+class TokenizerCacheConfig(BaseModel):
+    """Configuration for mounting a persistent volume for tokenizer model cache.
+
+    When enabled, mounts a PVC to the container and sets the HF_HOME environment
+    variable so HuggingFace tokenizers use the shared cache.
+    """
+
+    enabled: bool = False
+    claimName: str = "tokenizer-cache-pvc"
+    mountPath: str = "/cache/huggingface"
+    readOnly: bool = True
+    createPvc: bool = False
+    storageSize: str = "10Gi"
+    storageClassName: str | None = None
+    accessModes: list[str] = Field(default_factory=lambda: ["ReadWriteOnce"])
+
+
+class ContainerConfig(BaseModel):
+    """Runtime configuration applied to workflow containers."""
+
+    image: str = "ghcr.io/telekom/wurzel"
+    env: dict[str, str] = Field(default_factory=dict)
+    envFrom: list[EnvFromConfig] = Field(default_factory=list)
+    secretRef: list[str] = Field(default_factory=list)
+    configMapRef: list[str] = Field(default_factory=list)
+    mountSecrets: list[SecretMount] = Field(default_factory=list)
+    tokenizerCache: TokenizerCacheConfig = Field(default_factory=TokenizerCacheConfig)
+    annotations: dict[str, str] = Field(default_factory=lambda: {})
+    securityContext: SecurityContextConfig = Field(default_factory=SecurityContextConfig)
+    resources: ResourcesConfig = Field(default_factory=ResourcesConfig)
+
+
+class S3ArtifactConfig(BaseModel):
+    """Storage destination for artifacts exchanged between steps."""
+
     bucket: str = "wurzel-bucket"
     endpoint: str = "s3.amazonaws.com"
     insecure: bool = False

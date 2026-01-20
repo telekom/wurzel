@@ -187,6 +187,20 @@ class DvcBackend(Backend, backend_name="dvc"):
         env_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
         return env_file
 
+    @classmethod
+    def from_values(cls, files: "Iterable[Path]", workflow_name: str | None = None) -> "DvcBackend":  # pylint: disable=unused-argument
+        """Instantiate the backend from values files.
+
+        Args:
+            files: Iterable of paths to YAML values files
+            workflow_name: Optional workflow name (currently not used, kept for API compatibility)
+
+        Returns:
+            DvcBackend: Instance configured from the merged values files
+        """
+        settings = load_values(files, DvcBackendSettings)
+        return cls(settings=settings)
+
     def _generate_dict(
         self,
         step: TypedStep,
