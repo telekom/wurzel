@@ -135,7 +135,7 @@ class TestBackendArtifactGeneration:
             pytest.param(
                 get_argo_backend(),
                 "ArgoBackend",
-                ["ArgoBackend", "- wurzel", "- run"],
+                ["kind:", "Workflow", "- wurzel", "- run"],
                 marks=pytest.mark.skipif(not HAS_HERA, reason="Hera is not available"),
                 id="ArgoBackend",
             ),
@@ -300,7 +300,7 @@ class TestEndToEndIntegration:
             # Argo-style checks
             assert yaml_checks["spec_key"] in parsed
             assert yaml_checks["workflow_key"] in parsed[yaml_checks["spec_key"]]
-            assert yaml_checks["backend_pattern"] in str(yaml_output)
+            assert "Workflow" in parsed.get("kind", "")
 
     @pytest.mark.parametrize(
         "backend_class",
@@ -333,7 +333,10 @@ class TestEndToEndIntegration:
         # 2. Generate artifact
         step = WZ(ManualMarkdownStep)
         yaml_output = backend.generate_artifact(step)
-        assert backend_class.__name__ in yaml_output
+        if backend_class.__name__ == "ArgoBackend":
+            assert "kind:" in yaml_output and "Workflow" in yaml_output
+        else:
+            assert "stages" in yaml_output
 
         # Verify both operations used the same backend instance
         assert isinstance(backend, backend_class)
@@ -359,11 +362,11 @@ class TestBackendSettings:
             ),
             pytest.param(
                 get_argo_backend(),
-                lambda: __import__("wurzel.executors.backend.backend_argo", fromlist=["ArgoBackendSettings"]).ArgoBackendSettings,
-                lambda tmp_path: {"IMAGE": "custom/image:latest", "NAMESPACE": "test-ns"},
+                lambda: __import__("wurzel.executors.backend.backend_argo", fromlist=["WorkflowConfig"]).WorkflowConfig,
+                lambda tmp_path: {"name": "custom-workflow", "namespace": "test-ns"},
                 lambda tmp_path, backend: {
-                    "IMAGE": (backend.settings.IMAGE, "custom/image:latest"),
-                    "NAMESPACE": (backend.settings.NAMESPACE, "test-ns"),
+                    "name": (backend.config.name, "custom-workflow"),
+                    "namespace": (backend.config.namespace, "test-ns"),
                 },
                 marks=pytest.mark.skipif(not HAS_HERA, reason="Hera is not available"),
                 id="ArgoBackend",
@@ -380,10 +383,15 @@ class TestBackendSettings:
         if callable(settings_class):
             settings_class = settings_class()
 
-        # Create settings with kwargs
+        # Create settings/config with kwargs
         kwargs = settings_kwargs(tmp_path)
-        settings = settings_class(**kwargs)
-        backend = backend_class(settings=settings)
+        config_or_settings = settings_class(**kwargs)
+
+        # ArgoBackend uses 'config', DvcBackend uses 'settings'
+        if backend_class.__name__ == "ArgoBackend":
+            backend = backend_class(config=config_or_settings)
+        else:
+            backend = backend_class(settings=config_or_settings)
 
         # Verify expected values
         expected = expected_values(tmp_path, backend)
@@ -423,7 +431,13 @@ class TestBackendContextManager:
         output_path = tmp_path / "output"
 
         # Use backend as context manager
-        backend_kwargs = {"middlewares": middlewares} if middlewares else {}
+        # Note: ArgoBackend doesn't support middlewares parameter in __init__
+        # Middlewares are handled through the Backend base class for DvcBackend
+        if backend_class.__name__ == "ArgoBackend":
+            backend_kwargs = {}
+        else:
+            backend_kwargs = {"middlewares": middlewares} if middlewares else {}
+
         with backend_class(**backend_kwargs) as backend:
             assert isinstance(backend, backend_class)
             results = backend.execute_step(ManualMarkdownStep, set(), output_path)
