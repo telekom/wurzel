@@ -5,6 +5,7 @@
 """Settings for Prometheus middleware."""
 
 from pydantic import Field
+from pydantic_settings import SettingsConfigDict
 
 from wurzel.core.settings import Settings
 
@@ -12,6 +13,8 @@ from wurzel.core.settings import Settings
 class PrometheusMiddlewareSettings(Settings):
     """Configuration for Prometheus middleware."""
 
-    PROMETHEUS_GATEWAY: str = Field("localhost:9091", description="host:port of pushgateway")
-    PROMETHEUS_JOB: str = Field("default-job-name", description="jobname for the prometheus counter")
-    PROMETHEUS_DISABLE_CREATED_METRIC: bool = Field(True, description="disable *_created metrics")
+    model_config = SettingsConfigDict(env_prefix="PROMETHEUS__")
+
+    GATEWAY: str = Field("localhost:9091", description="host:port of pushgateway")
+    JOB: str = Field("default-job-name", description="jobname for the prometheus counter")
+    DISABLE_CREATED_METRIC: bool = Field(True, description="disable *_created metrics")
