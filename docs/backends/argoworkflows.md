@@ -1,10 +1,15 @@
 # Argo Workflows Backend
 
-The Argo Workflows Backend transforms your Wurzel pipeline into Kubernetes-native CronWorkflow YAML configurations, enabling cloud-native, scalable pipeline orchestration with advanced scheduling capabilities.
+The Argo Workflows Backend transforms your Wurzel pipeline into Kubernetes-native Workflow or CronWorkflow YAML configurations, enabling cloud-native, scalable pipeline orchestration with optional scheduling capabilities.
 
 ## Overview
 
-Argo Workflows is a powerful, Kubernetes-native workflow engine that excels at container orchestration and parallel execution. The Argo Backend generates `CronWorkflow` YAML files that leverage Kubernetes' native scheduling and resource management capabilities.
+Argo Workflows is a powerful, Kubernetes-native workflow engine that excels at container orchestration and parallel execution. The Argo Backend generates either:
+
+- **`Workflow`**: For one-time or manually triggered pipeline executions (when `schedule: null`)
+- **`CronWorkflow`**: For scheduled, recurring pipeline executions (when a cron schedule is provided)
+
+Both workflow types leverage Kubernetes' native scheduling and resource management capabilities.
 
 !!! important "Generate-Time vs Runtime Configuration"
     The Argo backend uses a **two-phase configuration model**:
@@ -17,8 +22,9 @@ Argo Workflows is a powerful, Kubernetes-native workflow engine that excels at c
 ## Key Features
 
 - **Cloud-Native Orchestration**: Run pipelines natively on Kubernetes clusters
+- **Flexible Execution**: Support for both one-time Workflows and scheduled CronWorkflows
 - **Horizontal Scaling**: Automatically scale pipeline steps based on resource requirements
-- **Advanced Scheduling**: Cron-based scheduling with fine-grained control
+- **Advanced Scheduling**: Optional cron-based scheduling with fine-grained control
 - **Resource Management**: Leverage Kubernetes resource limits and requests
 - **Artifact Management**: Integrated S3-compatible artifact storage
 - **Service Integration**: Seamless integration with Kubernetes services and secrets
@@ -35,14 +41,21 @@ pip install wurzel[argo]
 
 ### CLI Usage
 
-Generate an Argo Workflows CronWorkflow configuration using a `values.yaml` file:
+Generate an Argo Workflows configuration using a `values.yaml` file:
 
 ```bash
-# Generate cronworkflow.yaml using Argo backend with values file
+# Generate a CronWorkflow with scheduled execution
 wurzel generate --backend ArgoBackend \
     --values values.yaml \
     --pipeline_name pipelinedemo \
     --output cronworkflow.yaml \
+    examples.pipeline.pipelinedemo:pipeline
+
+# Or generate a one-time Workflow (set schedule: null in values.yaml)
+wurzel generate --backend ArgoBackend \
+    --values values-no-schedule.yaml \
+    --pipeline_name pipelinedemo \
+    --output workflow.yaml \
     examples.pipeline.pipelinedemo:pipeline
 ```
 
@@ -59,7 +72,7 @@ workflows:
     # Workflow metadata
     name: wurzel-pipeline
     namespace: argo-workflows
-    schedule: "0 4 * * *"  # Cron schedule (set to null for one-time Workflow)
+    schedule: "0 4 * * *"  # Cron schedule for CronWorkflow, or null for one-time Workflow
     entrypoint: wurzel-pipeline
     serviceAccountName: wurzel-service-account
     dataDir: /data
@@ -169,15 +182,69 @@ workflows:
       defaultMode: 509  # File permissions (decimal), e.g., 509 = 0o775
 ```
 
+### Workflow vs CronWorkflow
+
+The Argo backend generates different workflow types based on the `schedule` configuration:
+
+#### Normal Workflow (One-Time Execution)
+
+Set `schedule: null` (or omit it) to create a **Workflow** for manual or one-time execution:
+
+```yaml
+workflows:
+  my-workflow:
+    name: my-pipeline
+    schedule: null  # Creates a Workflow, not a CronWorkflow
+```
+
+**Use cases:**
+- Manual pipeline execution triggered via Argo UI or CLI
+- Event-driven pipelines triggered by other workflows
+- One-time data processing tasks
+- CI/CD integration where external systems trigger execution
+
+**Triggering:**
+```bash
+# Submit the workflow manually
+argo submit workflow.yaml
+
+# Or trigger via kubectl
+kubectl create -f workflow.yaml
+```
+
+#### CronWorkflow (Scheduled Execution)
+
+Set a cron schedule string to create a **CronWorkflow** for recurring execution:
+
+```yaml
+workflows:
+  my-cron-workflow:
+    name: my-scheduled-pipeline
+    schedule: "0 4 * * *"  # Creates a CronWorkflow that runs daily at 4 AM
+```
+
+**Use cases:**
+- Regularly scheduled data ingestion
+- Periodic model training or evaluation
+- Automated report generation
+- Scheduled data synchronization
+
+**Common cron schedules:**
+- `"0 4 * * *"` - Daily at 4 AM
+- `"*/15 * * * *"` - Every 15 minutes
+- `"0 0 * * 0"` - Weekly on Sundays at midnight
+- `"0 0 1 * *"` - Monthly on the 1st at midnight
+
+
 ### Configuration Reference
 
 #### Workflow-Level Options
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `name` | string | `wurzel` | Name of the CronWorkflow/Workflow |
+| `name` | string | `wurzel` | Name of the Workflow/CronWorkflow |
 | `namespace` | string | `argo-workflows` | Kubernetes namespace |
-| `schedule` | string | `0 4 * * *` | Cron schedule (set to `null` for one-time Workflow) |
+| `schedule` | string | `0 4 * * *` | Cron schedule for CronWorkflow. Set to `null` to create a normal Workflow instead |
 | `entrypoint` | string | `wurzel-pipeline` | DAG entrypoint name |
 | `serviceAccountName` | string | `wurzel-service-account` | Kubernetes service account |
 | `dataDir` | path | `/usr/app` | Data directory inside containers |
@@ -350,23 +417,6 @@ argo_yaml = backend.generate_artifact(pipeline)
 print(argo_yaml)
 ```
 
-## Deploying Argo Workflows
-
-Once you've generated your CronWorkflow YAML, deploy it to your Kubernetes cluster:
-
-```bash
-# Apply the CronWorkflow to your cluster
-kubectl apply -f cronworkflow.yaml
-
-# Monitor workflow executions
-argo list
-
-# Check workflow logs
-argo logs <workflow-name>
-
-# Get workflow status
-argo get <workflow-name>
-```
 
 ## Benefits for Cloud-Native Pipelines
 
