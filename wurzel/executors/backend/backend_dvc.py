@@ -13,9 +13,12 @@ import wurzel
 import wurzel.cli
 from wurzel.core import TypedStep
 from wurzel.executors.backend.backend import Backend
+from wurzel.executors.backend.values import load_values
 from wurzel.executors.base_executor import BaseStepExecutor
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
+
     from wurzel.executors.middlewares.base import BaseMiddleware
 
 
@@ -96,6 +99,20 @@ class DvcBackend(Backend):
             executer, dont_encapsulate=dont_encapsulate, middlewares=middlewares, load_middlewares_from_env=load_middlewares_from_env
         )
         self.settings = settings if settings else DvcBackendSettings()
+
+    @classmethod
+    def from_values(cls, files: "Iterable[Path]", workflow_name: str | None = None) -> "DvcBackend":  # pylint: disable=unused-argument
+        """Instantiate the backend from values files.
+
+        Args:
+            files: Iterable of paths to YAML values files
+            workflow_name: Optional workflow name (currently not used, kept for API compatibility)
+
+        Returns:
+            DvcBackend: Instance configured from the merged values files
+        """
+        settings = load_values(files, DvcBackendSettings)
+        return cls(settings=settings)
 
     def _generate_dict(
         self,

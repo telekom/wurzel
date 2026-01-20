@@ -13,7 +13,7 @@ if not HAS_HERA:
 
 from wurzel.core import NoSettings, TypedStep
 from wurzel.datacontract.common import MarkdownDataContract
-from wurzel.executors.backend.backend_argo import ArgoBackend, ArgoBackendSettings, S3ArtifactTemplate
+from wurzel.executors.backend.backend_argo import ArgoBackend, S3ArtifactConfig, WorkflowConfig
 
 
 class DummyStep(TypedStep[NoSettings, None, MarkdownDataContract]):
@@ -35,15 +35,14 @@ class TestArgoBackend:
         """Test ArgoBackend can be initialized."""
         backend = ArgoBackend()
         assert backend is not None
-        assert isinstance(backend.settings, ArgoBackendSettings)
+        assert isinstance(backend.config, WorkflowConfig)
 
-    def test_backend_with_custom_settings(self):
-        """Test ArgoBackend with custom settings."""
-        settings = ArgoBackendSettings(IMAGE="custom-image:latest", PIPELINE_NAME="test-pipeline", NAMESPACE="test-ns")
-        backend = ArgoBackend(settings=settings)
-        assert backend.settings.IMAGE == "custom-image:latest"
-        assert backend.settings.PIPELINE_NAME == "test-pipeline"
-        assert backend.settings.NAMESPACE == "test-ns"
+    def test_backend_with_custom_config(self):
+        """Test ArgoBackend with custom config."""
+        config = WorkflowConfig(name="test-pipeline", namespace="test-ns")
+        backend = ArgoBackend(config=config)
+        assert backend.config.name == "test-pipeline"
+        assert backend.config.namespace == "test-ns"
 
     def test_generate_artifact_single_step(self):
         """Test generating Argo Workflow YAML for a single step."""
@@ -70,97 +69,64 @@ class TestArgoBackend:
         assert "DummyFollowStep" in yaml_output
         assert "tasks:" in yaml_output
 
-    def test_backend_settings_from_env(self, monkeypatch):
-        """Test ArgoBackend settings can be loaded from environment."""
-        monkeypatch.setenv("ARGOWORKFLOWBACKEND__IMAGE", "test-image:v1")
-        monkeypatch.setenv("ARGOWORKFLOWBACKEND__NAMESPACE", "custom-ns")
-        monkeypatch.setenv("ARGOWORKFLOWBACKEND__PIPELINE_NAME", "my-pipeline")
+    def test_workflow_config_defaults(self):
+        """Test WorkflowConfig has correct defaults."""
+        config = WorkflowConfig()
+        assert config.name == "wurzel"
+        assert config.namespace == "argo-workflows"
+        assert config.schedule == "0 4 * * *"
 
-        settings = ArgoBackendSettings()
-        assert settings.IMAGE == "test-image:v1"
-        assert settings.NAMESPACE == "custom-ns"
-        assert settings.PIPELINE_NAME == "my-pipeline"
-
-    def test_s3_artifact_template_settings(self):
-        """Test S3ArtifactTemplate settings."""
-        s3_config = S3ArtifactTemplate(bucket="my-bucket", endpoint="s3.example.com")
+    def test_s3_artifact_config(self):
+        """Test S3ArtifactConfig settings."""
+        s3_config = S3ArtifactConfig(bucket="my-bucket", endpoint="s3.example.com")
         assert s3_config.bucket == "my-bucket"
         assert s3_config.endpoint == "s3.example.com"
 
-    def test_inline_step_settings_disabled_by_default(self):
-        """Test INLINE_STEP_SETTINGS is disabled by default."""
-        settings = ArgoBackendSettings()
-        assert settings.INLINE_STEP_SETTINGS is False
-
-    def test_inline_step_settings_can_be_enabled(self, monkeypatch):
-        """Test INLINE_STEP_SETTINGS can be enabled via environment."""
-        monkeypatch.setenv("ARGOWORKFLOWBACKEND__INLINE_STEP_SETTINGS", "true")
-        settings = ArgoBackendSettings()
-        assert settings.INLINE_STEP_SETTINGS is True
+    def test_workflow_config_custom_image(self):
+        """Test WorkflowConfig with custom container image."""
+        config = WorkflowConfig()
+        config.container.image = "custom-image:v1"
+        assert config.container.image == "custom-image:v1"
 
     def test_is_available(self):
         """Test ArgoBackend.is_available() returns True when Hera is installed."""
         assert ArgoBackend.is_available() is True
 
-    def test_pipeline_name_validation(self):
-        """Test pipeline name must follow DNS label rules."""
-        # Valid names
-        ArgoBackendSettings(PIPELINE_NAME="valid-name")
-        ArgoBackendSettings(PIPELINE_NAME="name123")
+    def test_workflow_config_schedule_optional(self):
+        """Test WorkflowConfig schedule can be None for manual workflows."""
+        config = WorkflowConfig(schedule=None)
+        assert config.schedule is None
 
-        # Invalid names should raise validation error
-        with pytest.raises(Exception):  # Pydantic ValidationError
-            ArgoBackendSettings(PIPELINE_NAME="Invalid_Name")
-
-        with pytest.raises(Exception):
-            ArgoBackendSettings(PIPELINE_NAME="-invalid")
-
-        with pytest.raises(Exception):
-            ArgoBackendSettings(PIPELINE_NAME="invalid-")
-
-    def test_generate_dict_method(self):
-        """Test _generate_dict returns a dictionary."""
+    def test_generate_workflow_returns_dict(self):
+        """Test _generate_workflow returns a workflow object."""
         backend = ArgoBackend()
         step = DummyStep()
 
-        result = backend._generate_dict(step)
+        workflow = backend._generate_workflow(step)
 
-        assert isinstance(result, dict)
-        assert "metadata" in result
-        assert "spec" in result
+        assert workflow is not None
+        assert hasattr(workflow, "to_dict")
 
-    def test_create_envs_from_step_settings_disabled(self):
-        """Test _create_envs_from_step_settings returns empty list when disabled."""
-        settings = ArgoBackendSettings(INLINE_STEP_SETTINGS=False)
-        backend = ArgoBackend(settings=settings)
+    def test_wurzel_run_id_in_output(self):
+        """Test that WURZEL_RUN_ID is included in generated workflow."""
+        backend = ArgoBackend()
         step = DummyStep()
 
-        envs = backend._create_envs_from_step_settings(step)
+        yaml_output = backend.generate_artifact(step)
 
-        assert envs == []
+        assert "WURZEL_RUN_ID" in yaml_output
+        assert "{{workflow.uid}}" in yaml_output
 
-    def test_create_envs_from_step_settings_with_no_settings(self):
-        """Test _create_envs_from_step_settings with NoSettings step."""
-        settings = ArgoBackendSettings(INLINE_STEP_SETTINGS=True)
-        backend = ArgoBackend(settings=settings)
-        step = DummyStep()  # Has NoSettings
+    def test_backend_with_custom_executor(self):
+        """Test ArgoBackend can be initialized with custom executor."""
+        from wurzel.executors.base_executor import BaseStepExecutor
 
-        envs = backend._create_envs_from_step_settings(step)
-
-        assert envs == []
-
-    def test_backend_with_middlewares(self):
-        """Test ArgoBackend can be initialized with middlewares."""
-        backend = ArgoBackend(middlewares=["prometheus"])
+        backend = ArgoBackend(executor=BaseStepExecutor)
         assert backend is not None
+        assert backend.executor == BaseStepExecutor
 
-    def test_backend_dont_encapsulate(self):
-        """Test ArgoBackend with dont_encapsulate flag."""
-        backend = ArgoBackend(dont_encapsulate=True)
-        assert backend is not None
-
-    def test_s3_artifact_template_defaults(self):
-        """Test S3ArtifactTemplate has correct defaults."""
-        s3_config = S3ArtifactTemplate()
+    def test_s3_artifact_config_defaults(self):
+        """Test S3ArtifactConfig has correct defaults."""
+        s3_config = S3ArtifactConfig()
         assert s3_config.bucket == "wurzel-bucket"
         assert s3_config.endpoint == "s3.amazonaws.com"
