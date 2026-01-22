@@ -76,9 +76,10 @@ class TestDvcBackendRunId:
 
         yaml_output = backend.generate_artifact(step)
 
-        # Check that WURZEL_RUN_ID is set in the command
+        # Check that generate_run_id stage exists and generates WURZEL_RUN_ID
+        assert "generate_run_id:" in yaml_output
         assert "WURZEL_RUN_ID=" in yaml_output
-        assert "dvc-$(date" in yaml_output or "WURZEL_RUN_ID:-" in yaml_output
+        assert "dvc-$(date" in yaml_output
 
     def test_dvc_run_id_uses_timestamp_fallback(self):
         """Test that DVC uses timestamp-based fallback for run_id."""
@@ -87,11 +88,12 @@ class TestDvcBackendRunId:
 
         yaml_output = backend.generate_artifact(step)
 
-        # Verify the fallback pattern is present
-        assert "${WURZEL_RUN_ID:-dvc-$(date +%Y%m%d-%H%M%S)-$$}" in yaml_output
+        # Verify the generate_run_id stage generates the timestamp-based ID
+        assert "generate_run_id:" in yaml_output
+        assert "dvc-$(date +%Y%m%d-%H%M%S)-$$" in yaml_output
 
     def test_dvc_run_id_in_all_stages(self):
-        """Test that WURZEL_RUN_ID is set for all stages in a multi-step pipeline."""
+        """Test that all stages depend on the generate_run_id stage."""
         backend = DvcBackend()
 
         class Step1(TypedStep[NoSettings, None, MarkdownDataContract]):
@@ -108,9 +110,10 @@ class TestDvcBackendRunId:
 
         yaml_output = backend.generate_artifact(step2)
 
-        # Count occurrences of WURZEL_RUN_ID in the output
-        run_id_count = yaml_output.count("WURZEL_RUN_ID=")
-        assert run_id_count >= 2  # Should appear for both steps
+        # Verify generate_run_id stage exists
+        assert "generate_run_id:" in yaml_output
+        # Verify all steps depend on .wurzel_run_id
+        assert yaml_output.count(".wurzel_run_id") == 2  # Should appear in deps for both steps
 
 
 @pytest.mark.skipif(not HAS_HERA, reason="Hera not available")

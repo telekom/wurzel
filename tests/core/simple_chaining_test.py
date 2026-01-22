@@ -82,18 +82,22 @@ def test_yaml(backend: type[Backend], keys):
     d = WZ(D)
     a >> b >> c
     d >> c
+
+    # DVC backend adds generate_run_id stage, so counts are +1
+    is_dvc = backend == DvcBackend
+
     y = backend().generate_artifact(b)
     y_dict = yaml.safe_load(y)
-    assert len(safeget(y_dict, *keys)) == 2
+    assert len(safeget(y_dict, *keys)) == (3 if is_dvc else 2)
     y = backend().generate_artifact(c)
     y_dict = yaml.safe_load(y)
-    assert len(safeget(y_dict, *keys)) == 4
+    assert len(safeget(y_dict, *keys)) == (5 if is_dvc else 4)
     y = backend().generate_artifact(d)
     y_dict = yaml.safe_load(y)
-    assert len(safeget(y_dict, *keys)) == 1
+    assert len(safeget(y_dict, *keys)) == (2 if is_dvc else 1)
     y = backend().generate_artifact(a)
     y_dict = yaml.safe_load(y)
-    assert len(safeget(y_dict, *keys)) == 1
+    assert len(safeget(y_dict, *keys)) == (2 if is_dvc else 1)
 
 
 def _get_minimal_pipeline_test_params():
@@ -112,4 +116,6 @@ def test_minimal_pipeline(backend: type[Backend], keys, params):
 
     y = backend(**params).generate_artifact(duplication)
     y_dict = yaml.safe_load(y)
-    assert len(safeget(y_dict, *keys)) == 3
+    # DVC backend adds generate_run_id stage, so count is 4 instead of 3
+    expected_count = 4 if backend == DvcBackend else 3
+    assert len(safeget(y_dict, *keys)) == expected_count

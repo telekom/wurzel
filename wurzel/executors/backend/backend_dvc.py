@@ -190,14 +190,16 @@ class DvcBackend(Backend):
             encapsulate_env=self.config.encapsulateEnv,
         )
 
-        # Prepend WURZEL_RUN_ID environment variable to the command
-        # DVC will generate a unique ID at runtime using timestamp
-        cmd = f'WURZEL_RUN_ID="${{WURZEL_RUN_ID:-dvc-$(date +%Y%m%d-%H%M%S)-$$}}" {cli_call}'
+        # Add dependency on the run_id stage for all steps
+        run_id_output = self.config.dataDir / ".wurzel_run_id"
+        deps_with_run_id = [inspect.getfile(step.__class__), run_id_output, *outputs_of_deps]
+
+        cmd = f'export WURZEL_RUN_ID="$(cat {run_id_output})" && echo "$WURZEL_RUN_ID" &&  {cli_call}'
 
         return result | {
             step.__class__.__name__: {
                 "cmd": cmd,
-                "deps": [inspect.getfile(step.__class__), *outputs_of_deps],
+                "deps": deps_with_run_id,
                 "outs": [output_path],
                 "always_changed": step.is_leaf(),  # Forces re-run for leaf steps
             }
@@ -218,11 +220,25 @@ class DvcBackend(Backend):
             str: A YAML string containing the full DVC pipeline definition.
 
         """
-        data = self._generate_dict(step)
+        # Add the run_id stage that generates WURZEL_RUN_ID
+        run_id_output = self.config.dataDir / ".wurzel_run_id"
+        run_id_cmd = (
+            f'export WURZEL_RUN_ID="dvc-$(date +%Y%m%d-%H%M%S)-$$" && echo "$WURZEL_RUN_ID" > {run_id_output} && export WURZEL_RUN_ID'
+        )
+        run_id_stage = {
+            "generate_run_id": {
+                "cmd": run_id_cmd,
+                "outs": [run_id_output],
+                "always_changed": True,
+            }
+        }
+
+        data = run_id_stage | self._generate_dict(step)
 
         # Convert all Path objects to strings for YAML compatibility
         for k in data:
             for key in ["outs", "deps"]:
-                data[k][key] = [str(p) for p in data[k][key]]
+                if key in data[k]:
+                    data[k][key] = [str(p) for p in data[k][key]]
 
         return yaml.dump({"stages": data})
