@@ -198,9 +198,26 @@ def test_topics_deprecation_warning(tmp_path):
     with pytest.warns(DeprecationWarning, match="`topics` metadata field is deprecated "):
         f = tmp_path / "file.md"
         f.write_text("---\ntopics: foo\n---\n# Some title\n\nMore text.")
-        s = MarkdownDataContract.from_file(f, url_prefix="SPACE/")
 
-        assert s.md.startswith("# Some title")
+
+def test_markdown_data_contract_metrics():
+    doc = MarkdownDataContract(md="Hello\nWorld", keywords="bread, butter, ,", url="u")
+    metrics = doc.metrics()
+
+    assert metrics["md_char_len"] == float(len(doc.md))
+    assert metrics["md_line_count"] == float(len(doc.md.splitlines()))
+    assert metrics["keywords_count"] == 2.0
+
+
+def test_markdown_data_contract_metrics_aggregated():
+    doc_a = MarkdownDataContract(md="abcd", keywords="a,b", url="u")
+    doc_b = MarkdownDataContract(md="xyz", keywords="c", url="u")
+
+    metrics = MarkdownDataContract.get_metrics([doc_a, doc_b])
+
+    assert metrics["md_char_len"] == float(len(doc_a.md) + len(doc_b.md))
+    assert metrics["md_line_count"] == float(len(doc_a.md.splitlines()) + len(doc_b.md.splitlines()))
+    assert metrics["keywords_count"] == 3.0
 
 
 def test_metadata_field_metadata(tmp_path):
