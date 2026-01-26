@@ -198,6 +198,8 @@ def test_topics_deprecation_warning(tmp_path):
     with pytest.warns(DeprecationWarning, match="`topics` metadata field is deprecated "):
         f = tmp_path / "file.md"
         f.write_text("---\ntopics: foo\n---\n# Some title\n\nMore text.")
+        s = MarkdownDataContract.from_file(f, url_prefix="SPACE/")
+        assert s.md.startswith("# Some title")
 
 
 def test_markdown_data_contract_metrics():
