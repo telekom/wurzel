@@ -67,7 +67,7 @@ class BaseMiddleware(ABC):
 
     def __exit__(self, *exc_details):
         """Context manager exit. Called when leaving the 'with' block."""
-        return self
+        return False
 
 
 class MiddlewareChain:
