@@ -164,3 +164,35 @@ def test_prometheus_middleware_run_id_with_step_name_label(monkeypatch) -> None:
         sample for sample in metric_samples if sample.labels.get("run_id") == test_run_id and sample.labels.get("step_name") == "DummyStep"
     ]
     assert len(matching_samples) > 0, "Expected to find metrics with both run_id and step_name labels"
+
+
+def test_prometheus_middleware_datacontract_metrics(monkeypatch) -> None:
+    test_run_id = "metrics-test-123"
+    monkeypatch.setenv("WURZEL_RUN_ID", test_run_id)
+
+    report = DummyReport(
+        results=1,
+        inputs=1,
+        time_to_save=0.1,
+        time_to_load=0.1,
+        time_to_execute=0.1,
+        metrics={"md_char_len": 5.0},
+    )
+
+    def call_next(step_cls: type, inputs: Optional[set], output_dir: Optional[Any]):
+        return [(None, report)]
+
+    m = PrometheusMiddleware()
+    m(call_next, DummyStep, set(), None)
+
+    metric_samples = list(m.gauge_contract_metrics.collect())[0].samples
+    matches = [
+        sample
+        for sample in metric_samples
+        if sample.name == "step_datacontract_metric"
+        and sample.labels.get("metric_name") == "md_char_len"
+        and sample.labels.get("step_name") == "DummyStep"
+        and sample.labels.get("run_id") == test_run_id
+    ]
+    assert len(matches) == 1
+    assert matches[0].value == 5.0

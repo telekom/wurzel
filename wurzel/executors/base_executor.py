@@ -61,6 +61,7 @@ class StepReport(pydantic.BaseModel):
     time_to_save: float
     step_name: str
     history: list[str]
+    metrics: dict[str, float] = pydantic.Field(default_factory=dict)
 
 
 def _try_sort(x: StepReturnType) -> StepReturnType:
@@ -84,6 +85,23 @@ def _try_sort(x: StepReturnType) -> StepReturnType:
         return x
     log.warning("Can't sort objects of this type", extra={"extra": {"type": type(x).__name__}})
     return x
+
+
+def _collect_output_metrics(step: TypedStep, result: Any) -> dict[str, float]:
+    output_model_class = step.output_model_class
+    get_metrics = getattr(output_model_class, "get_metrics", None)
+    if not callable(get_metrics):
+        return {}
+    try:
+        metrics = get_metrics(result)
+    except Exception:  # pylint: disable=broad-exception-caught
+        log.warning(
+            "Could not collect data contract metrics",
+            extra={"step": step.__class__.__name__, "contract": output_model_class.__name__},
+            exc_info=True,
+        )
+        return {}
+    return metrics or {}
 
 
 @contextmanager
@@ -355,6 +373,7 @@ class BaseStepExecutor:
                     inputs=try_get_length(inpt),
                     results=try_get_length(res),
                     history=history.get(),
+                    metrics=_collect_output_metrics(step, res),
                 )
                 log.info(
                     f"Finished: {step_cls.__name__}.run({history[:-1]}) -> {output_path}",

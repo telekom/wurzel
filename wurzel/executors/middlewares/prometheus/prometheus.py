@@ -8,7 +8,7 @@ import os
 from logging import getLogger
 from typing import Any, Optional
 
-from prometheus_client import REGISTRY, CollectorRegistry, Counter, Histogram, push_to_gateway
+from prometheus_client import REGISTRY, CollectorRegistry, Counter, Gauge, Histogram, push_to_gateway
 
 from wurzel.core.typed_step import TypedStep
 from wurzel.path import PathToFolderWithBaseModels
@@ -73,6 +73,12 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
         self.histogram_save = Histogram("step_hist_save", "Time to save results", ("step_name", "run_id"), registry=self.registry)
         self.histogram_load = Histogram("step_hist_load", "Time to load inputs", ("step_name", "run_id"), registry=self.registry)
         self.histogram_execute = Histogram("step_hist_execute", "Time to execute results", ("step_name", "run_id"), registry=self.registry)
+        self.gauge_contract_metrics = Gauge(
+            "step_datacontract_metric",
+            "Metrics reported by data contracts",
+            ("metric_name", "step_name", "run_id"),
+            registry=self.registry,
+        )
 
     def __call__(
         self,
@@ -105,16 +111,23 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
 
         # Aggregate metrics from all reports
         tt_s, tt_l, tt_e = (0, 0, 0)
+        contract_metrics: dict[str, float] = {}
         for _, report in data:
             self.counter_results.labels(step_name, run_id).inc(report.results)
             self.counter_inputs.labels(step_name, run_id).inc(report.inputs)
             tt_s += report.time_to_save
             tt_l += report.time_to_load
             tt_e += report.time_to_execute
+            report_metrics = getattr(report, "metrics", None)
+            if report_metrics:
+                for name, value in report_metrics.items():
+                    contract_metrics[name] = contract_metrics.get(name, 0.0) + float(value)
 
         self.histogram_save.labels(step_name, run_id).observe(tt_s)
         self.histogram_load.labels(step_name, run_id).observe(tt_l)
         self.histogram_execute.labels(step_name, run_id).observe(tt_e)
+        for name, value in contract_metrics.items():
+            self.gauge_contract_metrics.labels(name, step_name, run_id).set(value)
 
         return data
 

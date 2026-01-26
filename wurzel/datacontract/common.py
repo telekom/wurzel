@@ -132,3 +132,11 @@ class MarkdownDataContract(PydanticModel):
             keywords=metadata.get("keywords", path.name.split(".")[0]),
             metadata=metadata.get("metadata", None),
         )
+
+    def metrics(self) -> dict[str, float]:
+        keywords_list = [kw.strip() for kw in self.keywords.split(",") if kw.strip()]
+        return {
+            "md_char_len": float(len(self.md)),
+            "md_line_count": float(len(self.md.splitlines())),
+            "keywords_count": float(len(keywords_list)),
+        }
