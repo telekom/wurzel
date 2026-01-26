@@ -128,6 +128,16 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
             metrics["columns"] = float(obj.shape[1])
         return metrics
 
+    @classmethod
+    def get_metrics(cls, obj: Any) -> MetricMap:
+        import pandas as pd  # pylint: disable=import-outside-toplevel
+
+        metrics = super().get_metrics(obj)
+        if isinstance(obj, pd.DataFrame):
+            metrics["rows"] = float(obj.shape[0])
+            metrics["columns"] = float(obj.shape[1])
+        return metrics
+
 
 class PydanticModel(pydantic.BaseModel, DataModel):
     """DataModel contract specified with pydantic."""
