@@ -47,9 +47,9 @@ wurzel inspect wurzel.<step_path>
 ### 2. Programmatic Execution (Python)
 Run a step using the snippet below:
 ```python
-from wurzel.steps import step
 from pathlib import Path
-from wurzel.step_executor import BaseStepExecutor
+from wurzel.executors.base_executor import BaseStepExecutor
+from wurzel.steps import step
 
 with BaseStepExecutor() as ex:
     ex(step, set(Path("./input")), Path("./output"))

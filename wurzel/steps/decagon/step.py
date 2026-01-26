@@ -11,9 +11,9 @@ import pandas as pd
 import requests
 from pandera.typing import DataFrame
 
+from wurzel.core import TypedStep
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import StepFailed
-from wurzel.step import TypedStep
 
 from .data import ChunkResultInfo, DecagonArticleResult
 from .settings import DecagonSettings

@@ -10,7 +10,8 @@ description = "Pick, choose and chain your RAG tools in a pythonic way"
 authors = [
     {name ="Thomas Weigel", email="thomas.weigel@telekom.de"},
     {name ="Paul Bauriegel", email="paul.bauriegel@telekom.de"},
-    {name ="Maximilian Erren", email="maximilian.erren@telekom.de"}
+    {name ="Maximilian Erren", email="maximilian.erren@telekom.de"},
+    {name ="Sam Heymann", email="sam.heymann@telekom.de"}
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.13"
