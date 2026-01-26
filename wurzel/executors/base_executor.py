@@ -313,7 +313,7 @@ class BaseStepExecutor:
             else:
                 raise NotImplementedError(f"Cannot load/convert {inpt} as input for a step")
 
-    def _execute_step(
+    def _execute_step(  # pylint: disable=too-many-locals
         self,
         step_cls: type[TypedStep],
         inputs: set[PathToFolderWithBaseModels],
@@ -344,8 +344,9 @@ class BaseStepExecutor:
                 run_time = time.time() - run_start
                 store_time = 0
                 if output_path:
+                    store_start = time.time()
                     self.store(step, history, res, output_path)
-                    store_time = time.time() - run_time
+                    store_time = time.time() - store_start
                 report = StepReport(
                     time_to_load=load_time,
                     time_to_execute=run_time,
