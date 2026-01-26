@@ -5,6 +5,7 @@
 """Tests for run_id functionality in backends."""
 
 import pytest
+import yaml
 
 from wurzel.core import NoSettings, TypedStep
 from wurzel.datacontract.common import MarkdownDataContract
@@ -110,10 +111,20 @@ class TestDvcBackendRunId:
 
         yaml_output = backend.generate_artifact(step2)
 
+        data = yaml.safe_load(yaml_output)
+        assert isinstance(data, dict)
+        assert "stages" in data
+        stages = data["stages"]
+
         # Verify generate_run_id stage exists
-        assert "generate_run_id:" in yaml_output
-        # Verify all steps depend on .wurzel_run_id
-        assert yaml_output.count(".wurzel_run_id") == 2  # Should appear in deps for both steps
+        assert "generate_run_id" in stages
+
+        # Verify all step stages depend on .wurzel_run_id (in deps)
+        run_id_filename = ".wurzel_run_id"
+        for stage_name in ["Step1", "Step2"]:
+            assert stage_name in stages
+            deps = stages[stage_name].get("deps", [])
+            assert any(str(dep).endswith(run_id_filename) for dep in deps)
 
 
 @pytest.mark.skipif(not HAS_HERA, reason="Hera not available")
