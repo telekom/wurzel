@@ -29,18 +29,39 @@ class NestedCustomPrefixSettings(SettingsLeaf):
     NESTED_LIST: list[str] = ["default"]
 
 
+def test_case_sensitive_behavior():
+    """Test that environment variable handling is case-sensitive due to case_sensitive=True in model_config."""
+    # Test that case sensitivity is enforced regardless of platform
+    # This should work the same way on Windows and Unix-like systems
+    os.environ["my_custom_prefix_test_field"] = "lowercase_value"
+    os.environ["my_custom_prefix_TEST_FIELD"] = "UPPERCASE_VALUE"
+
+    try:
+        settings = CustomPrefixSettings()
+        # Should read from the exact case match, not the lowercase version
+        assert settings.TEST_FIELD == "UPPERCASE_VALUE", f"Expected UPPERCASE_VALUE, got {settings.TEST_FIELD}"
+    finally:
+        # Clean up both environment variables
+        if "my_custom_prefix_test_field" in os.environ:
+            del os.environ["my_custom_prefix_test_field"]
+        if "my_custom_prefix_TEST_FIELD" in os.environ:
+            del os.environ["my_custom_prefix_TEST_FIELD"]
+
+
 def test_custom_env_prefix_direct_usage():
     """Test that custom env_prefix in model_config is respected when using settings directly."""
     # Set environment variables with custom prefix
+    # Since case_sensitive=True is set in SettingsBase.model_config,
+    # environment variable names should be case-sensitive across all platforms
     os.environ["my_custom_prefix_TEST_FIELD"] = "CUSTOM_VALUE"
     os.environ["my_custom_prefix_ANOTHER_FIELD"] = "100"  # pragma: allowlist secret
 
     try:
         settings = CustomPrefixSettings()
-        assert settings.TEST_FIELD == "CUSTOM_VALUE"
-        assert settings.ANOTHER_FIELD == 100
+        assert settings.TEST_FIELD == "CUSTOM_VALUE", f"Expected CUSTOM_VALUE, got {settings.TEST_FIELD}"
+        assert settings.ANOTHER_FIELD == 100, f"Expected 100, got {settings.ANOTHER_FIELD}"
     finally:
-        # Clean up
+        # Clean up environment variables
         del os.environ["my_custom_prefix_TEST_FIELD"]
         del os.environ["my_custom_prefix_ANOTHER_FIELD"]  # pragma: allowlist secret
 
