@@ -43,7 +43,7 @@ class NestedCustomPrefixSettings(SettingsLeaf):
     NESTED_LIST: list[str] = ["default"]
 
 
-def test_windows_case_sensitivity_limitation():
+def test_windows_case_sensitivity_limitation(env):
     """Test that documents the Windows case sensitivity limitation.
 
     This test documents the known limitation that on Windows, the case_sensitive=True
@@ -52,90 +52,48 @@ def test_windows_case_sensitivity_limitation():
 
     See: https://docs.pydantic.dev/latest/concepts/pydantic_settings/#case-sensitivity
     """
-    # Use direct environment variable setting to avoid monkeypatch issues
-    import os
+    # Use the env fixture to properly manage environment variables
+    env.set("my_custom_prefix_TEST_FIELD", "UPPERCASE")
 
-    original_value = os.environ.get("my_custom_prefix_TEST_FIELD")
+    settings = CustomPrefixSettings()
+    actual_value = settings.TEST_FIELD
 
-    try:
-        # Set environment variable directly - match the exact field name case
-        os.environ["my_custom_prefix_TEST_FIELD"] = "UPPERCASE"
-
-        settings = CustomPrefixSettings()
-        actual_value = settings.TEST_FIELD
-
-        # On Unix-like systems: should read from exact case match
-        # On Windows: case_sensitive is ignored, but should still read from env var
-        assert actual_value == "UPPERCASE", (
-            f"Expected UPPERCASE, got '{actual_value}'. Default value 'default_value' suggests environment variables are not being read."
-        )
-    finally:
-        # Clean up
-        if original_value is None:
-            os.environ.pop("my_custom_prefix_TEST_FIELD", None)
-        else:
-            os.environ["my_custom_prefix_TEST_FIELD"] = original_value
+    # On Unix-like systems: should read from exact case match
+    # On Windows: case_sensitive is ignored, but should still read from env var
+    assert actual_value == "UPPERCASE", (
+        f"Expected UPPERCASE, got '{actual_value}'. Default value 'default_value' suggests environment variables are not being read."
+    )
 
 
-def test_case_sensitive_behavior():
+def test_case_sensitive_behavior(env):
     """Test that environment variable handling works correctly across platforms."""
-    # Use direct environment variable setting to avoid monkeypatch issues
-    import os
+    # Use the env fixture to properly manage environment variables
+    env.set("my_custom_prefix_TEST_FIELD", "UPPERCASE_VALUE")
 
-    original_value = os.environ.get("my_custom_prefix_TEST_FIELD")
+    settings = CustomPrefixSettings()
+    actual_value = settings.TEST_FIELD
 
-    try:
-        # Set environment variable directly - match the exact field name case
-        os.environ["my_custom_prefix_TEST_FIELD"] = "UPPERCASE_VALUE"
-
-        settings = CustomPrefixSettings()
-        actual_value = settings.TEST_FIELD
-
-        # Should read from the environment variable
-        assert actual_value == "UPPERCASE_VALUE", (
-            f"Expected UPPERCASE_VALUE, got '{actual_value}'. This suggests the environment variables are not being read correctly."
-        )
-    finally:
-        # Clean up
-        if original_value is None:
-            os.environ.pop("my_custom_prefix_TEST_FIELD", None)
-        else:
-            os.environ["my_custom_prefix_TEST_FIELD"] = original_value
+    # Should read from the environment variable
+    assert actual_value == "UPPERCASE_VALUE", (
+        f"Expected UPPERCASE_VALUE, got '{actual_value}'. This suggests the environment variables are not being read correctly."
+    )
 
 
-def test_custom_env_prefix_direct_usage():
+def test_custom_env_prefix_direct_usage(env):
     """Test that custom env_prefix in model_config is respected when using settings directly."""
-    # Use direct environment variable setting to avoid monkeypatch issues
-    import os
+    # Use the env fixture to properly manage environment variables
+    env.set("my_custom_prefix_TEST_FIELD", "CUSTOM_VALUE")
+    env.set("my_custom_prefix_ANOTHER_FIELD", "100")  # pragma: allowlist secret
 
-    original_test_field = os.environ.get("my_custom_prefix_TEST_FIELD")
-    original_another_field = os.environ.get("my_custom_prefix_ANOTHER_FIELD")
+    settings = CustomPrefixSettings()
 
-    try:
-        # Set environment variables directly - match the exact field name case
-        os.environ["my_custom_prefix_TEST_FIELD"] = "CUSTOM_VALUE"
-        os.environ["my_custom_prefix_ANOTHER_FIELD"] = "100"  # pragma: allowlist secret
-
-        settings = CustomPrefixSettings()
-
-        # Test that the custom prefix works and reads from env vars
-        assert settings.TEST_FIELD == "CUSTOM_VALUE", (
-            f"Expected CUSTOM_VALUE, got '{settings.TEST_FIELD}'. This suggests the custom env_prefix is not working correctly."
-        )
-        assert settings.ANOTHER_FIELD == 100, (
-            f"Expected 100, got {settings.ANOTHER_FIELD}. This suggests the custom env_prefix is not working correctly."
-        )
-    finally:
-        # Clean up
-        if original_test_field is None:
-            os.environ.pop("my_custom_prefix_TEST_FIELD", None)
-        else:
-            os.environ["my_custom_prefix_TEST_FIELD"] = original_test_field
-
-        if original_another_field is None:
-            os.environ.pop("my_custom_prefix_ANOTHER_FIELD", None)  # pragma: allowlist secret
-        else:
-            os.environ["my_custom_prefix_ANOTHER_FIELD"] = original_another_field  # pragma: allowlist secret
+    # Test that the custom prefix works and reads from env vars
+    assert settings.TEST_FIELD == "CUSTOM_VALUE", (
+        f"Expected CUSTOM_VALUE, got '{settings.TEST_FIELD}'. This suggests the custom env_prefix is not working correctly."
+    )
+    assert settings.ANOTHER_FIELD == 100, (
+        f"Expected 100, got {settings.ANOTHER_FIELD}. This suggests the custom env_prefix is not working correctly."
+    )
 
 
 def test_with_prefix_preserves_existing_config(monkeypatch):
