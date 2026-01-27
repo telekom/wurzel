@@ -122,7 +122,16 @@ class SettingsLeaf(SettingsBase):
     def with_prefix(cls, prefix: str) -> "SettingsLeaf":
         """Returns a new class with env_prefix set."""
         cpy = create_model(prefix + "." + cls.__class__.__name__, __base__=cls)
-        cpy.model_config["env_prefix"] = prefix
+
+        # Get existing model_config or create new one
+        existing_config = getattr(cls, "model_config", SettingsConfigDict())
+
+        # Create new config dict, preserving existing settings and updating env_prefix
+        new_config = dict(existing_config)
+        new_config["env_prefix"] = prefix
+
+        # Set the merged config
+        cpy.model_config = SettingsConfigDict(**new_config)
         return cpy
 
 

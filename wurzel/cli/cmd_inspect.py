@@ -22,7 +22,22 @@ def main(step: "type[TypedStep]", gen_env=False):
 
     ins = WZ(step)
     set_cls: Settings = ins.settings_class
-    env_prefix = step.__name__.upper()
+
+    # Get env_prefix from settings model_config if available and non-empty, otherwise use step name
+    has_custom_prefix = (
+        set_cls != NoneType
+        and set_cls is not None
+        and set_cls != NoSettings
+        and hasattr(set_cls, "model_config")
+        and "env_prefix" in set_cls.model_config
+        and set_cls.model_config["env_prefix"]
+    )
+
+    if has_custom_prefix:
+        env_prefix = set_cls.model_config["env_prefix"]
+    else:
+        env_prefix = step.__name__.upper()
+
     data = {
         "Name": step.__name__,
         "Input": "None" if ins.input_model_class == NoneType else ins.input_model_class,
