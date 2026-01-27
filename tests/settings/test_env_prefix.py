@@ -4,8 +4,6 @@
 
 """Tests for env_prefix support in SettingsLeaf."""
 
-import os
-
 from pydantic_settings import SettingsConfigDict
 
 from wurzel.step.settings import Settings, SettingsLeaf
@@ -29,44 +27,32 @@ class NestedCustomPrefixSettings(SettingsLeaf):
     NESTED_LIST: list[str] = ["default"]
 
 
-def test_case_sensitive_behavior():
+def test_case_sensitive_behavior(monkeypatch):
     """Test that environment variable handling is case-sensitive due to case_sensitive=True in model_config."""
     # Test that case sensitivity is enforced regardless of platform
     # This should work the same way on Windows and Unix-like systems
-    os.environ["my_custom_prefix_test_field"] = "lowercase_value"
-    os.environ["my_custom_prefix_TEST_FIELD"] = "UPPERCASE_VALUE"
+    monkeypatch.setenv("my_custom_prefix_test_field", "lowercase_value")
+    monkeypatch.setenv("my_custom_prefix_TEST_FIELD", "UPPERCASE_VALUE")
 
-    try:
-        settings = CustomPrefixSettings()
-        # Should read from the exact case match, not the lowercase version
-        assert settings.TEST_FIELD == "UPPERCASE_VALUE", f"Expected UPPERCASE_VALUE, got {settings.TEST_FIELD}"
-    finally:
-        # Clean up both environment variables
-        if "my_custom_prefix_test_field" in os.environ:
-            del os.environ["my_custom_prefix_test_field"]
-        if "my_custom_prefix_TEST_FIELD" in os.environ:
-            del os.environ["my_custom_prefix_TEST_FIELD"]
+    settings = CustomPrefixSettings()
+    # Should read from the exact case match, not the lowercase version
+    assert settings.TEST_FIELD == "UPPERCASE_VALUE", f"Expected UPPERCASE_VALUE, got {settings.TEST_FIELD}"
 
 
-def test_custom_env_prefix_direct_usage():
+def test_custom_env_prefix_direct_usage(monkeypatch):
     """Test that custom env_prefix in model_config is respected when using settings directly."""
     # Set environment variables with custom prefix
     # Since case_sensitive=True is set in SettingsBase.model_config,
     # environment variable names should be case-sensitive across all platforms
-    os.environ["my_custom_prefix_TEST_FIELD"] = "CUSTOM_VALUE"
-    os.environ["my_custom_prefix_ANOTHER_FIELD"] = "100"  # pragma: allowlist secret
+    monkeypatch.setenv("my_custom_prefix_TEST_FIELD", "CUSTOM_VALUE")
+    monkeypatch.setenv("my_custom_prefix_ANOTHER_FIELD", "100")  # pragma: allowlist secret
 
-    try:
-        settings = CustomPrefixSettings()
-        assert settings.TEST_FIELD == "CUSTOM_VALUE", f"Expected CUSTOM_VALUE, got {settings.TEST_FIELD}"
-        assert settings.ANOTHER_FIELD == 100, f"Expected 100, got {settings.ANOTHER_FIELD}"
-    finally:
-        # Clean up environment variables
-        del os.environ["my_custom_prefix_TEST_FIELD"]
-        del os.environ["my_custom_prefix_ANOTHER_FIELD"]  # pragma: allowlist secret
+    settings = CustomPrefixSettings()
+    assert settings.TEST_FIELD == "CUSTOM_VALUE", f"Expected CUSTOM_VALUE, got {settings.TEST_FIELD}"
+    assert settings.ANOTHER_FIELD == 100, f"Expected 100, got {settings.ANOTHER_FIELD}"
 
 
-def test_with_prefix_preserves_existing_config():
+def test_with_prefix_preserves_existing_config(monkeypatch):
     """Test that with_prefix method preserves existing model_config and only updates env_prefix."""
     # Test with_prefix method
     prefixed_class = CustomPrefixSettings.with_prefix("TEST__")
@@ -79,15 +65,12 @@ def test_with_prefix_preserves_existing_config():
     assert prefixed_class.model_config["env_nested_delimiter"] == "__"
 
     # Test that the prefixed class works with environment variables
-    os.environ["TEST__TEST_FIELD"] = "prefixed_value"
-    try:
-        prefixed_settings = prefixed_class()
-        assert prefixed_settings.TEST_FIELD == "prefixed_value"
-    finally:
-        del os.environ["TEST__TEST_FIELD"]
+    monkeypatch.setenv("TEST__TEST_FIELD", "prefixed_value")
+    prefixed_settings = prefixed_class()
+    assert prefixed_settings.TEST_FIELD == "prefixed_value"
 
 
-def test_nested_settings_with_custom_prefix():
+def test_nested_settings_with_custom_prefix(monkeypatch):
     """Test that nested settings with custom env_prefix work correctly."""
 
     # Create a parent settings class that contains the nested settings
@@ -96,20 +79,14 @@ def test_nested_settings_with_custom_prefix():
 
     # Set environment variables for nested settings using the field name prefix
     # This is the expected behavior for nested settings
-    os.environ["NESTED__NESTED_FIELD"] = "false"
-    os.environ["NESTED__NESTED_LIST"] = '["item1", "item2"]'
+    monkeypatch.setenv("NESTED__NESTED_FIELD", "false")
+    monkeypatch.setenv("NESTED__NESTED_LIST", '["item1", "item2"]')
 
-    try:
-        parent_settings = ParentSettings()
+    parent_settings = ParentSettings()
 
-        # The nested settings should read from the environment
-        assert parent_settings.NESTED.NESTED_FIELD is False
-        assert parent_settings.NESTED.NESTED_LIST == ["item1", "item2"]
-
-    finally:
-        # Clean up
-        del os.environ["NESTED__NESTED_FIELD"]
-        del os.environ["NESTED__NESTED_LIST"]
+    # The nested settings should read from the environment
+    assert parent_settings.NESTED.NESTED_FIELD is False
+    assert parent_settings.NESTED.NESTED_LIST == ["item1", "item2"]
 
 
 def test_default_env_prefix_fallback():
