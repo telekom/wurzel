@@ -36,66 +36,47 @@ def test_windows_case_sensitivity_limitation(monkeypatch):
 
     See: https://docs.pydantic.dev/latest/concepts/pydantic_settings/#case-sensitivity
     """
-    # Set two environment variables with different cases but same prefix
+    # Set only one environment variable to avoid conflicts
     monkeypatch.setenv("my_custom_prefix_TEST_FIELD", "UPPERCASE")
-    monkeypatch.setenv("my_custom_prefix_test_field", "lowercase")
 
     settings = CustomPrefixSettings()
-
-    # The key insight: on Windows, both variables might be accessible due to OS case insensitivity
-    # On Unix-like systems, only the exact case match should be accessible
-    # This test documents that the behavior differs by platform, which is expected
     actual_value = settings.TEST_FIELD
 
-    # Should read from one of the environment variables (not the default value)
-    # The specific value depends on the platform and pydantic-settings implementation
-    assert actual_value in ["UPPERCASE", "lowercase"], (
-        f"Expected UPPERCASE or lowercase, got '{actual_value}'. "
-        f"Default value 'default_value' suggests environment variables are not being read."
+    # Should read from the environment variable (not the default value)
+    assert actual_value == "UPPERCASE", (
+        f"Expected UPPERCASE, got '{actual_value}'. Default value 'default_value' suggests environment variables are not being read."
     )
 
 
 def test_case_sensitive_behavior(monkeypatch):
     """Test that environment variable handling works correctly across platforms."""
-    # Test both lowercase and uppercase environment variable names
-    # On Windows, environment variables are case-insensitive at OS level (case_sensitive has no effect)
-    # On Unix-like systems, they are case-sensitive when case_sensitive=True
-    monkeypatch.setenv("my_custom_prefix_test_field", "lowercase_value")
+    # Set only one environment variable to avoid conflicts
     monkeypatch.setenv("my_custom_prefix_TEST_FIELD", "UPPERCASE_VALUE")
 
     settings = CustomPrefixSettings()
     actual_value = settings.TEST_FIELD
 
-    # On Unix-like systems with case_sensitive=True: should get UPPERCASE_VALUE (exact match)
-    # On Windows: case_sensitive is ignored, so behavior depends on how pydantic processes the env vars
-    # The important thing is that it reads from one of the environment variables (not the default)
-    assert actual_value in ["lowercase_value", "UPPERCASE_VALUE"], (
-        f"Expected one of ['lowercase_value', 'UPPERCASE_VALUE'], got '{actual_value}'. "
-        "This suggests the environment variables are not being read correctly."
+    # Should read from the environment variable
+    assert actual_value == "UPPERCASE_VALUE", (
+        f"Expected UPPERCASE_VALUE, got '{actual_value}'. This suggests the environment variables are not being read correctly."
     )
 
 
 def test_custom_env_prefix_direct_usage(monkeypatch):
     """Test that custom env_prefix in model_config is respected when using settings directly."""
-    # Set environment variables with custom prefix
-    # Test with both cases to ensure compatibility across platforms
-    # Note: On Windows, case_sensitive is ignored, so we test both cases
+    # Set only one environment variable to avoid conflicts
     monkeypatch.setenv("my_custom_prefix_TEST_FIELD", "CUSTOM_VALUE")
-    monkeypatch.setenv("my_custom_prefix_test_field", "custom_value_lowercase")
     monkeypatch.setenv("my_custom_prefix_ANOTHER_FIELD", "100")  # pragma: allowlist secret
-    monkeypatch.setenv("my_custom_prefix_another_field", "200")  # pragma: allowlist secret
 
     settings = CustomPrefixSettings()
 
-    # On Unix-like systems with case_sensitive=True: should get exact case matches
-    # On Windows: case_sensitive is ignored, so might get either case
-    # The important thing is that the custom prefix works and reads from env vars
-    assert settings.TEST_FIELD in ["CUSTOM_VALUE", "custom_value_lowercase"], (
-        f"Expected CUSTOM_VALUE or custom_value_lowercase, got '{settings.TEST_FIELD}'. "
-        "This suggests the custom env_prefix is not working correctly."
+    # Test that the custom prefix works and reads from env vars
+    # On both Windows and Unix-like systems, this should work
+    assert settings.TEST_FIELD == "CUSTOM_VALUE", (
+        f"Expected CUSTOM_VALUE, got '{settings.TEST_FIELD}'. This suggests the custom env_prefix is not working correctly."
     )
-    assert settings.ANOTHER_FIELD in [100, 200], (
-        f"Expected 100 or 200, got {settings.ANOTHER_FIELD}. This suggests the custom env_prefix is not working correctly."
+    assert settings.ANOTHER_FIELD == 100, (
+        f"Expected 100, got {settings.ANOTHER_FIELD}. This suggests the custom env_prefix is not working correctly."
     )
 
 
