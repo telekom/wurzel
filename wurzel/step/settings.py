@@ -4,9 +4,11 @@
 
 import inspect
 import json
+from types import NoneType
 from typing import Any, TypeAlias, Union, get_origin
 
-from pydantic import create_model, model_validator
+from pydantic import create_model as py_create_model
+from pydantic import model_validator
 from pydantic_core import InitErrorDetails, PydanticUndefined, ValidationError
 from pydantic_settings import (
     BaseSettings as _PydanticBaseSettings,
@@ -15,6 +17,45 @@ from pydantic_settings import (
     PydanticBaseSettingsSource,
     SettingsConfigDict,
 )
+
+
+def get_env_prefix_from_settings(settings_cls: type, step_name: str) -> str:
+    """Get env_prefix from settings model_config if available and non-empty, otherwise use step name.
+
+    This utility function centralizes the logic for determining the environment variable prefix
+    to use for a settings class, following the same pattern used in cmd_inspect.py.
+
+    Args:
+        settings_cls: The settings class to check for custom env_prefix
+        step_name: The step name to use as fallback (will be converted to uppercase)
+
+    Returns:
+        The environment variable prefix to use
+
+    Example:
+        >>> class MySettings(Settings):
+        ...     model_config = SettingsConfigDict(env_prefix="custom_")
+        >>> get_env_prefix_from_settings(MySettings, "MyStep")
+        'custom_'
+
+        >>> class DefaultSettings(Settings):
+        ...     pass
+        >>> get_env_prefix_from_settings(DefaultSettings, "MyStep")
+        'MYSTEP'
+    """
+    has_custom_prefix = (
+        settings_cls != NoneType
+        and settings_cls is not None
+        and settings_cls != NoSettings
+        and hasattr(settings_cls, "model_config")
+        and "env_prefix" in settings_cls.model_config
+        and settings_cls.model_config["env_prefix"]
+    )
+
+    if has_custom_prefix:
+        return settings_cls.model_config["env_prefix"]
+
+    return step_name.upper()
 
 
 class SettingsBase(_PydanticBaseSettings):
@@ -178,13 +219,16 @@ class SettingsLeaf(SettingsBase):
             # Now reads from NESTED__API_URL environment variable
             ```
         """
-        cpy = create_model(prefix + "." + cls.__class__.__name__, __base__=cls)
+        cpy = py_create_model(prefix + "." + cls.__class__.__name__, __base__=cls)
 
         # Get existing model_config or create new one
         existing_config = getattr(cls, "model_config", SettingsConfigDict())
 
-        # Create new config dict, preserving existing settings and updating env_prefix
-        new_config = dict(existing_config)
+        # Get default configuration from SettingsBase
+        default_config = dict(SettingsBase.model_config)
+
+        # Create new config dict, starting with defaults, then overlay existing config, then update env_prefix
+        new_config = {**default_config, **dict(existing_config)}
         new_config["env_prefix"] = prefix
 
         # Set the merged config
