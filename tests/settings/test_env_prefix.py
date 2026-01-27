@@ -251,8 +251,14 @@ def test_settings_config_dict_overwrite_behavior():
 
 def test_real_world_step_settings_behavior():
     """Test the behavior with real step settings like SFTPManualMarkdownStep."""
-    # Import a real step settings class
-    from wurzel.steps.sftp.sftp_manual_markdown import SFTPManualMarkdownSettings
+    # Import a real step settings class (skip if paramiko is not available)
+    try:
+        from wurzel.steps.sftp.sftp_manual_markdown import SFTPManualMarkdownSettings
+    except ImportError:
+        # Skip this test if paramiko is not available
+        import pytest
+
+        pytest.skip("paramiko not available, skipping SFTP step test")
 
     # Check that it inherits defaults properly
     assert hasattr(SFTPManualMarkdownSettings, "model_config")
