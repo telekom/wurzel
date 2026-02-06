@@ -4,9 +4,11 @@
 
 import inspect
 import json
+from types import NoneType
 from typing import Any, TypeAlias, Union, get_origin
 
-from pydantic import create_model, model_validator
+from pydantic import create_model as py_create_model
+from pydantic import model_validator
 from pydantic_core import InitErrorDetails, PydanticUndefined, ValidationError
 from pydantic_settings import (
     BaseSettings as _PydanticBaseSettings,
@@ -15,6 +17,45 @@ from pydantic_settings import (
     PydanticBaseSettingsSource,
     SettingsConfigDict,
 )
+
+
+def get_env_prefix_from_settings(settings_cls: type, step_name: str) -> str:
+    """Get env_prefix from settings model_config if available and non-empty, otherwise use step name.
+
+    This utility function centralizes the logic for determining the environment variable prefix
+    to use for a settings class, following the same pattern used in cmd_inspect.py.
+
+    Args:
+        settings_cls: The settings class to check for custom env_prefix
+        step_name: The step name to use as fallback (will be converted to uppercase)
+
+    Returns:
+        The environment variable prefix to use
+
+    Example:
+        >>> class MySettings(Settings):
+        ...     model_config = SettingsConfigDict(env_prefix="custom_")
+        >>> get_env_prefix_from_settings(MySettings, "MyStep")
+        'custom_'
+
+        >>> class DefaultSettings(Settings):
+        ...     pass
+        >>> get_env_prefix_from_settings(DefaultSettings, "MyStep")
+        'MYSTEP'
+    """
+    has_custom_prefix = (
+        settings_cls != NoneType
+        and settings_cls is not None
+        and settings_cls != NoSettings
+        and hasattr(settings_cls, "model_config")
+        and "env_prefix" in settings_cls.model_config
+        and settings_cls.model_config["env_prefix"]
+    )
+
+    if has_custom_prefix:
+        return settings_cls.model_config["env_prefix"]
+
+    return step_name.upper()
 
 
 class SettingsBase(_PydanticBaseSettings):
@@ -116,13 +157,82 @@ class SettingsLeaf(SettingsBase):
     This class is mainly used to fix pydantic_settings incorrect loading of env vars.
     It might be made obsolete by future pydantic_settings releases
     https://github.com/pydantic/pydantic-settings/pull/261.
+
+    ## Custom Environment Variable Prefix
+
+    You can define a custom environment variable prefix for your settings class
+    by setting `model_config = SettingsConfigDict(env_prefix='your_prefix_')`.
+
+    This allows you to override the default behavior where environment variables
+    are prefixed with the step name in uppercase.
+
+    ### Example:
+    ```python
+    from pydantic_settings import SettingsConfigDict
+    from wurzel.step import Settings
+
+
+    class MySettings(Settings):
+        model_config = SettingsConfigDict(env_prefix="my_custom_prefix_")
+
+        API_URL: str = "https://api.example.com"
+        TIMEOUT: int = 30
+
+
+    # Environment variables will be:
+    # my_custom_prefix_API_URL=https://api.custom.com
+    # my_custom_prefix_TIMEOUT=60
+    ```
+
+    ### Priority:
+    1. Custom `env_prefix` from `model_config` (if non-empty)
+    2. Step name in uppercase (default fallback)
+
+    The `with_prefix()` method preserves all existing `model_config` settings
+    and only updates the `env_prefix`, making it safe to use with classes that
+    have other configuration options.
     """
 
     @classmethod
     def with_prefix(cls, prefix: str) -> "SettingsLeaf":
-        """Returns a new class with env_prefix set."""
-        cpy = create_model(prefix + "." + cls.__class__.__name__, __base__=cls)
-        cpy.model_config["env_prefix"] = prefix
+        """Returns a new class with the specified env_prefix set.
+
+        This method creates a new settings class that inherits from the current class
+        but with a custom environment variable prefix. All existing model_config
+        settings are preserved, only the env_prefix is updated.
+
+        Args:
+            prefix: The environment variable prefix to use (e.g., 'NESTED__')
+
+        Returns:
+            A new settings class with the custom env_prefix applied.
+
+        Example:
+            ```python
+            class MySettings(Settings):
+                model_config = SettingsConfigDict(env_prefix="original_")
+                API_URL: str = "default"
+
+
+            # Create a new class with different prefix
+            NestedSettings = MySettings.with_prefix("NESTED__")
+            # Now reads from NESTED__API_URL environment variable
+            ```
+        """
+        cpy = py_create_model(prefix + "." + cls.__class__.__name__, __base__=cls)
+
+        # Get existing model_config or create new one
+        existing_config = getattr(cls, "model_config", SettingsConfigDict())
+
+        # Get default configuration from SettingsBase
+        default_config = dict(SettingsBase.model_config)
+
+        # Create new config dict, starting with defaults, then overlay existing config, then update env_prefix
+        new_config = {**default_config, **dict(existing_config)}
+        new_config["env_prefix"] = prefix
+
+        # Set the merged config
+        cpy.model_config = SettingsConfigDict(**new_config)
         return cpy
 
 
@@ -134,7 +244,26 @@ class Settings(SettingsLeaf):
     However for nested Settings, there will be prefixes applied separated with __ : `PARENT_VAR__YOUR_AD_COULD_BE_HERE`
     will be read from env.
 
-    Same goes for TypedStepSettings. Their prefix is *always* `STEP_NAME_IN_UPPER_CASE`.
+    Same goes for TypedStepSettings. Their prefix is *always* `STEP_NAME_IN_UPPER_CASE`
+    unless a custom `env_prefix` is defined in the `model_config`.
+
+    ## Custom Environment Variable Prefix
+
+    You can override the default step name prefix by defining a custom `env_prefix`:
+    ```python
+    from pydantic_settings import SettingsConfigDict
+
+
+    class MyCustomSettings(Settings):
+        model_config = SettingsConfigDict(env_prefix="my_app_")
+
+        API_URL: str = "https://default.api.com"
+        TIMEOUT: int = 30
+    ```
+
+    This will read from `my_app_API_URL` and `my_app_TIMEOUT` instead of the default
+    step name prefix.
+
     ## Example
     ```python
     class KafkaSettings(Settings):

@@ -8,7 +8,7 @@ from typing import Union
 from pydantic import BaseModel
 from pydantic import create_model as py_create_model
 
-from wurzel.step.settings import Settings, SettingsBase
+from wurzel.step.settings import Settings, SettingsBase, get_env_prefix_from_settings
 from wurzel.step.typed_step import TypedStep
 
 
@@ -66,15 +66,22 @@ def create_model(
     base_class = py_create_model("SettingsLeaf_allow_extra", __base__=Settings)
     if allow_extra_fields:
         base_class.model_config["extra"] = "allow"
-    inner_models: dict[str, Settings] = {
-        step.__class__.__name__.upper(): py_create_model(
-            "MetaSettings_" + step.__class__.__name__,
-            **{name: (v.annotation, v) for name, v in step.settings_class.model_fields.items()},
-            __base__=base_class,
-        )
-        for step in clean_fields
-        if step.settings_class != NoneType
-    }
+    inner_models: dict[str, Settings] = {}
+    for step in clean_fields:
+        if step.settings_class != NoneType:
+            # Get the proper env_prefix using the centralized utility function
+            env_prefix = get_env_prefix_from_settings(step.settings_class, step.__class__.__name__)
+
+            # Create the nested settings class with the proper env_prefix
+            nested_settings_class = py_create_model(
+                "MetaSettings_" + step.__class__.__name__,
+                **{name: (v.annotation, v) for name, v in step.settings_class.model_fields.items()},
+                __base__=base_class,
+            )
+
+            # Apply the env_prefix using with_prefix method to preserve all base configuration
+            prefixed_settings_class = nested_settings_class.with_prefix(env_prefix)
+            inner_models[step.__class__.__name__.upper()] = prefixed_settings_class
 
     new_model_class: type[BaseModel] = py_create_model(
         "MetaSettings_Parent",
