@@ -34,14 +34,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache venv
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            venv-${{ runner.os }}-${{ matrix.python-version }}-
-
       - name: Install the latest version of uv and set the python version
         uses: astral-sh/setup-uv@v6
         with:
