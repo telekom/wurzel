@@ -31,8 +31,8 @@ $(PY):
 	$(SYSTEM_PYTHON) -m venv $(VENV)
 
 $(UV): $(PY)
-	$(PIP) install --upgrade pip
-	$(PIP) install uv
+	$(PY) -m pip install --upgrade pip
+	$(PY) -m pip install uv
 
 install: $(VENV)/touchfile
 	$(UV) run pre-commit install
