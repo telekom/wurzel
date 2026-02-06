@@ -59,7 +59,7 @@ Data source steps introduce data into your pipeline. They have `None` as their i
 from typing import Any
 from wurzel.step import TypedStep
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.meta.settings import Settings
+from wurzel.step import Settings
 
 class MySettings(Settings):
     """Configuration for MyDatasourceStep."""
@@ -103,7 +103,7 @@ class MyDatasourceStep(TypedStep[MySettings, None, list[MarkdownDataContract]]):
 import sqlite3
 from wurzel.step import TypedStep
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.meta.settings import Settings
+from wurzel.step import Settings
 
 class DatabaseSettings(Settings):
     """Database connection settings."""
@@ -151,7 +151,7 @@ Processing steps transform data from upstream steps. They can filter, validate, 
 ```python
 from wurzel.step import TypedStep
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.meta.settings import Settings
+from wurzel.step import Settings
 
 class FilterSettings(Settings):
     """Settings for document filtering."""
@@ -193,7 +193,7 @@ class DocumentFilterStep(TypedStep[FilterSettings, list[MarkdownDataContract], l
 import pandas as pd
 from wurzel.step import TypedStep
 from wurzel.datacontract import MarkdownDataContract, EmbeddingResult
-from wurzel.meta.settings import Settings
+from wurzel.step import Settings
 
 class EmbeddingSettings(Settings):
     """Settings for embedding generation."""
@@ -246,7 +246,7 @@ class CustomEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract
 ```python
 from wurzel.step import TypedStep
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.meta.settings import Settings
+from wurzel.step import Settings
 
 class ValidationSettings(Settings):
     """Settings for document validation."""
@@ -307,7 +307,7 @@ Some steps need to combine data from multiple sources:
 from typing import Union
 from wurzel.step import TypedStep
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.meta.settings import Settings
+from wurzel.step import Settings
 
 class MergerSettings(Settings):
     """Settings for document merging."""
@@ -357,7 +357,7 @@ For steps that need to maintain state across executions:
 from collections import defaultdict
 from wurzel.step import TypedStep
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.meta.settings import Settings
+from wurzel.step import Settings
 
 class DeduplicationSettings(Settings):
     """Settings for deduplication."""
