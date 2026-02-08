@@ -17,9 +17,9 @@ from markdown import Markdown
 from pandera.typing import DataFrame
 from tqdm.auto import tqdm
 
+from wurzel.core import TypedStep
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import EmbeddingAPIException, StepFailed
-from wurzel.step import TypedStep
 from wurzel.steps.data import EmbeddingResult
 from wurzel.steps.embedding.huggingface import HuggingFaceInferenceAPIEmbeddings, PrefixedAPIEmbeddings
 from wurzel.steps.splitter import SimpleSplitterStep

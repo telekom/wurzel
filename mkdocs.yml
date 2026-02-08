@@ -143,6 +143,9 @@ nav:
       - Overview: backends/index.md
       - Argo Workflows: backends/argoworkflows.md
       - DVC: backends/dvc.md
+  - Executor:
+      - Overview: executor/index.md
+      - Middlewares: executor/middlewares.md
   - Steps:
     - Docling: steps/docling.md
     - Deduplication: steps/duplication.md
