@@ -34,34 +34,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache venv
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            venv-${{ runner.os }}-${{ matrix.python-version }}-
-
       - name: Install the latest version of uv and set the python version
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
           python-version: ${{ matrix.python-version }}
-          activate-environment: true
 
       - name: Install dependencies (minimal)
         if: matrix.test-type == 'minimal'
-        run: |
-          uv lock
-          uv --no-progress pip install -e ".[test]"
+        run: uv sync --extra test
 
       - name: Install dependencies (full)
         if: matrix.test-type == 'full'
-        run: |
-          uv lock
-          uv lock
-          make install UV="uv" PIP="pip" SYSTEM_PYTHON="python${{ matrix.python-version }}"
+        run: make install
 
       - name: Test minimal installation
         if: matrix.test-type == 'minimal'
