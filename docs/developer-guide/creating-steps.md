@@ -328,9 +328,7 @@ class DeduplicationStep(
         _ = sum(len(sources) - 1 for sources in self.document_index.values())
 ```
 
-## Step Settings and Configuration
-
-<a id="step-settings"></a>
+## Step Settings and Configuration {#step-settings}
 
 ### Environment Variable Integration
 
@@ -373,6 +371,88 @@ class ComplexStepSettings(Settings):
     processing: ProcessingConfig = ProcessingConfig()
     DEBUG_MODE: bool = False
 ```
+
+### Custom Environment Variable Prefix
+
+By default, Wurzel uses the step name in uppercase as the environment variable prefix (e.g., `MYSTEP__FIELD_NAME`). You can override this by defining a custom `env_prefix` in your settings class:
+
+```python
+from pydantic_settings import SettingsConfigDict
+from wurzel.step import Settings
+
+class CustomAPISettings(Settings):
+    """API settings with custom environment variable prefix."""
+    model_config = SettingsConfigDict(env_prefix='myapp_api_')
+
+    api_key: str
+    base_url: str = "https://api.example.com"
+    timeout: int = 30
+    max_retries: int = 3
+
+# Environment variables:
+# myapp_api_API_KEY=your_secret_key
+# myapp_api_BASE_URL=https://custom.api.com
+# myapp_api_TIMEOUT=60
+```
+
+#### When to Use Custom Prefixes
+
+Custom prefixes are useful for:
+
+- **Application-wide settings**: Use a consistent prefix across all steps (e.g., `myapp_`)
+- **Shared configuration**: Multiple steps can share the same environment variables
+- **Legacy integration**: Match existing environment variable naming conventions
+- **Environment separation**: Different prefixes for development, staging, and production
+
+#### Priority System
+
+Wurzel follows this priority for environment variable prefixes:
+
+1. **Custom `env_prefix`** from `model_config` (if non-empty)
+2. **Step name uppercase** (default behavior)
+
+#### Example with Multiple Steps
+
+```python
+# Shared settings with custom prefix
+class DatabaseSettings(Settings):
+    model_config = SettingsConfigDict(env_prefix='company_db_')
+
+    host: str = "localhost"
+    port: int = 5432
+    database: str = "app"
+
+class APISettings(Settings):
+    model_config = SettingsConfigDict(env_prefix='company_api_')
+
+    endpoint: str = "https://api.company.com"
+    version: str = "v1"
+
+# Both steps can be used in the same pipeline with different prefixes
+class DataLoaderStep(TypedStep[DatabaseSettings, None, list[DataContract]]):
+    def __init__(self):
+        self.settings = DatabaseSettings()
+        # Reads from: company_db_HOST, company_db_PORT, etc.
+
+class APIProcessorStep(TypedStep[APISettings, list[DataContract], list[DataContract]]):
+    def __init__(self):
+        self.settings = APISettings()
+        # Reads from: company_api_ENDPOINT, company_api_VERSION, etc.
+```
+
+#### Inspecting Environment Variables
+
+You can check which environment variables a step expects using the `wurzel inspect` command:
+
+```bash
+# Show step information including custom env_prefix
+wurzel inspect my_module.MyStep
+
+# Generate environment variable template
+wurzel inspect my_module.MyStep --gen-env
+```
+
+If a step has a custom `env_prefix`, the inspect command will show that prefix instead of the default step name.
 
 ## Testing Custom Steps
 

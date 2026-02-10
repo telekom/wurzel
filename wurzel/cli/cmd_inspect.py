@@ -17,12 +17,15 @@ def main(step: "type[TypedStep]", gen_env=False):
     """Execute."""
     # Lazy imports to avoid loading heavy dependencies at import time
     from wurzel.step import Settings  # pylint: disable=import-outside-toplevel
-    from wurzel.step.settings import NoSettings  # pylint: disable=import-outside-toplevel
+    from wurzel.step.settings import NoSettings, get_env_prefix_from_settings  # pylint: disable=import-outside-toplevel
     from wurzel.utils import WZ  # pylint: disable=import-outside-toplevel
 
     ins = WZ(step)
     set_cls: Settings = ins.settings_class
-    env_prefix = step.__name__.upper()
+
+    # Get env_prefix using the centralized utility function
+    env_prefix = get_env_prefix_from_settings(set_cls, step.__name__)
+
     data = {
         "Name": step.__name__,
         "Input": "None" if ins.input_model_class == NoneType else ins.input_model_class,

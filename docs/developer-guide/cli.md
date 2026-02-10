@@ -72,6 +72,8 @@ wurzel inspect wurzel.steps.manual_markdown.ManualMarkdownStep
 wurzel inspect wurzel.steps.manual_markdown.ManualMarkdownStep --gen-env
 ```
 
+The `inspect` command shows the environment variable prefix used by the step. If a step has a custom `env_prefix` defined in its settings, that prefix will be displayed instead of the default step name. The `--gen-env` flag generates the correct environment variable names based on the actual prefix used.
+
 ### Managing Environment Variables
 
 Use the `wurzel env` helper to inspect or validate the variables your pipeline needs:
@@ -94,9 +96,11 @@ wurzel env examples.pipeline.pipelinedemo:pipeline --check --allow-extra-fields
 The `wurzel generate` command creates backend-specific pipeline configurations from chained pipelines.
 
 **Arguments:**
+
 - `pipeline` - Module path to a chained pipeline (multiple steps combined with `>>` operator)
 
 **Options:**
+
 - `-b, --backend` - Backend to use (default: DvcBackend). Case-insensitive.
 - `--list-backends` - List all available backends and exit
 
@@ -138,6 +142,7 @@ pipeline = splitter
 ```
 
 Then generate the pipeline configuration:
+
 ```bash
 wurzel generate myproject.pipelines.pipeline -b DvcBackend
 ```
