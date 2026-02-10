@@ -43,7 +43,7 @@ jobs:
 
       - name: Install dependencies (minimal)
         if: matrix.test-type == 'minimal'
-        run: uv --no-progress pip install -e ".[test]"
+        run: uv sync --extra test
 
       - name: Install dependencies (full)
         if: matrix.test-type == 'full'

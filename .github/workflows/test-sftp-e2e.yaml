@@ -92,7 +92,7 @@ jobs:
           fi
 
       - name: Install dependencies
-        run: uv --no-progress pip install -e ".[test, sftp]"
+        run: uv sync --extra test --extra sftp
 
       - name: Setup test data on SFTP server
         run: |
