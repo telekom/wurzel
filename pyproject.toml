@@ -34,7 +34,7 @@ dependencies= [
     "pandas==2.3.3",
     "numpy < 2.0.0",
     "dvc==3.63.0",
-    "pathspec<0.13", # needed for dvc
+    "pathspec>=0.10.3",
     "Markdown==3.6",
     "pydantic-settings==2.5.2",
     "pydantic>=2.6.4, == 2.*",
@@ -108,6 +108,7 @@ test = [
     "pytest>=8.4,<9.1",
     "pytest-asyncio==0.23.*",
     "pytest-cov>=4,<8",
+    "pytest-examples>=0.0.18",
     "pytest-html==4.*",
     "pytest_env==1.*",
     "pytest-xdist==3.*",

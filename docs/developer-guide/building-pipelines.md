@@ -16,31 +16,16 @@ A pipeline in Wurzel is a **chain of processing steps** that are connected and e
 
 ### The WZ Utility
 
-The `WZ()` utility function is your primary tool for instantiating steps:
-
-```python
-from wurzel.utils import WZ
-from wurzel.steps.manual_markdown import ManualMarkdownStep
-
-# Create a step instance
-markdown_step = WZ(ManualMarkdownStep)
-```
-
-### Chaining Steps
-
-Connect steps using the `>>` operator to define data flow:
+Use `WZ(StepClass)` to create step instances and `>>` to chain them:
 
 ```python
 from wurzel.steps import EmbeddingStep, QdrantConnectorStep
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.utils import WZ
 
-# Define individual steps
 source = WZ(ManualMarkdownStep)
 embedding = WZ(EmbeddingStep)
 storage = WZ(QdrantConnectorStep)
-
-# Chain them together
 source >> embedding >> storage
 ```
 
@@ -49,119 +34,66 @@ source >> embedding >> storage
 <a id="defining-a-pipeline"></a>
 ### Basic Example
 
-Here's a complete pipeline that processes markdown documents, generates embeddings, and stores them in a vector database:
+Define a function that builds the chain and returns the last step. Wurzel runs upstream steps in order:
 
 ```python
-from wurzel.steps import (
-    EmbeddingStep,
-    QdrantConnectorStep,
-)
-from wurzel.utils import WZ
-from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.step import TypedStep
+from wurzel.steps import EmbeddingStep, QdrantConnectorStep
+from wurzel.steps.manual_markdown import ManualMarkdownStep
+from wurzel.utils import WZ
+
 
 def pipeline() -> TypedStep:
-    """Defines a Wurzel pipeline that embeds manual markdown and stores it in Qdrant."""
-
-    # Step 1: Load markdown input manually
     md = WZ(ManualMarkdownStep)
-
-    # Step 2: Generate embeddings from markdown content
     embed = WZ(EmbeddingStep)
-
-    # Step 3: Store embeddings in a Qdrant vector database
     db = WZ(QdrantConnectorStep)
-
-    # Chain the steps
     md >> embed >> db
-
-    # Return the final step in the chain
     return db
 ```
 
-### Execution Order
-
-Even though the function returns only the last step (`db`), Wurzel automatically resolves and runs all upstream dependencies in the correct order:
-
-1. **ManualMarkdownStep** runs first to provide data
-2. **EmbeddingStep** transforms that data into vectors
-3. **QdrantConnectorStep** persists the result
+Execution order: ManualMarkdownStep → EmbeddingStep → QdrantConnectorStep.
 
 ## Advanced Pipeline Patterns
 
-### Branching Pipelines
+### Branching
 
-You can create branches in your pipeline where one step feeds into multiple downstream steps:
+One source can feed multiple downstream steps:
 
 ```python
+from wurzel.step import TypedStep
+from wurzel.steps import EmbeddingStep, QdrantConnectorStep
+from wurzel.steps.manual_markdown import ManualMarkdownStep
+from wurzel.steps.splitter import SimpleSplitterStep
+from wurzel.utils import WZ
+
+
 def branching_pipeline() -> TypedStep:
-    """Pipeline with branching data flow."""
-
-    # Source step
     source = WZ(ManualMarkdownStep)
-
-    # Processing steps
     embedding = WZ(EmbeddingStep)
-    preprocessor = WZ(TextPreprocessorStep)
-
-    # Branch: source feeds into both embedding and preprocessor
-    source >> embedding
-    source >> preprocessor
-
-    # Converge: both feed into final storage
+    splitter = WZ(SimpleSplitterStep)
     vector_db = WZ(QdrantConnectorStep)
-    processed_storage = WZ(ProcessedTextStorageStep)
-
-    embedding >> vector_db
-    preprocessor >> processed_storage
-
-    # Return one of the final steps (or create a step that depends on both)
+    source >> embedding >> vector_db
+    source >> splitter
     return vector_db
-```
-
-### Multi-Input Steps
-
-Some steps can accept input from multiple upstream steps:
-
-```python
-def multi_input_pipeline() -> TypedStep:
-    """Pipeline where a step receives multiple inputs."""
-
-    text_source = WZ(TextSourceStep)
-    image_source = WZ(ImageSourceStep)
-
-    # Multi-modal step that accepts both text and images
-    multimodal_processor = WZ(MultiModalProcessorStep)
-
-    # Both sources feed into the processor
-    text_source >> multimodal_processor
-    image_source >> multimodal_processor
-
-    storage = WZ(MultiModalStorageStep)
-    multimodal_processor >> storage
-
-    return storage
 ```
 
 ### Conditional Processing
 
-Create pipelines with conditional logic using step parameters:
+Choose steps at build time:
 
 ```python
-def conditional_pipeline(use_advanced_processing: bool = False) -> TypedStep:
-    """Pipeline with conditional processing paths."""
+from wurzel.step import TypedStep
+from wurzel.steps import EmbeddingStep, QdrantConnectorStep
+from wurzel.steps.embedding import TruncatedEmbeddingStep
+from wurzel.steps.manual_markdown import ManualMarkdownStep
+from wurzel.utils import WZ
 
+
+def conditional_pipeline(use_truncated: bool = False) -> TypedStep:
     source = WZ(ManualMarkdownStep)
-
-    if use_advanced_processing:
-        processor = WZ(AdvancedEmbeddingStep)
-    else:
-        processor = WZ(BasicEmbeddingStep)
-
+    processor = WZ(TruncatedEmbeddingStep) if use_truncated else WZ(EmbeddingStep)
     storage = WZ(QdrantConnectorStep)
-
     source >> processor >> storage
-
     return storage
 ```
 
@@ -173,101 +105,79 @@ Each step can be configured through environment variables or settings classes. S
 
 ### Pipeline-Level Configuration
 
-Configure entire pipelines through environment variables:
+Use environment variables to choose steps:
 
 ```python
 import os
-from wurzel.steps import EmbeddingStep
+
+from wurzel.step import TypedStep
+from wurzel.steps import EmbeddingStep, QdrantConnectorStep
+from wurzel.steps.embedding import TruncatedEmbeddingStep
+from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.utils import WZ
 
+
 def configurable_pipeline() -> TypedStep:
-    """Pipeline that adapts based on environment configuration."""
-
     source = WZ(ManualMarkdownStep)
-
-    # Configure embedding step based on environment
-    embedding_model = os.getenv('EMBEDDING_MODEL', 'default')
-    if embedding_model == 'advanced':
-        embedding = WZ(AdvancedEmbeddingStep)
-    else:
-        embedding = WZ(EmbeddingStep)
-
+    use_truncated = os.getenv("EMBEDDING_MODEL", "").lower() == "truncated"
+    embedding = WZ(TruncatedEmbeddingStep) if use_truncated else WZ(EmbeddingStep)
     storage = WZ(QdrantConnectorStep)
-
     source >> embedding >> storage
     return storage
 ```
 
 ## Testing Pipelines
 
-### Unit Testing Individual Steps
-
-Test steps in isolation:
-
 ```python
-import pytest
+from wurzel.step import TypedStep
+from wurzel.steps import EmbeddingStep, QdrantConnectorStep
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.utils import WZ
 
+
 def test_markdown_step():
-    """Test the markdown step in isolation."""
     step = WZ(ManualMarkdownStep)
     result = step.run(None)
-
     assert result is not None
-    assert len(result) > 0
-```
+    assert isinstance(result, list)
 
-### Integration Testing
 
-Test complete pipeline flows:
+def pipeline() -> TypedStep:
+    md = WZ(ManualMarkdownStep)
+    embed = WZ(EmbeddingStep)
+    db = WZ(QdrantConnectorStep)
+    md >> embed >> db
+    return db
 
-```python
+
 def test_complete_pipeline():
-    """Test the entire pipeline execution."""
-    pipeline_result = pipeline()
-
-    # Execute the pipeline (this would typically be done by a backend)
-    # result = execute_pipeline(pipeline_result)
-
-    # Assert pipeline structure
-    assert pipeline_result is not None
-    # Add more specific assertions based on your pipeline
+    assert pipeline() is not None
 ```
 
 ## Pipeline Optimization
 
 ### Parallel Execution
 
-Wurzel can automatically parallelize steps that don't depend on each other:
+Independent branches can run in parallel (backend-dependent):
 
 ```python
+from wurzel.step import TypedStep
+from wurzel.steps import EmbeddingStep, QdrantConnectorStep
+from wurzel.steps.manual_markdown import ManualMarkdownStep
+from wurzel.utils import WZ
+
+
 def parallel_pipeline() -> TypedStep:
-    """Pipeline optimized for parallel execution."""
-
     source = WZ(ManualMarkdownStep)
-
-    # These can run in parallel since they're independent
-    embedding_a = WZ(EmbeddingStepA)
-    embedding_b = WZ(EmbeddingStepB)
-
-    source >> embedding_a
-    source >> embedding_b
-
-    # This step waits for both embeddings
-    combiner = WZ(EmbeddingCombinerStep)
-    embedding_a >> combiner
-    embedding_b >> combiner
-
+    embedding_a = WZ(EmbeddingStep)
+    embedding_b = WZ(EmbeddingStep)
     storage = WZ(QdrantConnectorStep)
-    combiner >> storage
-
+    source >> embedding_a >> storage
+    source >> embedding_b
     return storage
 ```
 
-### Caching and Persistence
-
-Steps automatically cache their outputs based on input changes. This is handled transparently by the backend execution engines.
+Steps cache outputs based on input changes; backends handle persistence.
 
 ## Best Practices
 
@@ -284,79 +194,28 @@ Steps automatically cache their outputs based on input changes. This is handled 
 2. **Batch processing**: Design steps to handle multiple items efficiently
 3. **Resource management**: Be mindful of memory usage in data-intensive steps
 
-### Code Organization
+## Common Patterns
+
+### ETL-style (extract → transform → load)
 
 ```python
-# Good: Organized and readable
-def document_processing_pipeline() -> TypedStep:
-    """
-    Processes documents through embedding and storage.
+from wurzel.step import TypedStep
+from wurzel.steps import EmbeddingStep, QdrantConnectorStep
+from wurzel.steps.manual_markdown import ManualMarkdownStep
+from wurzel.steps.splitter import SimpleSplitterStep
+from wurzel.utils import WZ
 
-    Pipeline flow:
-    1. Load markdown documents
-    2. Generate embeddings
-    3. Store in vector database
-    """
-    # Data ingestion
-    documents = WZ(ManualMarkdownStep)
 
-    # Processing
-    embeddings = WZ(EmbeddingStep)
-
-    # Storage
+def etl_pipeline() -> TypedStep:
+    extractor = WZ(ManualMarkdownStep)
+    transformer = WZ(SimpleSplitterStep)
+    loader = WZ(EmbeddingStep)
     storage = WZ(QdrantConnectorStep)
-
-    # Pipeline definition
-    documents >> embeddings >> storage
-
+    extractor >> transformer >> loader >> storage
     return storage
 ```
 
-## Common Patterns
-
-### ETL Pipeline
-
-```python
-def etl_pipeline() -> TypedStep:
-    """Extract, Transform, Load pipeline."""
-
-    # Extract
-    extractor = WZ(DataExtractionStep)
-
-    # Transform
-    transformer = WZ(DataTransformationStep)
-    validator = WZ(DataValidationStep)
-
-    # Load
-    loader = WZ(DataLoadingStep)
-
-    # Chain
-    extractor >> transformer >> validator >> loader
-
-    return loader
-```
-
-### ML Pipeline
-
-```python
-def ml_pipeline() -> TypedStep:
-    """Machine learning pipeline with training and inference."""
-
-    # Data preparation
-    data_loader = WZ(MLDataLoaderStep)
-    preprocessor = WZ(DataPreprocessorStep)
-
-    # Model training
-    trainer = WZ(ModelTrainingStep)
-
-    # Model evaluation
-    evaluator = WZ(ModelEvaluationStep)
-
-    # Pipeline
-    data_loader >> preprocessor >> trainer >> evaluator
-
-    return evaluator
-```
+Same pattern works for document ML pipelines (load → split → embed → store).
 
 ## Next Steps
 
