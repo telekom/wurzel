@@ -33,7 +33,7 @@ dependencies= [
     "tqdm==4.67.1",
     "pandas==2.3.3",
     "numpy < 2.0.0",
-    "dvc==3.63.0",
+    "dvc>=3.66.0,<4",
     "pathspec>=0.10.3",
     "Markdown==3.6",
     "pydantic-settings==2.5.2",
