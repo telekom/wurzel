@@ -98,7 +98,6 @@ dvc repro
 Use the DVC backend directly in Python:
 
 ```python
-from pathlib import Path
 from wurzel.executors.backend.backend_dvc import DvcBackend
 from wurzel.steps.embedding import EmbeddingStep
 from wurzel.steps.manual_markdown import ManualMarkdownStep
@@ -109,21 +108,17 @@ from wurzel.utils import WZ
 source = WZ(ManualMarkdownStep)
 embedding = WZ(EmbeddingStep)
 step = WZ(QdrantConnectorStep)
-
 source >> embedding >> step
 pipeline = step
 
-# Option 1: Generate DVC configuration from values file
-backend = DvcBackend.from_values(
-    files=[Path("values.yaml")],
-    workflow_name="pipelinedemo"
-)
-dvc_yaml = backend.generate_artifact(pipeline)
-print(dvc_yaml)
-
-# Option 2: Generate with default settings
+# Option 1: Generate with default settings (no values file)
 dvc_yaml = DvcBackend().generate_artifact(pipeline)
-print(dvc_yaml)
+
+# Option 2: Generate from values file (YAML must contain dvc.pipelinedemo)
+# from pathlib import Path
+# values_file = Path("values.yaml")
+# backend = DvcBackend.from_values(files=[values_file], workflow_name="pipelinedemo")
+# dvc_yaml = backend.generate_artifact(pipeline)
 ```
 
 ## Running DVC Pipelines

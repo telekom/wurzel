@@ -15,29 +15,28 @@ Both types follow the same `TypedStep` interface but serve different roles in yo
 
 ### The TypedStep Interface
 
-All steps inherit from `TypedStep`, which provides:
+All steps inherit from `TypedStep` with three type parameters: **TSettings**, **TInput**, **TOutput**. You implement:
+
+- **`__init__`** — setup (connections, resources)
+- **`run(inpt)`** — process input and return output
+- **`finalize`** — optional cleanup
 
 ```python
-class TypedStep[TSettings, TInput, TOutput]:
-    """
-    Base class for all pipeline steps.
+from typing import Generic, TypeVar
 
-    Type parameters:
-    - TSettings: Configuration schema (Pydantic BaseModel)
-    - TInput: Input data type (or None for data sources)
-    - TOutput: Output data type
-    """
+TSettings = TypeVar("TSettings")
+TInput = TypeVar("TInput")
+TOutput = TypeVar("TOutput")
 
+
+class TypedStep(Generic[TSettings, TInput, TOutput]):
     def __init__(self) -> None:
-        """Initialize the step (setup logic goes here)."""
         pass
 
     def run(self, inpt: TInput) -> TOutput:
-        """Process input data and return output."""
         raise NotImplementedError
 
     def finalize(self) -> None:
-        """Cleanup logic called after pipeline execution."""
         pass
 ```
 
@@ -56,88 +55,76 @@ Data source steps introduce data into your pipeline. They have `None` as their i
 ### Basic Data Source
 
 ```python
-from typing import Any
-from wurzel.core import TypedStep
+from pathlib import Path
+
+from wurzel.core import Settings, TypedStep
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.meta.settings import Settings
+
 
 class MySettings(Settings):
-    """Configuration for MyDatasourceStep."""
-    data_path: str = "./data"
-    file_pattern: str = "*.md"
+    DATA_PATH: Path = Path("./data")
+    FILE_PATTERN: str = "*.md"
+
 
 class MyDatasourceStep(TypedStep[MySettings, None, list[MarkdownDataContract]]):
-    """Data source step for loading Markdown files from a configurable path."""
-
     def __init__(self):
-        """Initialize the data source."""
+        super().__init__()
         self.settings = MySettings()
-        # Setup logic here (validate paths, check permissions, etc.)
 
     def run(self, inpt: None) -> list[MarkdownDataContract]:
-        """Load and return markdown documents."""
-        import glob
-        import os
-
-        pattern = os.path.join(self.settings.data_path, self.settings.file_pattern)
-        files = glob.glob(pattern)
-
         documents = []
-        for file_path in files:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
-
+        for file_path in self.settings.DATA_PATH.glob(self.settings.FILE_PATTERN):
+            content = file_path.read_text(encoding="utf-8")
             doc = MarkdownDataContract(
-                content=content,
-                source=file_path,
-                metadata={"file_path": file_path}
+                md=content,
+                url=str(file_path),
+                keywords=file_path.stem,
+                metadata={"file_path": str(file_path)},
             )
             documents.append(doc)
-
         return documents
 ```
 
 ### Advanced Data Source with Database
 
+Shows a source step with **resource cleanup** in `finalize`:
+
 ```python
 import sqlite3
-from wurzel.core import TypedStep
+
+from wurzel.core import Settings, TypedStep
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.meta.settings import Settings
+
 
 class DatabaseSettings(Settings):
-    """Database connection settings."""
-    db_path: str = "data.db"
-    table_name: str = "documents"
-    query: str = "SELECT content, source, metadata FROM documents"
+    DB_PATH: str = "data.db"
+    TABLE_NAME: str = "documents"
+    QUERY: str = "SELECT content, source, metadata FROM documents"
+
 
 class DatabaseSourceStep(TypedStep[DatabaseSettings, None, list[MarkdownDataContract]]):
-    """Load documents from a SQLite database."""
-
     def __init__(self):
-        """Initialize database connection."""
+        super().__init__()
         self.settings = DatabaseSettings()
-        self.connection = sqlite3.connect(self.settings.db_path)
-        self.connection.row_factory = sqlite3.Row  # Enable column access by name
+        self.connection = sqlite3.connect(self.settings.DB_PATH)
+        self.connection.row_factory = sqlite3.Row
 
     def run(self, inpt: None) -> list[MarkdownDataContract]:
-        """Query database and return documents."""
         cursor = self.connection.cursor()
-        cursor.execute(self.settings.query)
-
+        cursor.execute(self.settings.QUERY)
         documents = []
         for row in cursor.fetchall():
+            meta = eval(row["metadata"]) if row["metadata"] else {}
             doc = MarkdownDataContract(
-                content=row['content'],
-                source=row['source'],
-                metadata=eval(row['metadata']) if row['metadata'] else {}
+                md=row["content"],
+                url=row["source"],
+                keywords="",
+                metadata=meta,
             )
             documents.append(doc)
-
         return documents
 
     def finalize(self) -> None:
-        """Close database connection."""
         if self.connection:
             self.connection.close()
 ```
@@ -149,151 +136,115 @@ Processing steps transform data from upstream steps. They can filter, validate, 
 ### Filter Step
 
 ```python
-from wurzel.core import TypedStep
+from wurzel.core import Settings, TypedStep
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.meta.settings import Settings
+
 
 class FilterSettings(Settings):
-    """Settings for document filtering."""
-    min_length: int = 100
-    max_length: int = 10000
-    required_keywords: list[str] = []
+    MIN_LENGTH: int = 100
+    MAX_LENGTH: int = 10000
+    REQUIRED_KEYWORDS: list[str] = []
 
-class DocumentFilterStep(TypedStep[FilterSettings, list[MarkdownDataContract], list[MarkdownDataContract]]):
-    """Filter documents based on length and keyword criteria."""
 
+class DocumentFilterStep(
+    TypedStep[FilterSettings, list[MarkdownDataContract], list[MarkdownDataContract]]
+):
     def __init__(self):
-        """Initialize the filter."""
+        super().__init__()
         self.settings = FilterSettings()
 
     def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
-        """Filter documents based on criteria."""
         filtered_docs = []
-
         for doc in inpt:
-            # Length filter
-            content_length = len(doc.content)
-            if content_length < self.settings.min_length or content_length > self.settings.max_length:
+            if (
+                len(doc.md) < self.settings.MIN_LENGTH
+                or len(doc.md) > self.settings.MAX_LENGTH
+            ):
                 continue
-
-            # Keyword filter
-            if self.settings.required_keywords:
-                content_lower = doc.content.lower()
-                if not all(keyword.lower() in content_lower for keyword in self.settings.required_keywords):
-                    continue
-
+            if self.settings.REQUIRED_KEYWORDS and not all(
+                kw.lower() in doc.md.lower() for kw in self.settings.REQUIRED_KEYWORDS
+            ):
+                continue
             filtered_docs.append(doc)
-
         return filtered_docs
 ```
 
 ### Transformation Step
 
 ```python
-import pandas as pd
-from wurzel.core import TypedStep
-from wurzel.datacontract import MarkdownDataContract, EmbeddingResult
-from wurzel.meta.settings import Settings
+from wurzel.core import Settings, TypedStep
+from wurzel.datacontract import MarkdownDataContract
 
-class EmbeddingSettings(Settings):
-    """Settings for embedding generation."""
-    model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
-    batch_size: int = 32
 
-class CustomEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract], pd.DataFrame[EmbeddingResult]]):
-    """Transform documents into embeddings stored in a DataFrame."""
+class TransformSettings(Settings):
+    PREFIX: str = "[processed] "
 
+
+class DocumentTransformStep(
+    TypedStep[TransformSettings, list[MarkdownDataContract], list[MarkdownDataContract]]
+):
     def __init__(self):
-        """Initialize the embedding model."""
-        self.settings = EmbeddingSettings()
+        super().__init__()
+        self.settings = TransformSettings()
 
-        # Import and initialize model
-        from sentence_transformers import SentenceTransformer
-        self.model = SentenceTransformer(self.settings.model_name)
-
-    def run(self, inpt: list[MarkdownDataContract]) -> pd.DataFrame[EmbeddingResult]:
-        """Generate embeddings for input documents."""
-
-        # Extract texts for embedding
-        texts = [doc.content for doc in inpt]
-
-        # Generate embeddings in batches
-        embeddings = self.model.encode(
-            texts,
-            batch_size=self.settings.batch_size,
-            show_progress_bar=True
-        )
-
-        # Create result objects
-        results = []
-        for i, (doc, embedding) in enumerate(zip(inpt, embeddings)):
-            result = EmbeddingResult(
-                id=f"doc_{i}",
-                content=doc.content,
-                source=doc.source,
+    def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
+        return [
+            MarkdownDataContract(
+                md=self.settings.PREFIX + doc.md,
+                url=doc.url,
+                keywords=doc.keywords,
                 metadata=doc.metadata,
-                embedding=embedding.tolist(),
-                embedding_model=self.settings.model_name
             )
-            results.append(result)
-
-        # Convert to DataFrame
-        return pd.DataFrame(results)
+            for doc in inpt
+        ]
 ```
 
 ### Validation Step
 
+Uses a helper and raises after too many errors:
+
 ```python
-from wurzel.core import TypedStep
+from wurzel.core import Settings, TypedStep
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.meta.settings import Settings
+
 
 class ValidationSettings(Settings):
-    """Settings for document validation."""
-    check_encoding: bool = True
-    check_structure: bool = True
-    max_errors: int = 5
+    CHECK_ENCODING: bool = True
+    CHECK_STRUCTURE: bool = True
+    MAX_ERRORS: int = 5
 
-class DocumentValidationStep(TypedStep[ValidationSettings, list[MarkdownDataContract], list[MarkdownDataContract]]):
-    """Validate documents and filter out invalid ones."""
 
+class DocumentValidationStep(
+    TypedStep[
+        ValidationSettings, list[MarkdownDataContract], list[MarkdownDataContract]
+    ]
+):
     def __init__(self):
-        """Initialize validator."""
+        super().__init__()
         self.settings = ValidationSettings()
         self.error_count = 0
 
     def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
-        """Validate and filter documents."""
         valid_docs = []
-
         for doc in inpt:
             if self._validate_document(doc):
                 valid_docs.append(doc)
             else:
                 self.error_count += 1
-                if self.error_count >= self.settings.max_errors:
-                    raise RuntimeError(f"Too many validation errors: {self.error_count}")
-
+                if self.error_count >= self.settings.MAX_ERRORS:
+                    raise RuntimeError(
+                        f"Too many validation errors: {self.error_count}"
+                    )
         return valid_docs
 
     def _validate_document(self, doc: MarkdownDataContract) -> bool:
-        """Validate a single document."""
-
-        # Check encoding
-        if self.settings.check_encoding:
+        if self.settings.CHECK_ENCODING:
             try:
-                doc.content.encode('utf-8')
+                doc.md.encode("utf-8")
             except UnicodeEncodeError:
                 return False
-
-        # Check structure
-        if self.settings.check_structure:
-            if not doc.content.strip():
-                return False
-
-            if len(doc.content) < 10:  # Minimum content length
-                return False
-
+        if self.settings.CHECK_STRUCTURE and (not doc.md.strip() or len(doc.md) < 10):
+            return False
         return True
 ```
 
@@ -301,104 +252,80 @@ class DocumentValidationStep(TypedStep[ValidationSettings, list[MarkdownDataCont
 
 ### Multi-Input Steps
 
-Some steps need to combine data from multiple sources:
+Steps can collect data from multiple upstream runs (simplified: single input list here):
 
 ```python
-from typing import Union
-from wurzel.core import TypedStep
+from wurzel.core import Settings, TypedStep
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.meta.settings import Settings
+
 
 class MergerSettings(Settings):
-    """Settings for document merging."""
-    merge_strategy: str = "concatenate"  # or "interleave"
+    MERGE_STRATEGY: str = "concatenate"
 
-class DocumentMergerStep(TypedStep[MergerSettings, Union[list[MarkdownDataContract], list[MarkdownDataContract]], list[MarkdownDataContract]]):
-    """Merge documents from multiple sources."""
 
+class DocumentMergerStep(
+    TypedStep[MergerSettings, list[MarkdownDataContract], list[MarkdownDataContract]]
+):
     def __init__(self):
-        """Initialize merger."""
+        super().__init__()
         self.settings = MergerSettings()
-        self.collected_inputs = []
+        self.collected_inputs: list[list[MarkdownDataContract]] = []
 
     def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
-        """Collect inputs and merge when all are available."""
         self.collected_inputs.append(inpt)
-
-        # In a real implementation, you'd need logic to determine
-        # when all inputs have been received
-        if len(self.collected_inputs) >= 2:  # Expecting 2 sources
-            return self._merge_documents()
-
-        return []  # Return empty until all inputs received
-
-    def _merge_documents(self) -> list[MarkdownDataContract]:
-        """Merge collected documents."""
-        if self.settings.merge_strategy == "concatenate":
-            # Simply concatenate all documents
-            all_docs = []
+        if self.settings.MERGE_STRATEGY == "concatenate":
+            all_docs: list[MarkdownDataContract] = []
             for doc_list in self.collected_inputs:
                 all_docs.extend(doc_list)
             return all_docs
-
-        elif self.settings.merge_strategy == "interleave":
-            # Interleave documents from different sources
-            # Implementation depends on your specific needs
-            pass
-
-        return []
+        return inpt
 ```
 
 ### Stateful Processing
 
-For steps that need to maintain state across executions:
+State in `__init__` and optional cleanup in `finalize`:
 
 ```python
+import hashlib
 from collections import defaultdict
-from wurzel.core import TypedStep
+
+from wurzel.core import Settings, TypedStep
 from wurzel.datacontract import MarkdownDataContract
-from wurzel.meta.settings import Settings
+
 
 class DeduplicationSettings(Settings):
-    """Settings for deduplication."""
-    similarity_threshold: float = 0.9
-    hash_algorithm: str = "md5"
+    HASH_ALGORITHM: str = "md5"
 
-class DeduplicationStep(TypedStep[DeduplicationSettings, list[MarkdownDataContract], list[MarkdownDataContract]]):
-    """Remove duplicate documents based on content similarity."""
 
+class DeduplicationStep(
+    TypedStep[
+        DeduplicationSettings, list[MarkdownDataContract], list[MarkdownDataContract]
+    ]
+):
     def __init__(self):
-        """Initialize deduplication."""
+        super().__init__()
         self.settings = DeduplicationSettings()
-        self.seen_hashes = set()
-        self.document_index = defaultdict(list)
+        self.seen_hashes: set[str] = set()
+        self.document_index: defaultdict[str, list[str]] = defaultdict(list)
 
     def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
-        """Remove duplicates from input documents."""
-        import hashlib
-
         unique_docs = []
-
         for doc in inpt:
-            # Generate content hash
-            if self.settings.hash_algorithm == "md5":
-                content_hash = hashlib.md5(doc.content.encode()).hexdigest()
-            else:
-                content_hash = hashlib.sha256(doc.content.encode()).hexdigest()
-
-            # Check if we've seen this content before
+            raw = doc.md.encode()
+            content_hash = (
+                hashlib.md5(raw).hexdigest()
+                if self.settings.HASH_ALGORITHM == "md5"
+                else hashlib.sha256(raw).hexdigest()
+            )
             if content_hash not in self.seen_hashes:
                 self.seen_hashes.add(content_hash)
                 unique_docs.append(doc)
-                self.document_index[content_hash].append(doc.source)
-
+                self.document_index[content_hash].append(doc.url)
         return unique_docs
 
     def finalize(self) -> None:
-        """Log deduplication statistics."""
-        total_seen = len(self.seen_hashes)
-        duplicates = sum(len(sources) - 1 for sources in self.document_index.values())
-        print(f"Deduplication complete: {total_seen} unique documents, {duplicates} duplicates removed")
+        _ = len(self.seen_hashes)
+        _ = sum(len(sources) - 1 for sources in self.document_index.values())
 ```
 
 ## Step Settings and Configuration
@@ -407,51 +334,44 @@ class DeduplicationStep(TypedStep[DeduplicationSettings, list[MarkdownDataContra
 
 ### Environment Variable Integration
 
-Wurzel automatically maps environment variables to step settings:
+Settings fields map to env vars (prefix = step name in UPPERCASE, e.g. `MYSTEP__API_KEY`):
 
 ```python
-class APISettings(Settings):
-    """Settings for API-based data source."""
-    api_key: str  # Maps to API_KEY environment variable
-    base_url: str = "https://api.example.com"  # Default value
-    timeout: int = 30
-    max_retries: int = 3
+from wurzel.core import Settings
 
-# Environment variables:
-# API_KEY=your_secret_key
-# BASE_URL=https://custom.api.com  (optional override)
-# TIMEOUT=60  (optional override)
+
+class APISettings(Settings):
+    API_KEY: str
+    BASE_URL: str = "https://api.example.com"
+    TIMEOUT: int = 30
+    MAX_RETRIES: int = 3
 ```
 
 ### Nested Configuration
 
-For complex configuration structures:
+Nested settings use `__` in env var names:
 
 ```python
+from wurzel.core import Settings
+
+
 class DatabaseConfig(Settings):
-    """Database connection configuration."""
-    host: str = "localhost"
-    port: int = 5432
-    database: str = "wurzel"
-    username: str = "user"
-    password: str = "password"
+    HOST: str = "localhost"
+    PORT: int = 5432
+    DATABASE: str = "wurzel"
+    USERNAME: str = "user"
+    PASSWORD: str = "password"
+
 
 class ProcessingConfig(Settings):
-    """Processing configuration."""
-    batch_size: int = 100
-    parallel_workers: int = 4
+    BATCH_SIZE: int = 100
+    PARALLEL_WORKERS: int = 4
+
 
 class ComplexStepSettings(Settings):
-    """Complex step configuration."""
     database: DatabaseConfig = DatabaseConfig()
     processing: ProcessingConfig = ProcessingConfig()
-    debug_mode: bool = False
-
-# Environment variables:
-# DATABASE__HOST=production-db.example.com
-# DATABASE__PORT=5433
-# PROCESSING__BATCH_SIZE=200
-# DEBUG_MODE=true
+    DEBUG_MODE: bool = False
 ```
 
 ## Testing Custom Steps
@@ -459,134 +379,129 @@ class ComplexStepSettings(Settings):
 ### Unit Testing
 
 ```python
-import pytest
-from unittest.mock import Mock, patch
-from your_module import MyDatasourceStep, MySettings
+from pathlib import Path
+from unittest.mock import patch
 
-def test_datasource_step():
-    """Test the data source step."""
+from wurzel.core import TypedStep
+from wurzel.datacontract import MarkdownDataContract
+from wurzel.steps.manual_markdown import ManualMarkdownStep
+from wurzel.utils import WZ
 
-    # Create test settings
-    settings = MySettings(data_path="./test_data", file_pattern="*.md")
 
-    # Mock file system
-    with patch('glob.glob') as mock_glob, \
-         patch('builtins.open', create=True) as mock_open:
-
-        mock_glob.return_value = ["test1.md", "test2.md"]
-        mock_open.return_value.__enter__.return_value.read.return_value = "# Test Content"
-
-        # Test step execution
-        step = MyDatasourceStep()
-        step.settings = settings
+def test_markdown_step_returns_list(tmp_path: Path):
+    (tmp_path / "doc.md").write_text("# Hello")
+    with patch.dict("os.environ", {"MANUALMARKDOWNSTEP__FOLDER_PATH": str(tmp_path)}):
+        step = WZ(ManualMarkdownStep)
         result = step.run(None)
+    assert isinstance(result, list)
+    assert len(result) == 1
+    assert all(isinstance(d, MarkdownDataContract) for d in result)
 
-        assert len(result) == 2
-        assert result[0].content == "# Test Content"
 
 def test_filter_step():
-    """Test the document filter step."""
-    from your_module import DocumentFilterStep, FilterSettings
-    from wurzel.datacontract import MarkdownDataContract
+    from wurzel.core import Settings
 
-    # Create test data
+    class FilterSettings(Settings):
+        MIN_LENGTH: int = 10
+
+    class SimpleFilterStep(
+        TypedStep[
+            FilterSettings, list[MarkdownDataContract], list[MarkdownDataContract]
+        ]
+    ):
+        def __init__(self):
+            super().__init__()
+            self.settings = FilterSettings()
+
+        def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
+            return [d for d in inpt if len(d.md) >= self.settings.MIN_LENGTH]
+
     docs = [
-        MarkdownDataContract(content="Short", source="test1"),
-        MarkdownDataContract(content="This is a longer document with enough content", source="test2"),
-        MarkdownDataContract(content="A" * 200, source="test3"),  # Long enough
+        MarkdownDataContract(md="Hi", url="u1", keywords="k1"),
+        MarkdownDataContract(md="Long enough content here", url="u2", keywords="k2"),
     ]
-
-    # Test filtering
-    step = DocumentFilterStep()
-    step.settings = FilterSettings(min_length=50)
+    step = WZ(SimpleFilterStep)
     result = step.run(docs)
-
-    assert len(result) == 2  # Short document filtered out
-    assert result[0].content == "This is a longer document with enough content"
+    assert len(result) == 1
+    assert result[0].md == "Long enough content here"
 ```
 
 ### Integration Testing
 
 ```python
-def test_pipeline_with_custom_steps():
-    """Test a complete pipeline using custom steps."""
-    from wurzel.utils import WZ
+from wurzel.steps.manual_markdown import ManualMarkdownStep
+from wurzel.utils import WZ
 
-    # Create pipeline
-    source = WZ(MyDatasourceStep)
-    filter_step = WZ(DocumentFilterStep)
-    embedding = WZ(CustomEmbeddingStep)
 
-    source >> filter_step >> embedding
-
-    # Test pipeline structure
-    assert filter_step.inputs == [source]
-    assert embedding.inputs == [filter_step]
+def test_pipeline_structure():
+    source = WZ(ManualMarkdownStep)
+    assert source is not None
+    assert hasattr(source, "inputs")
 ```
 
 ## Best Practices
 
 ### Error Handling
 
-```python
-class RobustProcessingStep(TypedStep[Settings, list[MarkdownDataContract], list[MarkdownDataContract]]):
-    """Example of robust error handling in steps."""
+Catch per-item errors and fail if too many:
 
+```python
+from wurzel.core import NoSettings, TypedStep
+from wurzel.datacontract import MarkdownDataContract
+
+
+class RobustProcessingStep(
+    TypedStep[NoSettings, list[MarkdownDataContract], list[MarkdownDataContract]]
+):
     def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
-        """Process documents with error handling."""
         processed_docs = []
         errors = []
-
         for i, doc in enumerate(inpt):
             try:
-                processed_doc = self._process_document(doc)
-                processed_docs.append(processed_doc)
+                processed_docs.append(doc)
             except Exception as e:
-                error_msg = f"Failed to process document {i}: {str(e)}"
-                errors.append(error_msg)
-                # Log error but continue processing
-                print(f"Warning: {error_msg}")
-
-        if errors and len(errors) > len(inpt) * 0.5:  # More than 50% failed
+                errors.append(f"Failed to process document {i}: {e!s}")
+        if errors and len(errors) > len(inpt) * 0.5:
             raise RuntimeError(f"Too many processing errors: {len(errors)}/{len(inpt)}")
-
         return processed_docs
 ```
 
 ### Resource Management
 
-```python
-class ResourceManagedStep(TypedStep[Settings, list[MarkdownDataContract], list[MarkdownDataContract]]):
-    """Example of proper resource management."""
+Use `finalize()` to release connections and temp files:
 
+```python
+import os
+from typing import Any
+
+from wurzel.core import NoSettings, TypedStep
+from wurzel.datacontract import MarkdownDataContract
+
+
+class ResourceManagedStep(
+    TypedStep[NoSettings, list[MarkdownDataContract], list[MarkdownDataContract]]
+):
     def __init__(self):
-        """Initialize with resource management."""
-        self.connection = None
-        self.temp_files = []
+        super().__init__()
+        self.connection: Any = None
+        self.temp_files: list[str] = []
 
     def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
-        """Process with proper resource handling."""
         try:
-            # Your processing logic here
-            return self._process_documents(inpt)
+            return inpt
         except Exception:
-            # Clean up on error
             self._cleanup_resources()
             raise
 
     def finalize(self) -> None:
-        """Ensure cleanup happens."""
         self._cleanup_resources()
 
-    def _cleanup_resources(self):
-        """Clean up allocated resources."""
-        if self.connection:
+    def _cleanup_resources(self) -> None:
+        if self.connection is not None:
             self.connection.close()
             self.connection = None
-
         for temp_file in self.temp_files:
             try:
-                import os
                 os.unlink(temp_file)
             except OSError:
                 pass

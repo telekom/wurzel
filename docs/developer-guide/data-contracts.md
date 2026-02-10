@@ -18,36 +18,27 @@ Wurzel implements a **type-safe pipeline system** where data flows between proce
 
 ### The DataModel Interface
 
-All data contracts in Wurzel implement the abstract `DataModel` interface:
+Contracts implement `DataModel`: **save_to_path** and **load_from_path** for persistence between steps.
 
 ```python
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, Self, TypeVar
 
-T = TypeVar('T', bound='DataModel')
+T = TypeVar("T", bound="DataModel")
+
 
 class DataModel(ABC):
-    """
-    Abstract base class for all data models in Wurzel.
-
-    Provides serialization and deserialization capabilities
-    for data exchange between pipeline steps.
-    """
-
+    @classmethod
     @abstractmethod
-    def save_to_path(self, path: Path) -> None:
-        """Save the data model to the specified path."""
-        pass
+    def save_to_path(cls, path: Path, obj: Self | list[Self]) -> Path: ...
 
     @classmethod
     @abstractmethod
-    def load_from_path(cls: type[T], path: Path) -> T:
-        """Load the data model from the specified path."""
-        pass
+    def load_from_path(cls, path: Path, *args: Any) -> Self: ...
 ```
 
-This interface ensures that all data types can be:
+This ensures all data types can be:
 
 - **Persisted** to disk between pipeline steps
 - **Loaded** automatically by the next step
@@ -59,30 +50,37 @@ Wurzel provides two concrete implementations of the `DataModel` interface:
 
 #### PydanticModel
 
-For structured objects and metadata:
+For structured objects; inherits JSON save/load from the base. Custom override only if you need different behavior:
 
 ```python
-from pydantic import BaseModel
+import json
+from pathlib import Path
+
 from wurzel.datacontract import PydanticModel
 
+
 class DocumentMetadata(PydanticModel):
-    """Example of a Pydantic-based data contract."""
     title: str
     author: str
     created_date: str
     tags: list[str] = []
 
-    # Inherited methods for serialization
-    def save_to_path(self, path: Path) -> None:
-        """Save as JSON file."""
-        with open(path, 'w') as f:
-            f.write(self.model_dump_json())
+    @classmethod
+    def save_to_path(
+        cls, path: Path, obj: "DocumentMetadata | list[DocumentMetadata]"
+    ) -> Path:
+        path = path.with_suffix(".json")
+        single = [obj] if isinstance(obj, cls) else obj
+        path.write_text(json.dumps([m.model_dump() for m in single], indent=2))
+        return path
 
     @classmethod
-    def load_from_path(cls, path: Path) -> 'DocumentMetadata':
-        """Load from JSON file."""
-        with open(path, 'r') as f:
-            data = json.load(f)
+    def load_from_path(
+        cls, path: Path, model_type: type["DocumentMetadata"]
+    ) -> "DocumentMetadata":
+        data = json.loads(path.read_text())
+        if isinstance(data, list):
+            data = data[0]
         return cls(**data)
 ```
 
@@ -92,25 +90,26 @@ class DocumentMetadata(PydanticModel):
 - **Use cases**: Individual documents, metadata, configuration objects
 - **Validation**: Automatic Pydantic validation
 
-#### DataFrame
+#### DataFrame (Pandera)
 
-For bulk data processing:
+For bulk data, use Pandera schema models like `EmbeddingResult`:
 
 ```python
 import pandas as pd
-from wurzel.datacontract import DataFrame
 
-# Type-safe DataFrame with specific row type
-EmbeddingDataFrame = DataFrame[EmbeddingResult]
+from wurzel.steps.data import EmbeddingResult
 
-class EmbeddingResult(PydanticModel):
-    """Data contract for embedding results."""
-    id: str
-    content: str
-    source: str
-    metadata: dict[str, Any]
-    embedding: list[float]
-    embedding_model: str
+df = pd.DataFrame(
+    {
+        "text": ["doc1"],
+        "url": ["file:///doc1.md"],
+        "vector": [[0.1, 0.2]],
+        "keywords": [""],
+        "embedding_input_text": ["doc1"],
+        "metadata": [{}],
+    }
+)
+typed_df = EmbeddingResult(df)
 ```
 
 **Features**:
@@ -123,62 +122,58 @@ class EmbeddingResult(PydanticModel):
 
 ### MarkdownDataContract
 
-The primary contract for document processing pipelines:
+Primary contract for document pipelines. Fields: **md**, **url**, **keywords**, **metadata**.
 
 ```python
 from wurzel.datacontract import MarkdownDataContract
 
-# Create a markdown document
 doc = MarkdownDataContract(
-    content="# My Document\n\nThis is the content.",
-    source="document.md",
-    metadata={
-        "author": "John Doe",
-        "created": "2024-01-01",
-        "tags": ["documentation", "markdown"]
-    }
+    md="# My Document\n\nThis is the content.",
+    url="document.md",
+    keywords="documentation, markdown",
+    metadata={"author": "John Doe", "created": "2024-01-01", "tags": ["markdown"]},
 )
-
-# Access fields
-print(doc.content)    # The markdown content
-print(doc.source)     # Source identifier/path
-print(doc.metadata)   # Additional metadata dictionary
+_ = doc.md
+_ = doc.url
+_ = doc.metadata
 ```
 
 **Fields**:
 
-- `content`: The actual markdown text
-- `source`: Source identifier (file path, URL, etc.)
+- `md`: The actual markdown text
+- `url`: Source identifier (file path, URL, etc.)
+- `keywords`: Optional keywords
 - `metadata`: Flexible dictionary for additional information
 
 **Usage**: Document ingestion, text processing, content management
 
 ### EmbeddingResult
 
-For vector embedding data:
+DataFrame schema for embedding output (one row per chunk). Columns: **text**, **url**, **vector**, **keywords**, **embedding_input_text**, **metadata**.
 
 ```python
-from wurzel.datacontract import EmbeddingResult
+import pandas as pd
 
-# Create an embedding result
-embedding = EmbeddingResult(
-    id="doc_001",
-    content="Original text content",
-    source="source_document.md",
-    metadata={"processed_at": "2024-01-01T10:00:00Z"},
-    embedding=[0.1, 0.2, 0.3, ...],  # Vector representation
-    embedding_model="sentence-transformers/all-MiniLM-L6-v2"
-)
+from wurzel.steps.data import EmbeddingResult
+
+row = {
+    "text": "Original text content",
+    "url": "source_document.md",
+    "vector": [0.1, 0.2, 0.3],
+    "keywords": "",
+    "embedding_input_text": "Original text content",
+    "metadata": {"processed_at": "2024-01-01T10:00:00Z"},
+}
+df = pd.DataFrame([row])
+embedding_df = EmbeddingResult(df)
 ```
 
-**Fields**:
+**Fields** (per row):
 
-- `id`: Unique identifier for the embedding
-- `content`: Original text that was embedded
-- `source`: Source of the original content
-- `metadata`: Additional context information
-- `embedding`: The actual vector representation
-- `embedding_model`: Model used to generate the embedding
+- `text`: Text that was embedded
+- `url`: Source of the content
+- `vector`: Vector representation
+- `keywords`, `embedding_input_text`, `metadata`: Optional
 
 **Usage**: Vector databases, similarity search, ML pipelines
 
@@ -186,219 +181,160 @@ embedding = EmbeddingResult(
 
 ### Simple Custom Contract
 
+Subclass `PydanticModel`, add fields and validators:
+
 ```python
-from wurzel.datacontract import PydanticModel
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import field_validator
+
+from wurzel.core import NoSettings, TypedStep
+from wurzel.datacontract import PydanticModel
+
 
 class ProductDataContract(PydanticModel):
-    """Data contract for product information."""
-
-    # Required fields
     product_id: str
     name: str
     price: float
-
-    # Optional fields with defaults
     description: Optional[str] = None
     category: str = "general"
     in_stock: bool = True
-
-    # Complex fields
     tags: list[str] = []
     attributes: dict[str, str] = {}
-
-    # Computed fields
     created_at: datetime = datetime.now()
 
-    # Validation
-    @validator('price')
-    def validate_price(cls, v):
+    @field_validator("price")
+    @classmethod
+    def validate_price(cls, v: float) -> float:
         if v < 0:
-            raise ValueError('Price must be positive')
+            raise ValueError("Price must be positive")
         return v
 
-    @validator('product_id')
-    def validate_id_format(cls, v):
-        if not v.startswith('PROD_'):
-            raise ValueError('Product ID must start with PROD_')
+    @field_validator("product_id")
+    @classmethod
+    def validate_id_format(cls, v: str) -> str:
+        if not v.startswith("PROD_"):
+            raise ValueError("Product ID must start with PROD_")
         return v
 
-# Usage in a step
-class ProductProcessingStep(TypedStep[Settings, list[ProductDataContract], list[ProductDataContract]]):
-    """Process product data with type safety."""
 
+class ProductProcessingStep(
+    TypedStep[NoSettings, list[ProductDataContract], list[ProductDataContract]]
+):
     def run(self, inpt: list[ProductDataContract]) -> list[ProductDataContract]:
-        processed_products = []
-
+        processed = []
         for product in inpt:
-            # Type-safe access to fields
             if product.price > 100:
                 product.tags.append("premium")
-
-            # Validation happens automatically
-            processed_products.append(product)
-
-        return processed_products
+            processed.append(product)
+        return processed
 ```
 
 ### Complex Hierarchical Contract
 
+Nested Pydantic models and enums:
+
 ```python
-from wurzel.datacontract import PydanticModel
-from typing import Union, Literal
+from datetime import datetime
 from enum import Enum
+from typing import Optional
+
+from pydantic import field_validator
+
+from wurzel.datacontract import PydanticModel
+
 
 class DocumentType(str, Enum):
-    """Enumeration of document types."""
     ARTICLE = "article"
     MANUAL = "manual"
     FAQ = "faq"
     TUTORIAL = "tutorial"
 
+
 class AuthorInfo(PydanticModel):
-    """Nested contract for author information."""
     name: str
     email: str
     organization: Optional[str] = None
 
+
 class DocumentSection(PydanticModel):
-    """Contract for document sections."""
     title: str
     content: str
-    level: int = 1  # Heading level
-    subsections: list['DocumentSection'] = []  # Self-referential
+    level: int = 1
+    subsections: list["DocumentSection"] = []
+
 
 class RichDocumentContract(PydanticModel):
-    """Complex document contract with hierarchical structure."""
-
-    # Basic information
     title: str
     document_type: DocumentType
     language: str = "en"
-
-    # Content structure
     sections: list[DocumentSection]
-
-    # Metadata
     author: AuthorInfo
     created_at: datetime
     updated_at: Optional[datetime] = None
-
-    # Processing information
     word_count: Optional[int] = None
     reading_time_minutes: Optional[float] = None
 
-    # Computed properties
-    @property
-    def total_sections(self) -> int:
-        """Count total sections including subsections."""
-        def count_sections(sections: list[DocumentSection]) -> int:
-            count = len(sections)
-            for section in sections:
-                count += count_sections(section.subsections)
-            return count
-        return count_sections(self.sections)
-
-    # Custom validation
-    @validator('sections')
-    def validate_sections(cls, v):
+    @field_validator("sections")
+    @classmethod
+    def validate_sections(cls, v: list[DocumentSection]) -> list[DocumentSection]:
         if not v:
-            raise ValueError('Document must have at least one section')
+            raise ValueError("Document must have at least one section")
         return v
 ```
 
 ### DataFrame-based Contracts
 
-For high-volume data processing:
+Use Pandera schema types in step signatures:
 
 ```python
-import pandas as pd
-from wurzel.datacontract import DataFrame, PydanticModel
+from pandera.typing import DataFrame
 
-class LogEntry(PydanticModel):
-    """Single log entry contract."""
-    timestamp: datetime
-    level: Literal["DEBUG", "INFO", "WARNING", "ERROR"]
-    message: str
-    source: str
-    user_id: Optional[str] = None
-    session_id: Optional[str] = None
-    metadata: dict[str, Any] = {}
+from wurzel.core import NoSettings, TypedStep
+from wurzel.steps.data import EmbeddingResult
 
-# Type-safe DataFrame for bulk log processing
-LogDataFrame = DataFrame[LogEntry]
 
-class LogProcessingStep(TypedStep[Settings, LogDataFrame, LogDataFrame]):
-    """Process log entries in bulk."""
-
-    def run(self, inpt: LogDataFrame) -> LogDataFrame:
-        """Filter and enrich log entries."""
-
-        # Convert to pandas DataFrame for processing
-        df = inpt.to_pandas()
-
-        # Bulk operations
-        df = df[df['level'].isin(['WARNING', 'ERROR'])]  # Filter
-        df['processed_at'] = datetime.now()  # Add column
-
-        # Convert back to type-safe DataFrame
-        processed_entries = []
-        for _, row in df.iterrows():
-            entry = LogEntry(
-                timestamp=row['timestamp'],
-                level=row['level'],
-                message=row['message'],
-                source=row['source'],
-                user_id=row.get('user_id'),
-                session_id=row.get('session_id'),
-                metadata=row.get('metadata', {})
-            )
-            processed_entries.append(entry)
-
-        return DataFrame(processed_entries)
+class EmbeddingPassthroughStep(
+    TypedStep[NoSettings, DataFrame[EmbeddingResult], DataFrame[EmbeddingResult]]
+):
+    def run(self, inpt: DataFrame[EmbeddingResult]) -> DataFrame[EmbeddingResult]:
+        return inpt
 ```
 
 ## Data Contract Best Practices
 
 ### Design Guidelines
 
-1. **Keep contracts focused**: Each contract should represent a single, well-defined data structure
-2. **Use descriptive names**: Make field names and contract names self-documenting
-3. **Provide defaults**: Use sensible defaults for optional fields
-4. **Add validation**: Use Pydantic validators for data integrity
-5. **Document everything**: Add docstrings and field descriptions
+1. **Keep contracts focused** — one clear data structure per contract
+2. **Use descriptive names** and **sensible defaults** for optional fields
+3. **Add validation** with Pydantic validators and `Field(..., description=...)`
 
 ```python
+import re
+from datetime import datetime
+from typing import Optional
+
+from pydantic import Field, field_validator
+
+from wurzel.datacontract import PydanticModel
+
+
 class WellDesignedContract(PydanticModel):
-    """
-    Example of a well-designed data contract.
-
-    This contract represents a processed document with
-    quality metrics and processing metadata.
-    """
-
-    # Core data (required)
     document_id: str = Field(..., description="Unique document identifier")
     content: str = Field(..., description="Processed document content")
-
-    # Metadata (optional with defaults)
     language: str = Field("en", description="Document language code")
     processing_version: str = Field("1.0", description="Processing pipeline version")
-
-    # Quality metrics
-    quality_score: float = Field(0.0, ge=0.0, le=1.0, description="Document quality score (0-1)")
-    confidence: float = Field(0.0, ge=0.0, le=1.0, description="Processing confidence (0-1)")
-
-    # Timestamps
+    quality_score: float = Field(0.0, ge=0.0, le=1.0, description="Quality score (0-1)")
+    confidence: float = Field(0.0, ge=0.0, le=1.0, description="Confidence (0-1)")
     created_at: datetime = Field(default_factory=datetime.now)
     processed_at: Optional[datetime] = None
 
-    @validator('document_id')
-    def validate_document_id(cls, v):
-        """Ensure document ID follows expected format."""
-        if not re.match(r'^DOC_\d{8}_\d{6}$', v):
-            raise ValueError('Document ID must match format: DOC_YYYYMMDD_HHMMSS')
+    @field_validator("document_id")
+    @classmethod
+    def validate_document_id(cls, v: str) -> str:
+        if not re.match(r"^DOC_\d{8}_\d{6}$", v):
+            raise ValueError("Document ID must match format: DOC_YYYYMMDD_HHMMSS")
         return v
 ```
 
@@ -418,42 +354,52 @@ class WellDesignedContract(PydanticModel):
 
 ### Migration and Versioning
 
-Handle contract evolution gracefully:
+Support multiple contract versions with a migration function and a step that accepts both:
 
 ```python
 from typing import Union
 
+from wurzel.core import NoSettings, TypedStep
+from wurzel.datacontract import PydanticModel
+
+
+class AuthorInfo(PydanticModel):
+    name: str
+    email: str = ""
+    organization: str | None = None
+
+
 class DocumentContractV1(PydanticModel):
-    """Original document contract."""
     title: str
     content: str
     author: str
 
+
 class DocumentContractV2(PydanticModel):
-    """Enhanced document contract with structured metadata."""
     title: str
     content: str
-    author: AuthorInfo  # Now a structured object
+    author: AuthorInfo
     version: int = 2
 
-# Migration function
+
 def migrate_document_v1_to_v2(old_doc: DocumentContractV1) -> DocumentContractV2:
-    """Migrate from V1 to V2 contract."""
     return DocumentContractV2(
         title=old_doc.title,
         content=old_doc.content,
         author=AuthorInfo(
-            name=old_doc.author,
-            email="unknown@example.com",  # Default for missing data
-            organization=None
-        )
+            name=old_doc.author, email="unknown@example.com", organization=None
+        ),
     )
 
-# Version-aware step
-class VersionAwareStep(TypedStep[Settings, Union[DocumentContractV1, DocumentContractV2], DocumentContractV2]):
-    """Step that handles multiple contract versions."""
 
-    def run(self, inpt: Union[DocumentContractV1, DocumentContractV2]) -> DocumentContractV2:
+class VersionAwareStep(
+    TypedStep[
+        NoSettings, Union[DocumentContractV1, DocumentContractV2], DocumentContractV2
+    ]
+):
+    def run(
+        self, inpt: Union[DocumentContractV1, DocumentContractV2]
+    ) -> DocumentContractV2:
         if isinstance(inpt, DocumentContractV1):
             return migrate_document_v1_to_v2(inpt)
         return inpt
@@ -465,89 +411,63 @@ class VersionAwareStep(TypedStep[Settings, Union[DocumentContractV1, DocumentCon
 
 ```python
 import pytest
-from datetime import datetime
-from your_module import ProductDataContract
 
-def test_product_contract_creation():
-    """Test basic contract creation and validation."""
-    product = ProductDataContract(
-        product_id="PROD_001",
-        name="Test Product",
-        price=29.99
+from wurzel.datacontract import MarkdownDataContract
+
+
+def test_markdown_contract_creation():
+    doc = MarkdownDataContract(
+        md="# Hello",
+        url="doc.md",
+        keywords="test",
+        metadata={"key": "value"},
     )
+    assert doc.md == "# Hello"
+    assert doc.url == "doc.md"
+    assert doc.metadata == {"key": "value"}
 
-    assert product.product_id == "PROD_001"
-    assert product.name == "Test Product"
-    assert product.price == 29.99
-    assert product.in_stock is True  # Default value
 
-def test_product_contract_validation():
-    """Test contract validation rules."""
-
-    # Test invalid price
-    with pytest.raises(ValueError, match="Price must be positive"):
-        ProductDataContract(
-            product_id="PROD_001",
-            name="Test Product",
-            price=-10.0
-        )
-
-    # Test invalid ID format
-    with pytest.raises(ValueError, match="Product ID must start with PROD_"):
-        ProductDataContract(
-            product_id="INVALID_001",
-            name="Test Product",
-            price=29.99
-        )
-
-def test_product_contract_serialization():
-    """Test contract serialization and deserialization."""
-    import tempfile
-    from pathlib import Path
-
-    # Create test product
-    original = ProductDataContract(
-        product_id="PROD_001",
-        name="Test Product",
-        price=29.99,
-        tags=["electronics", "gadget"]
-    )
-
-    # Test serialization
-    with tempfile.TemporaryDirectory() as temp_dir:
-        file_path = Path(temp_dir) / "product.json"
-        original.save_to_path(file_path)
-
-        # Test deserialization
-        loaded = ProductDataContract.load_from_path(file_path)
-
-        assert loaded.product_id == original.product_id
-        assert loaded.name == original.name
-        assert loaded.price == original.price
-        assert loaded.tags == original.tags
+def test_markdown_contract_validation():
+    with pytest.raises(Exception):
+        MarkdownDataContract(md=123, url="u", keywords="k")  # type: ignore[arg-type]
 ```
 
 ### Integration Testing with Steps
 
 ```python
-def test_step_with_custom_contract():
-    """Test step using custom data contract."""
-    from your_module import ProductProcessingStep, ProductDataContract
+from wurzel.core import NoSettings, TypedStep
+from wurzel.datacontract import PydanticModel
 
-    # Create test data
+
+class ProductDataContract(PydanticModel):
+    product_id: str
+    name: str
+    price: float
+    tags: list[str] = []
+
+
+class ProductProcessingStep(
+    TypedStep[NoSettings, list[ProductDataContract], list[ProductDataContract]]
+):
+    def run(self, inpt: list[ProductDataContract]) -> list[ProductDataContract]:
+        out = []
+        for p in inpt:
+            if p.price > 100:
+                p.tags.append("premium")
+            out.append(p)
+        return out
+
+
+def test_step_with_custom_contract():
     products = [
         ProductDataContract(product_id="PROD_001", name="Cheap Item", price=5.99),
         ProductDataContract(product_id="PROD_002", name="Expensive Item", price=150.00),
     ]
-
-    # Test step execution
     step = ProductProcessingStep()
     result = step.run(products)
-
-    # Verify processing logic
     assert len(result) == 2
-    assert "premium" not in result[0].tags  # Cheap item
-    assert "premium" in result[1].tags      # Expensive item
+    assert "premium" not in result[0].tags
+    assert "premium" in result[1].tags
 ```
 
 ## Next Steps

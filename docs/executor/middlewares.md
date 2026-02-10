@@ -33,16 +33,20 @@ You can enable middlewares in two ways:
 1. By passing names or instances to `BaseStepExecutor`:
 
 ```python
-from wurzel.executors.base_executor import BaseStepExecutor
+from pathlib import Path
+
+from wurzel.executors import BaseStepExecutor
+from wurzel.steps.manual_markdown import ManualMarkdownStep
 
 # Using names registered in the middleware registry
 with BaseStepExecutor(middlewares=["timing", "custom"]) as exc:
-    exc(MyStep, set(), Path("output"))
+    exc(ManualMarkdownStep, set(), Path("output"))
 
 # Or provide middleware instances directly
-from wurzel.executors.middlewares import TimingMiddleware
-with BaseStepExecutor(middlewares=[TimingMiddleware()]) as exc:
-    exc(MyStep, set(), Path("output"))
+from wurzel.executors.middlewares.prometheus import PrometheusMiddleware
+
+with BaseStepExecutor(middlewares=[PrometheusMiddleware()]) as exc:
+    exc(ManualMarkdownStep, set(), Path("output"))
 ```
 
 1. By setting the `MIDDLEWARES` environment variable to a comma-separated
@@ -72,13 +76,18 @@ and return values.
 Minimal example:
 
 ```python
+import logging
+
 from wurzel.executors.middlewares.base import BaseMiddleware
 
+log = logging.getLogger(__name__)
+
+
 class LoggingMiddleware(BaseMiddleware):
-    def __call__(self, call_next, step_cls, inputs, output_path):
-        print(f"Starting {step_cls.__name__}")
-        result = call_next(step_cls, inputs, output_path)
-        print(f"Finished {step_cls.__name__}")
+    def __call__(self, call_next, step_cls, inputs, output_dir):
+        log.info("Starting %s", step_cls.__name__)
+        result = call_next(step_cls, inputs, output_dir)
+        log.info("Finished %s", step_cls.__name__)
         return result
 ```
 
@@ -109,19 +118,28 @@ registry, follow the project's conventions for step executor extensions.
 Registering and using a custom middleware:
 
 ```python
+from pathlib import Path
+
+from wurzel.executors import BaseStepExecutor
 from wurzel.executors.middlewares import get_registry
+from wurzel.executors.middlewares.prometheus import PrometheusMiddleware
+from wurzel.steps.manual_markdown import ManualMarkdownStep
 
 registry = get_registry()
-registry.register("custom", MyCustomMiddleware)
+registry.register("custom", PrometheusMiddleware)
 
 with BaseStepExecutor(middlewares=["custom"]) as exc:
-    exc(MyStep, set(), Path("output"))
+    exc(ManualMarkdownStep, set(), Path("output"))
 ```
 
 Conditional loading example:
 
 ```python
 import os
+from pathlib import Path
+
+from wurzel.executors import BaseStepExecutor
+from wurzel.steps.manual_markdown import ManualMarkdownStep
 
 middlewares = []
 if os.environ.get("ENABLE_TIMING") == "true":
@@ -130,7 +148,7 @@ if os.environ.get("ENABLE_TRACING") == "true":
     middlewares.append("otel")
 
 with BaseStepExecutor(middlewares=middlewares) as exc:
-    exc(MyStep, set(), Path("output"))
+    exc(ManualMarkdownStep, set(), Path("output"))
 ```
 
 ## Using Middlewares with Backends

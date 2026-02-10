@@ -24,30 +24,38 @@ logging and error reporting when contracts fail.
 Basic usage as a context manager:
 
 ```python
-from wurzel.executors.base_executor import BaseStepExecutor
-from wurzel.step.typed_step import TypedStep
+from pathlib import Path
 
-class MyStep(TypedStep):
-    ...
+from wurzel.executors import BaseStepExecutor
+from wurzel.steps.manual_markdown import ManualMarkdownStep
 
 with BaseStepExecutor() as exc:
-    results = exc(MyStep, set(), Path("output"))
+    results = exc(ManualMarkdownStep, set(), Path("output"))
 ```
 
 Running the executor with middlewares by name:
 
 ```python
+from pathlib import Path
+
+from wurzel.executors import BaseStepExecutor
+from wurzel.steps.manual_markdown import ManualMarkdownStep
+
 with BaseStepExecutor(middlewares=["prometheus", "timing"]) as exc:
-    results = exc(MyStep, set(), Path("output"))
+    results = exc(ManualMarkdownStep, set(), Path("output"))
 ```
 
 Or provide middleware instances directly:
 
 ```python
-from wurzel.executors.middlewares import SomeMiddleware
+from pathlib import Path
 
-with BaseStepExecutor(middlewares=[SomeMiddleware()]) as exc:
-    results = exc(MyStep, set(), Path("output"))
+from wurzel.executors import BaseStepExecutor
+from wurzel.executors.middlewares.prometheus import PrometheusMiddleware
+from wurzel.steps.manual_markdown import ManualMarkdownStep
+
+with BaseStepExecutor(middlewares=[PrometheusMiddleware()]) as exc:
+    results = exc(ManualMarkdownStep, set(), Path("output"))
 ```
 
 ## Environment encapsulation

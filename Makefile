@@ -1,73 +1,49 @@
 # SPDX-FileCopyrightText: 2024 Deutsche Telekom AG
 #
 # SPDX-License-Identifier: CC0-1.0
-.PHONY: install test clean
+# Requires uv (https://docs.astral.sh/uv/). First-time: run 'make lock' then 'make install'.
+.PHONY: install test clean build lock lint documentation reuse-lint
 SRC_DIR = ./wurzel
-TEST_DIR= ./tests
+TEST_DIR = ./tests
 VENV = .venv
-SYSTEM_PYTHON?= python3.12
 SHELL := bash
 
+$(VENV)/.venv_created:
+	@uv venv $(VENV)
+	@touch $(VENV)/.venv_created
 
-ifeq ($(OS),Windows_NT)
-	PY  ?= $(VENV)/Scripts/python.exe
-	PIP ?= $(VENV)/Scripts/pip.exe
-	UV  ?= $(VENV)/Scripts/uv.exe
-else
-	PY  ?= $(VENV)/bin/python
-	PIP ?= $(VENV)/bin/pip
-	UV  ?= $(VENV)/bin/uv
-endif
-
+install: $(VENV)/.venv_created
+	uv sync --all-extras
+	uv run pre-commit install
 
 build: install
-	$(UV) pip install build
-	$(PY) -m build .
-
-$(VENV)/touchfile: pyproject.toml $(UV)
-	$(UV) --no-progress pip install -r pyproject.toml --all-extras
-	@$(shell if [ "$(OS)" = "Windows_NT" ]; then echo type nul > $(VENV)\\touchfile; else echo touch $(VENV)/touchfile; fi)
-$(PY):
-	$(SYSTEM_PYTHON) -m venv $(VENV)
-
-$(UV): $(PY)
-	$(PIP) install --upgrade pip
-	$(PIP) install uv
-
-install: $(VENV)/touchfile
-	$(UV) run pre-commit install
-
-UNAME_S := $(shell uname)
+	uv build
 
 test: install
 	@echo "🧪 Running tests..."
-ifeq ($(UNAME_S),Darwin)
-ifneq ($(GITHUB_ACTIONS),)
-	@echo "Running tests on MacOS in GitHub pipeline"
-	@echo "Skipping coverage check"
-# https://github.com/actions/runner-images/issues/9918
-# Docling coverage is not working when tests are skipped on MacOS
-	$(UV) run pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov=$(SRC_DIR)
-else
-	$(UV) run pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov-fail-under=90 --cov=$(SRC_DIR)
-endif
-else
-	$(UV) run pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov-fail-under=90 --cov=$(SRC_DIR)
-endif
+	@UNAME_S=$$(uname); \
+	if [ "$$UNAME_S" = "Darwin" ] && [ -n "$$GITHUB_ACTIONS" ]; then \
+		echo "Running tests on MacOS in GitHub pipeline"; \
+		echo "Skipping coverage check"; \
+		uv run pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov=$(SRC_DIR); \
+	elif [ "$$UNAME_S" = "Darwin" ]; then \
+		uv run pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov-fail-under=90 --cov=$(SRC_DIR); \
+	else \
+		uv run pytest $(TEST_DIR) --cov-branch --cov-report term --cov-report html:reports --cov-fail-under=90 --cov=$(SRC_DIR); \
+	fi
 
 lint: install
 	@echo "🔍 Running lint checks..."
-	$(UV) run pre-commit run --all-files
+	uv run pre-commit run --all-files
 
 clean:
 	@echo "🧹 Cleaning up..."
 	@rm -rf __pycache__ ${SRC_DIR}/*.egg-info **/__pycache__ .pytest_cache
-	@rm -rf .coverage reports dist
+	@rm -rf .coverage reports dist $(VENV)
 
 documentation: install
 	@echo "📚 Serving documentation..."
-	$(UV) run mkdocs serve
+	uv run mkdocs serve
 
-.PHONY: reuse-lint
 reuse-lint:
-	$(UV) run  reuse lint
+	uv run reuse lint

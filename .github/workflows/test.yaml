@@ -34,42 +34,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Cache venv
-        uses: actions/cache@v4
-        with:
-          path: .venv
-          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            venv-${{ runner.os }}-${{ matrix.python-version }}-
-
       - name: Install the latest version of uv and set the python version
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
           cache-dependency-glob: "**/pyproject.toml"
           python-version: ${{ matrix.python-version }}
-          activate-environment: true
 
       - name: Install dependencies (minimal)
         if: matrix.test-type == 'minimal'
-        run: |
-          uv lock
-          uv --no-progress pip install -e ".[test]"
+        run: uv sync --extra test
 
       - name: Install dependencies (full)
         if: matrix.test-type == 'full'
-        run: |
-          uv lock
-          uv lock
-          make install UV="uv" PIP="pip" SYSTEM_PYTHON="python${{ matrix.python-version }}"
+        run: make install
 
       - name: Test minimal installation
         if: matrix.test-type == 'minimal'
         run: |
           # Run a basic test to ensure the minimal package works
           uv run python -c "import wurzel; print('Minimal installation successful')"
-          # Run only core tests that don't require optional dependencies
-          uv run pytest tests/ -k "not (qdrant or milvus or docling or openai or transformers or tlsh or splitter)" -v --ignore=tests/splitter --ignore=tests/splitter_test.py
+          # Core tests only (no optional deps); skip doc examples (run in full install)
+          uv run pytest tests/ -k "not (qdrant or milvus or docling or openai or transformers or tlsh or splitter)" -v --ignore=tests/splitter --ignore=tests/splitter_test.py --ignore=tests/test_doc_examples.py
 
 
       - name: Test full installation
