@@ -364,7 +364,6 @@ container:
 Use the Argo backend directly in Python:
 
 ```python
-from pathlib import Path
 from wurzel.backend.backend_argo import ArgoBackend
 from wurzel.steps.embedding import EmbeddingStep
 from wurzel.steps.manual_markdown import ManualMarkdownStep
@@ -375,17 +374,16 @@ from wurzel.utils import WZ
 source = WZ(ManualMarkdownStep)
 embedding = WZ(EmbeddingStep)
 step = WZ(QdrantConnectorStep)
-
 source >> embedding >> step
 pipeline = step
 
-# Generate Argo Workflows configuration from values file
-backend = ArgoBackend.from_values(
-    files=[Path("values.yaml")],
-    workflow_name="pipelinedemo"
-)
+# Generate Argo Workflows configuration (default config, no values file)
+backend = ArgoBackend()
 argo_yaml = backend.generate_artifact(pipeline)
-print(argo_yaml)
+
+# Or from values file (YAML must contain workflows.pipelinedemo):
+# from pathlib import Path
+# backend = ArgoBackend.from_values(files=[Path("values.yaml")], workflow_name="pipelinedemo")
 ```
 
 ## Deploying Argo Workflows

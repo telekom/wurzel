@@ -47,12 +47,19 @@ wurzel inspect wurzel.<step_path>
 ### 2. Programmatic Execution (Python)
 Run a step using the snippet below:
 ```python
-from wurzel.steps import step
+import os
 from pathlib import Path
-from wurzel.step_executor import BaseStepExecutor
 
+from wurzel.step_executor import BaseStepExecutor
+from wurzel.steps.manual_markdown import ManualMarkdownStep
+
+# Create input dir and set folder (required by ManualMarkdownStep)
+input_dir = Path("./input")
+input_dir.mkdir(exist_ok=True)
+abs_input = input_dir.resolve()
+os.environ["MANUALMARKDOWNSTEP__FOLDER_PATH"] = str(abs_input)
 with BaseStepExecutor() as ex:
-    ex(step, set(Path("./input")), Path("./output"))
+    ex(ManualMarkdownStep, {abs_input}, Path("./output"))
 ```
 
 ### Building your one step

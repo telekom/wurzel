@@ -54,8 +54,8 @@ jobs:
         run: |
           # Run a basic test to ensure the minimal package works
           uv run python -c "import wurzel; print('Minimal installation successful')"
-          # Run only core tests that don't require optional dependencies
-          uv run pytest tests/ -k "not (qdrant or milvus or docling or openai or transformers or tlsh or splitter)" -v --ignore=tests/splitter --ignore=tests/splitter_test.py
+          # Core tests only (no optional deps); skip doc examples (run in full install)
+          uv run pytest tests/ -k "not (qdrant or milvus or docling or openai or transformers or tlsh or splitter)" -v --ignore=tests/splitter --ignore=tests/splitter_test.py --ignore=tests/test_doc_examples.py
 
 
       - name: Test full installation
