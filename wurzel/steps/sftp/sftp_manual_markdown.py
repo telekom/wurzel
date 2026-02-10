@@ -13,9 +13,9 @@ from typing import Optional
 import paramiko
 from pydantic import Field, SecretStr
 
+from wurzel.core import Settings, TypedStep
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import StepFailed
-from wurzel.step import Settings, TypedStep
 
 logger = logging.getLogger(__name__)
 

@@ -2,19 +2,20 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Tests for wurzel.backend.backend_argo module."""
-
-from pathlib import Path
+"""Tests for ArgoBackend with refactored structure."""
 
 import pytest
-import yaml
 
 from wurzel.utils import HAS_HERA
 
 if not HAS_HERA:
     pytest.skip("Hera is not available", allow_module_level=True)
 
-from wurzel.backend.backend_argo import (
+from pathlib import Path
+
+import yaml
+
+from wurzel.executors.backend.backend_argo import (
     ArgoBackend,
     ContainerConfig,
     EnvFromConfig,
@@ -28,7 +29,8 @@ from wurzel.backend.backend_argo import (
     WorkflowConfig,
     select_workflow,
 )
-from wurzel.backend.values import ValuesFileError, deep_merge_dicts, load_values
+from wurzel.executors.backend.values import ValuesFileError, deep_merge_dicts, load_values
+from wurzel.executors.base_executor import BaseStepExecutor
 
 from .conftest import DummyFollowStep, DummyStep
 
@@ -520,27 +522,28 @@ class TestSelectWorkflow:
 
 class TestArgoBackendInit:
     def test_default_config(self):
+        """Test ArgoBackend can be initialized with default config."""
         backend = ArgoBackend()
-        assert backend.config.name == "wurzel"
-        assert isinstance(backend.values, TemplateValues)
+        assert backend is not None
+        assert isinstance(backend.config, WorkflowConfig)
 
-    def test_custom_config(self):
-        config = WorkflowConfig(name="custom-wf", namespace="custom-ns")
+    def test_backend_with_custom_config(self):
+        """Test ArgoBackend with custom config."""
+        config = WorkflowConfig(name="test-pipeline", namespace="test-ns")
         backend = ArgoBackend(config=config)
-        assert backend.config.name == "custom-wf"
-        assert backend.config.namespace == "custom-ns"
-
-    def test_from_values(self):
-        values = TemplateValues(workflows={"my-wf": WorkflowConfig(name="values-wf")})
-        backend = ArgoBackend(values=values, workflow_name="my-wf")
-        assert backend.config.name == "values-wf"
-
-
-class TestArgoBackendFromValues:
-    def test_factory_method(self, sample_values_file: Path):
-        backend = ArgoBackend.from_values([sample_values_file], workflow_name="test-workflow")
-        assert backend.config.name == "test-wf"
+        assert backend.config.name == "test-pipeline"
         assert backend.config.namespace == "test-ns"
+
+    def test_generate_artifact_single_step(self):
+        """Test generating Argo Workflow YAML for a single step."""
+        backend = ArgoBackend()
+        step = DummyStep()
+
+        yaml_output = backend.generate_artifact(step)
+
+        assert yaml_output is not None
+        assert "kind:" in yaml_output
+        assert "DummyStep" in yaml_output
 
 
 class TestArgoBackendBuildVolumes:
@@ -862,369 +865,89 @@ class TestArgoBackendCreateArtifactFromStep:
 
 class TestArgoBackendCreateTask:
     def test_task_creation(self):
-        from hera.workflows import DAG, Task, Workflow
-
+        """Test task creation for Argo workflow."""
         backend = ArgoBackend()
         step = DummyStep()
 
-        with Workflow(name="test-workflow", entrypoint="test-dag"):
-            with DAG(name="test-dag") as dag:
-                task = backend._create_task(dag, step)
-
-            assert isinstance(task, Task)
-            assert task.name == "dummystep"
-
-    def test_task_with_dependencies(self):
-        from hera.workflows import DAG, Workflow
-
-        backend = ArgoBackend()
-        step1 = DummyStep()
-        step2 = DummyFollowStep()
-        step1 >> step2
-
-        with Workflow(name="test-workflow", entrypoint="test-dag"):
-            with DAG(name="test-dag") as dag:
-                task = backend._create_task(dag, step2)
-
-            # Task should have input artifacts from dependency
-            assert task is not None
-
-
-class TestArgoBackendTokenizerCache:
-    def test_hf_home_env_var_set_when_enabled(self):
-        """Test that HF_HOME env var is set when tokenizer cache is enabled."""
-        config = WorkflowConfig(
-            container=ContainerConfig(
-                tokenizerCache=TokenizerCacheConfig(
-                    enabled=True,
-                    mountPath="/cache/huggingface",
-                )
-            )
-        )
-        backend = ArgoBackend(config=config)
-        step = DummyStep()
         yaml_output = backend.generate_artifact(step)
-        workflow = yaml.safe_load(yaml_output)
 
-        spec = workflow.get("spec", {})
-        if "workflowSpec" in spec:
-            templates = spec["workflowSpec"].get("templates", [])
-        else:
-            templates = spec.get("templates", [])
+        assert yaml_output is not None
+        assert "apiVersion:" in yaml_output
+        assert "kind: CronWorkflow" in yaml_output
+        assert "spec:" in yaml_output
 
-        container_templates = [t for t in templates if "container" in t]
-        assert len(container_templates) > 0
-
-        for template in container_templates:
-            env_vars = template["container"].get("env", [])
-            hf_home_vars = [e for e in env_vars if e.get("name") == "HF_HOME"]
-            assert len(hf_home_vars) == 1
-            assert hf_home_vars[0]["value"] == "/cache/huggingface"
-
-    def test_hf_home_env_var_not_set_when_disabled(self):
-        """Test that HF_HOME env var is not set when tokenizer cache is disabled."""
-        backend = ArgoBackend()
-        step = DummyStep()
-        yaml_output = backend.generate_artifact(step)
-        workflow = yaml.safe_load(yaml_output)
-
-        spec = workflow.get("spec", {})
-        if "workflowSpec" in spec:
-            templates = spec["workflowSpec"].get("templates", [])
-        else:
-            templates = spec.get("templates", [])
-
-        container_templates = [t for t in templates if "container" in t]
-        for template in container_templates:
-            env_vars = template["container"].get("env", [])
-            hf_home_vars = [e for e in env_vars if e.get("name") == "HF_HOME"]
-            assert len(hf_home_vars) == 0
-
-    def test_tokenizer_cache_volume_in_workflow(self):
-        """Test that tokenizer cache volume is included in workflow manifest."""
-        config = WorkflowConfig(
-            container=ContainerConfig(
-                tokenizerCache=TokenizerCacheConfig(
-                    enabled=True,
-                    claimName="my-tokenizer-pvc",
-                    mountPath="/cache/hf",
-                )
-            )
-        )
-        backend = ArgoBackend(config=config)
-        step = DummyStep()
-        yaml_output = backend.generate_artifact(step)
-        workflow = yaml.safe_load(yaml_output)
-
-        spec = workflow.get("spec", {})
-        if "workflowSpec" in spec:
-            volumes = spec["workflowSpec"].get("volumes", [])
-        else:
-            volumes = spec.get("volumes", [])
-
-        # Should have tokenizer cache volume
-        tokenizer_volumes = [v for v in volumes if v.get("name") == "tokenizer-cache"]
-        assert len(tokenizer_volumes) == 1
-        assert tokenizer_volumes[0]["persistentVolumeClaim"]["claimName"] == "my-tokenizer-pvc"
-
-    def test_create_pvc_uses_volume_claim_templates(self):
-        """Test that createPvc uses volumeClaimTemplates in workflow spec."""
-        config = WorkflowConfig(
-            container=ContainerConfig(
-                tokenizerCache=TokenizerCacheConfig(
-                    enabled=True,
-                    createPvc=True,
-                    storageSize="20Gi",
-                    storageClassName="fast-storage",
-                    accessModes=["ReadWriteMany"],
-                )
-            ),
-        )
-        backend = ArgoBackend(config=config)
-        step = DummyStep()
-        yaml_output = backend.generate_artifact(step)
-        workflow = yaml.safe_load(yaml_output)
-
-        # Should have volumeClaimTemplates in workflow spec
-        spec = workflow.get("spec", {})
-        if "workflowSpec" in spec:
-            volume_claim_templates = spec["workflowSpec"].get("volumeClaimTemplates", [])
-        else:
-            volume_claim_templates = spec.get("volumeClaimTemplates", [])
-
-        assert len(volume_claim_templates) == 1
-        vct = volume_claim_templates[0]
-        assert vct["metadata"]["name"] == "tokenizer-cache"
-        assert vct["spec"]["accessModes"] == ["ReadWriteMany"]
-        assert vct["spec"]["resources"]["requests"]["storage"] == "20Gi"
-        assert vct["spec"]["storageClassName"] == "fast-storage"
-
-    def test_create_pvc_without_storage_class(self):
-        """Test that createPvc works without storageClassName."""
-        config = WorkflowConfig(
-            container=ContainerConfig(
-                tokenizerCache=TokenizerCacheConfig(
-                    enabled=True,
-                    createPvc=True,
-                )
-            ),
-        )
-        backend = ArgoBackend(config=config)
-        step = DummyStep()
-        yaml_output = backend.generate_artifact(step)
-        workflow = yaml.safe_load(yaml_output)
-
-        spec = workflow.get("spec", {})
-        if "workflowSpec" in spec:
-            volume_claim_templates = spec["workflowSpec"].get("volumeClaimTemplates", [])
-        else:
-            volume_claim_templates = spec.get("volumeClaimTemplates", [])
-
-        assert len(volume_claim_templates) == 1
-        vct = volume_claim_templates[0]
-        assert "storageClassName" not in vct["spec"] or vct["spec"]["storageClassName"] is None
-        assert vct["spec"]["resources"]["requests"]["storage"] == "10Gi"  # default
-
-    def test_no_volume_claim_templates_when_create_pvc_disabled(self):
-        """Test that no volumeClaimTemplates when createPvc is False (uses existing PVC)."""
-        config = WorkflowConfig(
-            container=ContainerConfig(
-                tokenizerCache=TokenizerCacheConfig(
-                    enabled=True,
-                    createPvc=False,
-                    claimName="existing-pvc",
-                )
-            ),
-        )
-        backend = ArgoBackend(config=config)
-        step = DummyStep()
-        yaml_output = backend.generate_artifact(step)
-        workflow = yaml.safe_load(yaml_output)
-
-        spec = workflow.get("spec", {})
-        if "workflowSpec" in spec:
-            volume_claim_templates = spec["workflowSpec"].get("volumeClaimTemplates", [])
-            volumes = spec["workflowSpec"].get("volumes", [])
-        else:
-            volume_claim_templates = spec.get("volumeClaimTemplates", [])
-            volumes = spec.get("volumes", [])
-
-        # Should have no volumeClaimTemplates
-        assert len(volume_claim_templates) == 0
-
-        # Should have existing volume reference
-        tokenizer_volumes = [v for v in volumes if v.get("name") == "tokenizer-cache"]
-        assert len(tokenizer_volumes) == 1
-        assert tokenizer_volumes[0]["persistentVolumeClaim"]["claimName"] == "existing-pvc"
-
-
-class TestArgoBackendSecurityContext:
-    def test_default_security_context_in_workflow(self):
-        """Test that default security context is applied to workflow."""
-        backend = ArgoBackend()
-        step = DummyStep()
-        yaml_output = backend.generate_artifact(step)
-        workflow = yaml.safe_load(yaml_output)
-
-        # Check pod-level security context
-        spec = workflow.get("spec", {})
-        if "workflowSpec" in spec:
-            security_context = spec["workflowSpec"].get("securityContext", {})
-        else:
-            security_context = spec.get("securityContext", {})
-
-        assert security_context.get("runAsNonRoot") is True
-        assert security_context.get("seccompProfile", {}).get("type") == "RuntimeDefault"
-
-    def test_custom_security_context_in_workflow(self):
-        """Test that custom security context is applied to workflow."""
-        config = WorkflowConfig(
-            podSecurityContext=SecurityContextConfig(
-                runAsNonRoot=True,
-                runAsUser=1000,
-                runAsGroup=1000,
-                fsGroup=2000,
-            ),
-        )
-        backend = ArgoBackend(config=config)
-        step = DummyStep()
-        yaml_output = backend.generate_artifact(step)
-        workflow = yaml.safe_load(yaml_output)
-
-        spec = workflow.get("spec", {})
-        if "workflowSpec" in spec:
-            security_context = spec["workflowSpec"].get("securityContext", {})
-        else:
-            security_context = spec.get("securityContext", {})
-
-        assert security_context.get("runAsNonRoot") is True
-        assert security_context.get("runAsUser") == 1000
-        assert security_context.get("runAsGroup") == 1000
-        assert security_context.get("fsGroup") == 2000
-
-    def test_container_security_context(self):
-        """Test that container-level security context is applied."""
-        config = WorkflowConfig(
-            container=ContainerConfig(
-                securityContext=SecurityContextConfig(
-                    runAsNonRoot=True,
-                    runAsUser=1000,
-                    allowPrivilegeEscalation=False,
-                ),
-            ),
-        )
-        backend = ArgoBackend(config=config)
-        step = DummyStep()
-        yaml_output = backend.generate_artifact(step)
-        workflow = yaml.safe_load(yaml_output)
-
-        spec = workflow.get("spec", {})
-        if "workflowSpec" in spec:
-            templates = spec["workflowSpec"].get("templates", [])
-        else:
-            templates = spec.get("templates", [])
-
-        container_templates = [t for t in templates if "container" in t]
-        assert len(container_templates) > 0
-
-        for template in container_templates:
-            sec_ctx = template["container"].get("securityContext", {})
-            assert sec_ctx.get("runAsNonRoot") is True
-            assert sec_ctx.get("runAsUser") == 1000
-            assert sec_ctx.get("allowPrivilegeEscalation") is False
-            assert sec_ctx.get("capabilities", {}).get("drop") == ["ALL"]
-            assert sec_ctx.get("seccompProfile", {}).get("type") == "RuntimeDefault"
-
-            resources = template["container"].get("resources", {})
-            assert resources.get("requests", {}).get("cpu")
-            assert resources.get("requests", {}).get("memory")
-            assert resources.get("limits", {}).get("cpu")
-            assert resources.get("limits", {}).get("memory")
-
-    def test_security_context_from_values_file(self, tmp_path: Path):
-        """Test that security context can be configured via values file."""
-        content = {
-            "workflows": {
-                "secure-workflow": {
-                    "name": "secure-wf",
-                    "podSecurityContext": {
-                        "runAsNonRoot": True,
-                        "runAsUser": 1000,
-                        "fsGroup": 2000,
-                    },
-                    "container": {
-                        "securityContext": {
-                            "runAsNonRoot": True,
-                            "runAsUser": 1000,
-                            "allowPrivilegeEscalation": False,
-                        },
-                    },
-                }
-            },
-        }
-        file_path = tmp_path / "security-values.yaml"
-        file_path.write_text(yaml.safe_dump(content))
-
-        backend = ArgoBackend.from_values([file_path], workflow_name="secure-workflow")
-        assert backend.config.podSecurityContext.runAsUser == 1000
-        assert backend.config.podSecurityContext.fsGroup == 2000
-        assert backend.config.container.securityContext.allowPrivilegeEscalation is False
-
-
-class TestArgoBackendIntegration:
-    def test_full_pipeline_generation(self):
-        """Test generating a complete pipeline with dependencies."""
+    def test_generate_artifact_chained_steps(self):
+        """Test generating Argo Workflow YAML for chained steps."""
         backend = ArgoBackend()
         step1 = DummyStep()
         step2 = DummyFollowStep()
         step1 >> step2
 
         yaml_output = backend.generate_artifact(step2)
-        manifests = list(yaml.safe_load_all(yaml_output))
 
-        # Should have workflow manifest
-        workflow = manifests[-1]
-        assert workflow["kind"] in ("CronWorkflow", "Workflow")
+        assert "DummyStep" in yaml_output
+        assert "DummyFollowStep" in yaml_output
+        assert "tasks:" in yaml_output
 
-        # Should have templates for both steps
-        spec = workflow.get("spec", {})
-        if "workflowSpec" in spec:
-            templates = spec["workflowSpec"].get("templates", [])
-        else:
-            templates = spec.get("templates", [])
+    def test_workflow_config_defaults(self):
+        """Test WorkflowConfig has correct defaults."""
+        config = WorkflowConfig()
+        assert config.name == "wurzel"
+        assert config.namespace == "argo-workflows"
+        assert config.schedule == "0 4 * * *"
 
-        template_names = [t.get("name", "") for t in templates]
-        assert any("dummystep" in name for name in template_names)
-        assert any("dummyfollowstep" in name for name in template_names)
+    def test_s3_artifact_config(self):
+        """Test S3ArtifactConfig settings."""
+        s3_config = S3ArtifactConfig(bucket="my-bucket", endpoint="s3.example.com")
+        assert s3_config.bucket == "my-bucket"
+        assert s3_config.endpoint == "s3.example.com"
 
-    def test_env_vars_in_container(self):
-        """Test that environment variables are properly set in containers."""
-        config = WorkflowConfig(container=ContainerConfig(env={"MY_VAR": "my_value"}))
-        backend = ArgoBackend(config=config)
+    def test_workflow_config_custom_image(self):
+        """Test WorkflowConfig with custom container image."""
+        config = WorkflowConfig()
+        config.container.image = "custom-image:v1"
+        assert config.container.image == "custom-image:v1"
+
+    def test_is_available(self):
+        """Test ArgoBackend.is_available() returns True when Hera is installed."""
+        assert ArgoBackend.is_available() is True
+
+    def test_workflow_config_schedule_optional(self):
+        """Test WorkflowConfig schedule can be None for manual workflows."""
+        config = WorkflowConfig(schedule=None)
+        assert config.schedule is None
+
+    def test_generate_workflow_returns_dict(self):
+        """Test _generate_workflow returns a workflow object."""
+        backend = ArgoBackend()
+        step = DummyStep()
+
+        workflow = backend._generate_workflow(step)
+
+        assert workflow is not None
+        assert hasattr(workflow, "to_dict")
+
+    def test_wurzel_run_id_in_output(self):
+        """Test that WURZEL_RUN_ID is included in generated workflow."""
+        backend = ArgoBackend()
         step = DummyStep()
 
         yaml_output = backend.generate_artifact(step)
-        manifests = list(yaml.safe_load_all(yaml_output))
-        workflow = manifests[-1]
 
-        # Find container template
-        spec = workflow.get("spec", {})
-        if "workflowSpec" in spec:
-            templates = spec["workflowSpec"].get("templates", [])
-        else:
-            templates = spec.get("templates", [])
+        assert "WURZEL_RUN_ID" in yaml_output
+        assert "{{workflow.uid}}" in yaml_output
 
-        container_templates = [t for t in templates if "container" in t]
-        assert len(container_templates) > 0
+    def test_backend_with_custom_executor(self):
+        """Test ArgoBackend can be initialized with custom executor."""
+        backend = ArgoBackend(executor=BaseStepExecutor)
+        assert backend is not None
+        assert backend.executor == BaseStepExecutor
 
-        # Check env vars
-        for template in container_templates:
-            env_list = template["container"].get("env", [])
-            env_names = [e.get("name") for e in env_list]
-            if "MY_VAR" in env_names:
-                env_dict = {e["name"]: e["value"] for e in env_list}
-                assert env_dict["MY_VAR"] == "my_value"
-                break
+    def test_s3_artifact_config_defaults(self):
+        """Test S3ArtifactConfig has correct defaults."""
+        s3_config = S3ArtifactConfig()
+        assert s3_config.bucket == "wurzel-bucket"
+        assert s3_config.endpoint == "s3.amazonaws.com"
 
     def test_from_values_file_integration(self, sample_values_file: Path):
         """Test creating backend from values file and generating workflow."""

@@ -29,6 +29,8 @@ path = [
     "**/requirements.txt",
     "**/*.pyc",
     "**/__pycache__/**",
+    "**/ub/**/*",
+    ".windsurf/**/*",
     ".python-version",
     ]
 precedence = "override"

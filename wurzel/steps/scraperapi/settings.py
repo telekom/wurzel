@@ -8,7 +8,7 @@
 
 from pydantic import Field, SecretStr
 
-from wurzel.step.settings import Settings
+from wurzel.core.settings import Settings
 from wurzel.utils import MarkdownConverterSettings
 
 # Local application/library specific imports

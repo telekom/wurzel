@@ -189,8 +189,8 @@ from typing import Optional
 
 from pydantic import field_validator
 
+from wurzel.core import NoSettings, TypedStep
 from wurzel.datacontract import PydanticModel
-from wurzel.step import NoSettings, TypedStep
 
 
 class ProductDataContract(PydanticModel):
@@ -291,7 +291,7 @@ Use Pandera schema types in step signatures:
 ```python
 from pandera.typing import DataFrame
 
-from wurzel.step import NoSettings, TypedStep
+from wurzel.core import NoSettings, TypedStep
 from wurzel.steps.data import EmbeddingResult
 
 
@@ -359,8 +359,8 @@ Support multiple contract versions with a migration function and a step that acc
 ```python
 from typing import Union
 
+from wurzel.core import NoSettings, TypedStep
 from wurzel.datacontract import PydanticModel
-from wurzel.step import NoSettings, TypedStep
 
 
 class AuthorInfo(PydanticModel):
@@ -435,8 +435,8 @@ def test_markdown_contract_validation():
 ### Integration Testing with Steps
 
 ```python
+from wurzel.core import NoSettings, TypedStep
 from wurzel.datacontract import PydanticModel
-from wurzel.step import NoSettings, TypedStep
 
 
 class ProductDataContract(PydanticModel):

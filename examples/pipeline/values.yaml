@@ -8,9 +8,20 @@ dvc:
     encapsulateEnv: true
 
 # Argo Workflows Backend Configuration
+#
+# Middleware Configuration:
+# Middlewares are configured via environment variables in the container.env section below.
+# Set MIDDLEWARES to enable middleware(s), then configure each middleware with its settings.
+# Pattern: <MIDDLEWARE_NAME_UPPERCASE>MIDDLEWARE__<SETTING_NAME>
+#
+# Example for Prometheus middleware:
+#   MIDDLEWARES: "prometheus"
+#   PROMETHEUS__PROMETHEUS_GATEWAY: "prometheus-pushgateway:9091"
+#   PROMETHEUS__PROMETHEUS_JOB: "wurzel-pipeline"  # optional
+#   PROMETHEUS__PROMETHEUS_DISABLE_CREATED_METRIC: "true"  # optional
 workflows:
   pipelinedemo:
-    name: wurzel-hallo
+    name: wurzel-pipeline
     namespace: argo-workflows-gude
     schedule: "0 4 * * 1"
     entrypoint: wurzel-pipeline
@@ -63,6 +74,7 @@ workflows:
 
       # Environment variables
       env:
+        # Step-specific settings
         MANUALMARKDOWNSTEP__FOLDER_PATH: "examples/pipeline/demo-data"
         SIMPLESPLITTERSTEP__BATCH_SIZE: "100"
         SIMPLESPLITTERSTEP__NUM_THREADS: "4"
@@ -71,6 +83,11 @@ workflows:
         SIMPLESPLITTERSTEP__TOKEN_COUNT_BUFFER: "32"
         SIMPLESPLITTERSTEP__TOKENIZER_MODEL: "gpt-3.5-turbo"
         SIMPLESPLITTERSTEP__SENTENCE_SPLITTER_MODEL: "de_core_news_sm"
+
+        # Middleware configuration
+        # Enable Prometheus middleware for metrics collection
+        MIDDLEWARES: "prometheus"
+        PROMETHEUS__PROMETHEUS_GATEWAY: "prometheus-pushgateway.monitoring.svc.cluster.local:9091"
 
       # Environment from external sources
       envFrom:

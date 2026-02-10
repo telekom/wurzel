@@ -7,6 +7,7 @@ from logging import getLogger
 from pathlib import Path
 
 import pytest
+from prometheus_client import REGISTRY
 from pydantic import BaseModel
 
 log = getLogger(__name__)
@@ -106,3 +107,53 @@ def pytest_collection_modifyitems(config, items):
             continue
         if not do_rep_tests and has_repeatability_marker:
             item.add_marker(pytest.mark.skip(reason="only running --repeatability tests"))
+
+
+@pytest.fixture(scope="function", autouse=True)
+def reset_prometheus_singleton():
+    """Reset PrometheusStepExecutor singleton between tests to prevent registry conflicts.
+
+    This fixture ensures proper test isolation for the deprecated PrometheusStepExecutor.
+    Without this cleanup, tests running with coverage or in certain orders can fail with:
+    - "Duplicated timeseries in CollectorRegistry" errors
+    - "'PrometheusStepExecutor' object has no attribute 'counter_started'" errors
+
+    The issue occurs because pytest-cov or test collection can reset the singleton instance
+    but leave metrics registered in the global Prometheus REGISTRY, causing conflicts.
+    """
+    yield
+
+    # Clean up after each test
+    try:
+        from wurzel.executors import PrometheusStepExecutor
+
+        # Reset singleton instance
+        PrometheusStepExecutor._instance = None
+        PrometheusStepExecutor._metrics_initialized = False
+
+        # Unregister prometheus metrics if they exist
+        # pylint: disable=protected-access
+        collectors_to_remove = []
+        for collector in list(REGISTRY._collector_to_names.keys()):
+            if hasattr(collector, "_name"):
+                name = getattr(collector, "_name", "")
+                if name in [
+                    "steps_started",
+                    "steps_failed",
+                    "step_results",
+                    "step_inputs",
+                    "step_hist_save",
+                    "step_hist_load",
+                    "step_hist_execute",
+                ]:
+                    collectors_to_remove.append(collector)
+
+        for collector in collectors_to_remove:
+            try:
+                REGISTRY.unregister(collector)
+            except Exception:  # pylint: disable=broad-exception-caught
+                # Collector might not be registered, that's fine
+                pass
+    except ImportError:
+        # PrometheusStepExecutor not available, skip cleanup
+        pass

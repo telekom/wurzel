@@ -11,7 +11,7 @@ from logging import getLogger
 from pandera.typing import DataFrame
 from qdrant_client import models
 
-from wurzel.step import TypedStep
+from wurzel.core import TypedStep
 from wurzel.steps.data import EmbeddingMultiVectorResult
 from wurzel.steps.qdrant.step import QdrantConnectorStep
 

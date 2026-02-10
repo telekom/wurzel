@@ -123,8 +123,16 @@ workflows:
 
       # Runtime environment variables (step settings)
       env:
+        # Step-specific settings
         MANUALMARKDOWNSTEP__FOLDER_PATH: "examples/pipeline/demo-data"
         SIMPLESPLITTERSTEP__BATCH_SIZE: "100"
+
+        # Middleware configuration (optional)
+        # Enable Prometheus middleware for metrics collection
+        MIDDLEWARES: "prometheus"
+        PROMETHEUS__PROMETHEUS_GATEWAY: "prometheus-pushgateway.monitoring.svc.cluster.local:9091"
+        PROMETHEUS__PROMETHEUS_JOB: "wurzel-pipeline"  # optional
+        PROMETHEUS__PROMETHEUS_DISABLE_CREATED_METRIC: "true"  # optional
 
       # Environment from Kubernetes Secrets/ConfigMaps
       envFrom:
@@ -227,22 +235,6 @@ workflows:
 - `"0 0 * * 0"` - Weekly on Sundays at midnight
 - `"0 0 1 * *"` - Monthly on the 1st at midnight
 
-**Monitoring:**
-```bash
-# List all CronWorkflows
-argo cron list
-
-# View CronWorkflow details
-argo cron get my-scheduled-pipeline
-
-# List workflow runs from CronWorkflow
-argo list --label workflows.argoproj.io/cron-workflow=my-scheduled-pipeline
-```
-
-!!! tip "Choosing the Right Type"
-    - Use **Workflow** (schedule: null) when you need explicit control over when pipelines run
-    - Use **CronWorkflow** (with schedule) for automated, time-based execution
-    - You can have both: a CronWorkflow for regular execution and a Workflow template for manual reruns
 
 ### Configuration Reference
 
@@ -325,6 +317,43 @@ When enabled, the `HF_HOME` environment variable is automatically set to the `mo
 | `endpoint` | string | `s3.amazonaws.com` | S3 endpoint URL |
 | `defaultMode` | int | `null` | File permissions (decimal) |
 
+### Middleware Configuration
+
+Middlewares (like Prometheus for metrics collection) are configured via environment variables in the `container.env` section. Middlewares must be enabled and configured at **generate-time** in your `values.yaml` file.
+
+#### Enabling Prometheus Middleware
+
+To enable Prometheus middleware for metrics collection, add the following to your `container.env` section:
+
+```yaml
+container:
+  env:
+    # Enable Prometheus middleware
+    MIDDLEWARES: "prometheus"
+    PROMETHEUS__PROMETHEUS_GATEWAY: "prometheus-pushgateway.monitoring.svc.cluster.local:9091"
+
+    # Optional Prometheus settings
+    PROMETHEUS__PROMETHEUS_JOB: "wurzel-pipeline"
+    PROMETHEUS__PROMETHEUS_DISABLE_CREATED_METRIC: "true"
+```
+
+**Available Prometheus Settings:**
+
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `MIDDLEWARES` | - | Comma-separated list of middleware names (e.g., `"prometheus"`) |
+| `PROMETHEUS__PROMETHEUS_GATEWAY` | `localhost:9091` | Prometheus Pushgateway endpoint (host:port) |
+| `PROMETHEUS__PROMETHEUS_JOB` | `default-job-name` | Job name for Prometheus metrics |
+| `PROMETHEUS__PROMETHEUS_DISABLE_CREATED_METRIC` | `true` | Disable `*_created` metrics |
+
+**Metrics Collected:**
+
+- `step_duration_seconds` - Histogram of step execution duration
+- `step_executions_total` - Counter of step executions
+- Labels: `step_name`, `run_id` (from `WURZEL_RUN_ID`)
+
+For more details on middlewares, see the [Middleware Documentation](../executor/middlewares.md).
+
 ### Runtime Environment Variables
 
 Step settings are configured via environment variables at **runtime** (when the workflow executes). These can be set in three ways:
@@ -364,7 +393,7 @@ container:
 Use the Argo backend directly in Python:
 
 ```python
-from wurzel.backend.backend_argo import ArgoBackend
+from wurzel.executors.backend.backend_argo import ArgoBackend
 from wurzel.steps.embedding import EmbeddingStep
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.steps.qdrant.step import QdrantConnectorStep
@@ -386,54 +415,6 @@ argo_yaml = backend.generate_artifact(pipeline)
 # backend = ArgoBackend.from_values(files=[Path("values.yaml")], workflow_name="pipelinedemo")
 ```
 
-## Deploying Argo Workflows
-
-Once you've generated your Workflow or CronWorkflow YAML, deploy it to your Kubernetes cluster:
-
-### Deploying a Normal Workflow
-
-```bash
-# Apply the Workflow to your cluster
-kubectl apply -f workflow.yaml
-
-# Submit it for execution
-argo submit workflow.yaml
-
-# Or create and submit in one command
-kubectl create -f workflow.yaml
-```
-
-### Deploying a CronWorkflow
-
-```bash
-# Apply the CronWorkflow to your cluster (starts the cron schedule)
-kubectl apply -f cronworkflow.yaml
-
-# View CronWorkflow status
-argo cron get wurzel-pipeline
-
-# List CronWorkflows
-argo cron list
-```
-
-### Monitoring Workflow Executions
-
-```bash
-# List all workflow executions
-argo list
-
-# Get detailed workflow status
-argo get <workflow-name>
-
-# View workflow logs
-argo logs <workflow-name>
-
-# Follow logs in real-time
-argo logs <workflow-name> -f
-
-# View logs for specific step
-argo logs <workflow-name> -c <container-name>
-```
 
 ## Benefits for Cloud-Native Pipelines
 
