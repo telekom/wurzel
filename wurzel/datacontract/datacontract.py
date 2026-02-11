@@ -176,7 +176,7 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
         a ``pandas.DataFrame``, not a list, so the two are incompatible.
         Use ``save_to_path`` directly with a DataFrame instead.
         """
-        raise NotImplementedError(
+        raise TypeError(
             f"{cls.__name__} does not support batch_writer(). "
             "PanderaDataFrameModel.save_to_path() requires a DataFrame, "
             "not a list of items. Use save_to_path() directly with a DataFrame."
