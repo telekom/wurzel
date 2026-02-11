@@ -3,9 +3,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from .common import MarkdownDataContract
-from .datacontract import DataModel, PanderaDataFrameModel, PydanticModel
+from .datacontract import BatchWriter, DataModel, PanderaDataFrameModel, PydanticModel
 
 __all__ = [
+    "BatchWriter",
     "PanderaDataFrameModel",
     "PydanticModel",
     "MarkdownDataContract",

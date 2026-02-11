@@ -38,7 +38,7 @@ def test_docling_step(real_data_path, expected_md_start, expected_contract_count
         },
     )
 
-    contracts = docling_step.run({})
+    contracts = [item for batch in docling_step.run({}) for item in batch]
     assert len(contracts) == expected_contract_count, f"Expected {expected_contract_count} contracts, got {len(contracts)}"
     if contracts:
         actual_md = contracts[0]["md"].strip()

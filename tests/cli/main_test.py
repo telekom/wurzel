@@ -79,8 +79,10 @@ def test_run(tmp_path, env):
         input_folders=[],
         output_path=out,
     )
-    assert list(out.glob("*"))
-    assert (out / "ManualMarkdown.json").read_text()
+    # Generator steps produce numbered batch files.
+    batch_files = list(out.glob("*_batch*.json"))
+    assert batch_files
+    assert batch_files[0].read_text()
 
 
 @pytest.mark.parametrize("gen_env", [True, False])

@@ -65,11 +65,16 @@ class SFTPManualMarkdownStep(TypedStep[SFTPManualMarkdownSettings, None, list[Ma
     def run(self, inpt: None) -> list[MarkdownDataContract]:
         """Execute the step to retrieve Markdown files from SFTP server.
 
+        Yields one single-element batch per file so the executor can persist
+        results incrementally and release memory between files.  The SFTP
+        connection stays open while the generator is consumed and is cleaned up
+        in the ``finally`` block once the generator is closed.
+
         Args:
             inpt: None (this is a leaf step)
 
-        Returns:
-            list[MarkdownDataContract]: List of loaded Markdown documents
+        Yields:
+            list[MarkdownDataContract]: A single-element list per loaded Markdown document.
 
         Raises:
             paramiko.SSHException: If connection or authentication fails
@@ -103,24 +108,23 @@ class SFTPManualMarkdownStep(TypedStep[SFTPManualMarkdownSettings, None, list[Ma
 
             logger.info(f"Found {len(md_files)} Markdown files on SFTP server", extra={"file_count": len(md_files)})
 
-            # Load each file into MarkdownDataContract
-            results: list[MarkdownDataContract] = []
+            # Yield each file as a single-element batch
+            loaded_count = 0
             for remote_file in md_files:
                 try:
                     contract = self._load_markdown_from_sftp(sftp, remote_file)
                     if contract:
-                        results.append(contract)
+                        loaded_count += 1
+                        yield [contract]
                 except (OSError, paramiko.SSHException) as e:
                     logger.error(f"Failed to load file {remote_file}: {e}", extra={"remote_file": remote_file, "error": str(e)})
 
             logger.info(
-                f"Successfully loaded {len(results)} Markdown files from SFTP",
-                extra={"loaded_count": len(results), "total_found": len(md_files)},
+                f"Successfully loaded {loaded_count} Markdown files from SFTP",
+                extra={"loaded_count": loaded_count, "total_found": len(md_files)},
             )
-            if len(results) == 0:
+            if loaded_count == 0:
                 raise StepFailed("No Markdown files found or failed to load any")
-
-            return results
 
         finally:
             # Clean up connections

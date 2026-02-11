@@ -112,15 +112,17 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
     def run(self, inpt: None) -> list[MarkdownDataContract]:
         """Run the document extraction and conversion process for German PDFs.
 
+        Yields one single-element batch per document so the executor can
+        persist results incrementally and free memory between conversions.
+
         Args:
             inpt (None): Input parameter (not used).
 
-        Returns:
-            List[MarkdownDataContract]: List of converted Markdown contracts.
+        Yields:
+            list[MarkdownDataContract]: A single-element list per converted document.
 
         """
         urls = self.settings.URLS
-        contracts = []
 
         for url in urls:
             try:
@@ -128,10 +130,8 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
                 md = converted_contract.document.export_to_markdown(image_placeholder="")
                 keyword = self.extract_keywords(md)
                 contract_instance = {"md": md, "keywords": " ".join([self.settings.DEFAULT_KEYWORD, keyword]), "url": url}
-                contracts.append(contract_instance)
+                yield [contract_instance]
 
             except (FileNotFoundError, OSError) as e:
                 log.warning(f"Failed to verify URL: {url}. Error: {e}")
                 continue
-
-        return contracts

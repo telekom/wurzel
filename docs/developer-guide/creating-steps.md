@@ -85,6 +85,51 @@ class MyDatasourceStep(TypedStep[MySettings, None, list[MarkdownDataContract]]):
         return documents
 ```
 
+### Memory-Efficient Data Source (Generator)
+
+When a data source loads many items (large file sets, API responses, database cursors), building the full list in memory can be expensive. You can make `run()` a **generator** that yields batches instead. The executor detects this automatically — no flag or configuration needed.
+
+Each `yield` should produce a **list** (a batch). The executor accumulates items in memory and flushes them to numbered batch files on disk once a threshold is reached (default: 500 items), keeping memory usage bounded.
+
+```python
+from pathlib import Path
+
+from wurzel.datacontract import MarkdownDataContract
+from wurzel.step import Settings, TypedStep
+
+
+class MySettings(Settings):
+    DATA_PATH: Path = Path("./data")
+
+
+class MyStreamingSourceStep(TypedStep[MySettings, None, list[MarkdownDataContract]]):
+    """Yields one document at a time -- memory usage stays constant."""
+
+    def run(self, inpt: None) -> list[MarkdownDataContract]:
+        for file_path in self.settings.DATA_PATH.rglob("*.md"):
+            content = file_path.read_text(encoding="utf-8")
+            yield [
+                MarkdownDataContract(
+                    md=content,
+                    url=str(file_path),
+                    keywords=file_path.stem,
+                )
+            ]
+```
+
+!!! tip "How it works"
+    The executor uses `inspect.isgeneratorfunction()` to detect generators at
+    runtime. When detected, each yielded batch is fed to a
+    [`BatchWriter`](data-contracts.md#batchwriter) which buffers items and
+    flushes them to numbered JSON files (`<StepName>_batch0000.json`,
+    `_batch0001.json`, …). The return type annotation stays `list[...]` for
+    static type-checking compatibility.
+
+!!! note "Yielding batches vs. single items"
+    Each `yield` must produce a **list**, even if it contains only one item
+    (`yield [item]`). You can also yield larger batches when it is natural
+    to do so — for example, yielding a page of API results at a time.
+
 ### Advanced Data Source with Database
 
 Shows a source step with **resource cleanup** in `finalize`:
@@ -392,8 +437,8 @@ def test_markdown_step_returns_list(tmp_path: Path):
     (tmp_path / "doc.md").write_text("# Hello")
     with patch.dict("os.environ", {"MANUALMARKDOWNSTEP__FOLDER_PATH": str(tmp_path)}):
         step = WZ(ManualMarkdownStep)
-        result = step.run(None)
-    assert isinstance(result, list)
+        # ManualMarkdownStep is a generator - consume all yielded batches.
+        result = [item for batch in step.run(None) for item in batch]
     assert len(result) == 1
     assert all(isinstance(d, MarkdownDataContract) for d in result)
 
@@ -424,6 +469,67 @@ def test_filter_step():
     result = step.run(docs)
     assert len(result) == 1
     assert result[0].md == "Long enough content here"
+```
+
+### Testing Generator Steps
+
+Generator steps return a generator object, not a list. Consume all yielded
+batches in your test to collect the results:
+
+```python
+from unittest.mock import patch
+
+from wurzel.datacontract import MarkdownDataContract
+from wurzel.step import Settings, TypedStep
+
+
+class StreamSettings(Settings):
+    DATA_PATH: str = "./data"
+
+
+class MyStreamingSourceStep(
+    TypedStep[StreamSettings, None, list[MarkdownDataContract]]
+):
+    def run(self, inpt: None) -> list[MarkdownDataContract]:
+        from pathlib import Path
+
+        for fp in Path(self.settings.DATA_PATH).rglob("*.md"):
+            yield [
+                MarkdownDataContract(md=fp.read_text(), url=str(fp), keywords=fp.stem)
+            ]
+
+
+def test_streaming_source(tmp_path):
+    (tmp_path / "a.md").write_text("# A")
+    (tmp_path / "b.md").write_text("# B")
+    env = {"MYSTREAMINGSOURCESTEP__DATA_PATH": str(tmp_path)}
+    with patch.dict("os.environ", env):
+        step = MyStreamingSourceStep()
+        # Flatten yielded batches into a single list.
+        results = [item for batch in step.run(None) for item in batch]
+    assert len(results) == 2
+```
+
+To test that a generator step raises an exception, force evaluation with `list()`:
+
+```python
+import pytest
+
+from wurzel.datacontract import MarkdownDataContract
+from wurzel.exceptions import StepFailed
+from wurzel.step import NoSettings, TypedStep
+
+
+class MyFailingStep(TypedStep[NoSettings, None, list[MarkdownDataContract]]):
+    def run(self, inpt: None) -> list[MarkdownDataContract]:
+        yield [MarkdownDataContract(md="ok", url="", keywords="")]
+        raise StepFailed("boom")
+
+
+def test_generator_raises_on_error():
+    step = MyFailingStep()
+    with pytest.raises(StepFailed):
+        list(step.run(None))  # forces the generator to run
 ```
 
 ### Integration Testing

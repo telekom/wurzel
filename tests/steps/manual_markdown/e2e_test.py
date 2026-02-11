@@ -17,8 +17,8 @@ def test_step(tmp_path, env):
     outp = tmp_path / "out"
     env.set("FOLDER_PATH", str(tmp_path.absolute()))
     BaseStepExecutor(dont_encapsulate=True)(ManualMarkdownStep, set(), outp)
-    out = outp / "ManualMarkdown.json"
-    assert out.exists() and out.is_file()
-    data = json.loads(out.read_text())
-    assert data
+    # Generator steps accumulate items and flush to numbered batch files.
+    batch_files = sorted(outp.glob("*_batch*.json"))
+    assert len(batch_files) == 1, "Expected exactly 1 batch file for 2 items"
+    data = json.loads(batch_files[0].read_text())
     assert len(data) == 2
