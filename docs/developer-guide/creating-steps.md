@@ -103,7 +103,7 @@ class MySettings(Settings):
 
 
 class MyStreamingSourceStep(TypedStep[MySettings, None, list[MarkdownDataContract]]):
-    """Yields one document at a time — memory usage stays constant."""
+    """Yields one document at a time -- memory usage stays constant."""
 
     def run(self, inpt: None) -> list[MarkdownDataContract]:
         for file_path in self.settings.DATA_PATH.rglob("*.md"):
@@ -437,7 +437,7 @@ def test_markdown_step_returns_list(tmp_path: Path):
     (tmp_path / "doc.md").write_text("# Hello")
     with patch.dict("os.environ", {"MANUALMARKDOWNSTEP__FOLDER_PATH": str(tmp_path)}):
         step = WZ(ManualMarkdownStep)
-        # ManualMarkdownStep is a generator — consume all yielded batches.
+        # ManualMarkdownStep is a generator - consume all yielded batches.
         result = [item for batch in step.run(None) for item in batch]
     assert len(result) == 1
     assert all(isinstance(d, MarkdownDataContract) for d in result)
