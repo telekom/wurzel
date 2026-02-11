@@ -21,7 +21,7 @@ from typing import Any
 
 import pytest
 
-from wurzel.datacontract.datacontract import BatchWriter, DataModel, PydanticModel
+from wurzel.datacontract.datacontract import BatchWriter, DataModel, PanderaDataFrameModel, PydanticModel
 
 # ---------------------------------------------------------------------------
 # Test models
@@ -168,10 +168,12 @@ class TestBatchWriterContextManager:
 
 
 class TestBatchWriterStats:
-    def test_store_time_is_positive_when_writing(self, tmp_path):
+    def test_store_time_is_non_negative_when_writing(self, tmp_path):
         with BatchWriter(SimpleItem, tmp_path, "test", flush_size=100) as writer:
             writer.extend([SimpleItem(value=i) for i in range(50)])
-        assert writer.store_time > 0.0
+        # On Windows, time.time() resolution can be coarse enough that small
+        # writes complete within a single tick, yielding 0.0.
+        assert writer.store_time >= 0.0
 
     def test_store_time_accumulates_across_flushes(self, tmp_path):
         with BatchWriter(SimpleItem, tmp_path, "test", flush_size=3) as writer:
@@ -370,3 +372,18 @@ class TestDataModelBatchWriterFactory:
         """Without explicit flush_size, the default (500) is used."""
         writer = SimpleItem.batch_writer(tmp_path, "default")
         assert writer._flush_size == BatchWriter.DEFAULT_FLUSH_SIZE == 500
+
+    def test_pandera_model_raises_type_error(self, tmp_path):
+        """PanderaDataFrameModel.batch_writer() raises because save_to_path expects a DataFrame."""
+        with pytest.raises(TypeError, match="does not support batch_writer"):
+            PanderaDataFrameModel.batch_writer(tmp_path, "pandera")
+
+    def test_pandera_subclass_raises_type_error(self, tmp_path):
+        """Subclasses of PanderaDataFrameModel also inherit the guard."""
+        import pandera as pa
+
+        class MySchema(PanderaDataFrameModel):
+            col_a: pa.typing.Series[str]
+
+        with pytest.raises(TypeError, match="does not support batch_writer"):
+            MySchema.batch_writer(tmp_path, "sub")

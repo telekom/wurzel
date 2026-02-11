@@ -352,6 +352,62 @@ class WellDesignedContract(PydanticModel):
    - For analytics: Use DataFrame with efficient column types
    - For individual processing: Use PydanticModel with focused fields
 
+4. **Use generators for large data sources**:
+   - When a step produces many items, make `run()` a generator that yields batches (see [Memory-Efficient Data Source](creating-steps.md#memory-efficient-data-source-generator))
+   - The executor uses a `BatchWriter` to buffer and flush items to numbered files on disk
+
+## Batch Writing and Streaming
+
+<a id="batchwriter"></a>
+
+### BatchWriter
+
+When generator steps yield data incrementally, the executor persists results through a `BatchWriter`. This context manager accumulates items in an in-memory buffer and flushes them to numbered batch files once a configurable threshold is reached. This keeps memory usage bounded while minimizing the number of output files.
+
+**Key features:**
+
+- Configurable `flush_size` (default: 500 items)
+- Best-effort sorting within each batch (uses `PydanticModel.__lt__` when available)
+- Automatic `gc.collect()` after each flush to release memory
+- Numbered output files: `<prefix>_batch0000.json`, `_batch0001.json`, …
+
+You can also use `BatchWriter` directly for custom persistence logic:
+
+```python
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from wurzel.datacontract import PydanticModel
+
+
+class MyItem(PydanticModel):
+    value: int
+
+
+def some_data_source():
+    """Example generator that yields batches of items."""
+    for i in range(3):
+        yield [MyItem(value=j) for j in range(i * 10, (i + 1) * 10)]
+
+
+with TemporaryDirectory() as tmp:
+    output_path = Path(tmp) / "batch_output"
+    # Using the classmethod on any DataModel subclass:
+    with MyItem.batch_writer(output_path, "MyStep", flush_size=200) as writer:
+        for chunk in some_data_source():
+            writer.extend(chunk)
+
+assert writer.total_items == 30
+assert writer.file_count == 1
+assert writer.store_time >= 0.0
+```
+
+The `batch_writer()` classmethod is available on every `DataModel` subclass (including `PydanticModel` and `PanderaDataFrameModel`).
+
+### Streaming JSON Serialization
+
+`PydanticModel.save_to_path` writes JSON arrays item-by-item to avoid building the entire serialized string in memory. This is transparent to consumers — the output is a standard JSON array — but is critical for large lists where constructing a single string could spike memory usage.
+
 ### Migration and Versioning
 
 Support multiple contract versions with a migration function and a step that accepts both:

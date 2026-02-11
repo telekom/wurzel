@@ -168,6 +168,21 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
     """
 
     @classmethod
+    def batch_writer(cls, output_path, prefix, flush_size=BatchWriter.DEFAULT_FLUSH_SIZE):
+        """Not supported for DataFrame models.
+
+        ``BatchWriter`` accumulates items in a Python list and flushes them
+        via ``save_to_path``.  ``PanderaDataFrameModel.save_to_path`` expects
+        a ``pandas.DataFrame``, not a list, so the two are incompatible.
+        Use ``save_to_path`` directly with a DataFrame instead.
+        """
+        raise NotImplementedError(
+            f"{cls.__name__} does not support batch_writer(). "
+            "PanderaDataFrameModel.save_to_path() requires a DataFrame, "
+            "not a list of items. Use save_to_path() directly with a DataFrame."
+        )
+
+    @classmethod
     def save_to_path(cls, path: Path, obj: Union[Self, list[Self]]) -> Path:
         import pandas as pd  # pylint: disable=import-outside-toplevel
 
