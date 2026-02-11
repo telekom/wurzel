@@ -3,17 +3,131 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import abc
+import gc
 import hashlib
 import json
+import time
 import types
 import typing
 from ast import literal_eval
+from logging import getLogger
 from pathlib import Path
-from typing import Self, Union, get_origin
+from typing import Optional, Self, Union, get_origin
 
 import pandera as pa
 import pandera.typing as patyp
 import pydantic
+
+log = getLogger(__name__)
+
+
+class BatchWriter:  # pylint: disable=too-many-instance-attributes
+    """Context manager that accumulates items and periodically flushes them to numbered batch files.
+
+    Items are collected in an in-memory buffer.  Once the buffer reaches
+    ``flush_size`` items it is sorted (best-effort), persisted via
+    ``model_class.save_to_path``, and the memory is released via
+    ``gc.collect()``.  Remaining items are flushed when the context manager
+    exits.
+
+    Usage::
+
+        with DataModel.batch_writer(output_path, "MyStep") as writer:
+            for item in stream:
+                writer.extend([item])
+        print(writer.total_items, writer.file_count)
+    """
+
+    DEFAULT_FLUSH_SIZE: int = 500
+
+    def __init__(
+        self,
+        model_class: type["DataModel"],
+        output_path: Optional[Path],
+        prefix: str,
+        flush_size: int = DEFAULT_FLUSH_SIZE,
+    ) -> None:
+        self._model_class = model_class
+        self._output_path = output_path
+        self._prefix = prefix
+        self._flush_size = flush_size
+        self._buffer: list = []
+        self._file_count: int = 0
+        self._total_items: int = 0
+        self._store_time: float = 0.0
+
+    # -- read-only stats ------------------------------------------------
+
+    @property
+    def total_items(self) -> int:
+        """Total number of items flushed to disk so far."""
+        return self._total_items
+
+    @property
+    def file_count(self) -> int:
+        """Number of batch files written so far."""
+        return self._file_count
+
+    @property
+    def store_time(self) -> float:
+        """Cumulative wall-clock time spent writing to disk (seconds)."""
+        return self._store_time
+
+    # -- mutators -------------------------------------------------------
+
+    def extend(self, items) -> None:
+        """Add *items* to the buffer, flushing full batches to disk as needed."""
+        if isinstance(items, list):
+            self._buffer.extend(items)
+        else:
+            self._buffer.extend(list(items))
+
+        while len(self._buffer) >= self._flush_size:
+            self._flush(self._buffer[: self._flush_size])
+            self._buffer = self._buffer[self._flush_size :]
+
+    def flush(self) -> None:
+        """Force-write any remaining buffered items to disk."""
+        if self._buffer:
+            self._flush(self._buffer)
+            self._buffer = []
+
+    # -- internals ------------------------------------------------------
+
+    def _flush(self, items: list) -> None:
+        count = len(items)
+        if self._output_path:
+            store_start = time.time()
+            items = self._try_sort(items)
+            self._model_class.save_to_path(
+                self._output_path / f"{self._prefix}_batch{self._file_count:04d}",
+                items,
+            )
+            self._store_time += time.time() - store_start
+        self._total_items += count
+        log.info(f"Batch {self._file_count}: saved {count} items (total: {self._total_items})")
+        self._file_count += 1
+        del items
+        gc.collect()
+
+    @staticmethod
+    def _try_sort(items: list) -> list:
+        """Best-effort sort; returns *items* unchanged when not comparable."""
+        try:
+            return sorted(items)
+        except TypeError:
+            return items
+
+    # -- context manager ------------------------------------------------
+
+    def __enter__(self) -> "BatchWriter":
+        if self._output_path and not self._output_path.is_dir():
+            self._output_path.mkdir(parents=True, exist_ok=True)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+        self.flush()
+        return False
 
 
 class DataModel:
@@ -30,6 +144,22 @@ class DataModel:
     @abc.abstractmethod
     def load_from_path(cls, path: Path, *args) -> Self:
         """Abstract function to load the data from the given Path."""
+
+    @classmethod
+    def batch_writer(
+        cls,
+        output_path: Optional[Path],
+        prefix: str,
+        flush_size: int = BatchWriter.DEFAULT_FLUSH_SIZE,
+    ) -> BatchWriter:
+        """Return a :class:`BatchWriter` bound to this model class.
+
+        Args:
+            output_path: Directory for batch files (``None`` = no disk output).
+            prefix: Filename prefix for batch files.
+            flush_size: Max items buffered before a flush.
+        """
+        return BatchWriter(cls, output_path, prefix, flush_size)
 
 
 class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
@@ -95,8 +225,18 @@ class PydanticModel(pydantic.BaseModel, DataModel):
         """
         path = path.with_suffix(".json")
         if isinstance(obj, list):
+            # Stream JSON array item-by-item to avoid building the entire
+            # serialised string in memory (critical for large lists).
             with path.open("wt", encoding="UTF-8") as fp:
-                json.dump(obj, fp, default=pydantic.BaseModel.model_dump)
+                fp.write("[")
+                for i, item in enumerate(obj):
+                    if i > 0:
+                        fp.write(",")
+                    if isinstance(item, pydantic.BaseModel):
+                        fp.write(item.model_dump_json())
+                    else:
+                        json.dump(item, fp)
+                fp.write("]")
         elif isinstance(obj, cls):
             with path.open("wt", encoding="UTF-8") as fp:
                 fp.write(obj.model_dump_json())

@@ -4,10 +4,11 @@
 
 """Base Executor."""
 
+import inspect
 import json
 import os
 import time
-from collections.abc import Generator
+from collections.abc import Generator, Iterable
 from contextlib import contextmanager
 from contextvars import copy_context
 from logging import getLogger
@@ -268,18 +269,49 @@ class BaseStepExecutor:
             else:
                 raise NotImplementedError(f"Cannot load/convert {inpt} as input for a step")
 
-    def _execute_step(
+    def _consume_batches(
+        self,
+        step: TypedStep,
+        history: History,
+        batches: Iterable[StepReturnType],
+        output_path: Optional[PathToFolderWithBaseModels],
+    ) -> tuple[int, int, float]:
+        """Consume a batch-yielding iterable via a :class:`~wurzel.datacontract.BatchWriter`.
+
+        The writer accumulates items in memory and flushes them to numbered
+        batch files once the buffer is full.  See
+        :meth:`DataModel.batch_writer` for details.
+
+        Returns:
+            ``(total_items, file_count, cumulative_store_time)``
+
+        """
+        output_model_class: type[datacontract.DataModel] = step.output_model_class
+        with output_model_class.batch_writer(output_path, str(history)) as writer:
+            for batch in batches:
+                writer.extend(batch)
+        return writer.total_items, writer.file_count, writer.store_time
+
+    def _execute_step(  # pylint: disable=too-many-locals
         self,
         step_cls: type[TypedStep],
         inputs: set[PathToFolderWithBaseModels],
         output_path: Optional[PathToFolderWithBaseModels],
     ):
-        """Exceute specified step."""
+        """Execute specified step."""
         step = step_cls()
         # pylint: disable=protected-access
         if output_path:
             output_path = step._internal_output_class(output_path)
-        run: Callable[[list], Any] = pydantic.validate_call(step.run, validate_return=True)
+
+        # Detect generator functions automatically: if run() uses ``yield``,
+        # the executor treats the result as a stream of batches.  No flag
+        # required on the step class.  Return-type validation is disabled for
+        # generators because pydantic cannot validate a lazy generator against
+        # a concrete list type.
+        is_generator_fn = inspect.isgeneratorfunction(step.run)
+        run: Callable[[list], Any] = pydantic.validate_call(step.run, validate_return=not is_generator_fn)
+
         was_called_once = False
         try:
             for (inpt, history), load_time in self._load_data(step, inputs, output_path):
@@ -296,25 +328,43 @@ class BaseStepExecutor:
                     res = ctx.run(run, inpt)
                 finally:
                     step_history.reset(token)
-                run_time = time.time() - run_start
-                store_time = 0
-                if output_path:
-                    self.store(step, history, res, output_path)
-                    store_time = time.time() - run_time
+
+                # -- persist results & collect timings --
+                if is_generator_fn:
+                    result_count, batch_count, store_time = self._consume_batches(
+                        step,
+                        history,
+                        res,
+                        output_path,
+                    )
+                    run_time = time.time() - run_start - store_time
+                    result_data = None  # already persisted to disk
+                    log_suffix = f" ({result_count} items in {batch_count} batches)"
+                else:
+                    run_time = time.time() - run_start
+                    store_time = 0.0
+                    if output_path:
+                        store_start = time.time()
+                        self.store(step, history, res, output_path)
+                        store_time = time.time() - store_start
+                    result_count = try_get_length(res)
+                    result_data = res
+                    log_suffix = ""
+
                 report = StepReport(
                     time_to_load=load_time,
                     time_to_execute=run_time,
                     time_to_save=store_time,
                     step_name=step_cls.__name__,
                     inputs=try_get_length(inpt),
-                    results=try_get_length(res),
+                    results=result_count,
                     history=history.get(),
                 )
                 log.info(
-                    f"Finished: {step_cls.__name__}.run({history[:-1]}) -> {output_path}",
+                    f"Finished: {step_cls.__name__}.run({history[:-1]}) -> {output_path}{log_suffix}",
                     extra=report.model_dump(),
                 )
-                yield res, report
+                yield result_data, report
             log.info(f"{step_cls.__name__}.finalize()")
             if not was_called_once:
                 log.error(
