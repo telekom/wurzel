@@ -7,16 +7,11 @@
 # pylint: disable=duplicate-code
 import itertools
 import re
-from datetime import datetime, timedelta, timezone
 from hashlib import sha256
 from logging import getLogger
-from typing import Optional
 
-import requests
-from dateutil.parser import isoparse
 from pandera.typing import DataFrame
 from qdrant_client import QdrantClient, models
-from qdrant_client.http.models.models import CollectionTelemetry, InlineResponse2002
 
 from wurzel.exceptions import CustomQdrantException, StepFailed
 from wurzel.step import TypedStep, step_history
@@ -24,6 +19,7 @@ from wurzel.steps.data import EmbeddingResult
 from wurzel.utils import HAS_TLSH
 
 from .data import QdrantResult
+from .retirement import CollectionRetirer
 from .settings import QdrantSettings
 
 log = getLogger(__name__)
@@ -77,33 +73,6 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         while True:
             i += 1
             yield i
-
-    def _get_telemetry(self, details_level: int) -> InlineResponse2002:
-        """Fetch collection-level telemetry data from Qdrant.
-
-        The telemetry includes configuration and runtime metadata for each collection,
-        such as:
-        - Shard-level distribution (local/remote).
-        - Last responded timestamps for shard operations (used for retention logic).
-
-        Used primarily to make decisions regarding collection retirement and to analyze
-        cluster health and usage behavior.
-
-        Args:
-        details_level (int): Level of detail required (as supported by the API).
-
-        Returns:
-        InlineResponse2002: Parsed telemetry response from Qdrant.
-        """
-        url = f"{self.settings.URI}/telemetry?details_level={details_level}"
-        headers = {"api-key": self.settings.APIKEY.get_secret_value()}
-        try:
-            response = requests.get(url, headers=headers, timeout=self.settings.REQUEST_TIMEOUT)
-            response.raise_for_status()
-            data = InlineResponse2002(**response.json())
-            return data
-        except requests.RequestException as e:
-            raise RuntimeError(f"Failed to fetch telemetry from Qdrant: {e}") from e
 
     def run(self, inpt: DataFrame[EmbeddingResult]) -> DataFrame[QdrantResult]:
         if not self.client.collection_exists(self.collection_name):
@@ -247,93 +216,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         )
 
     def _retire_collections(self) -> None:
-        """Retire (delete) historical Qdrant collections.
-
-        - Are not among the last N (per COLLECTION_HISTORY_LEN),
-        - Are not currently targeted by an alias,
-        - Have not been recently used (per telemetry).
-
-        Skipped entirely if ENABLE_COLLECTION_RETIREMENT is False.
-        """
-        if not self.settings.ENABLE_COLLECTION_RETIREMENT:
-            log.info("Skipping Qdrant collection retirement as ENABLE_COLLECTION_RETIREMENT is set.")
-            return
-
-        collections_versioned: dict[int, str] = self._get_collection_versions()
-        if not collections_versioned:
-            return
-
-        # Determine the N latest versions to retain
-        sorted_versions = sorted(collections_versioned.keys())
-        versions_to_keep = set(sorted_versions[-self.settings.COLLECTION_HISTORY_LEN :])
-
-        alias_pointed = {alias.collection_name for alias in self.client.get_aliases().aliases}
-
-        # pylint: disable-next=no-member
-        telemetry_collections = self._get_telemetry(details_level=self.settings.TELEMETRY_DETAILS_LEVEL).result.collections.collections
-
-        for version, collection_name in collections_versioned.items():
-            if version in versions_to_keep:
-                continue
-
-            if self._should_skip_collection(collection_name, alias_pointed, telemetry_collections):
-                continue
-
-            self._retire_or_log(collection_name)
-
-    def _retire_or_log(self, collection_name: str) -> None:
-        """Deletes the collection unless DRY_RUN is enabled, in which case it logs the action."""
-        if self.settings.COLLECTION_RETIRE_DRY_RUN:
-            log.info("[DRY RUN] Would retire collection", extra={"collection": collection_name})
-        else:
-            log.info("Deleting retired collection", extra={"collection": collection_name})
-            self.client.delete_collection(collection_name)
-
-    def _should_skip_collection(self, name: str, alias_pointed: set[str], telemetry_collections: list[CollectionTelemetry]) -> bool:
-        """Check if a collection should not be deleted."""
-        if name in alias_pointed:
-            log.info("Skipping deletion: still aliased", extra={"collection": name})
-            return True
-
-        usage_info = next((col for col in telemetry_collections if col.id == name), None)
-        if usage_info and self._was_recently_used_via_shards(usage_info):
-            log.info("Skipping deletion: recently accessed", extra={"collection": name})
-            return True
-
-        return False
-
-    def _was_recently_used_via_shards(self, collection_info: CollectionTelemetry) -> bool:
-        """Checks if the collection was accessed within the retention window based on its shard telemetry timestamps."""
-        threshold = datetime.now(timezone.utc) - timedelta(days=self.settings.COLLECTION_USAGE_RETENTION_DAYS)
-        latest_usage = self._get_latest_usage_timestamp(collection_info)
-        return latest_usage is not None and latest_usage > threshold
-
-    def _get_latest_usage_timestamp(self, collection_info: CollectionTelemetry) -> Optional[datetime]:
-        """Returns the most recent usage timestamp across all local and remote shards of a collection."""
-        timestamps = []
-
-        for shard in collection_info.shards:
-            timestamps.append(self._parse_local_timestamp(shard))
-            timestamps.extend(self._parse_remote_timestamps(shard))
-
-        return max(filter(None, timestamps), default=None)
-
-    def _parse_local_timestamp(self, shard) -> Optional[datetime]:
-        """Parses the local shard’s last responded timestamp into a datetime."""
-        ts = shard.local.optimizations.optimizations.last_responded
-        return self._safe_parse_iso(ts)
-
-    def _parse_remote_timestamps(self, shard) -> list[datetime]:
-        """Extracts and parses all valid remote shard usage timestamps for a collection."""
-        return [
-            self._safe_parse_iso(remote.searches.last_responded)
-            for remote in shard.remote
-            if self._safe_parse_iso(remote.searches.last_responded) is not None
-        ]
-
-    def _safe_parse_iso(self, timestamp: Optional[str]) -> Optional[datetime]:
-        """Safely parses an ISO timestamp string into a datetime, or returns None if absent."""
-        return isoparse(timestamp) if timestamp else None
+        CollectionRetirer(self.client, self.settings).retire(self._get_collection_versions())
 
     def _update_alias(self):
         success = self.client.update_collection_aliases(
