@@ -50,7 +50,10 @@ class QdrantSettings(Settings):
     COLLECTION_USAGE_RETENTION_DAYS: int = Field(default=2, description="Number of days to consider a collection as recently used.")
     REQUEST_TIMEOUT: int = Field(default=20, description="Timeout (in seconds) for requests sent to Qdrant (e.g., telemetry).")
     COLLECTION_RETIRE_DRY_RUN: bool = Field(default=False, description="If True, only log collections to be retired without deleting.")
-    ENABLE_COLLECTION_RETIREMENT: bool = Field(default=False, description="Skips retirement of collections, if enable.")
+    ENABLE_COLLECTION_RETIREMENT: bool = Field(
+        default=False,
+        description="Enable automated retirement of old collections.",
+    )
 
     @field_validator("SEARCH_PARAMS", "INDEX_PARAMS", mode="before")
     @classmethod
