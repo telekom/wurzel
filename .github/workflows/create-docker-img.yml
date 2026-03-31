@@ -134,8 +134,7 @@ jobs:
           annotations: ${{ steps.meta.outputs.annotations }}
           cache-from: type=gha,scope=${{ github.workflow }}-${{ matrix.python_version }}-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ github.workflow }}-${{ matrix.python_version }}-${{ matrix.platform }}
-          outputs: type=image,push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
-          load: ${{ github.event_name == 'pull_request' }}
+          outputs: ${{ github.event_name == 'pull_request' && 'type=docker' || 'type=image,push-by-digest=true,name-canonical=true,push=true' }}
           provenance: false
           sbom: false
 
