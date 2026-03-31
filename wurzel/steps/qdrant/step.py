@@ -358,7 +358,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         return f"{self.settings.COLLECTION}_v{previous_version + 1}"
 
     def _get_collection_versions(self) -> dict[int, str]:
-        version_pattern = re.compile(rf"^{self.settings.COLLECTION}_v(\d+)$")
+        version_pattern = re.compile(rf"^{re.escape(self.settings.COLLECTION)}_v(\d+)$")
         previous_collections = self.client.get_collections().collections
         versioned_collections = {}
 
