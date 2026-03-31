@@ -129,13 +129,19 @@ jobs:
           build-args: PYTHON_VERSION=${{ matrix.python_version }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
-          tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha,scope=${{ github.workflow }}-${{ matrix.python_version }}-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ github.workflow }}-${{ matrix.python_version }}-${{ matrix.platform }}
           outputs: type=image,push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
           load: ${{ github.event_name == 'pull_request' }}
           provenance: false
           sbom: false
+
+      - name: Push tags
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}@${{ steps.build.outputs.digest }}
 
       - name: Export digest
         if: github.event_name != 'pull_request'
