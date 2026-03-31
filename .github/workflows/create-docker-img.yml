@@ -139,13 +139,6 @@ jobs:
           provenance: false
           sbom: false
 
-      - name: Push tags
-        if: github.ref == 'refs/heads/main'
-        run: |
-          docker buildx imagetools create \
-            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}@${{ steps.build.outputs.digest }}
-
       - name: Export digest
         if: github.event_name != 'pull_request'
         run: |
