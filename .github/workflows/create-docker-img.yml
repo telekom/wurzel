@@ -10,9 +10,6 @@ on:
       - pypi.org Release
     types:
       - completed
-  push:
-    branches:
-      - "!main"
   pull_request:
     branches:
       - main
@@ -246,7 +243,7 @@ jobs:
       REGISTRY: ghcr.io
 
     container:
-      image: ghcr.io/${{ github.repository }}-py${{ matrix.python_version }}:${{ needs.build.outputs.version }}
+      image: ghcr.io/${{ github.repository }}-py${{ matrix.python_version }}:${{ needs.merge.outputs.version }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
