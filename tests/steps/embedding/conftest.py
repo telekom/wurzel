@@ -2,6 +2,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import shutil
+from pathlib import Path
+
+import numpy as np
 import pytest
 import requests_mock
 
@@ -32,3 +36,61 @@ def embedding_service_mock():
         m.post("/embed", text=POST_RESULT_EMBEDDING_STR)
         m.get("/info", text=GET_RESULT_INFO)
         yield
+
+
+@pytest.fixture(scope="module")
+def mock_embedding():
+    """A pytest fixture that provides a mock embedding class for testing.
+
+    Overrides the `_select_embedding` method of the `EmbeddingStep` class
+    to return an instance of the mock embedding class, which generates
+    a fixed-size random vector upon calling `embed_query`.
+
+    Returns:
+    -------
+    MockEmbedding
+        An instance of the mock embedding class.
+
+    """
+
+    class MockEmbedding:
+        def embed_query(self, _: str) -> list[float]:
+            """Simulates embedding of a query string into a fixed-size random vector.
+
+            Parameters
+            ----------
+            _ : str
+                The input query string (ignored in this mock implementation).
+
+            Returns:
+            -------
+            np.ndarray
+                A random vector of size 768.
+
+            """
+            return list(np.random.random(768))
+
+    def mock_func(*args, **kwargs):
+        return MockEmbedding()
+
+    return mock_func
+
+
+@pytest.fixture
+def default_embedding_data(tmp_path):
+    mock_file = Path("tests/data/markdown.json")
+    input_folder = tmp_path / "input"
+    input_folder.mkdir()
+    shutil.copy(mock_file, input_folder)
+    output_folder = tmp_path / "out"
+    return (input_folder, output_folder)
+
+
+@pytest.fixture
+def splitter_tokenizer_model():
+    return "gpt-3.5-turbo"
+
+
+@pytest.fixture
+def sentence_splitter_model():
+    return "de_core_news_sm"

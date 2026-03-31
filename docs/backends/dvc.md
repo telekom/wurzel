@@ -6,6 +6,14 @@ The DVC Backend transforms your Wurzel pipeline into Data Version Control (DVC) 
 
 DVC (Data Version Control) is a powerful tool for ML experiment management that works seamlessly with Git. The DVC Backend generates `dvc.yaml` files that define your pipeline stages, dependencies, and outputs in a format that DVC can execute and track.
 
+!!! important "Generate-Time vs Runtime Configuration"
+    The DVC backend uses a **two-phase configuration model**:
+
+    - **Generate-Time (YAML or Environment)**: A `values.yaml` file or environment variables configure the **pipeline structure** — data directories and environment encapsulation settings. This is used when running `wurzel generate`.
+    - **Runtime (Environment Variables)**: **Step settings** (e.g., `MANUALMARKDOWNSTEP__FOLDER_PATH`) are read from environment variables when `dvc repro` executes the pipeline locally.
+
+    This separation allows you to generate pipeline definitions once and run them in different environments by changing only the runtime environment variables.
+
 ## Key Features
 
 - **Data Versioning**: Automatically track changes to datasets and model artifacts
@@ -29,28 +37,68 @@ wurzel generate examples.pipeline.pipelinedemo:pipeline
 
 # Explicitly specify DVC backend
 wurzel generate --backend DvcBackend --output dvc.yaml examples.pipeline.pipelinedemo:pipeline
+
+# Generate using a values file (recommended)
+wurzel generate --backend DvcBackend \
+    --values values.yaml \
+    --pipeline_name pipelinedemo \
+    --output dvc.yaml \
+    examples.pipeline.pipelinedemo:pipeline
 ```
 
-### Environment Configuration
+### Values File Configuration (Generate-Time)
 
-Configure the DVC backend using environment variables:
+The `values.yaml` file configures the pipeline structure at generate-time:
+
+```yaml
+dvc:
+  pipelinedemo:
+    dataDir: "./data"        # Directory for step outputs
+    encapsulateEnv: true     # Whether to encapsulate environment in CLI calls
+```
+
+### Environment Configuration (Generate-Time Alternative)
+
+Alternatively, configure the DVC backend using environment variables at generate-time:
 
 ```bash
 export DVCBACKEND__DATA_DIR=./data
 export DVCBACKEND__ENCAPSULATE_ENV=true
 ```
 
-Available configuration options:
+### Configuration Reference
 
-- `DVCBACKEND__DATA_DIR`: Directory for data files (default: `./data`)
-- `DVCBACKEND__ENCAPSULATE_ENV`: Whether to encapsulate environment variables (default: `false`)
+| Field | Environment Variable | Default | Description |
+|-------|---------------------|---------|-------------|
+| `dataDir` | `DVCBACKEND__DATA_DIR` | `./data` | Directory for step output artifacts |
+| `encapsulateEnv` | `DVCBACKEND__ENCAPSULATE_ENV` | `true` | Whether to encapsulate environment in CLI calls |
+
+### Runtime Environment Variables
+
+Step settings are configured via environment variables at **runtime** (when `dvc repro` executes). Set these before running your pipeline:
+
+```bash
+# Step-specific settings (runtime)
+export MANUALMARKDOWNSTEP__FOLDER_PATH="examples/pipeline/demo-data"
+export SIMPLESPLITTERSTEP__BATCH_SIZE="100"
+export SIMPLESPLITTERSTEP__NUM_THREADS="4"
+
+# Run the pipeline
+dvc repro
+```
+
+!!! tip "Inspecting Required Environment Variables"
+    Use `wurzel inspect` to see all environment variables required by your pipeline steps:
+    ```bash
+    wurzel inspect examples.pipeline.pipelinedemo:pipeline --gen-env
+    ```
 
 ### Programmatic Usage
 
 Use the DVC backend directly in Python:
 
 ```python
-from wurzel.backend.dvc import DvcBackend
+from wurzel.backend.backend_dvc import DvcBackend
 from wurzel.steps.embedding import EmbeddingStep
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.steps.qdrant.step import QdrantConnectorStep
@@ -60,13 +108,17 @@ from wurzel.utils import WZ
 source = WZ(ManualMarkdownStep)
 embedding = WZ(EmbeddingStep)
 step = WZ(QdrantConnectorStep)
-
 source >> embedding >> step
 pipeline = step
 
-# Generate DVC configuration
-dvc_yaml = DvcBackend().generate_yaml(pipeline)
-print(dvc_yaml)
+# Option 1: Generate with default settings (no values file)
+dvc_yaml = DvcBackend().generate_artifact(pipeline)
+
+# Option 2: Generate from values file (YAML must contain dvc.pipelinedemo)
+# from pathlib import Path
+# values_file = Path("values.yaml")
+# backend = DvcBackend.from_values(files=[values_file], workflow_name="pipelinedemo")
+# dvc_yaml = backend.generate_artifact(pipeline)
 ```
 
 ## Running DVC Pipelines

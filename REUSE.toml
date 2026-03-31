@@ -29,6 +29,7 @@ path = [
     "**/requirements.txt",
     "**/*.pyc",
     "**/__pycache__/**",
+    ".python-version",
     ]
 precedence = "override"
 SPDX-FileCopyrightText = "NONE"

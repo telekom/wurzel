@@ -5,4 +5,7 @@ from wurzel.utils import HAS_LANGCHAIN_CORE
 
 if HAS_LANGCHAIN_CORE:
     from .huggingface import HuggingFaceInferenceAPIEmbeddings, PrefixedAPIEmbeddings  # noqa: F401
-    from .step import EmbeddingStep  # noqa: F401
+    from .step import (
+        EmbeddingStep,  # noqa: F401
+        TruncatedEmbeddingStep,  # noqa: F401
+    )

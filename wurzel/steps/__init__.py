@@ -12,7 +12,10 @@ if HAS_DOCLING:
 if HAS_LANGCHAIN_CORE and HAS_REQUESTS:
     try:
         from .embedding import *  # noqa: F403 Allow importing Step classes
-        from .embedding import EmbeddingStep  # noqa: F401
+        from .embedding import (
+            EmbeddingStep,  # noqa: F401
+            TruncatedEmbeddingStep,  # noqa: F401
+        )
     except ImportError:
         pass
 

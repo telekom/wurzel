@@ -18,6 +18,16 @@ class Backend:
     to convert a `TypedStep` into the appropriate format required by the target framework.
     """
 
+    @classmethod
+    def is_available(cls) -> bool:
+        """Check if all required dependencies for this backend are installed.
+
+        Returns:
+            bool: True if all dependencies are available, False otherwise.
+
+        """
+        return True
+
     def generate_artifact(self, step: TypedStep) -> str:
         """Abstract method to generate a backend-specific YAML string representation of a pipeline step.
 

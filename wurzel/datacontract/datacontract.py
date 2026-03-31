@@ -52,10 +52,29 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
         """Switch case to find the matching file ending."""
         import pandas as pd  # pylint: disable=import-outside-toplevel
 
-        read_data = pd.read_csv(path.open(encoding="utf-8"))
+        # Load CSV from path
+        with path.open(encoding="utf-8") as f:
+            read_data = pd.read_csv(f)
+
+        def _literal_eval_or_passthrough(value):
+            """Convert stringified literals to Python objects because pandas keeps CSV cells as strings."""
+            if not isinstance(value, str):
+                return value
+            stripped = value.strip()
+            if stripped == "":
+                return None
+            try:
+                return literal_eval(stripped)
+            except (ValueError, SyntaxError):
+                return value
+
+        # Iterate over coluns and load data
         for key, atr in cls.to_schema().columns.items():
-            if atr.dtype.type is list:
-                read_data[key] = read_data[key].apply(literal_eval)
+            if key not in read_data.columns:
+                continue
+            if atr.dtype.type in {list, dict}:
+                read_data[key] = read_data[key].apply(_literal_eval_or_passthrough)
+
         return patyp.DataFrame[cls](read_data)
 
 
@@ -106,9 +125,11 @@ class PydanticModel(pydantic.BaseModel, DataModel):
             model_type = [ty for ty in typing.get_args(model_type) if ty][0]
         if get_origin(model_type) is None:
             if issubclass(model_type, pydantic.BaseModel):
-                return cls(**json.load(path.open(encoding="utf-8")))
+                with path.open(encoding="utf-8") as f:
+                    return cls(**json.load(f))
         elif get_origin(model_type) is list:
-            data = json.load(path.open(encoding="utf-8"))
+            with path.open(encoding="utf-8") as f:
+                data = json.load(f)
             for i, entry in enumerate(data):
                 data[i] = cls(**entry)
             return data
