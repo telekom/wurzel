@@ -1,0 +1,9 @@
+# Kong depends on supabase-studio: service_healthy upstream, which causes
+# startup failures because studio's healthcheck probes over IPv4 while
+# Next.js binds to IPv6 (HOSTNAME: "::").  Studio itself starts in ~200ms;
+# the health gate is unnecessary – kong only needs the container to exist.
+services:
+  kong:
+    depends_on:
+      studio:
+        condition: service_started

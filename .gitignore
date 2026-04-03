@@ -236,3 +236,6 @@ test_file.py
 tmp.py
 tmp/
 examples/pipeline/output
+
+# Supabase local dev stack – bootstrapped by `make setup-dev`, not checked in
+infra/superbase/

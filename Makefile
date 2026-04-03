@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 # Requires uv (https://docs.astral.sh/uv/). First-time: run 'make lock' then 'make install'.
-.PHONY: install test clean build lock lint documentation reuse-lint
+.PHONY: install test clean build lock lint documentation reuse-lint setup-dev
 SRC_DIR = ./wurzel
 TEST_DIR = ./tests
 VENV = .venv
@@ -47,3 +47,6 @@ documentation: install
 
 reuse-lint:
 	uv run reuse lint
+
+setup-dev:
+	@bash scripts/setup-dev.sh
