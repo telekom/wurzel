@@ -3,12 +3,14 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 #
-# Sets up a local Supabase development environment with MinIO S3 backend.
+# Sets up a local development environment with:
+#   - Supabase with MinIO S3 backend
+#   - Temporal workflow engine
 # Safe to re-run – skips steps that are already done.
 #
-# The Supabase docker stack is bootstrapped from the official upstream repo on
-# first run and placed in infra/superbase/ (gitignored).  Only the overlay
-# files in scripts/overlays/ need to live in this repo.
+# The Supabase and Temporal docker stacks are bootstrapped from official
+# upstream repos on first run and placed in infra/ (gitignored). Only the
+# overlay files in scripts/overlays/ need to live in this repo.
 #
 # Usage: bash scripts/setup-dev.sh
 #        (or via: make setup-dev)
@@ -18,12 +20,17 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SUPABASE_DIR="${REPO_ROOT}/infra/superbase"
+TEMPORAL_DIR="${REPO_ROOT}/infra/temporal"
 OVERLAYS_DIR="${SCRIPT_DIR}/overlays"
 
 # Pinned to the same release visible in docker-compose.yml
 # (supabase/studio:2026.03.16-sha-5528817)
 SUPABASE_REPO="https://github.com/supabase/supabase"
 SUPABASE_BRANCH="master"
+
+# Temporal configuration
+TEMPORAL_REPO="https://github.com/temporalio/samples-server"
+TEMPORAL_BRANCH="main"
 
 # ── Colour helpers ──────────────────────────────────────────────────────────
 if [ -t 1 ]; then
@@ -45,7 +52,7 @@ check_prereqs() {
   command -v openssl>/dev/null 2>&1 || error "openssl is required but not found."
 
   if ! podman compose version >/dev/null 2>&1; then
-    error "podman compose is required but not found. Install via: brew install podman-compose"
+    error "podman compose is required but not found. Ensure you have podman 4.0+ installed: brew install podman"
   fi
 
   if ! podman info >/dev/null 2>&1; then
@@ -91,14 +98,50 @@ bootstrap_supabase() {
   info "Bootstrap complete → ${SUPABASE_DIR}"
 }
 
+# ── Bootstrap Temporal docker stack ─────────────────────────────────────────
+# Downloads the official Temporal samples-server compose directory from GitHub
+# using a sparse checkout and places it at infra/temporal/.
+bootstrap_temporal() {
+  if [ -f "${TEMPORAL_DIR}/docker-compose.yml" ]; then
+    info "Temporal docker stack already present – skipping bootstrap."
+    return
+  fi
+
+  info "Bootstrapping Temporal docker stack from upstream..."
+  info "  → ${TEMPORAL_REPO} (branch: ${TEMPORAL_BRANCH})"
+
+  local tmp_dir
+  tmp_dir="$(mktemp -d)"
+  # shellcheck disable=SC2064
+  trap "rm -rf '${tmp_dir}'" EXIT
+
+  # Sparse checkout – only downloads the compose/ subdirectory
+  git clone \
+    --filter=blob:none \
+    --no-checkout \
+    --depth 1 \
+    --branch "${TEMPORAL_BRANCH}" \
+    "${TEMPORAL_REPO}" \
+    "${tmp_dir}/temporal" \
+    2>&1 | sed 's/^/  /'
+
+  git -C "${tmp_dir}/temporal" sparse-checkout set --cone compose
+  git -C "${tmp_dir}/temporal" checkout "${TEMPORAL_BRANCH}" 2>&1 | sed 's/^/  /'
+
+  mkdir -p "${TEMPORAL_DIR}"
+  cp -r "${tmp_dir}/temporal/compose/." "${TEMPORAL_DIR}/"
+
+  info "Bootstrap complete → ${TEMPORAL_DIR}"
+}
+
 # ── Copy repo-tracked overlays into the bootstrapped directory ───────────────
 copy_overlays() {
   if [ ! -d "${OVERLAYS_DIR}" ]; then
     return
   fi
 
-  info "Copying overlay files into ${SUPABASE_DIR}..."
-  for f in "${OVERLAYS_DIR}"/*; do
+  info "Copying Supabase overlay files into ${SUPABASE_DIR}..."
+  for f in "${OVERLAYS_DIR}"/docker-compose.healthcheck-override.yml; do
     [ -f "${f}" ] || continue
     local dest="${SUPABASE_DIR}/$(basename "${f}")"
     if [ ! -f "${dest}" ] || ! diff -q "${f}" "${dest}" >/dev/null 2>&1; then
@@ -106,6 +149,35 @@ copy_overlays() {
       info "  ✓ $(basename "${f}")"
     fi
   done
+}
+
+# ── Patch Temporal configuration ────────────────────────────────────────────
+# Temporal's default ports conflict with Supabase. Patch to avoid conflicts:
+# - PostgreSQL: 5432 → 5433 (Supabase pooler uses 5432)
+# - Web UI: 8080 → 8233 (Supabase services use 8080 internally)
+patch_temporal_config() {
+  local compose_file="${TEMPORAL_DIR}/docker-compose.yml"
+  local patched=false
+  
+  if grep -q '"5432:5432"' "${compose_file}" 2>/dev/null; then
+    info "Patching Temporal PostgreSQL port (5432 → 5433)..."
+    sed -i.bak 's/"5432:5432"/"5433:5432"/g' "${compose_file}"
+    rm -f "${compose_file}.bak"
+    info "  ✓ Temporal PostgreSQL will be available on localhost:5433"
+    patched=true
+  fi
+
+  if grep -q '8080:8080' "${compose_file}" 2>/dev/null; then
+    info "Patching Temporal UI port (8080 → 8233)..."
+    sed -i.bak 's/8080:8080/8233:8080/g' "${compose_file}"
+    rm -f "${compose_file}.bak"
+    info "  ✓ Temporal Web UI will be available on http://localhost:8233"
+    patched=true
+  fi
+
+  if [ "$patched" = false ]; then
+    info "Temporal configuration already patched – skipping."
+  fi
 }
 
 # ── .env setup ──────────────────────────────────────────────────────────────
@@ -172,16 +244,27 @@ COMPOSE_FILES=(
   -f docker-compose.healthcheck-override.yml
 )
 
+# ── Temporal compose file list ──────────────────────────────────────────────
+TEMPORAL_COMPOSE_FILES=(
+  -f docker-compose.yml
+)
+
 # ── Pull images ─────────────────────────────────────────────────────────────
 pull_images() {
   info "Pulling latest Supabase + MinIO images (this may take a while on first run)..."
   (cd "${SUPABASE_DIR}" && podman compose "${COMPOSE_FILES[@]}" pull --quiet)
+
+  info "Pulling latest Temporal images (this may take a while on first run)..."
+  (cd "${TEMPORAL_DIR}" && podman compose "${TEMPORAL_COMPOSE_FILES[@]}" pull --quiet)
 }
 
 # ── Start services ───────────────────────────────────────────────────────────
 start_services() {
   info "Starting Supabase with S3 (MinIO) backend..."
   (cd "${SUPABASE_DIR}" && podman compose "${COMPOSE_FILES[@]}" up -d --remove-orphans)
+
+  info "Starting Temporal workflow engine..."
+  (cd "${TEMPORAL_DIR}" && podman compose "${TEMPORAL_COMPOSE_FILES[@]}" up -d --remove-orphans)
 }
 
 # ── Health check ─────────────────────────────────────────────────────────────
@@ -190,7 +273,7 @@ wait_for_healthy() {
   local interval=5
   local elapsed=0
 
-  info "Waiting for all services to become healthy (timeout: ${timeout}s)..."
+  info "Waiting for all Supabase services to become healthy (timeout: ${timeout}s)..."
 
   while [ "${elapsed}" -lt "${timeout}" ]; do
     local not_healthy
@@ -213,22 +296,49 @@ wait_for_healthy() {
     )
 
     if [ "${exited}" -gt 0 ]; then
-      warning "One or more containers exited unexpectedly."
+      warning "One or more Supabase containers exited unexpectedly."
       warning "Run: podman compose ${COMPOSE_FILES[*]} ps  (from ${SUPABASE_DIR})"
     fi
 
     if [ "${not_healthy}" -eq 0 ]; then
-      info "All services are healthy."
-      return 0
+      info "All Supabase services are healthy."
+      break
     fi
 
-    printf "  ... ${not_healthy} service(s) not yet healthy (%ds elapsed)\r" "${elapsed}"
+    printf "  ... ${not_healthy} Supabase service(s) not yet healthy (%ds elapsed)\r" "${elapsed}"
     sleep "${interval}"
     elapsed=$((elapsed + interval))
   done
 
-  warning "Timeout reached. Some services may still be starting up."
-  warning "Run: podman compose ${COMPOSE_FILES[*]} ps  (from ${SUPABASE_DIR})"
+  if [ "${elapsed}" -ge "${timeout}" ]; then
+    warning "Timeout reached for Supabase. Some services may still be starting up."
+    warning "Run: podman compose ${COMPOSE_FILES[*]} ps  (from ${SUPABASE_DIR})"
+  fi
+
+  # Wait for Temporal services
+  elapsed=0
+  info "Waiting for Temporal services to become healthy (timeout: ${timeout}s)..."
+
+  while [ "${elapsed}" -lt "${timeout}" ]; do
+    local temporal_ready
+    temporal_ready=$(
+      cd "${TEMPORAL_DIR}" && podman compose "${TEMPORAL_COMPOSE_FILES[@]}" \
+        ps --format json 2>/dev/null \
+      | grep -c '"State":"running"' || echo "0"
+    )
+
+    if [ "${temporal_ready}" -ge 2 ]; then
+      info "Temporal services are running."
+      return 0
+    fi
+
+    printf "  ... Waiting for Temporal services to start (%ds elapsed)\r" "${elapsed}"
+    sleep "${interval}"
+    elapsed=$((elapsed + interval))
+  done
+
+  warning "Timeout reached for Temporal. Some services may still be starting up."
+  warning "Run: podman compose ${TEMPORAL_COMPOSE_FILES[*]} ps  (from ${TEMPORAL_DIR})"
 }
 
 # ── Summary ──────────────────────────────────────────────────────────────────
@@ -241,19 +351,32 @@ print_summary() {
 
   echo ""
   printf "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
-  printf "${GREEN}  Supabase dev environment is ready!${RESET}\n"
+  printf "${GREEN}  Development environment is ready!${RESET}\n"
   printf "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${RESET}\n"
   echo ""
+  printf "${YELLOW}Supabase:${RESET}\n"
   printf "  Studio URL   : %s\n"           "${public_url:-http://localhost:8000}"
   printf "  Dashboard    : %s / %s\n"      "${dashboard_user:-supabase}" "${dashboard_pass:-(see infra/superbase/.env)}"
   printf "  REST API     : %s/rest/v1/\n"  "${public_url:-http://localhost:8000}"
   printf "  Auth API     : %s/auth/v1/\n"  "${public_url:-http://localhost:8000}"
   printf "  Storage API  : %s/storage/v1/\n" "${public_url:-http://localhost:8000}"
   printf "  S3 backend   : MinIO (internal)\n"
-  echo ""
   printf "  Stack dir    : %s\n" "${SUPABASE_DIR}"
   printf "  Stop with    : cd %s && podman compose %s down\n" \
     "${SUPABASE_DIR}" "${COMPOSE_FILES[*]}"
+  echo ""
+  printf "${YELLOW}Temporal:${RESET}\n"
+  printf "  Web UI       : http://localhost:8233\n"
+  printf "  gRPC Frontend: localhost:7233\n"
+  printf "  PostgreSQL   : localhost:5433 (temporal/temporal/temporal)\n"
+  printf "  Stack dir    : %s\n" "${TEMPORAL_DIR}"
+  printf "  Stop with    : cd %s && podman compose %s down\n" \
+    "${TEMPORAL_DIR}" "${TEMPORAL_COMPOSE_FILES[*]}"
+  echo ""
+  printf "${GREEN}Next steps:${RESET}\n"
+  printf "  • Access Temporal Web UI: http://localhost:8233\n"
+  printf "  • Connect to Temporal:    temporal.NewClient(temporal.ClientOptions{HostPort: \"localhost:7233\"})\n"
+  printf "  • Access Supabase Studio: %s\n" "${public_url:-http://localhost:8000}"
   echo ""
 }
 
@@ -261,7 +384,9 @@ print_summary() {
 main() {
   check_prereqs
   bootstrap_supabase
+  bootstrap_temporal
   copy_overlays
+  patch_temporal_config
   setup_env
   generate_secrets
   sync_minio_credentials

@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 # Requires uv (https://docs.astral.sh/uv/). First-time: run 'make lock' then 'make install'.
-.PHONY: install test clean build lock lint documentation reuse-lint setup-dev
+.PHONY: install test clean build lock lint documentation reuse-lint setup-dev start-dev stop-dev
 SRC_DIR = ./wurzel
 TEST_DIR = ./tests
 VENV = .venv
@@ -50,3 +50,29 @@ reuse-lint:
 
 setup-dev:
 	@bash scripts/setup-dev.sh
+
+start-dev: setup-dev
+	@echo "✅ Development environment is running"
+	@echo ""
+	@echo "Services:"
+	@echo "  • Supabase Studio: http://localhost:8000"
+	@echo "  • Temporal Web UI: http://localhost:8233"
+	@echo ""
+	@echo "Stop with: make stop-dev"
+
+stop-dev:
+	@echo "🛑 Stopping development services..."
+	@if [ -d "infra/superbase" ]; then \
+		cd infra/superbase && podman compose \
+			-f docker-compose.yml \
+			-f docker-compose.s3.yml \
+			-f docker-compose.healthcheck-override.yml \
+			down; \
+	fi
+	@if [ -d "infra/temporal" ]; then \
+		cd infra/temporal && podman compose \
+			-f docker-compose.yml \
+			-f docker-compose.temporal.yml \
+			down; \
+	fi
+	@echo "✅ All services stopped"
