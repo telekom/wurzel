@@ -2,14 +2,17 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import json as _json
 import logging
 import re
 import warnings
 from pathlib import Path
-from typing import Any, Callable, Self
+from typing import Annotated, Any, Callable, Self
 
+import pyarrow as pa
 import pydantic
 import yaml
+from pydantic import field_validator
 
 from .datacontract import PydanticModel
 
@@ -65,7 +68,15 @@ class MarkdownDataContract(PydanticModel):
     md: str
     keywords: str
     url: str  # Url of pydantic is buggy in serialization
-    metadata: dict[str, Any] | None = None
+    metadata: Annotated[str | None, pa.utf8()] = None
+
+    @field_validator("metadata", mode="before")
+    @classmethod
+    def _serialize_metadata(cls, v):
+        """Serialize dict metadata to JSON string for Arrow compatibility."""
+        if isinstance(v, dict):
+            return _json.dumps(v)
+        return v
 
     @classmethod
     @pydantic.validate_call
@@ -132,6 +143,12 @@ class MarkdownDataContract(PydanticModel):
             keywords=metadata.get("keywords", path.name.split(".")[0]),
             metadata=metadata.get("metadata", None),
         )
+
+    def get_metadata_dict(self) -> dict[str, Any] | None:
+        """Get metadata as a dict (deserialize from JSON string)."""
+        if self.metadata is None:
+            return None
+        return _json.loads(self.metadata)
 
     def metrics(self) -> dict[str, float]:
         keywords_list = [kw.strip() for kw in self.keywords.split(",") if kw.strip()]

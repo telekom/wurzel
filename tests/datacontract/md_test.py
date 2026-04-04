@@ -239,21 +239,26 @@ Text.
     s = MarkdownDataContract.from_file(f)
 
     assert "# Title" in s.md
+    # metadata is now stored as JSON string, use get_metadata_dict()
     assert s.metadata is not None
-    assert s.metadata["foo"] == "bar"
-    assert s.metadata["bar"] == 123
+    metadata_dict = s.get_metadata_dict()
+    assert metadata_dict is not None
+    assert metadata_dict["foo"] == "bar"
+    assert metadata_dict["bar"] == 123
     assert s.url == "foo/bar"
 
-    assert s.__hash__() == 21317556317919954558699657768736304700342060298586059611903002870732316103488, "Invalid hash"
-
-    # save and load again
-    f2 = tmp_path / "file2.json"
+    # save and load again (now uses .parquet extension)
+    f2 = tmp_path / "file2"
 
     MarkdownDataContract.save_to_path(f2, s)
 
-    s2 = MarkdownDataContract.load_from_path(f2, MarkdownDataContract)
+    s2 = MarkdownDataContract.load_from_path(f2.with_suffix(".parquet"), MarkdownDataContract)
 
-    assert s.__hash__() == s2.__hash__(), "Invalid hash after write/load file"
+    # Verify metadata roundtrips correctly
+    assert s.md == s2.md
+    assert s.url == s2.url
+    assert s.keywords == s2.keywords
+    assert s.get_metadata_dict() == s2.get_metadata_dict()
 
 
 def test_utf8_encoding(tmp_path):

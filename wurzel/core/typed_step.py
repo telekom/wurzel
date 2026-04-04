@@ -18,6 +18,7 @@ from typing import (
 )
 
 import pandera.typing as patyp
+from pydantic_arrow import ArrowFrame
 from typing_inspect import get_origin
 
 from wurzel.core.settings import Settings
@@ -99,7 +100,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     settings_class: type[SETTS]
     output_model_class: MODEL_TYPE
     input_model_class: MODEL_TYPE
-    _supported_containers: Iterable[type[Iterable]] = (list, set, patyp.DataFrame)
+    _supported_containers: Iterable[type[Iterable]] = (list, set, patyp.DataFrame, ArrowFrame)
     settings: SETTS
 
     def output_path(self, folder: Path) -> Path:
@@ -271,7 +272,11 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
             TypeError: On incompatible types
 
         """
-        if self.input_model_type != step.output_model_type:
+        # Allow chaining if the inner model classes match (e.g., ArrowFrame[X] -> list[X])
+        _, self_inner = self._unpack_list_containers(self.input_model_type)
+        _, step_inner = self._unpack_list_containers(step.output_model_type)
+        
+        if self.input_model_type != step.output_model_type and self_inner != step_inner:
             raise TypeError(f"Cannot chain {self} to {step} ({step.output_model_type} -> {self.input_model_type})")
         super().add_required_step(step)
 

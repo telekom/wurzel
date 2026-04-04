@@ -10,11 +10,15 @@ import types
 import typing
 from ast import literal_eval
 from pathlib import Path
-from typing import Any, Self, Union, get_origin
+from typing import TYPE_CHECKING, Any, Self, Union, get_origin
 
 import pandera as pa
 import pandera.typing as patyp
 import pydantic
+from pydantic_arrow import ArrowFrame
+
+if TYPE_CHECKING:
+    from pydantic_arrow import ArrowFrame
 
 MetricMap = dict[str, float]
 
@@ -124,58 +128,63 @@ class PydanticModel(pydantic.BaseModel, DataModel):
     """DataModel contract specified with pydantic."""
 
     @classmethod
-    def save_to_path(cls, path: Path, obj: Union[Self, list[Self]]):
+    def save_to_path(cls, path: Path, obj: Union[Self, list[Self], "ArrowFrame"]):
         """Wurzel save model.
 
         Args:
             path (Path): location
-            obj (Union[Self, list[Self]]): obj(s) to store
+            obj (Union[Self, list[Self], ArrowFrame]): obj(s) to store
 
         Raises:
             NotImplementedError
 
         """
-        path = path.with_suffix(".json")
-        if isinstance(obj, list):
-            with path.open("wt", encoding="UTF-8") as fp:
-                json.dump(obj, fp, default=pydantic.BaseModel.model_dump)
+        path = path.with_suffix(".parquet")
+        if isinstance(obj, ArrowFrame):
+            # Streaming write -- data flows batch-by-batch, never fully buffered
+            obj.to_parquet(str(path))
+        elif isinstance(obj, list):
+            ArrowFrame[cls].from_rows(obj).to_parquet(str(path))
         elif isinstance(obj, cls):
-            with path.open("wt", encoding="UTF-8") as fp:
-                fp.write(obj.model_dump_json())
+            ArrowFrame[cls].from_rows([obj]).to_parquet(str(path))
         else:
             raise NotImplementedError(f"Cannot store {type(obj)}")
         return path
 
     # pylint: disable=arguments-differ
     @classmethod
-    def load_from_path(cls, path: Path, model_type: type[Union[Self, list[Self]]]) -> Union[Self, list[Self]]:
+    def load_from_path(cls, path: Path, model_type: type[Union[Self, list[Self], "ArrowFrame"]]) -> Union[Self, list[Self], "ArrowFrame"]:
         """Wurzel load model.
 
         Args:
             path (Path): load model from
-            model_type (type[Union[Self, list[Self]]]): expected type
+            model_type (type[Union[Self, list[Self], ArrowFrame]]): expected type
 
         Raises:
             NotImplementedError
 
         Returns:
-            Union[Self, list[Self]]: dependent on expected type
+            Union[Self, list[Self], ArrowFrame]: dependent on expected type
 
         """
         # isinstace does not work for union pylint: disable=unidiomatic-typecheck
         if type(model_type) is types.UnionType:
             model_type = [ty for ty in typing.get_args(model_type) if ty][0]
-        if get_origin(model_type) is None:
-            if issubclass(model_type, pydantic.BaseModel):
-                with path.open(encoding="utf-8") as f:
-                    return cls(**json.load(f))
-        elif get_origin(model_type) is list:
-            with path.open(encoding="utf-8") as f:
-                data = json.load(f)
-            for i, entry in enumerate(data):
-                data[i] = cls(**entry)
-            return data
 
+        origin = get_origin(model_type)
+
+        # If the step expects ArrowFrame[Model], return a LAZY frame (no materialization)
+        if origin is ArrowFrame or (isinstance(model_type, type) and issubclass(model_type, ArrowFrame)):
+            return ArrowFrame[cls].from_parquet(str(path))
+
+        # Otherwise materialize into models
+        frame = ArrowFrame[cls].from_parquet(str(path))
+        models = frame.collect()
+
+        if origin is list:
+            return models
+        if origin is None and issubclass(model_type, pydantic.BaseModel):
+            return models[0]
         raise NotImplementedError(f"Can not load {model_type}")
 
     def __hash__(self) -> int:

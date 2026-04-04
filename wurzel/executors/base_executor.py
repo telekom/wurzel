@@ -20,6 +20,7 @@ import pandera.typing as patyp
 import pydantic
 from asgi_correlation_id import correlation_id
 from pydantic import SecretStr
+from pydantic_arrow import ArrowFrame
 from pydantic_core import ValidationError
 
 from wurzel.core.history import (
@@ -47,7 +48,7 @@ if TYPE_CHECKING:
 log = getLogger(__name__)
 
 
-StepReturnType: TypeAlias = Union[pandas.DataFrame, PydanticModel, list[PydanticModel]]
+StepReturnType: TypeAlias = Union[pandas.DataFrame, PydanticModel, list[PydanticModel], "ArrowFrame"]
 
 
 class StepReport(pydantic.BaseModel):
@@ -69,7 +70,8 @@ def _try_sort(x: StepReturnType) -> StepReturnType:
 
     Returns either a sorted x or x itself
     """
-    if isinstance(x, PydanticModel):
+    if isinstance(x, (PydanticModel, ArrowFrame)):
+        # Do not materialize a lazy stream
         return x
     try:
         if isinstance(x, (list, set)):
@@ -88,6 +90,14 @@ def _try_sort(x: StepReturnType) -> StepReturnType:
 
 
 def _collect_output_metrics(step: TypedStep, result: Any) -> dict[str, float]:
+    # Handle ArrowFrame separately
+    if isinstance(result, ArrowFrame):
+        try:
+            return {"rows": float(result.num_rows)}
+        except TypeError:
+            # num_rows not available for streaming sources
+            return {}
+    
     output_model_class = step.output_model_class
     get_metrics = getattr(output_model_class, "get_metrics", None)
     if not callable(get_metrics):
@@ -235,14 +245,14 @@ class BaseStepExecutor:
         self,
         step: TypedStep,
         hist: History,
-        obj: Union[PanderaDataFrameModel, PydanticModel, list[PydanticModel]],
+        obj: Union[PanderaDataFrameModel, PydanticModel, list[PydanticModel], "ArrowFrame"],
         path: PathToFolderWithBaseModels,
     ) -> Path:
         """Store step result.
 
         Args:
             step (TypedStep): Step Object
-            obj (Union[PanderaDataFrameModel, PydanticModel]): Result of step
+            obj (Union[PanderaDataFrameModel, PydanticModel, ArrowFrame]): Result of step
             path (PathToBaseModel): Where to save
 
         """
@@ -323,7 +333,7 @@ class BaseStepExecutor:
             # Only yield once
             yield (None, History(step)), 0
         for inpt in inputs:
-            if isinstance(inpt, (datacontract.DataModel, PydanticModel, patyp.DataFrame, list)):
+            if isinstance(inpt, (datacontract.DataModel, PydanticModel, patyp.DataFrame, list, ArrowFrame)):
                 yield (inpt, History("[Memory]", step)), 0
             elif isinstance(inpt, (Path, PathToFolderWithBaseModels)):
                 for (inpt, hist), took in self.load(step, inpt):
@@ -342,7 +352,11 @@ class BaseStepExecutor:
         # pylint: disable=protected-access
         if output_path:
             output_path = step._internal_output_class(output_path)
-        run: Callable[[list], Any] = pydantic.validate_call(step.run, validate_return=True)
+        run: Callable[[list], Any] = pydantic.validate_call(
+            step.run,
+            validate_return=True,
+            config=pydantic.ConfigDict(arbitrary_types_allowed=True),
+        )
         was_called_once = False
         try:
             for (inpt, history), load_time in self._load_data(step, inputs, output_path):

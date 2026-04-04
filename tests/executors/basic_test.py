@@ -20,7 +20,7 @@ def test_memory_in_file_out(tmp_path):
     with BaseStepExecutor() as ex:
         ex(MyStep, (DEFAULT_OBJ,), out)
     files = list(out.glob("*"))
-    expected = out / "[Memory]-My.json"
+    expected = out / "[Memory]-My.parquet"
     assert len(files) == 1
     assert expected in files
 
@@ -28,7 +28,9 @@ def test_memory_in_file_out(tmp_path):
 def test_file_in_memory_out(tmp_path):
     inpt_folder = tmp_path / "input"
     inpt_folder.mkdir()
-    (inpt_folder / "First.json").write_text(DEFAULT_OBJ.model_dump_json())
+    # Save using the new parquet format
+    from wurzel.datacontract import PydanticModel
+    PydanticModel.save_to_path(inpt_folder / "First", DEFAULT_OBJ)
     with BaseStepExecutor() as ex:
         res = ex.execute_step(MyStep, (inpt_folder,), None)
     assert res[0][0] == [DEFAULT_OBJ, DEFAULT_OBJ]
@@ -86,7 +88,7 @@ def test_2_to_1(tmp_path):
     assert len(b) == 2
     assert len(list(out_b.glob("*"))) == 2
     for p in out_b.glob("*"):
-        assert p.name in ["TstA-TstB.json", "TstA2-TstB.json"]
+        assert p.name in ["TstA-TstB.parquet", "TstA2-TstB.parquet"]
 
 
 def test_2_to_2_to_1(tmp_path):
@@ -107,13 +109,13 @@ def test_2_to_2_to_1(tmp_path):
     assert len(c) == 2
     assert len(list(final.glob("*"))) == 2
 
-    assert list(out_as[0].glob("*"))[0].name == "TstA.json"
-    assert list(out_as[1].glob("*"))[0].name == "TstA2.json"
+    assert list(out_as[0].glob("*"))[0].name == "TstA.parquet"
+    assert list(out_as[1].glob("*"))[0].name == "TstA2.parquet"
     for p in out_b1.glob("*"):
-        assert p.name in ["TstA-TstB.json", "TstA2-TstB.json"]
+        assert p.name in ["TstA-TstB.parquet", "TstA2-TstB.parquet"]
 
     for p in final.glob("*"):
-        assert p.name in ["TstA-TstB-TstC.json", "TstA2-TstB-TstC.json"]
+        assert p.name in ["TstA-TstB-TstC.parquet", "TstA2-TstB-TstC.parquet"]
 
 
 def test_2_to_1_to_1(tmp_path):
@@ -133,4 +135,4 @@ def test_2_to_1_to_1(tmp_path):
     assert len(c) == 2
     assert len(list(final.glob("*"))) == 2
     for p in final.glob("*"):
-        assert p.name in ["TstA-TstB-TstC.json", "TstA2-TstB-TstC.json"]
+        assert p.name in ["TstA-TstB-TstC.parquet", "TstA2-TstB-TstC.parquet"]
