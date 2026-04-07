@@ -58,7 +58,10 @@ start-dev: setup-dev
 	@echo "  • Supabase Studio: http://localhost:8000"
 	@echo "  • Temporal Web UI: http://localhost:8233"
 	@echo ""
-	@echo "Stop with: make stop-dev"
+	@echo "Starting Temporal development server..."
+	@echo "  (This will run in the foreground. Press Ctrl+C to stop)"
+	@echo ""
+	temporal server start-dev
 
 stop-dev:
 	@echo "🛑 Stopping development services..."
@@ -69,10 +72,6 @@ stop-dev:
 			-f docker-compose.healthcheck-override.yml \
 			down; \
 	fi
-	@if [ -d "infra/temporal" ]; then \
-		cd infra/temporal && podman compose \
-			-f docker-compose.yml \
-			-f docker-compose.temporal.yml \
-			down; \
-	fi
-	@echo "✅ All services stopped"
+	@echo "✅ Supabase services stopped"
+	@echo ""
+	@echo "Note: If you're running Temporal, stop it with Ctrl+C in its terminal"
