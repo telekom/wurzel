@@ -1,0 +1,132 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# Full UI journey: Supabase local (Auth + DB + Edge Functions) + Vite + Playwright.
+
+name: Web E2E (Playwright)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  playwright:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install Temporal CLI
+        run: |
+          curl -sSf https://temporal.download/cli.sh | sh
+          echo "$HOME/.temporalio/bin" >> "$GITHUB_PATH"
+
+      - name: Start Temporal dev server
+        run: |
+          temporal server start-dev --db-filename "${{ runner.temp }}/temporal-e2e.db" &
+          for i in $(seq 1 90); do
+            if bash -c "echo >/dev/tcp/127.0.0.1/7233" 2>/dev/null; then
+              echo "Temporal frontend port 7233 is open"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Timed out waiting for Temporal on 127.0.0.1:7233"
+          exit 1
+
+      - name: Start Supabase
+        run: supabase start
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install Python deps (Temporal worker + KaaS gateway)
+        run: uv sync --extra temporal --extra kaas-gateway
+
+      - name: Start Wurzel Temporal worker
+        run: |
+          nohup uv run python -m wurzel.temporal_worker.run_worker > "${{ runner.temp }}/wurzel-worker.log" 2>&1 &
+
+      - name: Export Supabase URL, keys, and gateway env
+        run: |
+          while IFS= read -r line || [[ -n "$line" ]]; do
+            line="${line#export }"
+            [[ -z "$line" || "$line" =~ ^# ]] && continue
+            key="${line%%=*}"
+            value="${line#*=}"
+            case "$key" in
+              API_URL)
+                echo "VITE_SUPABASE_URL=$value" >> "$GITHUB_ENV"
+                echo "SUPABASE_URL=$value" >> "$GITHUB_ENV"
+                ;;
+              ANON_KEY)
+                echo "VITE_SUPABASE_ANON_KEY=$value" >> "$GITHUB_ENV"
+                echo "SUPABASE_ANON_KEY=$value" >> "$GITHUB_ENV"
+                ;;
+              SERVICE_ROLE_KEY) echo "SUPABASE_SERVICE_ROLE_KEY=$value" >> "$GITHUB_ENV" ;;
+            esac
+          done < <(supabase status -o env)
+          echo "TEMPORAL_ADDRESS=127.0.0.1:7233" >> "$GITHUB_ENV"
+          echo "VITE_KAAS_GATEWAY_URL=http://127.0.0.1:8010" >> "$GITHUB_ENV"
+
+      - name: Start KaaS gateway (FastAPI)
+        run: |
+          nohup uv run wurzel-kaas-gateway > "${{ runner.temp }}/kaas-gateway.log" 2>&1 &
+          for i in $(seq 1 60); do
+            if bash -c "echo >/dev/tcp/127.0.0.1/8010" 2>/dev/null; then
+              echo "KaaS gateway listening on 8010"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Timed out waiting for KaaS gateway on 8010"
+          exit 1
+
+      - name: Install dependencies and Chromium
+        working-directory: apps/web
+        run: |
+          npm ci
+          npx playwright install chromium --with-deps
+
+      - name: Run Playwright
+        working-directory: apps/web
+        env:
+          CI: true
+          E2E_TEMPORAL: "1"
+        run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: wurzel-temporal-worker-log
+          path: ${{ runner.temp }}/wurzel-worker.log
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: kaas-gateway-log
+          path: ${{ runner.temp }}/kaas-gateway.log
+          if-no-files-found: ignore
+          retention-days: 7

@@ -1,0 +1,41 @@
+{
+    "name": "wurzel-kaas-web",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc -b && vite build",
+        "preview": "vite preview",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test:e2e": "playwright test",
+        "test:e2e:ui": "playwright test --ui",
+        "playwright:install": "playwright install chromium"
+    },
+    "dependencies": {
+        "@rjsf/core": "^5.24.3",
+        "@rjsf/validator-ajv8": "^5.24.3",
+        "@supabase/supabase-js": "^2.49.1",
+        "@xyflow/react": "^12.3.6",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
+        "react-router-dom": "^7.14.0"
+    },
+    "devDependencies": {
+        "@playwright/test": "^1.49.1",
+        "@tailwindcss/vite": "^4.2.2",
+        "@testing-library/jest-dom": "^6.6.3",
+        "@testing-library/react": "^16.0.1",
+        "@testing-library/user-event": "^14.5.2",
+        "@types/react": "^18.3.12",
+        "@types/react-dom": "^18.3.1",
+        "@vitejs/plugin-react": "^4.3.4",
+        "dotenv": "^16.4.7",
+        "jsdom": "^25.0.1",
+        "tailwindcss": "^4.2.2",
+        "typescript": "~5.6.3",
+        "vite": "^6.0.3",
+        "vitest": "^3.0.5"
+    }
+}

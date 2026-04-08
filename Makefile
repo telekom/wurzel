@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 # Requires uv (https://docs.astral.sh/uv/). First-time: run 'make lock' then 'make install'.
-.PHONY: install test clean build lock lint documentation reuse-lint setup-dev start-dev stop-dev
+.PHONY: install test clean build lock lint documentation reuse-lint setup-dev start-dev stop-dev test-supabase-db test-web test-web-e2e
 SRC_DIR = ./wurzel
 TEST_DIR = ./tests
 VENV = .venv
@@ -50,6 +50,18 @@ reuse-lint:
 
 setup-dev:
 	@bash scripts/setup-dev.sh
+
+# pgTAP tests (requires Supabase CLI + local DB with migrations applied)
+test-supabase-db:
+	supabase test db
+
+# Vitest + Testing Library (apps/web); run from repo root
+test-web:
+	cd apps/web && npm ci && npm test
+
+# Playwright E2E (requires `supabase start` and apps/web/.env with anon key + URL)
+test-web-e2e:
+	cd apps/web && npm ci && npx playwright install chromium && npm run test:e2e
 
 start-dev: setup-dev
 	@echo "✅ Development environment is running"

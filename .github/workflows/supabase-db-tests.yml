@@ -1,0 +1,31 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# Database tests (pgTAP) per Supabase testing guidance:
+# https://supabase.com/docs/guides/local-development/testing/overview
+# https://supabase.com/blog/testing-for-vibe-coders-from-zero-to-production-confidence
+
+name: Supabase database tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  pgtap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase (applies migrations)
+        run: supabase start
+
+      - name: Run pgTAP tests
+        run: supabase test db

@@ -86,6 +86,27 @@ def html2md_bin():
     yield Path(path)
 
 
+def pytest_configure(config) -> None:  # pylint: disable=unused-argument
+    """Defaults so `wurzel.kaas_gateway` can be imported in tests without a real Supabase stack."""
+    os.environ.setdefault("SUPABASE_URL", "http://127.0.0.1:54321")
+    os.environ.setdefault("SUPABASE_ANON_KEY", "pytest-anon-placeholder")
+    os.environ.setdefault("SUPABASE_SERVICE_ROLE_KEY", "pytest-service-placeholder")
+    try:
+        from wurzel.kaas_gateway.settings import get_settings
+
+        get_settings.cache_clear()
+    except ImportError:
+        pass
+    config.addinivalue_line(
+        "markers",
+        "supabase_db: runs `supabase test db` when RUN_SUPABASE_DB_TESTS=1",
+    )
+    config.addinivalue_line(
+        "markers",
+        "supabase_rest: hits PostgREST when RUN_SUPABASE_REST_TESTS=1",
+    )
+
+
 def pytest_addoption(parser):
     parser.addoption(
         "--repeatability",

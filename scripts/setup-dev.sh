@@ -57,7 +57,7 @@ check_prereqs() {
 # ── Initialize and configure Colima ────────────────────────────────────────
 setup_colima() {
   info "Setting up Colima..."
-  
+
   # Check if DOCKER_HOST is set to Podman and warn/unset it
   if [ -n "${DOCKER_HOST:-}" ]; then
     if [[ "$DOCKER_HOST" == *"podman"* ]]; then
@@ -67,7 +67,7 @@ setup_colima() {
       export DOCKER_HOST=""
     fi
   fi
-  
+
   # Check if Colima is already running
   if colima status >/dev/null 2>&1; then
     info "Colima is already running."
@@ -76,23 +76,23 @@ setup_colima() {
     # Start with sensible defaults: 4 CPUs, 8GB RAM, 100GB disk
     colima start --cpu 4 --memory 8 --disk 100 --arch "$(uname -m)"
   fi
-  
+
   # Set Docker context to Colima explicitly
   if docker context ls --format "{{.Name}}" 2>/dev/null | grep -q "^colima$"; then
     info "Switching Docker context to Colima..."
     docker context use colima >/dev/null 2>&1 || true
   fi
-  
+
   # Verify Docker CLI can connect
   if ! docker info >/dev/null 2>&1; then
     error "Docker CLI cannot connect to Colima. Try: colima restart"
   fi
-  
+
   local docker_version
   docker_version="$(docker --version 2>/dev/null || echo 'unknown')"
   local colima_status
   colima_status="$(colima status 2>/dev/null || echo 'unknown')"
-  
+
   info "Docker CLI version: ${docker_version}"
   info "Colima status: ${colima_status}"
   info "Colima is ready."
@@ -115,15 +115,15 @@ init_supabase() {
 start_supabase() {
   info "Starting Supabase services..."
   cd "${REPO_ROOT}"
-  
+
   if supabase status >/dev/null 2>&1; then
     info "Supabase is already running."
     return
   fi
-  
+
   info "This may take a few minutes on first run..."
   info "Using --ignore-health-check flag for Colima compatibility..."
-  
+
   # Start with ignore health check to avoid vector/logging issues on Colima
   if ! supabase start --ignore-health-check 2>&1; then
     echo ""
@@ -144,7 +144,7 @@ ALTERNATIVE: Try Colima with different settings:
 
 For debugging: supabase start --debug"
   fi
-  
+
   info "Supabase services started."
   warning "Note: Started with --ignore-health-check due to Colima limitations."
   warning "Analytics/logging (vector) may not be available, but core services should work."

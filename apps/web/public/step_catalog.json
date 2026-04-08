@@ -1,0 +1,1730 @@
+[
+    {
+        "step_key": "wurzel.steps.decagon.step.DecagonKnowledgeBaseStep",
+        "display_name": "DecagonKnowledgeBaseStep",
+        "import_path": "wurzel.steps.decagon.step.DecagonKnowledgeBaseStep",
+        "settings_json_schema": {
+            "additionalProperties": false,
+            "description": "Configuration for the Decagon Knowledge Base connector.\n\nAttributes:\n    API_URL: Base URL for the Decagon API.\n    API_KEY: API key for authentication (required).\n    SOURCE: Source identifier for articles - all created articles will\n        have this source value.\n    TIMEOUT: Request timeout in seconds.\n\nEnvironment Variables (with DECAGONKBSTEP prefix):\n    DECAGONKBSTEP__API_URL: Decagon API base URL\n    DECAGONKBSTEP__API_KEY: API key for authentication (required)\n    DECAGONKBSTEP__SOURCE: Source identifier for articles\n    DECAGONKBSTEP__TIMEOUT: Request timeout in seconds",
+            "properties": {
+                "API_URL": {
+                    "default": "https://eu.api.decagon.ai",
+                    "description": "Base URL for the Decagon API",
+                    "title": "Api Url",
+                    "type": "string"
+                },
+                "API_KEY": {
+                    "description": "API key for authentication with Decagon",
+                    "format": "password",
+                    "title": "Api Key",
+                    "type": "string",
+                    "writeOnly": true
+                },
+                "SOURCE": {
+                    "default": "Wurzel",
+                    "description": "Source identifier for articles",
+                    "title": "Source",
+                    "type": "string"
+                },
+                "TIMEOUT": {
+                    "default": 120,
+                    "description": "Request timeout in seconds",
+                    "exclusiveMinimum": 0,
+                    "title": "Timeout",
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "API_KEY"
+            ],
+            "title": "DecagonSettings",
+            "type": "object"
+        },
+        "input_json_schema": {
+            "type": "array",
+            "title": "input",
+            "items": {
+                "description": "A data contract of the input/output of the various pipeline steps representing a document in Markdown format.\n\nThe document consists have the Markdown body (document content) and additional metadata (keywords, url).\nThe metadata is optional.\n\nExample 1 (with metadata):\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\n---\n# Some title\n\nWith some more text.\n\n## And\n\n- Other\n- [Markdown content](#some-link)\n```\n\nExample 2 (without metadata):\n```md\n# Another title\n\nAnother text.\n```\n\nExample 3 (with extra metadata fields)\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\nmetadata:\n    token_len: 123\n    char_len: 550\n---\n# Some title\n\nA short text.\n```",
+                "properties": {
+                    "md": {
+                        "title": "Md",
+                        "type": "string"
+                    },
+                    "keywords": {
+                        "title": "Keywords",
+                        "type": "string"
+                    },
+                    "url": {
+                        "title": "Url",
+                        "type": "string"
+                    },
+                    "metadata": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "default": null,
+                        "title": "Metadata"
+                    }
+                },
+                "required": [
+                    "md",
+                    "keywords",
+                    "url"
+                ],
+                "title": "MarkdownDataContract",
+                "type": "object"
+            }
+        },
+        "output_json_schema": {
+            "type": "object",
+            "title": "output",
+            "x-wurzel-fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.decagon.data.DecagonArticleResult]"
+        },
+        "input_type_fqn": "list[wurzel.datacontract.common.MarkdownDataContract]",
+        "output_type_fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.decagon.data.DecagonArticleResult]"
+    },
+    {
+        "step_key": "wurzel.steps.docling.docling_step.DoclingStep",
+        "display_name": "DoclingStep",
+        "import_path": "wurzel.steps.docling.docling_step.DoclingStep",
+        "settings_json_schema": {
+            "$defs": {
+                "InputFormat": {
+                    "description": "A document format supported by document backend parsers.",
+                    "enum": [
+                        "docx",
+                        "pptx",
+                        "html",
+                        "image",
+                        "pdf",
+                        "asciidoc",
+                        "md",
+                        "csv",
+                        "xlsx",
+                        "xml_uspto",
+                        "xml_jats",
+                        "json_docling"
+                    ],
+                    "title": "InputFormat",
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false,
+            "description": "DoclingSettings is a configuration class that inherits from the base `Settings` class.\nIt provides customizable settings for document processing.\n\nAttributes:\n    FORCE_FULL_PAGE_OCR (bool): A flag to enforce full-page OCR processing. Defaults to True.\n    FORMATS (list[InputFormat]): A list of supported input formats for document processing.\n        Supported formats include:\n        - \"docx\"\n        - \"asciidoc\"\n        - \"pptx\"\n        - \"html\"\n        - \"image\"\n        - \"pdf\"\n        - \"md\"\n        - \"csv\"\n        - \"xlsx\"\n        - \"xml_uspto\"\n        - \"xml_jats\"\n        - \"json_docling\"\n    URLS (list[str]): A list of URLs for additional configuration or resources. Defaults to an empty list.",
+            "properties": {
+                "FORCE_FULL_PAGE_OCR": {
+                    "default": true,
+                    "title": "Force Full Page Ocr",
+                    "type": "boolean"
+                },
+                "FORMATS": {
+                    "default": [
+                        "docx",
+                        "asciidoc",
+                        "pptx",
+                        "html",
+                        "image",
+                        "pdf",
+                        "md",
+                        "csv",
+                        "xlsx",
+                        "xml_uspto",
+                        "xml_jats",
+                        "json_docling"
+                    ],
+                    "items": {
+                        "$ref": "#/$defs/InputFormat"
+                    },
+                    "title": "Formats",
+                    "type": "array"
+                },
+                "URLS": {
+                    "default": [],
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "Urls",
+                    "type": "array"
+                },
+                "DEFAULT_KEYWORD": {
+                    "default": "",
+                    "title": "Default Keyword",
+                    "type": "string"
+                }
+            },
+            "title": "DoclingSettings",
+            "type": "object"
+        },
+        "input_json_schema": {
+            "type": "null",
+            "title": "input"
+        },
+        "output_json_schema": {
+            "type": "array",
+            "title": "output",
+            "items": {
+                "description": "A data contract of the input/output of the various pipeline steps representing a document in Markdown format.\n\nThe document consists have the Markdown body (document content) and additional metadata (keywords, url).\nThe metadata is optional.\n\nExample 1 (with metadata):\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\n---\n# Some title\n\nWith some more text.\n\n## And\n\n- Other\n- [Markdown content](#some-link)\n```\n\nExample 2 (without metadata):\n```md\n# Another title\n\nAnother text.\n```\n\nExample 3 (with extra metadata fields)\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\nmetadata:\n    token_len: 123\n    char_len: 550\n---\n# Some title\n\nA short text.\n```",
+                "properties": {
+                    "md": {
+                        "title": "Md",
+                        "type": "string"
+                    },
+                    "keywords": {
+                        "title": "Keywords",
+                        "type": "string"
+                    },
+                    "url": {
+                        "title": "Url",
+                        "type": "string"
+                    },
+                    "metadata": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "default": null,
+                        "title": "Metadata"
+                    }
+                },
+                "required": [
+                    "md",
+                    "keywords",
+                    "url"
+                ],
+                "title": "MarkdownDataContract",
+                "type": "object"
+            }
+        },
+        "input_type_fqn": null,
+        "output_type_fqn": "list[wurzel.datacontract.common.MarkdownDataContract]"
+    },
+    {
+        "step_key": "wurzel.steps.duplication.DropDuplicationStep",
+        "display_name": "DropDuplicationStep",
+        "import_path": "wurzel.steps.duplication.DropDuplicationStep",
+        "settings_json_schema": {
+            "additionalProperties": false,
+            "description": "specify DROP_BY_FIELDS to field.",
+            "properties": {
+                "DROP_BY_FIELDS": {
+                    "default": [
+                        "md"
+                    ],
+                    "items": {
+                        "type": "string"
+                    },
+                    "title": "Drop By Fields",
+                    "type": "array"
+                }
+            },
+            "title": "DropStettings",
+            "type": "object"
+        },
+        "input_json_schema": {
+            "type": "array",
+            "title": "input",
+            "items": {
+                "description": "A data contract of the input/output of the various pipeline steps representing a document in Markdown format.\n\nThe document consists have the Markdown body (document content) and additional metadata (keywords, url).\nThe metadata is optional.\n\nExample 1 (with metadata):\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\n---\n# Some title\n\nWith some more text.\n\n## And\n\n- Other\n- [Markdown content](#some-link)\n```\n\nExample 2 (without metadata):\n```md\n# Another title\n\nAnother text.\n```\n\nExample 3 (with extra metadata fields)\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\nmetadata:\n    token_len: 123\n    char_len: 550\n---\n# Some title\n\nA short text.\n```",
+                "properties": {
+                    "md": {
+                        "title": "Md",
+                        "type": "string"
+                    },
+                    "keywords": {
+                        "title": "Keywords",
+                        "type": "string"
+                    },
+                    "url": {
+                        "title": "Url",
+                        "type": "string"
+                    },
+                    "metadata": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "default": null,
+                        "title": "Metadata"
+                    }
+                },
+                "required": [
+                    "md",
+                    "keywords",
+                    "url"
+                ],
+                "title": "MarkdownDataContract",
+                "type": "object"
+            }
+        },
+        "output_json_schema": {
+            "type": "array",
+            "title": "output",
+            "items": {
+                "description": "A data contract of the input/output of the various pipeline steps representing a document in Markdown format.\n\nThe document consists have the Markdown body (document content) and additional metadata (keywords, url).\nThe metadata is optional.\n\nExample 1 (with metadata):\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\n---\n# Some title\n\nWith some more text.\n\n## And\n\n- Other\n- [Markdown content](#some-link)\n```\n\nExample 2 (without metadata):\n```md\n# Another title\n\nAnother text.\n```\n\nExample 3 (with extra metadata fields)\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\nmetadata:\n    token_len: 123\n    char_len: 550\n---\n# Some title\n\nA short text.\n```",
+                "properties": {
+                    "md": {
+                        "title": "Md",
+                        "type": "string"
+                    },
+                    "keywords": {
+                        "title": "Keywords",
+                        "type": "string"
+                    },
+                    "url": {
+                        "title": "Url",
+                        "type": "string"
+                    },
+                    "metadata": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "default": null,
+                        "title": "Metadata"
+                    }
+                },
+                "required": [
+                    "md",
+                    "keywords",
+                    "url"
+                ],
+                "title": "MarkdownDataContract",
+                "type": "object"
+            }
+        },
+        "input_type_fqn": "list[wurzel.datacontract.common.MarkdownDataContract]",
+        "output_type_fqn": "list[wurzel.datacontract.common.MarkdownDataContract]"
+    },
+    {
+        "step_key": "wurzel.steps.embedding.step.BaseEmbeddingStep",
+        "display_name": "BaseEmbeddingStep",
+        "import_path": "wurzel.steps.embedding.step.BaseEmbeddingStep",
+        "settings_json_schema": {
+            "additionalProperties": false,
+            "description": "EmbeddingSettings is a configuration class for embedding-related settings.\n\nAttributes:\n    API (Url): The API endpoint for embedding operations.\n    NORMALIZE (bool): A flag indicating whether to normalize embeddings. Defaults to False.\n    BATCH_SIZE (int): The batch size for processing embeddings. Must be greater than 0. Defaults to 100.\n    TOKEN_COUNT_MIN (int): The minimum token count for processing. Must be greater than 0. Defaults to 1.\n    TOKEN_COUNT_MAX (int): The maximum token count for processing. Must be greater than 1. Defaults to 256.\n    TOKEN_COUNT_BUFFER (int): The buffer size for token count. Must be greater than 0. Defaults to 32.\n    STEPWORDS_PATH (Path): The file path to the stopwords file. Defaults to \"data/german_stopwords_full.txt\".\n    N_JOBS (int): The number of parallel jobs to use. Must be greater than 0. Defaults to 1.\n    PREFIX_MAP (dict[re.Pattern, str]): A mapping of regex patterns to string prefixes.\n        This is validated and transformed using the `_wrap_validator_model_mapping` method.\n    CLEAN_MD_BEFORE_EMBEDDING (bool): If true Markdown content is cleaned before sending to embedding model. Defaults to False.\n    TOKENIZER_MODEL (str): Name of tokenizer model measuring token count (tiktoken, spacy, or huggingface). Defaults to \"gpt-3.5-turbo\".\n\nMethods:\n    _wrap_validator_model_mapping(input_dict: dict[str, str], handler):\n        A static method to wrap and validate the model mapping. It converts string regex keys\n        in the input dictionary to compiled regex patterns and applies a handler function to the result.",
+            "properties": {
+                "BATCH_SIZE": {
+                    "default": 100,
+                    "exclusiveMinimum": 0,
+                    "title": "Batch Size",
+                    "type": "integer"
+                },
+                "NUM_THREADS": {
+                    "default": 4,
+                    "minimum": 1,
+                    "title": "Num Threads",
+                    "type": "integer"
+                },
+                "TOKEN_COUNT_MIN": {
+                    "default": 1,
+                    "exclusiveMinimum": 0,
+                    "title": "Token Count Min",
+                    "type": "integer"
+                },
+                "TOKEN_COUNT_MAX": {
+                    "default": 256,
+                    "exclusiveMinimum": 1,
+                    "title": "Token Count Max",
+                    "type": "integer"
+                },
+                "TOKEN_COUNT_BUFFER": {
+                    "default": 32,
+                    "exclusiveMinimum": 0,
+                    "title": "Token Count Buffer",
+                    "type": "integer"
+                },
+                "TOKENIZER_MODEL": {
+                    "default": "gpt-3.5-turbo",
+                    "description": "The tokenizer model to use for splitting documents.",
+                    "title": "Tokenizer Model",
+                    "type": "string"
+                },
+                "SENTENCE_SPLITTER_MODEL": {
+                    "default": "de_core_news_sm",
+                    "description": "The model splitting text into sentences.",
+                    "title": "Sentence Splitter Model",
+                    "type": "string"
+                },
+                "API": {
+                    "format": "uri",
+                    "minLength": 1,
+                    "title": "Api",
+                    "type": "string"
+                },
+                "NORMALIZE": {
+                    "default": false,
+                    "title": "Normalize",
+                    "type": "boolean"
+                },
+                "STEPWORDS_PATH": {
+                    "default": "data/german_stopwords_full.txt",
+                    "format": "path",
+                    "title": "Stepwords Path",
+                    "type": "string"
+                },
+                "N_JOBS": {
+                    "default": 1,
+                    "exclusiveMinimum": 0,
+                    "title": "N Jobs",
+                    "type": "integer"
+                },
+                "PREFIX_MAP": {
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "default": {
+                        "e5-": "query: ",
+                        "DPR|dpr": ""
+                    },
+                    "propertyNames": {
+                        "format": "regex"
+                    },
+                    "title": "Prefix Map",
+                    "type": "object"
+                },
+                "CLEAN_MD_BEFORE_EMBEDDING": {
+                    "default": true,
+                    "title": "Clean Md Before Embedding",
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "API"
+            ],
+            "title": "EmbeddingSettings",
+            "type": "object"
+        },
+        "input_json_schema": {
+            "type": "array",
+            "title": "input",
+            "items": {
+                "description": "A data contract of the input/output of the various pipeline steps representing a document in Markdown format.\n\nThe document consists have the Markdown body (document content) and additional metadata (keywords, url).\nThe metadata is optional.\n\nExample 1 (with metadata):\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\n---\n# Some title\n\nWith some more text.\n\n## And\n\n- Other\n- [Markdown content](#some-link)\n```\n\nExample 2 (without metadata):\n```md\n# Another title\n\nAnother text.\n```\n\nExample 3 (with extra metadata fields)\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\nmetadata:\n    token_len: 123\n    char_len: 550\n---\n# Some title\n\nA short text.\n```",
+                "properties": {
+                    "md": {
+                        "title": "Md",
+                        "type": "string"
+                    },
+                    "keywords": {
+                        "title": "Keywords",
+                        "type": "string"
+                    },
+                    "url": {
+                        "title": "Url",
+                        "type": "string"
+                    },
+                    "metadata": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "default": null,
+                        "title": "Metadata"
+                    }
+                },
+                "required": [
+                    "md",
+                    "keywords",
+                    "url"
+                ],
+                "title": "MarkdownDataContract",
+                "type": "object"
+            }
+        },
+        "output_json_schema": {
+            "type": "object",
+            "title": "output",
+            "x-wurzel-fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.data.EmbeddingResult]"
+        },
+        "input_type_fqn": "list[wurzel.datacontract.common.MarkdownDataContract]",
+        "output_type_fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.data.EmbeddingResult]"
+    },
+    {
+        "step_key": "wurzel.steps.embedding.step.EmbeddingStep",
+        "display_name": "EmbeddingStep",
+        "import_path": "wurzel.steps.embedding.step.EmbeddingStep",
+        "settings_json_schema": {
+            "additionalProperties": false,
+            "description": "EmbeddingSettings is a configuration class for embedding-related settings.\n\nAttributes:\n    API (Url): The API endpoint for embedding operations.\n    NORMALIZE (bool): A flag indicating whether to normalize embeddings. Defaults to False.\n    BATCH_SIZE (int): The batch size for processing embeddings. Must be greater than 0. Defaults to 100.\n    TOKEN_COUNT_MIN (int): The minimum token count for processing. Must be greater than 0. Defaults to 1.\n    TOKEN_COUNT_MAX (int): The maximum token count for processing. Must be greater than 1. Defaults to 256.\n    TOKEN_COUNT_BUFFER (int): The buffer size for token count. Must be greater than 0. Defaults to 32.\n    STEPWORDS_PATH (Path): The file path to the stopwords file. Defaults to \"data/german_stopwords_full.txt\".\n    N_JOBS (int): The number of parallel jobs to use. Must be greater than 0. Defaults to 1.\n    PREFIX_MAP (dict[re.Pattern, str]): A mapping of regex patterns to string prefixes.\n        This is validated and transformed using the `_wrap_validator_model_mapping` method.\n    CLEAN_MD_BEFORE_EMBEDDING (bool): If true Markdown content is cleaned before sending to embedding model. Defaults to False.\n    TOKENIZER_MODEL (str): Name of tokenizer model measuring token count (tiktoken, spacy, or huggingface). Defaults to \"gpt-3.5-turbo\".\n\nMethods:\n    _wrap_validator_model_mapping(input_dict: dict[str, str], handler):\n        A static method to wrap and validate the model mapping. It converts string regex keys\n        in the input dictionary to compiled regex patterns and applies a handler function to the result.",
+            "properties": {
+                "BATCH_SIZE": {
+                    "default": 100,
+                    "exclusiveMinimum": 0,
+                    "title": "Batch Size",
+                    "type": "integer"
+                },
+                "NUM_THREADS": {
+                    "default": 4,
+                    "minimum": 1,
+                    "title": "Num Threads",
+                    "type": "integer"
+                },
+                "TOKEN_COUNT_MIN": {
+                    "default": 1,
+                    "exclusiveMinimum": 0,
+                    "title": "Token Count Min",
+                    "type": "integer"
+                },
+                "TOKEN_COUNT_MAX": {
+                    "default": 256,
+                    "exclusiveMinimum": 1,
+                    "title": "Token Count Max",
+                    "type": "integer"
+                },
+                "TOKEN_COUNT_BUFFER": {
+                    "default": 32,
+                    "exclusiveMinimum": 0,
+                    "title": "Token Count Buffer",
+                    "type": "integer"
+                },
+                "TOKENIZER_MODEL": {
+                    "default": "gpt-3.5-turbo",
+                    "description": "The tokenizer model to use for splitting documents.",
+                    "title": "Tokenizer Model",
+                    "type": "string"
+                },
+                "SENTENCE_SPLITTER_MODEL": {
+                    "default": "de_core_news_sm",
+                    "description": "The model splitting text into sentences.",
+                    "title": "Sentence Splitter Model",
+                    "type": "string"
+                },
+                "API": {
+                    "format": "uri",
+                    "minLength": 1,
+                    "title": "Api",
+                    "type": "string"
+                },
+                "NORMALIZE": {
+                    "default": false,
+                    "title": "Normalize",
+                    "type": "boolean"
+                },
+                "STEPWORDS_PATH": {
+                    "default": "data/german_stopwords_full.txt",
+                    "format": "path",
+                    "title": "Stepwords Path",
+                    "type": "string"
+                },
+                "N_JOBS": {
+                    "default": 1,
+                    "exclusiveMinimum": 0,
+                    "title": "N Jobs",
+                    "type": "integer"
+                },
+                "PREFIX_MAP": {
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "default": {
+                        "e5-": "query: ",
+                        "DPR|dpr": ""
+                    },
+                    "propertyNames": {
+                        "format": "regex"
+                    },
+                    "title": "Prefix Map",
+                    "type": "object"
+                },
+                "CLEAN_MD_BEFORE_EMBEDDING": {
+                    "default": true,
+                    "title": "Clean Md Before Embedding",
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "API"
+            ],
+            "title": "EmbeddingSettings",
+            "type": "object"
+        },
+        "input_json_schema": {
+            "type": "array",
+            "title": "input",
+            "items": {
+                "description": "A data contract of the input/output of the various pipeline steps representing a document in Markdown format.\n\nThe document consists have the Markdown body (document content) and additional metadata (keywords, url).\nThe metadata is optional.\n\nExample 1 (with metadata):\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\n---\n# Some title\n\nWith some more text.\n\n## And\n\n- Other\n- [Markdown content](#some-link)\n```\n\nExample 2 (without metadata):\n```md\n# Another title\n\nAnother text.\n```\n\nExample 3 (with extra metadata fields)\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\nmetadata:\n    token_len: 123\n    char_len: 550\n---\n# Some title\n\nA short text.\n```",
+                "properties": {
+                    "md": {
+                        "title": "Md",
+                        "type": "string"
+                    },
+                    "keywords": {
+                        "title": "Keywords",
+                        "type": "string"
+                    },
+                    "url": {
+                        "title": "Url",
+                        "type": "string"
+                    },
+                    "metadata": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "default": null,
+                        "title": "Metadata"
+                    }
+                },
+                "required": [
+                    "md",
+                    "keywords",
+                    "url"
+                ],
+                "title": "MarkdownDataContract",
+                "type": "object"
+            }
+        },
+        "output_json_schema": {
+            "type": "object",
+            "title": "output",
+            "x-wurzel-fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.data.EmbeddingResult]"
+        },
+        "input_type_fqn": "list[wurzel.datacontract.common.MarkdownDataContract]",
+        "output_type_fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.data.EmbeddingResult]"
+    },
+    {
+        "step_key": "wurzel.steps.embedding.step.TruncatedEmbeddingStep",
+        "display_name": "TruncatedEmbeddingStep",
+        "import_path": "wurzel.steps.embedding.step.TruncatedEmbeddingStep",
+        "settings_json_schema": {
+            "additionalProperties": false,
+            "description": "EmbeddingSettings is a configuration class for embedding-related settings.\n\nAttributes:\n    API (Url): The API endpoint for embedding operations.\n    NORMALIZE (bool): A flag indicating whether to normalize embeddings. Defaults to False.\n    BATCH_SIZE (int): The batch size for processing embeddings. Must be greater than 0. Defaults to 100.\n    TOKEN_COUNT_MIN (int): The minimum token count for processing. Must be greater than 0. Defaults to 1.\n    TOKEN_COUNT_MAX (int): The maximum token count for processing. Must be greater than 1. Defaults to 256.\n    TOKEN_COUNT_BUFFER (int): The buffer size for token count. Must be greater than 0. Defaults to 32.\n    STEPWORDS_PATH (Path): The file path to the stopwords file. Defaults to \"data/german_stopwords_full.txt\".\n    N_JOBS (int): The number of parallel jobs to use. Must be greater than 0. Defaults to 1.\n    PREFIX_MAP (dict[re.Pattern, str]): A mapping of regex patterns to string prefixes.\n        This is validated and transformed using the `_wrap_validator_model_mapping` method.\n    CLEAN_MD_BEFORE_EMBEDDING (bool): If true Markdown content is cleaned before sending to embedding model. Defaults to False.\n    TOKENIZER_MODEL (str): Name of tokenizer model measuring token count (tiktoken, spacy, or huggingface). Defaults to \"gpt-3.5-turbo\".\n\nMethods:\n    _wrap_validator_model_mapping(input_dict: dict[str, str], handler):\n        A static method to wrap and validate the model mapping. It converts string regex keys\n        in the input dictionary to compiled regex patterns and applies a handler function to the result.",
+            "properties": {
+                "BATCH_SIZE": {
+                    "default": 100,
+                    "exclusiveMinimum": 0,
+                    "title": "Batch Size",
+                    "type": "integer"
+                },
+                "NUM_THREADS": {
+                    "default": 4,
+                    "minimum": 1,
+                    "title": "Num Threads",
+                    "type": "integer"
+                },
+                "TOKEN_COUNT_MIN": {
+                    "default": 1,
+                    "exclusiveMinimum": 0,
+                    "title": "Token Count Min",
+                    "type": "integer"
+                },
+                "TOKEN_COUNT_MAX": {
+                    "default": 256,
+                    "exclusiveMinimum": 1,
+                    "title": "Token Count Max",
+                    "type": "integer"
+                },
+                "TOKEN_COUNT_BUFFER": {
+                    "default": 32,
+                    "exclusiveMinimum": 0,
+                    "title": "Token Count Buffer",
+                    "type": "integer"
+                },
+                "TOKENIZER_MODEL": {
+                    "default": "gpt-3.5-turbo",
+                    "description": "The tokenizer model to use for splitting documents.",
+                    "title": "Tokenizer Model",
+                    "type": "string"
+                },
+                "SENTENCE_SPLITTER_MODEL": {
+                    "default": "de_core_news_sm",
+                    "description": "The model splitting text into sentences.",
+                    "title": "Sentence Splitter Model",
+                    "type": "string"
+                },
+                "API": {
+                    "format": "uri",
+                    "minLength": 1,
+                    "title": "Api",
+                    "type": "string"
+                },
+                "NORMALIZE": {
+                    "default": false,
+                    "title": "Normalize",
+                    "type": "boolean"
+                },
+                "STEPWORDS_PATH": {
+                    "default": "data/german_stopwords_full.txt",
+                    "format": "path",
+                    "title": "Stepwords Path",
+                    "type": "string"
+                },
+                "N_JOBS": {
+                    "default": 1,
+                    "exclusiveMinimum": 0,
+                    "title": "N Jobs",
+                    "type": "integer"
+                },
+                "PREFIX_MAP": {
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "default": {
+                        "e5-": "query: ",
+                        "DPR|dpr": ""
+                    },
+                    "propertyNames": {
+                        "format": "regex"
+                    },
+                    "title": "Prefix Map",
+                    "type": "object"
+                },
+                "CLEAN_MD_BEFORE_EMBEDDING": {
+                    "default": true,
+                    "title": "Clean Md Before Embedding",
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "API"
+            ],
+            "title": "EmbeddingSettings",
+            "type": "object"
+        },
+        "input_json_schema": {
+            "type": "array",
+            "title": "input",
+            "items": {
+                "description": "A data contract of the input/output of the various pipeline steps representing a document in Markdown format.\n\nThe document consists have the Markdown body (document content) and additional metadata (keywords, url).\nThe metadata is optional.\n\nExample 1 (with metadata):\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\n---\n# Some title\n\nWith some more text.\n\n## And\n\n- Other\n- [Markdown content](#some-link)\n```\n\nExample 2 (without metadata):\n```md\n# Another title\n\nAnother text.\n```\n\nExample 3 (with extra metadata fields)\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\nmetadata:\n    token_len: 123\n    char_len: 550\n---\n# Some title\n\nA short text.\n```",
+                "properties": {
+                    "md": {
+                        "title": "Md",
+                        "type": "string"
+                    },
+                    "keywords": {
+                        "title": "Keywords",
+                        "type": "string"
+                    },
+                    "url": {
+                        "title": "Url",
+                        "type": "string"
+                    },
+                    "metadata": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "default": null,
+                        "title": "Metadata"
+                    }
+                },
+                "required": [
+                    "md",
+                    "keywords",
+                    "url"
+                ],
+                "title": "MarkdownDataContract",
+                "type": "object"
+            }
+        },
+        "output_json_schema": {
+            "type": "object",
+            "title": "output",
+            "x-wurzel-fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.data.EmbeddingResult]"
+        },
+        "input_type_fqn": "list[wurzel.datacontract.common.MarkdownDataContract]",
+        "output_type_fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.data.EmbeddingResult]"
+    },
+    {
+        "step_key": "wurzel.steps.embedding.step_multivector.EmbeddingMultiVectorStep",
+        "display_name": "EmbeddingMultiVectorStep",
+        "import_path": "wurzel.steps.embedding.step_multivector.EmbeddingMultiVectorStep",
+        "settings_json_schema": {
+            "additionalProperties": false,
+            "description": "EmbeddingSettings is a configuration class for embedding-related settings.\n\nAttributes:\n    API (Url): The API endpoint for embedding operations.\n    NORMALIZE (bool): A flag indicating whether to normalize embeddings. Defaults to False.\n    BATCH_SIZE (int): The batch size for processing embeddings. Must be greater than 0. Defaults to 100.\n    TOKEN_COUNT_MIN (int): The minimum token count for processing. Must be greater than 0. Defaults to 1.\n    TOKEN_COUNT_MAX (int): The maximum token count for processing. Must be greater than 1. Defaults to 256.\n    TOKEN_COUNT_BUFFER (int): The buffer size for token count. Must be greater than 0. Defaults to 32.\n    STEPWORDS_PATH (Path): The file path to the stopwords file. Defaults to \"data/german_stopwords_full.txt\".\n    N_JOBS (int): The number of parallel jobs to use. Must be greater than 0. Defaults to 1.\n    PREFIX_MAP (dict[re.Pattern, str]): A mapping of regex patterns to string prefixes.\n        This is validated and transformed using the `_wrap_validator_model_mapping` method.\n    CLEAN_MD_BEFORE_EMBEDDING (bool): If true Markdown content is cleaned before sending to embedding model. Defaults to False.\n    TOKENIZER_MODEL (str): Name of tokenizer model measuring token count (tiktoken, spacy, or huggingface). Defaults to \"gpt-3.5-turbo\".\n\nMethods:\n    _wrap_validator_model_mapping(input_dict: dict[str, str], handler):\n        A static method to wrap and validate the model mapping. It converts string regex keys\n        in the input dictionary to compiled regex patterns and applies a handler function to the result.",
+            "properties": {
+                "BATCH_SIZE": {
+                    "default": 100,
+                    "exclusiveMinimum": 0,
+                    "title": "Batch Size",
+                    "type": "integer"
+                },
+                "NUM_THREADS": {
+                    "default": 4,
+                    "minimum": 1,
+                    "title": "Num Threads",
+                    "type": "integer"
+                },
+                "TOKEN_COUNT_MIN": {
+                    "default": 1,
+                    "exclusiveMinimum": 0,
+                    "title": "Token Count Min",
+                    "type": "integer"
+                },
+                "TOKEN_COUNT_MAX": {
+                    "default": 256,
+                    "exclusiveMinimum": 1,
+                    "title": "Token Count Max",
+                    "type": "integer"
+                },
+                "TOKEN_COUNT_BUFFER": {
+                    "default": 32,
+                    "exclusiveMinimum": 0,
+                    "title": "Token Count Buffer",
+                    "type": "integer"
+                },
+                "TOKENIZER_MODEL": {
+                    "default": "gpt-3.5-turbo",
+                    "description": "The tokenizer model to use for splitting documents.",
+                    "title": "Tokenizer Model",
+                    "type": "string"
+                },
+                "SENTENCE_SPLITTER_MODEL": {
+                    "default": "de_core_news_sm",
+                    "description": "The model splitting text into sentences.",
+                    "title": "Sentence Splitter Model",
+                    "type": "string"
+                },
+                "API": {
+                    "format": "uri",
+                    "minLength": 1,
+                    "title": "Api",
+                    "type": "string"
+                },
+                "NORMALIZE": {
+                    "default": false,
+                    "title": "Normalize",
+                    "type": "boolean"
+                },
+                "STEPWORDS_PATH": {
+                    "default": "data/german_stopwords_full.txt",
+                    "format": "path",
+                    "title": "Stepwords Path",
+                    "type": "string"
+                },
+                "N_JOBS": {
+                    "default": 1,
+                    "exclusiveMinimum": 0,
+                    "title": "N Jobs",
+                    "type": "integer"
+                },
+                "PREFIX_MAP": {
+                    "additionalProperties": {
+                        "type": "string"
+                    },
+                    "default": {
+                        "e5-": "query: ",
+                        "DPR|dpr": ""
+                    },
+                    "propertyNames": {
+                        "format": "regex"
+                    },
+                    "title": "Prefix Map",
+                    "type": "object"
+                },
+                "CLEAN_MD_BEFORE_EMBEDDING": {
+                    "default": true,
+                    "title": "Clean Md Before Embedding",
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "API"
+            ],
+            "title": "EmbeddingSettings",
+            "type": "object"
+        },
+        "input_json_schema": {
+            "type": "array",
+            "title": "input",
+            "items": {
+                "description": "A data contract of the input/output of the various pipeline steps representing a document in Markdown format.\n\nThe document consists have the Markdown body (document content) and additional metadata (keywords, url).\nThe metadata is optional.\n\nExample 1 (with metadata):\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\n---\n# Some title\n\nWith some more text.\n\n## And\n\n- Other\n- [Markdown content](#some-link)\n```\n\nExample 2 (without metadata):\n```md\n# Another title\n\nAnother text.\n```\n\nExample 3 (with extra metadata fields)\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\nmetadata:\n    token_len: 123\n    char_len: 550\n---\n# Some title\n\nA short text.\n```",
+                "properties": {
+                    "md": {
+                        "title": "Md",
+                        "type": "string"
+                    },
+                    "keywords": {
+                        "title": "Keywords",
+                        "type": "string"
+                    },
+                    "url": {
+                        "title": "Url",
+                        "type": "string"
+                    },
+                    "metadata": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "default": null,
+                        "title": "Metadata"
+                    }
+                },
+                "required": [
+                    "md",
+                    "keywords",
+                    "url"
+                ],
+                "title": "MarkdownDataContract",
+                "type": "object"
+            }
+        },
+        "output_json_schema": {
+            "type": "object",
+            "title": "output",
+            "x-wurzel-fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.data.EmbeddingMultiVectorResult]"
+        },
+        "input_type_fqn": "list[wurzel.datacontract.common.MarkdownDataContract]",
+        "output_type_fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.data.EmbeddingMultiVectorResult]"
+    },
+    {
+        "step_key": "wurzel.steps.manual_markdown.ManualMarkdownStep",
+        "display_name": "ManualMarkdownStep",
+        "import_path": "wurzel.steps.manual_markdown.ManualMarkdownStep",
+        "settings_json_schema": {
+            "additionalProperties": false,
+            "description": "Settings fro ManMdstep.",
+            "properties": {
+                "FOLDER_PATH": {
+                    "format": "path",
+                    "title": "Folder Path",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "FOLDER_PATH"
+            ],
+            "title": "ManualMarkdownSettings",
+            "type": "object"
+        },
+        "input_json_schema": {
+            "type": "null",
+            "title": "input"
+        },
+        "output_json_schema": {
+            "type": "array",
+            "title": "output",
+            "items": {
+                "description": "A data contract of the input/output of the various pipeline steps representing a document in Markdown format.\n\nThe document consists have the Markdown body (document content) and additional metadata (keywords, url).\nThe metadata is optional.\n\nExample 1 (with metadata):\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\n---\n# Some title\n\nWith some more text.\n\n## And\n\n- Other\n- [Markdown content](#some-link)\n```\n\nExample 2 (without metadata):\n```md\n# Another title\n\nAnother text.\n```\n\nExample 3 (with extra metadata fields)\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\nmetadata:\n    token_len: 123\n    char_len: 550\n---\n# Some title\n\nA short text.\n```",
+                "properties": {
+                    "md": {
+                        "title": "Md",
+                        "type": "string"
+                    },
+                    "keywords": {
+                        "title": "Keywords",
+                        "type": "string"
+                    },
+                    "url": {
+                        "title": "Url",
+                        "type": "string"
+                    },
+                    "metadata": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "default": null,
+                        "title": "Metadata"
+                    }
+                },
+                "required": [
+                    "md",
+                    "keywords",
+                    "url"
+                ],
+                "title": "MarkdownDataContract",
+                "type": "object"
+            }
+        },
+        "input_type_fqn": null,
+        "output_type_fqn": "list[wurzel.datacontract.common.MarkdownDataContract]"
+    },
+    {
+        "step_key": "wurzel.steps.milvus.step.MilvusConnectorStep",
+        "display_name": "MilvusConnectorStep",
+        "import_path": "wurzel.steps.milvus.step.MilvusConnectorStep",
+        "settings_json_schema": {
+            "additionalProperties": false,
+            "description": "MilvusSettings is a configuration class for managing settings related to MilvusDB.\n\nAttributes:\n    HOST (str): The hostname or IP address of the Milvus server. Defaults to \"localhost\".\n    PORT (int): The port number for the Milvus server. Must be between 1 and 65535. Defaults to 19530.\n    COLLECTION (str): The name of the collection in MilvusDB.\n    COLLECTION_HISTORY_LEN (int): The length of the collection history. Defaults to 10.\n    SEARCH_PARAMS (dict): Parameters for search operations in MilvusDB. Defaults to {\"metric_type\": \"IP\", \"params\": {}}.\n    INDEX_PARAMS (dict): Parameters for indexing operations in MilvusDB. Defaults to {\"index_type\": \"FLAT\",\n                            \"field_name\": \"vector\", \"metric_type\": \"IP\", \"params\": {}}.\n    USER (str): The username for authentication with MilvusDB.\n    PASSWORD (SecretStr): The password for authentication with MilvusDB.\n    SECURED (bool): Indicates whether the connection to MilvusDB is secured. Defaults to False.\n\nMethods:\n    parse_json(cls, v): Validates and parses JSON strings into Python objects for SEARCH_PARAMS and INDEX_PARAMS.",
+            "properties": {
+                "HOST": {
+                    "default": "localhost",
+                    "title": "Host",
+                    "type": "string"
+                },
+                "PORT": {
+                    "default": 19530,
+                    "exclusiveMinimum": 0,
+                    "maximum": 65535,
+                    "title": "Port",
+                    "type": "integer"
+                },
+                "COLLECTION": {
+                    "title": "Collection",
+                    "type": "string"
+                },
+                "COLLECTION_HISTORY_LEN": {
+                    "default": 10,
+                    "title": "Collection History Len",
+                    "type": "integer"
+                },
+                "SEARCH_PARAMS": {
+                    "additionalProperties": true,
+                    "default": {
+                        "metric_type": "IP",
+                        "params": {}
+                    },
+                    "title": "Search Params",
+                    "type": "object"
+                },
+                "INDEX_PARAMS": {
+                    "additionalProperties": true,
+                    "default": {
+                        "index_type": "FLAT",
+                        "field_name": "vector",
+                        "metric_type": "IP",
+                        "params": {}
+                    },
+                    "title": "Index Params",
+                    "type": "object"
+                },
+                "USER": {
+                    "title": "User",
+                    "type": "string"
+                },
+                "PASSWORD": {
+                    "format": "password",
+                    "title": "Password",
+                    "type": "string",
+                    "writeOnly": true
+                },
+                "SECURED": {
+                    "default": false,
+                    "title": "Secured",
+                    "type": "boolean"
+                }
+            },
+            "required": [
+                "COLLECTION",
+                "USER",
+                "PASSWORD"
+            ],
+            "title": "MilvusSettings",
+            "type": "object"
+        },
+        "input_json_schema": {
+            "type": "object",
+            "title": "input",
+            "x-wurzel-fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.data.EmbeddingResult]"
+        },
+        "output_json_schema": {
+            "description": "dummy output because its required to have a output data contract.",
+            "properties": {
+                "old": {
+                    "title": "Old",
+                    "type": "string"
+                },
+                "new": {
+                    "title": "New",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "old",
+                "new"
+            ],
+            "title": "Result",
+            "type": "object"
+        },
+        "input_type_fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.data.EmbeddingResult]",
+        "output_type_fqn": "wurzel.steps.milvus.data.Result"
+    },
+    {
+        "step_key": "wurzel.steps.qdrant.step.QdrantConnectorStep",
+        "display_name": "QdrantConnectorStep",
+        "import_path": "wurzel.steps.qdrant.step.QdrantConnectorStep",
+        "settings_json_schema": {
+            "$defs": {
+                "Distance": {
+                    "description": "Type of internal tags, build from payload Distance function types used to compare vectors",
+                    "enum": [
+                        "Cosine",
+                        "Euclid",
+                        "Dot",
+                        "Manhattan"
+                    ],
+                    "title": "Distance",
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false,
+            "description": "QdrantSettings is a configuration class for managing settings related to the Qdrant database.\n\nAttributes:\n    DISTANCE (Distance): The distance metric to be used, default is Distance.DOT.\n    URI (str): The URI for the Qdrant database, default is \"http://localhost:6333\".\n    COLLECTION (str): The name of the collection in the Qdrant database.\n    COLLECTION_HISTORY_LEN (int): The length of the collection history, default is 10.\n    SEARCH_PARAMS (dict): Parameters for search operations, default is {\"metric_type\": \"IP\", \"params\": {}}.\n    INDEX_PARAMS (dict): Parameters for index creation, default includes \"index_type\", \"field_name\", \"distance\", and \"params\".\n    APIKEY (SecretStr): The API key for authentication, default is an empty SecretStr.\n    REPLICATION_FACTOR (int): The replication factor for the database, default is 3, must be greater than 0.\n    BATCH_SIZE (int): The batch size for operations, default is 1024, must be greater than 0.\n\nMethods:\n    parse_json(v):\n        Validates and parses JSON strings into Python objects for SEARCH_PARAMS and INDEX_PARAMS.",
+            "properties": {
+                "DISTANCE": {
+                    "$ref": "#/$defs/Distance",
+                    "default": "Dot"
+                },
+                "URI": {
+                    "default": "http://localhost:6333",
+                    "title": "Uri",
+                    "type": "string"
+                },
+                "COLLECTION": {
+                    "title": "Collection",
+                    "type": "string"
+                },
+                "COLLECTION_HISTORY_LEN": {
+                    "default": 10,
+                    "title": "Collection History Len",
+                    "type": "integer"
+                },
+                "SEARCH_PARAMS": {
+                    "additionalProperties": true,
+                    "default": {
+                        "metric_type": "IP",
+                        "params": {}
+                    },
+                    "title": "Search Params",
+                    "type": "object"
+                },
+                "INDEX_PARAMS": {
+                    "additionalProperties": true,
+                    "default": {
+                        "index_type": "FLAT",
+                        "field_name": "vector",
+                        "distance": "Dot",
+                        "params": {}
+                    },
+                    "title": "Index Params",
+                    "type": "object"
+                },
+                "APIKEY": {
+                    "default": "",
+                    "format": "password",
+                    "title": "Apikey",
+                    "type": "string",
+                    "writeOnly": true
+                },
+                "REPLICATION_FACTOR": {
+                    "default": 3,
+                    "exclusiveMinimum": 0,
+                    "title": "Replication Factor",
+                    "type": "integer"
+                },
+                "BATCH_SIZE": {
+                    "default": 1024,
+                    "exclusiveMinimum": 0,
+                    "title": "Batch Size",
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "COLLECTION"
+            ],
+            "title": "QdrantSettings",
+            "type": "object"
+        },
+        "input_json_schema": {
+            "type": "object",
+            "title": "input",
+            "x-wurzel-fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.data.EmbeddingResult]"
+        },
+        "output_json_schema": {
+            "type": "object",
+            "title": "output",
+            "x-wurzel-fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.qdrant.data.QdrantResult]"
+        },
+        "input_type_fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.data.EmbeddingResult]",
+        "output_type_fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.qdrant.data.QdrantResult]"
+    },
+    {
+        "step_key": "wurzel.steps.qdrant.step_multi_vector.QdrantConnectorMultiVectorStep",
+        "display_name": "QdrantConnectorMultiVectorStep",
+        "import_path": "wurzel.steps.qdrant.step_multi_vector.QdrantConnectorMultiVectorStep",
+        "settings_json_schema": {
+            "$defs": {
+                "Distance": {
+                    "description": "Type of internal tags, build from payload Distance function types used to compare vectors",
+                    "enum": [
+                        "Cosine",
+                        "Euclid",
+                        "Dot",
+                        "Manhattan"
+                    ],
+                    "title": "Distance",
+                    "type": "string"
+                }
+            },
+            "additionalProperties": false,
+            "description": "QdrantSettings is a configuration class for managing settings related to the Qdrant database.\n\nAttributes:\n    DISTANCE (Distance): The distance metric to be used, default is Distance.DOT.\n    URI (str): The URI for the Qdrant database, default is \"http://localhost:6333\".\n    COLLECTION (str): The name of the collection in the Qdrant database.\n    COLLECTION_HISTORY_LEN (int): The length of the collection history, default is 10.\n    SEARCH_PARAMS (dict): Parameters for search operations, default is {\"metric_type\": \"IP\", \"params\": {}}.\n    INDEX_PARAMS (dict): Parameters for index creation, default includes \"index_type\", \"field_name\", \"distance\", and \"params\".\n    APIKEY (SecretStr): The API key for authentication, default is an empty SecretStr.\n    REPLICATION_FACTOR (int): The replication factor for the database, default is 3, must be greater than 0.\n    BATCH_SIZE (int): The batch size for operations, default is 1024, must be greater than 0.\n\nMethods:\n    parse_json(v):\n        Validates and parses JSON strings into Python objects for SEARCH_PARAMS and INDEX_PARAMS.",
+            "properties": {
+                "DISTANCE": {
+                    "$ref": "#/$defs/Distance",
+                    "default": "Dot"
+                },
+                "URI": {
+                    "default": "http://localhost:6333",
+                    "title": "Uri",
+                    "type": "string"
+                },
+                "COLLECTION": {
+                    "title": "Collection",
+                    "type": "string"
+                },
+                "COLLECTION_HISTORY_LEN": {
+                    "default": 10,
+                    "title": "Collection History Len",
+                    "type": "integer"
+                },
+                "SEARCH_PARAMS": {
+                    "additionalProperties": true,
+                    "default": {
+                        "metric_type": "IP",
+                        "params": {}
+                    },
+                    "title": "Search Params",
+                    "type": "object"
+                },
+                "INDEX_PARAMS": {
+                    "additionalProperties": true,
+                    "default": {
+                        "index_type": "FLAT",
+                        "field_name": "vector",
+                        "distance": "Dot",
+                        "params": {}
+                    },
+                    "title": "Index Params",
+                    "type": "object"
+                },
+                "APIKEY": {
+                    "default": "",
+                    "format": "password",
+                    "title": "Apikey",
+                    "type": "string",
+                    "writeOnly": true
+                },
+                "REPLICATION_FACTOR": {
+                    "default": 3,
+                    "exclusiveMinimum": 0,
+                    "title": "Replication Factor",
+                    "type": "integer"
+                },
+                "BATCH_SIZE": {
+                    "default": 1024,
+                    "exclusiveMinimum": 0,
+                    "title": "Batch Size",
+                    "type": "integer"
+                }
+            },
+            "required": [
+                "COLLECTION"
+            ],
+            "title": "QdrantSettings",
+            "type": "object"
+        },
+        "input_json_schema": {
+            "type": "object",
+            "title": "input",
+            "x-wurzel-fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.data.EmbeddingMultiVectorResult]"
+        },
+        "output_json_schema": {
+            "type": "object",
+            "title": "output",
+            "x-wurzel-fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.qdrant.data.QdrantMultiVectorResult]"
+        },
+        "input_type_fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.data.EmbeddingMultiVectorResult]",
+        "output_type_fqn": "pandera.typing.pandas.DataFrame[wurzel.steps.qdrant.data.QdrantMultiVectorResult]"
+    },
+    {
+        "step_key": "wurzel.steps.scraperapi.step.ScraperAPIStep",
+        "display_name": "ScraperAPIStep",
+        "import_path": "wurzel.steps.scraperapi.step.ScraperAPIStep",
+        "settings_json_schema": {
+            "$defs": {
+                "MarkdownConverterSettings": {
+                    "description": "Settings for the Markdown converter.",
+                    "properties": {
+                        "HTML2MD_BINARY_FLAGS": {
+                            "default": "",
+                            "description": "Flags for the html2md binary",
+                            "title": "Html2Md Binary Flags",
+                            "type": "string"
+                        }
+                    },
+                    "title": "MarkdownConverterSettings",
+                    "type": "object"
+                }
+            },
+            "additionalProperties": false,
+            "description": "Settings of ScraperAPIStep. Mainly the list of https://docs.scraperapi.com/python/credits-and-requests.",
+            "properties": {
+                "API": {
+                    "default": "https://api.scraperapi.com/",
+                    "title": "Api",
+                    "type": "string"
+                },
+                "RETRY": {
+                    "default": 5,
+                    "minimum": 0,
+                    "title": "Retry",
+                    "type": "integer"
+                },
+                "TOKEN": {
+                    "format": "password",
+                    "title": "Token",
+                    "type": "string",
+                    "writeOnly": true
+                },
+                "TIMEOUT": {
+                    "default": 61.0,
+                    "title": "Timeout",
+                    "type": "integer"
+                },
+                "XPATH": {
+                    "default": "//main",
+                    "title": "Xpath",
+                    "type": "string"
+                },
+                "CONCURRENCY_NUM": {
+                    "default": 1,
+                    "exclusiveMinimum": 0,
+                    "title": "Concurrency Num",
+                    "type": "integer"
+                },
+                "DEVICE_TYPE": {
+                    "default": "desktop",
+                    "title": "Device Type",
+                    "type": "string"
+                },
+                "FOLLOW_REDIRECT": {
+                    "default": true,
+                    "title": "Follow Redirect",
+                    "type": "boolean"
+                },
+                "WAIT_FOR_SELECTOR": {
+                    "default": "#cookies-notification-accept-cookie",
+                    "title": "Wait For Selector",
+                    "type": "string"
+                },
+                "COUNTRY_CODE": {
+                    "default": "en",
+                    "title": "Country Code",
+                    "type": "string"
+                },
+                "RENDER": {
+                    "default": true,
+                    "title": "Render",
+                    "type": "boolean"
+                },
+                "PREMIUM": {
+                    "default": false,
+                    "title": "Premium",
+                    "type": "boolean"
+                },
+                "ULTRA_PREMIUM": {
+                    "default": false,
+                    "title": "Ultra Premium",
+                    "type": "boolean"
+                },
+                "SCREENSHOT": {
+                    "default": false,
+                    "title": "Screenshot",
+                    "type": "boolean"
+                },
+                "MAX_COST": {
+                    "default": 30,
+                    "exclusiveMinimum": 0,
+                    "title": "Max Cost",
+                    "type": "integer"
+                },
+                "HTML2MD_SETTINGS": {
+                    "$ref": "#/$defs/MarkdownConverterSettings"
+                }
+            },
+            "required": [
+                "TOKEN"
+            ],
+            "title": "ScraperAPISettings",
+            "type": "object"
+        },
+        "input_json_schema": {
+            "type": "array",
+            "title": "input",
+            "items": {
+                "description": "Item from webmaster api.",
+                "properties": {
+                    "url": {
+                        "title": "Url",
+                        "type": "string"
+                    },
+                    "title": {
+                        "title": "Title",
+                        "type": "string"
+                    },
+                    "description": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "default": null,
+                        "title": "Description"
+                    },
+                    "category": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "default": null,
+                        "title": "Category"
+                    }
+                },
+                "required": [
+                    "url",
+                    "title"
+                ],
+                "title": "UrlItem",
+                "type": "object"
+            }
+        },
+        "output_json_schema": {
+            "type": "array",
+            "title": "output",
+            "items": {
+                "description": "A data contract of the input/output of the various pipeline steps representing a document in Markdown format.\n\nThe document consists have the Markdown body (document content) and additional metadata (keywords, url).\nThe metadata is optional.\n\nExample 1 (with metadata):\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\n---\n# Some title\n\nWith some more text.\n\n## And\n\n- Other\n- [Markdown content](#some-link)\n```\n\nExample 2 (without metadata):\n```md\n# Another title\n\nAnother text.\n```\n\nExample 3 (with extra metadata fields)\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\nmetadata:\n    token_len: 123\n    char_len: 550\n---\n# Some title\n\nA short text.\n```",
+                "properties": {
+                    "md": {
+                        "title": "Md",
+                        "type": "string"
+                    },
+                    "keywords": {
+                        "title": "Keywords",
+                        "type": "string"
+                    },
+                    "url": {
+                        "title": "Url",
+                        "type": "string"
+                    },
+                    "metadata": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "default": null,
+                        "title": "Metadata"
+                    }
+                },
+                "required": [
+                    "md",
+                    "keywords",
+                    "url"
+                ],
+                "title": "MarkdownDataContract",
+                "type": "object"
+            }
+        },
+        "input_type_fqn": "list[wurzel.steps.scraperapi.data.UrlItem]",
+        "output_type_fqn": "list[wurzel.datacontract.common.MarkdownDataContract]"
+    },
+    {
+        "step_key": "wurzel.steps.sftp.sftp_manual_markdown.SFTPManualMarkdownStep",
+        "display_name": "SFTPManualMarkdownStep",
+        "import_path": "wurzel.steps.sftp.sftp_manual_markdown.SFTPManualMarkdownStep",
+        "settings_json_schema": {
+            "additionalProperties": false,
+            "description": "Settings for SFTP Manual Markdown Step.\n\nThese settings configure the SFTP connection and file retrieval parameters.\nAll settings can be provided via environment variables with the prefix\nSFTPMANUALMARKDOWNSTEP__ (e.g., SFTPMANUALMARKDOWNSTEP__HOST=sftp.example.com)",
+            "properties": {
+                "HOST": {
+                    "description": "SFTP server hostname or IP address",
+                    "title": "Host",
+                    "type": "string"
+                },
+                "PORT": {
+                    "default": 22,
+                    "description": "SFTP server port",
+                    "title": "Port",
+                    "type": "integer"
+                },
+                "USERNAME": {
+                    "description": "SFTP username",
+                    "title": "Username",
+                    "type": "string"
+                },
+                "PASSWORD": {
+                    "default": "",
+                    "format": "password",
+                    "title": "Password",
+                    "type": "string",
+                    "writeOnly": true
+                },
+                "PRIVATE_KEY_PATH": {
+                    "anyOf": [
+                        {
+                            "format": "path",
+                            "type": "string"
+                        },
+                        {
+                            "type": "null"
+                        }
+                    ],
+                    "default": null,
+                    "description": "Path to SSH private key file",
+                    "title": "Private Key Path"
+                },
+                "PRIVATE_KEY_PASSPHRASE": {
+                    "default": "",
+                    "format": "password",
+                    "title": "Private Key Passphrase",
+                    "type": "string",
+                    "writeOnly": true
+                },
+                "REMOTE_PATH": {
+                    "description": "Remote path on SFTP server to search for .md files",
+                    "title": "Remote Path",
+                    "type": "string"
+                },
+                "RECURSIVE": {
+                    "default": true,
+                    "description": "Whether to search recursively for .md files",
+                    "title": "Recursive",
+                    "type": "boolean"
+                },
+                "TIMEOUT": {
+                    "default": 30.0,
+                    "description": "Connection timeout in seconds",
+                    "title": "Timeout",
+                    "type": "number"
+                }
+            },
+            "required": [
+                "HOST",
+                "USERNAME",
+                "REMOTE_PATH"
+            ],
+            "title": "SFTPManualMarkdownSettings",
+            "type": "object"
+        },
+        "input_json_schema": {
+            "type": "null",
+            "title": "input"
+        },
+        "output_json_schema": {
+            "type": "array",
+            "title": "output",
+            "items": {
+                "description": "A data contract of the input/output of the various pipeline steps representing a document in Markdown format.\n\nThe document consists have the Markdown body (document content) and additional metadata (keywords, url).\nThe metadata is optional.\n\nExample 1 (with metadata):\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\n---\n# Some title\n\nWith some more text.\n\n## And\n\n- Other\n- [Markdown content](#some-link)\n```\n\nExample 2 (without metadata):\n```md\n# Another title\n\nAnother text.\n```\n\nExample 3 (with extra metadata fields)\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\nmetadata:\n    token_len: 123\n    char_len: 550\n---\n# Some title\n\nA short text.\n```",
+                "properties": {
+                    "md": {
+                        "title": "Md",
+                        "type": "string"
+                    },
+                    "keywords": {
+                        "title": "Keywords",
+                        "type": "string"
+                    },
+                    "url": {
+                        "title": "Url",
+                        "type": "string"
+                    },
+                    "metadata": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "default": null,
+                        "title": "Metadata"
+                    }
+                },
+                "required": [
+                    "md",
+                    "keywords",
+                    "url"
+                ],
+                "title": "MarkdownDataContract",
+                "type": "object"
+            }
+        },
+        "input_type_fqn": null,
+        "output_type_fqn": "list[wurzel.datacontract.common.MarkdownDataContract]"
+    },
+    {
+        "step_key": "wurzel.steps.splitter.SimpleSplitterStep",
+        "display_name": "SimpleSplitterStep",
+        "import_path": "wurzel.steps.splitter.SimpleSplitterStep",
+        "settings_json_schema": {
+            "additionalProperties": false,
+            "description": "Anything Embedding-related.",
+            "properties": {
+                "BATCH_SIZE": {
+                    "default": 100,
+                    "exclusiveMinimum": 0,
+                    "title": "Batch Size",
+                    "type": "integer"
+                },
+                "NUM_THREADS": {
+                    "default": 4,
+                    "minimum": 1,
+                    "title": "Num Threads",
+                    "type": "integer"
+                },
+                "TOKEN_COUNT_MIN": {
+                    "default": 64,
+                    "exclusiveMinimum": 0,
+                    "title": "Token Count Min",
+                    "type": "integer"
+                },
+                "TOKEN_COUNT_MAX": {
+                    "default": 1024,
+                    "exclusiveMinimum": 1,
+                    "title": "Token Count Max",
+                    "type": "integer"
+                },
+                "TOKEN_COUNT_BUFFER": {
+                    "default": 32,
+                    "exclusiveMinimum": 0,
+                    "title": "Token Count Buffer",
+                    "type": "integer"
+                },
+                "TOKENIZER_MODEL": {
+                    "default": "gpt-3.5-turbo",
+                    "description": "The tokenizer model to use for splitting documents (supported: tiktoken and HF transformers).",
+                    "title": "Tokenizer Model",
+                    "type": "string"
+                },
+                "SENTENCE_SPLITTER_MODEL": {
+                    "default": "de_core_news_sm",
+                    "description": "The model splitting text into sentences.",
+                    "title": "Sentence Splitter Model",
+                    "type": "string"
+                }
+            },
+            "title": "SplitterSettings",
+            "type": "object"
+        },
+        "input_json_schema": {
+            "type": "array",
+            "title": "input",
+            "items": {
+                "description": "A data contract of the input/output of the various pipeline steps representing a document in Markdown format.\n\nThe document consists have the Markdown body (document content) and additional metadata (keywords, url).\nThe metadata is optional.\n\nExample 1 (with metadata):\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\n---\n# Some title\n\nWith some more text.\n\n## And\n\n- Other\n- [Markdown content](#some-link)\n```\n\nExample 2 (without metadata):\n```md\n# Another title\n\nAnother text.\n```\n\nExample 3 (with extra metadata fields)\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\nmetadata:\n    token_len: 123\n    char_len: 550\n---\n# Some title\n\nA short text.\n```",
+                "properties": {
+                    "md": {
+                        "title": "Md",
+                        "type": "string"
+                    },
+                    "keywords": {
+                        "title": "Keywords",
+                        "type": "string"
+                    },
+                    "url": {
+                        "title": "Url",
+                        "type": "string"
+                    },
+                    "metadata": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "default": null,
+                        "title": "Metadata"
+                    }
+                },
+                "required": [
+                    "md",
+                    "keywords",
+                    "url"
+                ],
+                "title": "MarkdownDataContract",
+                "type": "object"
+            }
+        },
+        "output_json_schema": {
+            "type": "array",
+            "title": "output",
+            "items": {
+                "description": "A data contract of the input/output of the various pipeline steps representing a document in Markdown format.\n\nThe document consists have the Markdown body (document content) and additional metadata (keywords, url).\nThe metadata is optional.\n\nExample 1 (with metadata):\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\n---\n# Some title\n\nWith some more text.\n\n## And\n\n- Other\n- [Markdown content](#some-link)\n```\n\nExample 2 (without metadata):\n```md\n# Another title\n\nAnother text.\n```\n\nExample 3 (with extra metadata fields)\n```md\n---\nkeywords: \"bread,butter\"\nurl: \"some/file/path.md\"\nmetadata:\n    token_len: 123\n    char_len: 550\n---\n# Some title\n\nA short text.\n```",
+                "properties": {
+                    "md": {
+                        "title": "Md",
+                        "type": "string"
+                    },
+                    "keywords": {
+                        "title": "Keywords",
+                        "type": "string"
+                    },
+                    "url": {
+                        "title": "Url",
+                        "type": "string"
+                    },
+                    "metadata": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ],
+                        "default": null,
+                        "title": "Metadata"
+                    }
+                },
+                "required": [
+                    "md",
+                    "keywords",
+                    "url"
+                ],
+                "title": "MarkdownDataContract",
+                "type": "object"
+            }
+        },
+        "input_type_fqn": "list[wurzel.datacontract.common.MarkdownDataContract]",
+        "output_type_fqn": "list[wurzel.datacontract.common.MarkdownDataContract]"
+    }
+]

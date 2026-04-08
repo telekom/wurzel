@@ -4,6 +4,11 @@
 #
 # https://github.com/github/gitignore/blob/main/Python.gitignore
 #
+apps/web/node_modules/
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/blob-report/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

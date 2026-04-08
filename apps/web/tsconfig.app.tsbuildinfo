@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/dashboardurls.ts","./src/main.tsx","./src/slugutils.ts","./src/stepcatalogutils.ts","./src/stepchainutils.ts","./src/supabaseclient.ts","./src/vite-env.d.ts","./src/test/setup.ts"],"version":"5.6.3"}
