@@ -32,23 +32,25 @@ if TYPE_CHECKING:  # pragma: no cover - only for typing
     from wurzel.step import TypedStep
 
 
-def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: str):
+def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: str | None):
     """Convert a cli-str to a Type[BaseStepExecutor].
 
     Args:
         _ctx (typer.Context)
         _param (typer.CallbackParam):
-        value (str): user typed string
+        value (str | None): user typed string, or None when option is omitted
 
     Raises:
         typer.BadParameter: If user typed string does not correlate with a Executor
 
     Returns:
-        Type[BaseStepExecutor]: {BaseStepExecutor, PrometheusStepExecutor}
+        Type[BaseStepExecutor] | None: {BaseStepExecutor, PrometheusStepExecutor, None}
 
     """
     from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor  # pylint: disable=import-outside-toplevel
 
+    if value is None:
+        return None
     if "BASESTEPEXECUTOR".startswith(value.upper()):
         return BaseStepExecutor
     if "PROMETHEUSSTEPEXECUTOR".startswith(value.upper()):
@@ -583,6 +585,7 @@ def generate(  # pylint: disable=too-many-positional-arguments
             "-e",
             "--executor",
             help="Step executor class for generated commands (overrides defaults and PROMETHEUS_GATEWAY for Argo)",
+            callback=executer_callback,
             autocompletion=lambda: ["BaseStepExecutor", "PrometheusStepExecutor"],
         ),
     ] = None,
@@ -625,7 +628,6 @@ def generate(  # pylint: disable=too-many-positional-arguments
     from wurzel.backend.values import ValuesFileError  # pylint: disable=import-outside-toplevel
     from wurzel.cli.cmd_generate import main as cmd_generate  # pylint: disable=import-outside-toplevel
 
-    executor_cls = executer_callback(None, None, executor) if executor else None
     log.debug(
         "generate pipeline",
         extra={
@@ -635,7 +637,7 @@ def generate(  # pylint: disable=too-many-positional-arguments
                 "values": values,
                 "pipeline_name": pipeline_name,
                 "output": output,
-                "executor": executor_cls,
+                "executor": executor,
             }
         },
     )
@@ -646,7 +648,7 @@ def generate(  # pylint: disable=too-many-positional-arguments
             values=values or [],
             pipeline_name=pipeline_name,
             output=output,
-            executor=executor_cls,
+            executor=executor,
         )
     except ValuesFileError as exc:
         raise typer.BadParameter(str(exc)) from exc

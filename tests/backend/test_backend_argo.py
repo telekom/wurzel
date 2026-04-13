@@ -903,6 +903,21 @@ class TestArgoBackendGeneratedCliExecutor:
         cmd = self._first_wurzel_command(yaml.safe_load(yaml_output))
         assert "-e PrometheusStepExecutor" in cmd
 
+    def test_uses_prometheus_executor_when_set_in_container_env(self):
+        config = WorkflowConfig(container=ContainerConfig(env={"PROMETHEUS_GATEWAY": "pushgateway.example:9091"}))
+        backend = ArgoBackend(config=config)
+        yaml_output = backend.generate_artifact(DummyStep())
+        cmd = self._first_wurzel_command(yaml.safe_load(yaml_output))
+        assert "-e PrometheusStepExecutor" in cmd
+
+    def test_container_env_takes_precedence_over_os_environ(self, monkeypatch):
+        monkeypatch.delenv("PROMETHEUS_GATEWAY", raising=False)
+        config = WorkflowConfig(container=ContainerConfig(env={"PROMETHEUS_GATEWAY": "pushgateway.example:9091"}))
+        backend = ArgoBackend(config=config)
+        yaml_output = backend.generate_artifact(DummyStep())
+        cmd = self._first_wurzel_command(yaml.safe_load(yaml_output))
+        assert "-e PrometheusStepExecutor" in cmd
+
 
 class TestArgoBackendCreateTask:
     def test_task_creation(self):

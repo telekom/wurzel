@@ -48,13 +48,16 @@ from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 log = logging.getLogger(__name__)
 
 
-def default_argo_step_executor() -> type[BaseStepExecutor]:
+def default_argo_step_executor(config: "WorkflowConfig | None" = None) -> type[BaseStepExecutor]:
     """Pick the step executor for generated Argo task commands.
 
-    When ``PROMETHEUS_GATEWAY`` is set (non-empty), emitted ``wurzel run`` lines
-    use ``PrometheusStepExecutor`` so metrics match runtime pushgateway config.
-    Otherwise ``BaseStepExecutor`` is used.
+    When ``PROMETHEUS_GATEWAY`` is set (non-empty) in the workflow container
+    env (preferred) or in the generator process environment (fallback), emitted
+    ``wurzel run`` lines use ``PrometheusStepExecutor`` so metrics match the
+    runtime pushgateway config.  Otherwise ``BaseStepExecutor`` is used.
     """
+    if config is not None and config.container.env.get("PROMETHEUS_GATEWAY", "").strip():
+        return PrometheusStepExecutor
     if os.environ.get("PROMETHEUS_GATEWAY", "").strip():
         return PrometheusStepExecutor
     return BaseStepExecutor
@@ -212,9 +215,9 @@ class ArgoBackend(Backend):
         executor: type[BaseStepExecutor] | None = None,
     ) -> None:
         super().__init__()
-        self.executor: type[BaseStepExecutor] = executor if executor is not None else default_argo_step_executor()
         self.values = values or TemplateValues()
         self.config = config or select_workflow(self.values, workflow_name)
+        self.executor: type[BaseStepExecutor] = executor if executor is not None else default_argo_step_executor(self.config)
         self._volumes, self._volume_mounts = self._build_volumes()
 
     @classmethod
