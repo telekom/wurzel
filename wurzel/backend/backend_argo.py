@@ -48,7 +48,7 @@ from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 log = logging.getLogger(__name__)
 
 
-def default_argo_step_executor(config: "WorkflowConfig | None" = None) -> type[BaseStepExecutor]:
+def default_argo_step_executor(config: WorkflowConfig | None = None) -> type[BaseStepExecutor]:
     """Pick the step executor for generated Argo task commands.
 
     When ``PROMETHEUS_GATEWAY`` is set (non-empty) in the workflow container
