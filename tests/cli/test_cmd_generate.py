@@ -29,9 +29,10 @@ def test_resolve_backend_instance_uses_from_values_for_argo(monkeypatch, tmp_pat
     sentinel = object()
     captured: dict[str, object] = {}
 
-    def fake_from_values(cls, files, workflow_name=None):  # noqa: ANN001
+    def fake_from_values(cls, files, workflow_name=None, *, executor=None):  # noqa: ANN001
         captured["files"] = files
         captured["workflow"] = workflow_name
+        captured["executor"] = executor
         return sentinel
 
     monkeypatch.setattr(ArgoBackend, "from_values", classmethod(fake_from_values))
@@ -41,6 +42,7 @@ def test_resolve_backend_instance_uses_from_values_for_argo(monkeypatch, tmp_pat
     assert adapter is sentinel
     assert captured["files"] == [values_file]
     assert captured["workflow"] == "demo"
+    assert captured["executor"] is None
 
 
 @pytest.mark.skipif(not HAS_HERA, reason="Argo backend requires Hera extras")
@@ -56,6 +58,30 @@ def test_resolve_backend_instance_inits_argo_without_values(monkeypatch):
 
     assert isinstance(adapter, ArgoBackend)
     assert init_calls == [((), {})]
+
+
+@pytest.mark.skipif(not HAS_HERA, reason="Argo backend requires Hera extras")
+def test_resolve_backend_instance_passes_executor_to_argo_from_values(monkeypatch, tmp_path):
+    from wurzel.step_executor import PrometheusStepExecutor
+
+    values_file = tmp_path / "values.yaml"
+    values_file.write_text("workflows: {}")
+    captured: dict[str, object] = {}
+
+    def fake_from_values(cls, files, workflow_name=None, *, executor=None):  # noqa: ANN001
+        captured["executor"] = executor
+        return object()
+
+    monkeypatch.setattr(ArgoBackend, "from_values", classmethod(fake_from_values))
+
+    cmd_generate._resolve_backend_instance(
+        ArgoBackend,
+        [values_file],
+        "demo",
+        executor=PrometheusStepExecutor,
+    )
+
+    assert captured["executor"] is PrometheusStepExecutor
 
 
 def test_resolve_backend_instance_for_non_argo_backend(tmp_path):
@@ -87,10 +113,11 @@ def test_cmd_generate_main_resolves_backend_with_iterable_values(monkeypatch, tm
 
     captured: dict[str, object] = {}
 
-    def fake_resolve(backend, values, pipeline_name):  # noqa: ANN001, ANN002, ANN003
+    def fake_resolve(backend, values, pipeline_name, executor=None):  # noqa: ANN001, ANN002, ANN003
         captured["backend"] = backend
         captured["values"] = values
         captured["pipeline_name"] = pipeline_name
+        captured["executor"] = executor
         return Adapter()
 
     monkeypatch.setattr(cmd_generate, "_resolve_backend_instance", fake_resolve)
@@ -102,6 +129,7 @@ def test_cmd_generate_main_resolves_backend_with_iterable_values(monkeypatch, tm
     assert captured["backend"] is _MinimalBackend
     assert captured["values"] == [values_file]
     assert captured["pipeline_name"] == "wf-name"
+    assert captured["executor"] is None
 
 
 def test_cmd_generate_main_writes_to_output(monkeypatch, tmp_path):
@@ -109,10 +137,11 @@ def test_cmd_generate_main_writes_to_output(monkeypatch, tmp_path):
         def generate_artifact(self, step):  # noqa: ARG002
             return "artifact-yaml"
 
-    def fake_resolve(backend, values, pipeline_name):  # noqa: ANN001, ANN002, ANN003
+    def fake_resolve(backend, values, pipeline_name, executor=None):  # noqa: ANN001, ANN002, ANN003
         assert backend is _MinimalBackend
         assert values == []
         assert pipeline_name is None
+        assert executor is None
         return Adapter()
 
     monkeypatch.setattr(cmd_generate, "_resolve_backend_instance", fake_resolve)

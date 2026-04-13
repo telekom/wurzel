@@ -37,6 +37,7 @@ def setup_argo_test_env():
         "ARGO_SERVER",
         "ARGO_TOKEN",
         "KUBECONFIG",
+        "PROMETHEUS_GATEWAY",
     ]
 
     for var in env_vars_to_clear:
