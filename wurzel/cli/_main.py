@@ -577,6 +577,15 @@ def generate(  # pylint: disable=too-many-positional-arguments
         str | None,
         typer.Option("--pipeline-name", help="pipeline name to render from the provided values files"),
     ] = None,
+    executor: Annotated[
+        str | None,
+        typer.Option(
+            "-e",
+            "--executor",
+            help="Step executor class for generated commands (overrides defaults and PROMETHEUS_GATEWAY for Argo)",
+            autocompletion=lambda: ["BaseStepExecutor", "PrometheusStepExecutor"],
+        ),
+    ] = None,
     output: Annotated[
         Path | None,
         typer.Option(
@@ -616,6 +625,7 @@ def generate(  # pylint: disable=too-many-positional-arguments
     from wurzel.backend.values import ValuesFileError  # pylint: disable=import-outside-toplevel
     from wurzel.cli.cmd_generate import main as cmd_generate  # pylint: disable=import-outside-toplevel
 
+    executor_cls = executer_callback(None, None, executor) if executor else None
     log.debug(
         "generate pipeline",
         extra={
@@ -625,6 +635,7 @@ def generate(  # pylint: disable=too-many-positional-arguments
                 "values": values,
                 "pipeline_name": pipeline_name,
                 "output": output,
+                "executor": executor_cls,
             }
         },
     )
@@ -635,6 +646,7 @@ def generate(  # pylint: disable=too-many-positional-arguments
             values=values or [],
             pipeline_name=pipeline_name,
             output=output,
+            executor=executor_cls,
         )
     except ValuesFileError as exc:
         raise typer.BadParameter(str(exc)) from exc

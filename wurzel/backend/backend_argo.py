@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Iterable
 from functools import cache
 from pathlib import Path
@@ -45,6 +46,18 @@ from wurzel.step import TypedStep
 from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 
 log = logging.getLogger(__name__)
+
+
+def default_argo_step_executor() -> type[BaseStepExecutor]:
+    """Pick the step executor for generated Argo task commands.
+
+    When ``PROMETHEUS_GATEWAY`` is set (non-empty), emitted ``wurzel run`` lines
+    use ``PrometheusStepExecutor`` so metrics match runtime pushgateway config.
+    Otherwise ``BaseStepExecutor`` is used.
+    """
+    if os.environ.get("PROMETHEUS_GATEWAY", "").strip():
+        return PrometheusStepExecutor
+    return BaseStepExecutor
 
 
 # ---------------------------------------------------------------------------
@@ -196,19 +209,25 @@ class ArgoBackend(Backend):
         *,
         values: TemplateValues | None = None,
         workflow_name: str | None = None,
-        executor: type[BaseStepExecutor] = PrometheusStepExecutor,
+        executor: type[BaseStepExecutor] | None = None,
     ) -> None:
         super().__init__()
-        self.executor: type[BaseStepExecutor] = executor
+        self.executor: type[BaseStepExecutor] = executor if executor is not None else default_argo_step_executor()
         self.values = values or TemplateValues()
         self.config = config or select_workflow(self.values, workflow_name)
         self._volumes, self._volume_mounts = self._build_volumes()
 
     @classmethod
-    def from_values(cls, files: Iterable[Path], workflow_name: str | None = None) -> ArgoBackend:
+    def from_values(
+        cls,
+        files: Iterable[Path],
+        workflow_name: str | None = None,
+        *,
+        executor: type[BaseStepExecutor] | None = None,
+    ) -> ArgoBackend:
         """Instantiate the backend from values files."""
         values = load_values(files, TemplateValues)
-        return cls(values=values, workflow_name=workflow_name)
+        return cls(values=values, workflow_name=workflow_name, executor=executor)
 
     # ------------------------------------------------------------------ helpers
     def _build_volumes(self) -> tuple[list[SecretVolume | ExistingVolume | Volume], list[VolumeMount]]:
@@ -444,6 +463,7 @@ class ArgoBackend(Backend):
             step.__class__,
             inputs=[Path(inpt.path) for inpt in inputs if inpt.path],
             output=self.config.dataDir / step.__class__.__name__,
+            executor=self.executor,
         )
         commands: list[str] = [entry for entry in cli_call.split(" ") if entry.strip()]
 
