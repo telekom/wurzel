@@ -141,18 +141,27 @@ class DvcBackend(Backend):
         self.executor: type[BaseStepExecutor] = executer
 
     @classmethod
-    def from_values(cls, files: "Iterable[Path]", workflow_name: str | None = None) -> "DvcBackend":
+    def from_values(
+        cls,
+        files: "Iterable[Path]",
+        workflow_name: str | None = None,
+        *,
+        executor: type[BaseStepExecutor] | None = None,
+    ) -> "DvcBackend":
         """Instantiate the backend from values files.
 
         Args:
             files: Iterable of paths to YAML values files
             workflow_name: Optional workflow name to select from values file
+            executor: Optional executor type to use for this backend
 
         Returns:
             DvcBackend: Instance configured from the merged values files
         """
         values = load_values(files, DvcTemplateValues)
         config = select_pipeline(values, workflow_name)
+        if executor is not None:
+            return cls(config=config, executor=executor)
         return cls(config=config)
 
     def _generate_dict(

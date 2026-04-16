@@ -10,9 +10,6 @@ on:
       - pypi.org Release
     types:
       - completed
-  push:
-    branches:
-      - "!main"
   pull_request:
     branches:
       - main
@@ -80,8 +77,11 @@ jobs:
           echo "minor=$minor" >> $GITHUB_OUTPUT
           echo "patch=$patch" >> $GITHUB_OUTPUT
 
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
@@ -122,18 +122,16 @@ jobs:
 
       - name: Build and push by digest
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           platforms: ${{ matrix.platform }}
           build-args: PYTHON_VERSION=${{ matrix.python_version }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
-          tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha,scope=${{ github.workflow }}-${{ matrix.python_version }}-${{ matrix.platform }}
           cache-to: type=gha,mode=max,scope=${{ github.workflow }}-${{ matrix.python_version }}-${{ matrix.platform }}
-          outputs: type=image,push-by-digest=true,name-canonical=true,push=${{ github.event_name != 'pull_request' }}
-          load: ${{ github.event_name == 'pull_request' }}
+          outputs: ${{ github.event_name == 'pull_request' && 'type=docker' || format('type=image,name={0}/{1}-py{2},push-by-digest=true,name-canonical=true,push=true', env.REGISTRY, env.IMAGE_NAME, matrix.python_version) }}
           provenance: false
           sbom: false
 
@@ -156,7 +154,7 @@ jobs:
       - name: Tag image with version
         if: github.event_name == 'pull_request' && matrix.platform == 'linux/amd64'
         run: |
-          docker tag ${{ steps.meta.outputs.tags }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}:${{ env.version }}
+          docker tag ${{ steps.build.outputs.imageid }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}:${{ env.version }}
 
       - name: Save image for testing
         if: github.event_name == 'pull_request' && matrix.platform == 'linux/amd64'
@@ -196,7 +194,7 @@ jobs:
           merge-multiple: true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
@@ -237,6 +235,7 @@ jobs:
           - '3.12'
     needs:
       - build
+      - merge
     permissions:
       contents: read
       packages: read

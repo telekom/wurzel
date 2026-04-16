@@ -11,16 +11,20 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from wurzel.core.typed_step import TypedStep
     from wurzel.executors.backend.backend import Backend
+    from wurzel.executors.base_executor import BaseStepExecutor
 
 
 def _resolve_backend_instance(
     backend: type[Backend],
     values: list[Path] | None,
     pipeline_name: str | None,
+    executor: type[BaseStepExecutor] | None = None,
 ) -> Backend:
     # Check if backend has from_values method (like ArgoBackend and DvcBackend)
     if hasattr(backend, "from_values") and values:
-        return backend.from_values(values, workflow_name=pipeline_name)  # type: ignore[call-arg]
+        return backend.from_values(values, workflow_name=pipeline_name, executor=executor)  # type: ignore[call-arg]
+    if executor is not None:
+        return backend(executor=executor)  # type: ignore[call-arg]
     return backend()
 
 
@@ -36,9 +40,10 @@ def main(
     values: Iterable[Path] | None = None,
     pipeline_name: str | None = None,
     output: Path | None = None,
+    executor: type[BaseStepExecutor] | None = None,
 ) -> str:
     """Generate backend-specific YAML for a pipeline."""
-    adapter = _resolve_backend_instance(backend, list(values or []), pipeline_name)
+    adapter = _resolve_backend_instance(backend, list(values or []), pipeline_name, executor)
     yaml_content = adapter.generate_artifact(step)
 
     if output:
