@@ -57,6 +57,13 @@ jobs:
           # workflow-controller-configmap pointing to it.  We just verify it's ready.
           kubectl -n argo wait --for=condition=available deployment/minio --timeout=60s || true
 
+      - name: Create MinIO credentials secret
+        run: |
+          # These match the Argo quick-start-minimal default MinIO credentials.
+          kubectl -n argo create secret generic my-minio-cred \
+            --from-literal=accesskey=admin \
+            --from-literal=secretkey=password  # pragma: allowlist secret
+
       - name: Create wurzel service account and RBAC
         run: |
           kubectl -n argo create serviceaccount wurzel-service-account

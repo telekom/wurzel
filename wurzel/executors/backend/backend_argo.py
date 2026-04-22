@@ -35,6 +35,7 @@ from hera.workflows.models import (
     PodSecurityContext,
     RetryStrategy,
     SeccompProfile,
+    SecretKeySelector,
     SecurityContext,
     VolumeMount,
 )
@@ -148,12 +149,22 @@ class ContainerConfig(BaseModel):
     resources: ResourcesConfig = Field(default_factory=ResourcesConfig)
 
 
+class SecretKeyRef(BaseModel):
+    """Reference to a key inside a Kubernetes Secret."""
+
+    name: str
+    key: str
+
+
 class S3ArtifactConfig(BaseModel):
     """Storage destination for artifacts exchanged between steps."""
 
     bucket: str = "wurzel-bucket"
     endpoint: str = "s3.amazonaws.com"
+    insecure: bool = False
     defaultMode: int | None = None
+    accessKeySecret: SecretKeyRef | None = None
+    secretKeySecret: SecretKeyRef | None = None
 
 
 class WorkflowConfig(BaseModel):
@@ -442,15 +453,25 @@ class ArgoBackend(Backend, backend_name="argo"):
         # Use {{workflow.name}} to create unique artifact paths per workflow run.
         # For CronWorkflows, workflow.name includes a unique timestamp suffix (e.g., "my-workflow-1702656000").
         # This prevents data from different runs or pipelines from mixing in the same S3 location.
+        art_cfg = self.config.artifacts
+        access_key = (
+            SecretKeySelector(name=art_cfg.accessKeySecret.name, key=art_cfg.accessKeySecret.key) if art_cfg.accessKeySecret else None
+        )
+        secret_key = (
+            SecretKeySelector(name=art_cfg.secretKeySecret.name, key=art_cfg.secretKeySecret.key) if art_cfg.secretKeySecret else None
+        )
         return S3Artifact(
             name=f"wurzel-artifact-{step.__class__.__name__.lower()}",
             recurse_mode=True,
             archive=NoneArchiveStrategy(),
             key="argo-workflows/{{workflow.name}}/" + step.__class__.__name__.lower(),
             path=str((self.config.dataDir / step.__class__.__name__).absolute()),
-            bucket=self.config.artifacts.bucket,
-            endpoint=self.config.artifacts.endpoint,
-            mode=self.config.artifacts.defaultMode,
+            bucket=art_cfg.bucket,
+            endpoint=art_cfg.endpoint,
+            insecure=art_cfg.insecure,
+            access_key_secret=access_key,
+            secret_key_secret=secret_key,
+            mode=art_cfg.defaultMode,
         )
 
     def _create_task(self, dag: DAG, step: TypedStep[Any, Any, Any], env_vars: dict[str, str] | None = None) -> Task:
