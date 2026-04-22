@@ -6,8 +6,8 @@ from __future__ import annotations
 
 import pytest
 
-from wurzel.executors.backend.backend import Backend
 from wurzel.cli import cmd_generate
+from wurzel.executors.backend.backend import Backend
 from wurzel.utils import HAS_HERA
 
 if HAS_HERA:
