@@ -31,7 +31,9 @@ from hera.workflows.archive import NoneArchiveStrategy
 from hera.workflows.models import (
     Capabilities,
     EnvVar,
+    IntOrString,
     PodSecurityContext,
+    RetryStrategy,
     SeccompProfile,
     SecurityContext,
     VolumeMount,
@@ -485,6 +487,7 @@ class ArgoBackend(Backend):
             env_from=self._build_env_from(),
             volume_mounts=self._volume_mounts or None,
             outputs=self._create_artifact_from_step(step),
+            retry_strategy=RetryStrategy(limit=IntOrString(4), retry_policy="OnError"),
         )
 
         dag.__enter__()  # pylint: disable=unnecessary-dunder-call

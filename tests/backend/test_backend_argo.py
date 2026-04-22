@@ -732,6 +732,24 @@ class TestArgoBackendGenerateArtifact:
         manifest = yaml.safe_load(yaml_output)
         assert manifest["kind"] in ("CronWorkflow", "Workflow")
 
+    def test_retry_strategy_on_error(self):
+        """Each container template should have retryStrategy with limit=4 and policy=OnError."""
+        backend = ArgoBackend()
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+
+        manifest = yaml.safe_load(yaml_output)
+        spec = manifest.get("spec", {})
+        # CronWorkflow nests templates under workflowSpec; plain Workflow uses spec directly
+        workflow_spec = spec.get("workflowSpec", spec)
+        templates = workflow_spec.get("templates", [])
+        task_templates = [t for t in templates if t.get("container")]
+        assert task_templates, "No container templates found in manifest"
+        for template in task_templates:
+            retry = template.get("retryStrategy", {})
+            assert retry.get("limit") == 4, f"Expected limit=4, got {retry.get('limit')}"
+            assert retry.get("retryPolicy") == "OnError", f"Expected retryPolicy=OnError, got {retry.get('retryPolicy')}"
+
 
 class TestArgoBackendGenerateWorkflow:
     """Tests for _generate_workflow method covering both CronWorkflow and normal Workflow creation."""
