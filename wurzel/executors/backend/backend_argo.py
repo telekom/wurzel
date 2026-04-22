@@ -49,7 +49,7 @@ from wurzel.executors.base_executor import BaseStepExecutor
 log = logging.getLogger(__name__)
 
 
-def default_argo_step_executor(config: WorkflowConfig | None = None) -> type[BaseStepExecutor]:
+def default_argo_step_executor(_config: WorkflowConfig | None = None) -> type[BaseStepExecutor]:
     """Pick the step executor for generated Argo task commands.
 
     Returns ``BaseStepExecutor`` by default.  Prometheus monitoring is handled

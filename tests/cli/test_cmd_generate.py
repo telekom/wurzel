@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from wurzel.cli import cmd_generate
 from wurzel.executors.backend.backend import Backend
 from wurzel.utils import HAS_HERA
@@ -17,9 +19,6 @@ else:  # pragma: no cover - optional dependency guard
 class _MinimalBackend(Backend):
     def generate_artifact(self, step):  # pragma: no cover - helper stub
         raise NotImplementedError
-
-
-import pytest
 
 
 @pytest.mark.skipif(not HAS_HERA, reason="Argo backend requires Hera extras")
@@ -83,6 +82,8 @@ def test_resolve_backend_instance_passes_executor_to_argo_from_values(monkeypatc
     )
 
     assert captured["executor"] is BaseStepExecutor
+
+
 def test_resolve_backend_instance_for_non_argo_backend(tmp_path):
     class DummyBackend(Backend):
         def __init__(self):

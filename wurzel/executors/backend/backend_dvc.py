@@ -161,7 +161,7 @@ class DvcBackend(Backend):
         values = load_values(files, DvcTemplateValues)
         config = select_pipeline(values, workflow_name)
         if executor is not None:
-            return cls(config=config, executor=executor)
+            return cls(config=config, executer=executor)
         return cls(config=config)
 
     def _generate_dict(
