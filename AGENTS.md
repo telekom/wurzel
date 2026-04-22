@@ -1,7 +1,7 @@
 # Wurzel
 
 ## Environment Setup
-`make install` every make comand like test will also run make install automaticly.
+`make install` every make command like test will also run make install automatically.
 
 
 
@@ -9,7 +9,7 @@
 Run `make test` to run all Tests in the folder
 
 ## Linting
-Run `make lint`to run linting will run all pre-commit hooks
+Run `make lint` to run linting will run all pre-commit hooks
 
 
 ## Testing Standards

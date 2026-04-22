@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import inspect
+import re
+import shlex
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypedDict
 
@@ -174,8 +176,11 @@ class DvcBackend(Backend, backend_name="dvc"):
         """Write env vars to {dataDir}/.wurzel_env as shell exports and return the path."""
         env_file = self.config.dataDir / ".wurzel_env"
         env_file.parent.mkdir(parents=True, exist_ok=True)
+        _safe_key = re.compile(r"^[A-Z_][A-Z0-9_]*$")
         lines = []
         for key, value in env_vars.items():
+            if not _safe_key.match(key):
+                raise ValueError(f"Unsafe environment variable name: {key!r}")
             escaped = value.replace("'", "'\\''")
             lines.append(f"export {key}='{escaped}'")
         env_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -221,10 +226,10 @@ class DvcBackend(Backend, backend_name="dvc"):
         run_id_output = self.config.dataDir / ".wurzel_run_id"
         deps_with_run_id = [inspect.getfile(step.__class__), run_id_output, *outputs_of_deps]
 
-        env_source = f". {env_file} && " if env_file else ""
+        env_source = f". {shlex.quote(str(env_file))} && " if env_file else ""
         if env_file:
             deps_with_run_id = [*deps_with_run_id, env_file]
-        cmd = f'{env_source}export WURZEL_RUN_ID="$(cat {run_id_output})" && echo "$WURZEL_RUN_ID" &&  {cli_call}'
+        cmd = f'{env_source}export WURZEL_RUN_ID="$(cat {shlex.quote(str(run_id_output))})" && echo "$WURZEL_RUN_ID" &&  {cli_call}'
 
         return result | {
             step.__class__.__name__: {

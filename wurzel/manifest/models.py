@@ -125,7 +125,7 @@ class PipelineSpec(BaseModel):
     @classmethod
     def _validate_backend(cls, v: str) -> str:
         # Import triggers backend registration side-effects (DvcBackend, ArgoBackend).
-        from wurzel.executors.backend.backend import Backend  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
+        from wurzel.executors.backend import Backend  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
 
         registry = Backend.get_registry()
         if registry and v not in registry:

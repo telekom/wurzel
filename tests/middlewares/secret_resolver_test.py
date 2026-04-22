@@ -157,6 +157,17 @@ class TestSecretResolverMiddleware:
 
 
 class TestBuildDefaultProviders:
+    def test_providers_registered_after_package_import(self):
+        """Importing SecretResolverMiddleware must trigger provider registration.
+        The providers package must be imported in the secret_resolver __init__.py.
+        """
+        from wurzel.executors.middlewares.secret_resolver import SecretResolverMiddleware  # noqa: F401, PLC0415
+        from wurzel.manifest.secrets.base import SecretProvider  # noqa: PLC0415
+
+        registry = SecretProvider.get_registry()
+        assert "k8s" in registry, "K8sSecretProvider must be registered via package import"
+        assert "vault" in registry, "VaultSecretProvider must be registered via package import"
+
     def test_no_env_vars_returns_empty_providers(self, monkeypatch):
         monkeypatch.delenv("SECRET_RESOLVER__URL", raising=False)
         monkeypatch.delenv("SECRET_RESOLVER__SERVICE_ROLE_KEY", raising=False)

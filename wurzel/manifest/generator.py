@@ -12,7 +12,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 
-from wurzel.executors.backend.backend import Backend
+from wurzel.executors.backend import Backend
 from wurzel.manifest.builder import ManifestBuilder
 from wurzel.manifest.env_expander import EnvExpander
 from wurzel.manifest.models import PipelineManifest
