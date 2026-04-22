@@ -68,6 +68,13 @@ jobs:
             --from-literal=secretkey=password \
             --dry-run=client -o yaml | kubectl apply -f -  # pragma: allowlist secret
 
+      - name: Create MinIO credentials secret
+        run: |
+          # These match the Argo quick-start-minimal default MinIO credentials.
+          kubectl -n argo create secret generic my-minio-cred \
+            --from-literal=accesskey=admin \
+            --from-literal=secretkey=password  # pragma: allowlist secret
+
       - name: Create wurzel service account and RBAC
         run: |
           kubectl -n ${{ env.ARGO_NAMESPACE }} create serviceaccount wurzel-service-account \
