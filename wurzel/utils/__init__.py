@@ -7,8 +7,12 @@ from logging import getLogger
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
-    from .meta_settings import WZ, create_model  # noqa: F401
-    from .meta_steps import find_typed_steps_in_package  # noqa: F401
+    from wurzel.core.meta import (  # noqa: F401
+        WZ,
+        create_model,
+        find_typed_steps_in_package,  # noqa: F401
+    )
+
     from .splitters import semantic_splitter  # noqa: F401
     from .to_markdown.html2md import MarkdownConverterSettings, to_markdown  # noqa: F401
 
@@ -58,15 +62,15 @@ HAS_PARAMIKO = _opt_deps["paramiko"]
 def __getattr__(name: str) -> Any:
     """Lazy import heavy dependencies to avoid slowing down CLI startup."""
     if name == "WZ":
-        from .meta_settings import WZ  # pylint: disable=import-outside-toplevel
+        from wurzel.core.meta import WZ  # pylint: disable=import-outside-toplevel
 
         return WZ
     if name == "create_model":
-        from .meta_settings import create_model  # pylint: disable=import-outside-toplevel
+        from wurzel.core.meta import create_model  # pylint: disable=import-outside-toplevel
 
         return create_model
     if name == "find_typed_steps_in_package":
-        from .meta_steps import find_typed_steps_in_package  # pylint: disable=import-outside-toplevel
+        from wurzel.core.meta import find_typed_steps_in_package  # pylint: disable=import-outside-toplevel
 
         return find_typed_steps_in_package
     if name == "semantic_splitter":

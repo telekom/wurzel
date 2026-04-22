@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+#
+# SPDX-License-Identifier: Apache-2.0
+
+"""Secret resolver middleware package."""
+
+from .secret_resolver import SecretResolverMiddleware
+
+__all__ = ["SecretResolverMiddleware"]

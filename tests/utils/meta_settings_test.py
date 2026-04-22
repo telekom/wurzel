@@ -6,11 +6,11 @@ from typing import Callable
 
 import pytest
 
+from wurzel.core.meta import WZ, create_model
 from wurzel.core.settings import Settings
 from wurzel.core.typed_step import TypedStep
 from wurzel.datacontract.datacontract import PydanticModel
 from wurzel.executors import BaseStepExecutor
-from wurzel.utils.meta_settings import WZ, create_model
 
 
 class MySettingsA(Settings):

@@ -6,7 +6,7 @@ import json
 import logging
 import logging.config
 
-from wurzel.utils.logging import JsonFormatter
+from wurzel.core.logging import JsonFormatter
 
 
 class WithExtraFormatter(JsonFormatter):

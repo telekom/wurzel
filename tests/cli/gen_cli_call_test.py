@@ -2,15 +2,25 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import os
 import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 import yaml
 
-from wurzel.cli import generate_cli_call
-from wurzel.executors import BaseStepExecutor
-from wurzel.steps.manual_markdown import ManualMarkdownStep
-from wurzel.utils import HAS_HERA
+_VENV_BIN = str(Path(sys.executable).parent)
+
+
+def _venv_env() -> dict:
+    return {**os.environ, "PATH": _VENV_BIN + ":" + os.environ.get("PATH", "")}
+
+
+from wurzel.cli import generate_cli_call  # noqa: E402
+from wurzel.executors import BaseStepExecutor  # noqa: E402
+from wurzel.steps.manual_markdown import ManualMarkdownStep  # noqa: E402
+from wurzel.utils import HAS_HERA  # noqa: E402
 
 
 @pytest.mark.parametrize("executor", [BaseStepExecutor])
@@ -66,6 +76,6 @@ def test_backend_cli(tmp_path, backend, env):
     env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", "./data")
     env.set("QDRANTCONNECTORSTEP__COLLECTION", "test-collection")
     cmd = ["wurzel", "generate", "examples.pipeline.pipelinedemo:pipeline", "--backend", backend]
-    proc = subprocess.run(cmd, capture_output=True, text=True)
+    proc = subprocess.run(cmd, capture_output=True, text=True, env=_venv_env())
     assert proc.returncode == 0, proc
     _result = yaml.safe_load(proc.stdout)  # loadable

@@ -191,7 +191,7 @@ def select_workflow(values: TemplateValues, workflow_name: str | None) -> Workfl
     return WorkflowConfig()
 
 
-class ArgoBackend(Backend):
+class ArgoBackend(Backend, backend_name="argo"):
     """Render Argo workflows from typed steps based on declarative YAML values."""
 
     @classmethod
@@ -200,6 +200,18 @@ class ArgoBackend(Backend):
         from wurzel.utils import HAS_HERA  # pylint: disable=import-outside-toplevel
 
         return HAS_HERA
+
+    @classmethod
+    def from_manifest_config(cls, raw_config: dict) -> ArgoBackend:
+        """Instantiate from a raw manifest config dict.
+
+        ``schedule`` is always applied (including ``None`` / ``null``) so that
+        ``schedule: null`` in the manifest produces a plain Workflow instead of
+        a CronWorkflow.
+        """
+        schedule = raw_config.pop("schedule", None) if raw_config else None
+        cfg = WorkflowConfig(schedule=schedule, **raw_config) if raw_config else WorkflowConfig(schedule=schedule)
+        return cls(config=cfg)
 
     def __init__(
         self,
@@ -349,12 +361,12 @@ class ArgoBackend(Backend):
         # container names can conflict with Argo's built-in init containers (init, wait).
         return None
 
-    def generate_artifact(self, step: TypedStep[Any, Any, Any]):
+    def generate_artifact(self, step: TypedStep[Any, Any, Any], *, env_vars: dict[str, str] | None = None):
         """Return YAML manifest(s) for workflow + optional dependent resources."""
-        workflow_manifest = self._generate_workflow(step).to_dict()
+        workflow_manifest = self._generate_workflow(step, env_vars=env_vars).to_dict()
         return yaml.safe_dump(workflow_manifest, sort_keys=False).strip()
 
-    def _generate_workflow(self, step: TypedStep[Any, Any, Any]) -> Workflow:
+    def _generate_workflow(self, step: TypedStep[Any, Any, Any], env_vars: dict[str, str] | None = None) -> Workflow:
         """Creates an Argo Workflow or CronWorkflow based on the schedule configuration.
 
         This method generates the appropriate Argo workflow type:
@@ -413,7 +425,7 @@ class ArgoBackend(Backend):
             context = Workflow(**workflow_kwargs)
 
         with context as workflow:
-            self.__generate_dag(step)
+            self.__generate_dag(step, env_vars=env_vars)
         return workflow
 
     @cache  # pylint: disable=method-cache-max-size-none
@@ -441,7 +453,7 @@ class ArgoBackend(Backend):
             mode=self.config.artifacts.defaultMode,
         )
 
-    def _create_task(self, dag: DAG, step: TypedStep[Any, Any, Any]) -> Task:
+    def _create_task(self, dag: DAG, step: TypedStep[Any, Any, Any], env_vars: dict[str, str] | None = None) -> Task:
         """Creates an Argo task for a Wurzel step, linking input/output artifacts and environment.
 
         Args:
@@ -466,7 +478,9 @@ class ArgoBackend(Backend):
         commands: list[str] = [entry for entry in cli_call.split(" ") if entry.strip()]
 
         dag.__exit__()
-        env_vars = [EnvVar(name=name, value=str(value)) for name, value in self.config.container.env.items()]
+        manifest_env_vars = env_vars or {}
+        merged_env = {**manifest_env_vars, **self.config.container.env}  # container.env wins
+        env_vars = [EnvVar(name=name, value=str(value)) for name, value in merged_env.items()]
 
         # Add WURZEL_RUN_ID for tracking pipeline runs
         env_vars.append(EnvVar(name="WURZEL_RUN_ID", value="{{workflow.uid}}"))
@@ -503,7 +517,7 @@ class ArgoBackend(Backend):
 
         return task
 
-    def __generate_dag(self, step: TypedStep[Any, Any, Any]) -> DAG:
+    def __generate_dag(self, step: TypedStep[Any, Any, Any], env_vars: dict[str, str] | None = None) -> DAG:
         """Recursively builds a DAG from a step and its dependencies using Hera's DAG API.
 
         Args:
@@ -522,11 +536,11 @@ class ArgoBackend(Backend):
                 if req.required_steps:
                     req_argo = resolve_requirements(req)  # type: ignore[arg-type]
                 else:
-                    req_argo = self._create_task(dag, req)  # type: ignore[arg-type]
+                    req_argo = self._create_task(dag, req, env_vars=env_vars)  # type: ignore[arg-type]
                 artifacts.append(req_argo.result)
                 argo_reqs.append(req_argo)
 
-            step_argo: Task = self._create_task(dag, step)
+            step_argo: Task = self._create_task(dag, step, env_vars=env_vars)
 
             for argo_req in argo_reqs:
                 argo_req >> step_argo  # pylint: disable=pointless-statement

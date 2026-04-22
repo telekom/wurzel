@@ -236,3 +236,11 @@ test_file.py
 tmp.py
 tmp/
 examples/pipeline/output
+
+# Generated DVC env file — may contain credentials, never commit
+.wurzel_env
+
+# Include manifest directory and its contents
+!wurzel/manifest/
+!wurzel/manifest/**
+__pycache__/

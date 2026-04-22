@@ -7,7 +7,7 @@ from collections.abc import Iterable
 
 import pytest
 
-from wurzel.utils.logging import _make_dict_serializable
+from wurzel.core.logging import _make_dict_serializable
 
 
 @dataclasses.dataclass

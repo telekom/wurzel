@@ -7,7 +7,7 @@ import logging.config
 
 import pytest
 
-from wurzel.utils.logging import get_logging_dict_config
+from wurzel.core.logging import get_logging_dict_config
 
 
 def test_logging_dict_config():
@@ -23,7 +23,7 @@ def test_logging_dict_config_invalid():
 
 
 def test_warning_override():
-    from wurzel.utils.logging import warnings_to_logger
+    from wurzel.core.logging import warnings_to_logger
 
     warnings_to_logger("Test", "None", __file__, lineno="123")
     # Dummy test

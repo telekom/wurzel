@@ -21,8 +21,8 @@ class TestGetAllBackends:
         """Test that get_all_backends always includes DvcBackend."""
         backends = get_all_backends()
         assert isinstance(backends, dict)
-        assert "DvcBackend" in backends
-        assert backends["DvcBackend"] == DvcBackend
+        assert "dvc" in backends
+        assert backends["dvc"] == DvcBackend
 
     def test_includes_argo_backend_when_hera_available(self):
         """Test that ArgoBackend is included when Hera is available."""
@@ -30,10 +30,10 @@ class TestGetAllBackends:
         if HAS_HERA:
             from wurzel.executors.backend import ArgoBackend
 
-            assert "ArgoBackend" in backends
-            assert backends["ArgoBackend"] == ArgoBackend
+            assert "argo" in backends
+            assert backends["argo"] == ArgoBackend
         else:
-            assert "ArgoBackend" not in backends
+            assert "argo" not in backends
 
     def test_returns_new_dict_each_call(self):
         """Test that get_all_backends returns a new dict each time."""
@@ -55,8 +55,8 @@ class TestGetAvailableBackends:
     def test_dvc_backend_always_available(self):
         """Test that DvcBackend is always in available backends."""
         available = get_available_backends()
-        assert "DvcBackend" in available
-        assert available["DvcBackend"] == DvcBackend
+        assert "dvc" in available
+        assert available["dvc"] == DvcBackend
 
     def test_subset_of_all_backends(self):
         """Test that available backends is a subset of all backends."""

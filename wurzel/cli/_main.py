@@ -27,9 +27,13 @@ app = typer.Typer(
 
 # Import and add the middlewares command group
 # ruff: noqa: E402
-from wurzel.cli import cmd_middlewares  # pylint: disable=wrong-import-position
+from wurzel.cli import (  # pylint: disable=wrong-import-position
+    cmd_manifest,
+    cmd_middlewares,
+)
 
 app.add_typer(cmd_middlewares.app, name="middlewares")
+app.add_typer(cmd_manifest.app, name="manifest")
 
 log = logging.getLogger(__name__)
 console = Console()
@@ -590,7 +594,7 @@ def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: 
 
 def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str):
     """Based on step_callback transform them to WZ pipeline elements."""
-    from wurzel.utils.meta_settings import WZ  # pylint: disable=import-outside-toplevel
+    from wurzel.core.meta import WZ  # pylint: disable=import-outside-toplevel
 
     step = step_callback(_ctx, _param, import_path)
     if not hasattr(step, "required_steps"):
@@ -714,7 +718,7 @@ def generate(  # pylint: disable=too-many-positional-arguments
 
 def update_log_level(log_level: str):
     """Fix for typer logs."""
-    from wurzel.utils.logging import get_logging_dict_config  # pylint: disable=import-outside-toplevel
+    from wurzel.core.logging import get_logging_dict_config  # pylint: disable=import-outside-toplevel
 
     log_config = get_logging_dict_config(log_level)
     log_config["formatters"]["default"] = {
@@ -740,11 +744,11 @@ def main_args(
     ] = "INFO",
 ):
     """Global settings, main."""
-    from wurzel.utils.logging import get_logging_dict_config  # pylint: disable=import-outside-toplevel
+    from wurzel.core.logging import get_logging_dict_config  # pylint: disable=import-outside-toplevel
 
     if not os.isatty(1):
         # typer.core.rich = None  # This may not be available in all typer versions
-        logging.config.dictConfig(get_logging_dict_config(log_level, "wurzel.utils.logging.JsonStringFormatter"))
+        logging.config.dictConfig(get_logging_dict_config(log_level, "wurzel.core.logging.JsonStringFormatter"))
         app.pretty_exceptions_enable = False
         app.pretty_exceptions_show_locals = False
     else:

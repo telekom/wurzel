@@ -4,17 +4,19 @@
 
 """Middleware system for step executors.
 
-This module provides a flexible middleware system for adding cross-cutting
-concerns to step execution. Middlewares can be chained together to add
-features like metrics, logging, tracing, etc.
+Middlewares wrap step execution to add cross-cutting concerns (metrics, logging,
+tracing) without modifying step logic. They follow the Chain of Responsibility
+pattern.
 
 Example:
-    >>> from wurzel.step_executor.middlewares import MiddlewareRegistry
-    >>> from wurzel.step_executor.middlewares.prometheus import PrometheusMiddleware
-    >>>
-    >>> # Register and load middlewares
-    >>> registry = MiddlewareRegistry()
-    >>> middlewares = registry.load_middlewares(["prometheus"])
+    ```python
+    from wurzel.executors.middlewares import get_registry
+
+    registry = get_registry()
+    # List all built-in middlewares
+    available = registry.list_available()
+    assert "prometheus" in available
+    ```
 """
 
 import logging
@@ -48,6 +50,15 @@ class MiddlewareRegistry:
             log.debug("Registered prometheus middleware")
         except ImportError as e:
             log.debug(f"Could not load prometheus middleware: {e}")
+
+        try:
+            # pylint: disable=import-outside-toplevel
+            from .secret_resolver import SecretResolverMiddleware
+
+            self.register("secret_resolver", SecretResolverMiddleware)
+            log.debug("Registered secret_resolver middleware")
+        except ImportError as e:  # pragma: no cover
+            log.debug(f"Could not load secret_resolver middleware: {e}")
 
     def register(self, name: str, middleware_class: type[BaseMiddleware]):
         """Register a middleware with a name.

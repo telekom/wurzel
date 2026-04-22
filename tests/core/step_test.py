@@ -2,27 +2,44 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import os
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 import yaml
 
-from wurzel.core import Step
-from wurzel.executors import BaseStepExecutor, DvcBackend
+_VENV_BIN = str(Path(sys.executable).parent)
+
+
+def _venv_env() -> dict:
+    return {**os.environ, "PATH": _VENV_BIN + ":" + os.environ.get("PATH", "")}
+
+
+from wurzel.core import Step  # noqa: E402
+from wurzel.executors import BaseStepExecutor, DvcBackend  # noqa: E402
 
 
 def is_valid_dvc_yaml(path: Path) -> bool:
     import os
 
     is_windows_environment = os.name == "nt"
-    create_stdout = subprocess.getoutput(
-        f"cd {path.parent} && git init && dvc init" if not is_windows_environment else f"cd /d {path.parent} && git init && dvc init"
-    )
-    status_stdout = subprocess.getoutput(
-        f"cd {path.parent} && dvc stage list" if not is_windows_environment else f"cd /d {path.parent} && dvc stage list"
-    )
+    create_stdout = subprocess.run(
+        f"cd {path.parent} && git init && dvc init" if not is_windows_environment else f"cd /d {path.parent} && git init && dvc init",
+        shell=True,
+        capture_output=True,
+        text=True,
+        env=_venv_env(),
+    ).stdout
+    status_stdout = subprocess.run(
+        f"cd {path.parent} && dvc stage list" if not is_windows_environment else f"cd /d {path.parent} && dvc stage list",
+        shell=True,
+        capture_output=True,
+        text=True,
+        env=_venv_env(),
+    ).stdout
     assert "Initialized empty Git repository in" in create_stdout, create_stdout
     assert "Initialized DVC repository." in create_stdout, create_stdout
     assert "is invalid" not in status_stdout
