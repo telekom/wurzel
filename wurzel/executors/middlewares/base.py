@@ -12,16 +12,13 @@ Example:
 
     log = logging.getLogger(__name__)
 
-
     class LoggingMiddleware(BaseMiddleware):
-        \"\"\"Middleware that logs step start and end.\"\"\"
-
+        # Logs step start and end
         def __call__(self, call_next, step_cls, inputs, output_dir):
             log.info("Starting %s", step_cls.__name__)
             result = call_next(step_cls, inputs, output_dir)
             log.info("Finished %s", step_cls.__name__)
             return result
-
 
     chain = MiddlewareChain([LoggingMiddleware()])
     assert len(chain.middlewares) == 1

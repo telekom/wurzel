@@ -70,21 +70,17 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     from wurzel.core import PanderaDataFrameModel, TypedStep, PydanticModel, NoSettings
     from pandera.typing import Series
 
-
     # Data Model definitions
     class MyData(PydanticModel):
         key: str = "Value"
 
-
     class MyTable(PanderaDataFrameModel):
         col1: Series[int]
-
 
     # Step definition
     class MyStep(TypedStep[NoSettings, None, list[MyData]]):
         def run(self, inpt: None) -> list[MyData]:
-            return ...
-
+            return [MyData()]
 
     class MyOtherStep(TypedStep[None, list[MyData], MyTable]):
         def run(self, inpt: list[MyData]) -> MyTable:

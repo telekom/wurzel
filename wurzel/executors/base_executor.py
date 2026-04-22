@@ -159,15 +159,12 @@ class BaseStepExecutor:
     from wurzel.datacontract import PydanticModel
     from wurzel.executors import BaseStepExecutor
 
-
     class Out(PydanticModel):
         value: str = "ok"
-
 
     class MyStep(TypedStep[NoSettings, None, Out]):
         def run(self, inpt: None) -> Out:
             return Out()
-
 
     with BaseStepExecutor(load_middlewares_from_env=False) as exc:
         results = exc(MyStep, None, None)
