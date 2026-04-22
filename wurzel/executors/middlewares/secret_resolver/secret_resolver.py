@@ -2,7 +2,27 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Middleware that resolves secret placeholders in env vars before step execution."""
+"""Middleware that resolves secret placeholders in env vars before step execution.
+
+Secret placeholders use the format ``${secret:<provider>:<ref>}``. The middleware
+scans all current env vars, resolves placeholders via the matching provider,
+temporarily overrides those vars for the duration of step execution, then restores them.
+
+```python
+from wurzel.manifest.secrets.base import SecretProvider
+from wurzel.executors.middlewares.secret_resolver.secret_resolver import (
+    SecretResolverMiddleware,
+)
+
+class FakeProvider(SecretProvider, provider_name="fake"):
+    def resolve(self, ref: str) -> str:
+        return f"resolved-{ref}"
+
+middleware = SecretResolverMiddleware(providers=[FakeProvider()])
+print(middleware._providers[0].provider_name)
+#> fake
+```
+"""
 
 from __future__ import annotations
 

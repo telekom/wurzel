@@ -174,6 +174,7 @@ class TestBuildDefaultProviders:
         assert providers == []
 
     def test_both_env_vars_set_returns_vault_provider(self, monkeypatch):
+        pytest.importorskip("supabase")
         monkeypatch.setenv("SECRET_RESOLVER__URL", "http://localhost:54321")
         monkeypatch.setenv("SECRET_RESOLVER__SERVICE_ROLE_KEY", "fake-jwt")
         mock_client = object()
@@ -225,6 +226,7 @@ class TestVaultSecretProvider:
             provider.resolve("missing-key")
 
     def test_supabase_vault_client_init(self, mocker):
+        pytest.importorskip("supabase")
         mocker.patch("supabase.create_client", return_value=mocker.MagicMock())
         from wurzel.executors.middlewares.secret_resolver.providers.vault import SupabaseVaultClient
 

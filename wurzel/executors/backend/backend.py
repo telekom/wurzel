@@ -21,21 +21,45 @@ class Backend(BaseStepExecutor):
     the ability to generate deployment artifacts (e.g., YAML configurations) for various
     workflow orchestrators such as Argo Workflows, Apache Airflow, GitLab CI/CD, or DVC.
 
-    Each backend implementation should subclass this and implement the generate_artifact method
-    to convert a `TypedStep` into the appropriate format required by the target framework,
-    while also inheriting all step execution functionality from BaseStepExecutor.
+    Each backend implementation should subclass this and implement the ``generate_artifact``
+    method to convert a `TypedStep` into the appropriate format required by the target
+    framework, while also inheriting all step execution functionality from BaseStepExecutor.
 
-    The backend implementations must set the WURZEL_RUN_ID environment variable in their
+    The backend implementations must set the ``WURZEL_RUN_ID`` environment variable in their
     generated artifacts. This provides a unique identifier for each pipeline run that can
     be used for Prometheus job names, logging, and other runtime identification needs.
-    For Argo Workflows, this should be set to {{workflow.uid}}.
+    For Argo Workflows, this should be set to ``{{workflow.uid}}``.
 
     Subclasses register themselves automatically by passing ``backend_name`` as a class
-    keyword argument::
+    keyword argument. Once registered, ``Backend.create("name", raw_config)`` will
+    instantiate the matching backend.
 
-        class MyBackend(Backend, backend_name="mybackend"): ...
+    ```python
+    from wurzel.executors.backend.backend import Backend
 
-    Once registered, ``Backend.create("mybackend", raw_config)`` will instantiate it.
+    registry = Backend.get_registry()
+    print("dvc" in registry)
+    #> True
+    ```
+
+    Subclasses register like this (no explicit registry call needed):
+
+    ```python
+    from pathlib import Path
+    from wurzel.core import TypedStep
+    from wurzel.executors.backend.backend import Backend
+
+    class MyBackend(Backend, backend_name="mybackend"):
+        def generate_artifact(self, step: type[TypedStep], output: Path) -> None:
+            pass  # write YAML / Makefile / … here
+
+        @classmethod
+        def from_manifest_config(cls, raw_config: dict) -> "MyBackend":
+            return cls()
+
+    print("mybackend" in Backend.get_registry())
+    #> True
+    ```
     """
 
     _registry: ClassVar[dict[str, type["Backend"]]] = {}

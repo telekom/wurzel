@@ -4,12 +4,35 @@
 
 """Parse and detect secret placeholder strings.
 
-Placeholders follow the format::
+Placeholders follow the format ``${secret:<provider>:<ref>}`` where
+``<provider>`` is the registered provider name (e.g. ``vault``, ``k8s``) and
+``<ref>`` is the provider-specific secret reference.
 
-    ${secret:<provider>:<ref>}
+```python
+from wurzel.manifest.secrets.placeholder import parse_placeholder, find_placeholder_vars
 
-where ``<provider>`` is ``vault`` or ``k8s`` and ``<ref>`` is the
-provider-specific secret reference (e.g. ``my-secret`` or ``my-secret/key``).
+# Parse a single placeholder
+ref = parse_placeholder("${secret:vault:my-secret}")
+print(ref.provider)
+#> vault
+print(ref.ref)
+#> my-secret
+
+# Non-placeholder values return None
+assert parse_placeholder("plain-value") is None
+
+# Scan a dict of env vars for placeholders
+env = {
+    "DB_PASSWORD": "${secret:vault:db-pass}",
+    "HOST": "localhost",
+    "API_KEY": "${secret:k8s:api-secret}",
+}
+refs = find_placeholder_vars(env)
+print(sorted(refs.keys()))
+#> ['API_KEY', 'DB_PASSWORD']
+print(refs["DB_PASSWORD"].provider)
+#> vault
+```
 """
 
 from __future__ import annotations

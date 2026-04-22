@@ -60,6 +60,20 @@ class MarkdownDataContract(PydanticModel):
 
     A short text.
     ```
+
+    The `metrics()` method returns numeric counters (character length, line count,
+    keyword count) useful for monitoring and quality checks:
+
+    ```python
+    from wurzel.datacontract.common import MarkdownDataContract
+
+    doc = MarkdownDataContract(md="# Hello", keywords="hello,world", url="docs/hello.md")
+    m = doc.metrics()
+    print(m["keywords_count"])
+    #> 2.0
+    print(m["md_line_count"])
+    #> 1.0
+    ```
     """
 
     md: str

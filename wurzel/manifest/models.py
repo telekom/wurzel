@@ -2,7 +2,52 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Pydantic models for the Wurzel pipeline manifest format."""
+"""Pydantic models for the Wurzel pipeline manifest format.
+
+A manifest is a YAML file that describes which steps to run, how they depend on
+each other, which middlewares to activate, and which backend should produce the
+execution artifact (DVC pipeline file, Argo Workflow, …).
+
+Minimal valid manifest:
+
+```yaml
+apiVersion: wurzel.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: my-pipeline
+spec:
+  backend: dvc
+  steps:
+    - name: ingest
+      class: wurzel.steps.manual_markdown.ManualMarkdownStep
+```
+
+```python
+from wurzel.manifest.models import PipelineManifest
+
+raw = {
+    "apiVersion": "wurzel.dev/v1alpha1",
+    "kind": "Pipeline",
+    "metadata": {"name": "demo"},
+    "spec": {
+        "backend": "dvc",
+        "steps": [
+            {
+                "name": "ingest",
+                "class": "wurzel.steps.manual_markdown.ManualMarkdownStep",
+            }
+        ],
+    },
+}
+manifest = PipelineManifest.model_validate(raw)
+print(manifest.metadata.name)
+#> demo
+print(manifest.spec.backend)
+#> dvc
+print(manifest.spec.steps[0].name)
+#> ingest
+```
+"""
 
 from __future__ import annotations
 

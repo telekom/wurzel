@@ -2,7 +2,25 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Abstract secret provider interface."""
+"""Abstract secret provider interface.
+
+Subclasses register automatically via the ``provider_name`` keyword argument.
+
+```python
+from wurzel.manifest.secrets.base import SecretProvider
+
+class DummyProvider(SecretProvider, provider_name="dummy"):
+    def resolve(self, ref: str) -> str:
+        return f"secret-{ref}"
+
+registry = SecretProvider.get_registry()
+print("dummy" in registry)
+#> True
+provider = registry["dummy"]()
+print(provider.resolve("my-key"))
+#> secret-my-key
+```
+"""
 
 from __future__ import annotations
 

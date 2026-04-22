@@ -2,7 +2,33 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Build a TypedStep graph from a validated PipelineManifest."""
+"""Build a TypedStep graph from a validated PipelineManifest.
+
+```python
+from wurzel.manifest.builder import ManifestBuilder
+from wurzel.manifest.models import PipelineManifest
+
+raw = {
+    "apiVersion": "wurzel.dev/v1alpha1",
+    "kind": "Pipeline",
+    "metadata": {"name": "demo"},
+    "spec": {
+        "backend": "dvc",
+        "steps": [
+            {
+                "name": "ingest",
+                "class": "wurzel.steps.manual_markdown.ManualMarkdownStep",
+            },
+        ],
+    },
+}
+manifest = PipelineManifest.model_validate(raw)
+builder = ManifestBuilder(manifest)
+graph = builder.build_step_graph()
+print("ingest" in graph)
+#> True
+```
+"""
 
 from __future__ import annotations
 

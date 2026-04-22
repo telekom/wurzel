@@ -4,8 +4,35 @@
 
 """Semantic validation of a PipelineManifest (DAG structure, class paths, middleware names).
 
-All methods return a list of human-readable error strings. An empty list means no errors.
-No exceptions are raised here — callers decide what to do with the errors.
+All methods return a list of human-readable error strings.
+An empty list means no errors. No exceptions are raised — callers decide what to do.
+
+```python
+from wurzel.manifest.models import PipelineManifest
+from wurzel.manifest.validator import ManifestValidator
+
+raw = {
+    "apiVersion": "wurzel.dev/v1alpha1",
+    "kind": "Pipeline",
+    "metadata": {"name": "demo"},
+    "spec": {
+        "backend": "dvc",
+        "steps": [
+            {"name": "a", "class": "wurzel.steps.manual_markdown.ManualMarkdownStep"},
+            {
+                "name": "b",
+                "class": "wurzel.steps.manual_markdown.ManualMarkdownStep",
+                "dependsOn": ["a"],
+            },
+        ],
+    },
+}
+manifest = PipelineManifest.model_validate(raw)
+validator = ManifestValidator(manifest)
+errors = validator.validate_all()
+print(errors)
+#> []
+```
 """
 
 from __future__ import annotations
