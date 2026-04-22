@@ -103,3 +103,24 @@ print("noop" in registry.list_available())
 ```
 
 ## Prometheus middleware
+
+Pushes step execution metrics to a Prometheus Pushgateway.
+Settings use the `PROMETHEUS__` prefix (pydantic-settings applies it automatically):
+
+| Environment Variable | Default | Description |
+|---|---|---|
+| `MIDDLEWARES` | - | Comma-separated list of middlewares to enable |
+| `PROMETHEUS__GATEWAY` | `localhost:9091` | Pushgateway endpoint (`host:port`) |
+| `PROMETHEUS__JOB` | `default-job-name` | Job name for metrics |
+| `PROMETHEUS__DISABLE_CREATED_METRIC` | `true` | Disable `*_created` metrics |
+
+**Metrics emitted** (labels: `step_name`, `run_id` from `WURZEL_RUN_ID`):
+
+- `steps_started`, `steps_failed`, `step_results`, `step_inputs` — Counters
+- `step_hist_load`, `step_hist_execute`, `step_hist_save` — Histograms
+- `step_datacontract_metric` — Gauge for data contract metrics
+
+For DVC, export the env vars before `dvc repro`. For Argo, add them to
+`container.env` in your `values.yaml`. See the
+[Argo backend docs](../backends/argoworkflows.md#middleware-configuration) for
+a YAML example.
