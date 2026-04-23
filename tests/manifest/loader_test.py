@@ -4,15 +4,14 @@
 
 import pytest
 
-from tests.manifest.conftest import FULL_MANIFEST_YAML, MINIMAL_MANIFEST_YAML
 from wurzel.manifest.loader import ManifestLoader
 from wurzel.manifest.models import PipelineManifest
 
 
 class TestManifestLoader:
-    def test_loads_valid_file(self, tmp_path):
+    def test_loads_valid_file(self, tmp_path, minimal_manifest_yaml):
         f = tmp_path / "pipeline.yaml"
-        f.write_text(MINIMAL_MANIFEST_YAML)
+        f.write_text(minimal_manifest_yaml)
         manifest = ManifestLoader.load(f)
         assert isinstance(manifest, PipelineManifest)
         assert manifest.metadata.name == "test-pipeline"
@@ -33,10 +32,10 @@ class TestManifestLoader:
         with pytest.raises(Exception):
             ManifestLoader.load(f)
 
-    def test_loads_full_manifest(self, tmp_path):
+    def test_loads_full_manifest(self, tmp_path, full_manifest_yaml):
         pytest.importorskip("hera")
         f = tmp_path / "full.yaml"
-        f.write_text(FULL_MANIFEST_YAML)
+        f.write_text(full_manifest_yaml)
         manifest = ManifestLoader.load(f)
         assert manifest.spec.backend == "argo"
         assert len(manifest.spec.steps) == 3
