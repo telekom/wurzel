@@ -33,6 +33,7 @@ class TestManifestLoader:
             ManifestLoader.load(f)
 
     def test_loads_full_manifest(self, tmp_path, full_manifest_yaml):
+        pytest.importorskip("hera")
         f = tmp_path / "full.yaml"
         f.write_text(full_manifest_yaml)
         manifest = ManifestLoader.load(f)

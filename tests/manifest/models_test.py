@@ -62,6 +62,7 @@ class TestPipelineSpec:
         assert "dvc" in registry, "DvcBackend must be registered when wurzel.manifest.models is imported"
 
     def test_backend_argo_valid(self):
+        pytest.importorskip("hera")
         spec = PipelineSpec(
             backend="argo",
             steps=[StepSpec.model_validate({"name": "s", "class": "a.B"})],
@@ -90,6 +91,7 @@ class TestPipelineSpec:
         assert spec.schedule is None
 
     def test_middlewares_order_preserved(self):
+        pytest.importorskip("hera")
         spec = PipelineSpec(
             backend="argo",
             middlewares=[
@@ -118,6 +120,7 @@ class TestPipelineManifest:
             )
 
     def test_valid_manifest_round_trips(self, full_manifest_yaml):
+        pytest.importorskip("hera")
         import yaml
 
         data = yaml.safe_load(full_manifest_yaml)
