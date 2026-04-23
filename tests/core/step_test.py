@@ -15,7 +15,8 @@ _VENV_BIN = str(Path(sys.executable).parent)
 
 
 def _venv_env() -> dict:
-    return {**os.environ, "PATH": _VENV_BIN + ":" + os.environ.get("PATH", "")}
+    sep = ";" if os.name == "nt" else ":"
+    return {**os.environ, "PATH": _VENV_BIN + sep + os.environ.get("PATH", "")}
 
 
 from wurzel.core import Step  # noqa: E402
