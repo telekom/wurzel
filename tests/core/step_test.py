@@ -5,19 +5,10 @@
 import os
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
 import yaml
-
-_VENV_BIN = str(Path(sys.executable).parent)
-
-
-def _venv_env() -> dict:
-    sep = ";" if os.name == "nt" else ":"
-    return {**os.environ, "PATH": _VENV_BIN + sep + os.environ.get("PATH", "")}
-
 
 from wurzel.core import Step  # noqa: E402
 from wurzel.executors import BaseStepExecutor, DvcBackend  # noqa: E402
@@ -30,7 +21,6 @@ def is_valid_dvc_yaml(path: Path) -> bool:
         shell=True,
         capture_output=True,
         text=True,
-        env=_venv_env(),
     )
     # DVC may write its init message to stdout or stderr depending on version/platform.
     create_output = create_result.stdout + create_result.stderr
@@ -39,7 +29,6 @@ def is_valid_dvc_yaml(path: Path) -> bool:
         shell=True,
         capture_output=True,
         text=True,
-        env=_venv_env(),
     ).stdout
     assert "Initialized empty Git repository in" in create_output, create_output
     assert "Initialized DVC repository." in create_output, create_output
