@@ -60,16 +60,19 @@ jobs:
       - name: Create MinIO credentials secret
         run: |
           # These match the Argo quick-start-minimal default MinIO credentials.
+          # Use --dry-run=client | apply so the step is idempotent (quick-start may already create this secret).
           kubectl -n argo create secret generic my-minio-cred \
             --from-literal=accesskey=admin \
-            --from-literal=secretkey=password  # pragma: allowlist secret
+            --from-literal=secretkey=password \
+            --dry-run=client -o yaml | kubectl apply -f -  # pragma: allowlist secret
 
       - name: Create wurzel service account and RBAC
         run: |
-          kubectl -n argo create serviceaccount wurzel-service-account
+          kubectl -n argo create serviceaccount wurzel-service-account --dry-run=client -o yaml | kubectl apply -f -
           kubectl -n argo create rolebinding wurzel-executor \
             --role=executor \
-            --serviceaccount=argo:wurzel-service-account
+            --serviceaccount=argo:wurzel-service-account \
+            --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Install the latest version of uv
         uses: astral-sh/setup-uv@v7
