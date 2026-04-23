@@ -51,7 +51,7 @@ class Backend(BaseStepExecutor):
 
     class MyBackend(Backend, backend_name="mybackend"):
         def generate_artifact(self, step: type[TypedStep], output: Path) -> None:
-            pass  # write YAML / Makefile / … here
+            pass  # write YAML / Makefile / ... here
 
         @classmethod
         def from_manifest_config(cls, raw_config: dict) -> "MyBackend":

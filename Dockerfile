@@ -2,21 +2,20 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 
+# ── Build args ───────────────────────────────────────────────────────────────
+# UV_EXTRAS controls which optional dependencies are installed:
+#   ""             → minimal  (core only, default)
+#   "--all-extras" → full     (every optional dependency)
+#   "--extra argo --extra qdrant" → custom selection
 ARG PYTHON_VERSION=3.11
+ARG UV_EXTRAS=""
 
-
+# ── Builder stage ─────────────────────────────────────────────────────────────
 FROM python:${PYTHON_VERSION}-slim AS builder
 
-
-LABEL org.opencontainers.image.title="wurzel"
-LABEL org.opencontainers.image.description="ETL framework for Retrieval-Augmented Generation (RAG) systems"
-LABEL org.opencontainers.image.vendor="Deutsche Telekom AG"
-LABEL org.opencontainers.image.licenses="Apache-2.0"
-LABEL org.opencontainers.image.source="https://github.com/telekom/wurzel"
-
+ARG UV_EXTRAS
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
-
 
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
@@ -31,30 +30,37 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
         curl \
         ca-certificates
 
-
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_CACHE_DIR=/tmp/.cache/uv \
     UV_PROJECT_ENVIRONMENT=/usr/app/.venv \
     UV_LINK_MODE=copy
 
-
 WORKDIR /usr/app
 
 COPY pyproject.toml ./
 
+# Install dependencies only (no project) for better layer caching.
 RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
-    uv sync --no-install-project
-
+    uv sync --no-install-project ${UV_EXTRAS}
 
 COPY wurzel ./wurzel
-RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
-    uv sync --inexact
 
+# Install the project itself.
+RUN --mount=type=cache,target=/tmp/.cache/uv,id=uv-cache \
+    uv sync --inexact ${UV_EXTRAS}
+
+# ── Production stage ──────────────────────────────────────────────────────────
 FROM python:${PYTHON_VERSION}-slim AS production
 
+LABEL org.opencontainers.image.title="wurzel"
+LABEL org.opencontainers.image.description="ETL framework for Retrieval-Augmented Generation (RAG) systems"
+LABEL org.opencontainers.image.vendor="Deutsche Telekom AG"
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+LABEL org.opencontainers.image.source="https://github.com/telekom/wurzel"
 
 ARG UID=10001
+
 RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     rm -f /etc/apt/apt.conf.d/docker-clean && \
@@ -77,31 +83,24 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     groupadd --gid $UID appgroup && \
     useradd --uid $UID --gid appgroup --shell /bin/bash --create-home appuser
 
-
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PATH="/usr/app/.venv/bin:$PATH"
 
-
 WORKDIR /usr/app
 RUN chown appuser:appgroup /usr/app
 
-
 COPY --from=builder --chown=appuser:appgroup /usr/app/.venv /usr/app/.venv
-
 
 COPY --chown=appuser:appgroup wurzel ./wurzel
 COPY --chown=appuser:appgroup entrypoint.sh ./
 COPY --chown=appuser:appgroup pyproject.toml ./
 
-
 RUN /usr/app/.venv/bin/dvc config core.autostage true --system && \
     /usr/app/.venv/bin/dvc config core.analytics false --system && \
     chmod +x ./entrypoint.sh
 
-
 USER appuser
-
 
 RUN git config --global user.name "wurzel" && \
     git config --global user.email "wurzel@example.com" && \
@@ -109,17 +108,12 @@ RUN git config --global user.name "wurzel" && \
     git config --global init.templatedir ''
 # init.templatedir ''  to avoid using the default template directory
 
-
-
-
 ENV DVC_DATA_PATH=/usr/app/dvc-data \
     DVC_FILE=/usr/app/dvc.yaml \
     DVC_CACHE_HISTORY_NUMBER=30 \
     WURZEL_PIPELINE=pipelinedemo:pipeline
 
-
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD python -c "import wurzel" || exit 1
-
 
 ENTRYPOINT ["./entrypoint.sh"]

@@ -15,9 +15,6 @@ on:
       - main
 
 
-
-
-
 env:
   REGISTRY: ghcr.io
   # Use the actual repository owner (handles forks)
@@ -35,6 +32,11 @@ jobs:
         python_version:
           - '3.11'
           - '3.12'
+        variant:
+          # minimal: core dependencies only (fast startup, small image)
+          - { name: minimal, uv_extras: "" }
+          # full: all optional dependencies (qdrant, milvus, docling, splitter, …)
+          - { name: full, uv_extras: "--all-extras" }
 
     permissions:
       contents: read
@@ -95,8 +97,9 @@ jobs:
         id: cache
         with:
           path: cache-mount
-          key: cache-mount-${{ matrix.python_version }}-${{ matrix.platform }}
+          key: cache-mount-${{ matrix.python_version }}-${{ matrix.variant.name }}-${{ matrix.platform }}
           restore-keys: |
+            cache-mount-${{ matrix.python_version }}-${{ matrix.variant.name }}-
             cache-mount-${{ matrix.python_version }}-
             cache-mount-
 
@@ -116,7 +119,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}-${{ matrix.variant.name }}
         env:
           DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
 
@@ -126,12 +129,14 @@ jobs:
         with:
           context: .
           platforms: ${{ matrix.platform }}
-          build-args: PYTHON_VERSION=${{ matrix.python_version }}
+          build-args: |
+            PYTHON_VERSION=${{ matrix.python_version }}
+            UV_EXTRAS=${{ matrix.variant.uv_extras }}
           labels: ${{ steps.meta.outputs.labels }}
           annotations: ${{ steps.meta.outputs.annotations }}
-          cache-from: type=gha,scope=${{ github.workflow }}-${{ matrix.python_version }}-${{ matrix.platform }}
-          cache-to: type=gha,mode=max,scope=${{ github.workflow }}-${{ matrix.python_version }}-${{ matrix.platform }}
-          outputs: ${{ github.event_name == 'pull_request' && 'type=docker' || format('type=image,name={0}/{1}-py{2},push-by-digest=true,name-canonical=true,push=true', env.REGISTRY, env.IMAGE_NAME, matrix.python_version) }}
+          cache-from: type=gha,scope=${{ github.workflow }}-${{ matrix.python_version }}-${{ matrix.variant.name }}-${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=${{ github.workflow }}-${{ matrix.python_version }}-${{ matrix.variant.name }}-${{ matrix.platform }}
+          outputs: ${{ github.event_name == 'pull_request' && 'type=docker' || format('type=image,name={0}/{1}-py{2}-{3},push-by-digest=true,name-canonical=true,push=true', env.REGISTRY, env.IMAGE_NAME, matrix.python_version, matrix.variant.name) }}
           provenance: false
           sbom: false
 
@@ -146,7 +151,7 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: actions/upload-artifact@v4
         with:
-          name: digests-${{ matrix.python_version }}-${{ env.PLATFORM_PAIR }}
+          name: digests-${{ matrix.python_version }}-${{ matrix.variant.name }}-${{ env.PLATFORM_PAIR }}
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
@@ -154,18 +159,21 @@ jobs:
       - name: Tag image with version
         if: github.event_name == 'pull_request' && matrix.platform == 'linux/amd64'
         run: |
-          docker tag ${{ steps.build.outputs.imageid }} ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}:${{ env.version }}
+          docker tag ${{ steps.build.outputs.imageid }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}-${{ matrix.variant.name }}:${{ env.version }}
 
       - name: Save image for testing
         if: github.event_name == 'pull_request' && matrix.platform == 'linux/amd64'
         run: |
-          docker save ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}:${{ env.version }} -o image.tar
+          docker save \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}-${{ matrix.variant.name }}:${{ env.version }} \
+            -o image.tar
 
       - name: Upload image
         if: github.event_name == 'pull_request' && matrix.platform == 'linux/amd64'
         uses: actions/upload-artifact@v4
         with:
-          name: docker-image-${{ matrix.python_version }}
+          name: docker-image-${{ matrix.python_version }}-${{ matrix.variant.name }}
           path: image.tar
           retention-days: 1
 
@@ -177,6 +185,9 @@ jobs:
         python_version:
           - '3.11'
           - '3.12'
+        variant:
+          - { name: minimal, uv_extras: "" }
+          - { name: full, uv_extras: "--all-extras" }
     needs:
       - build
     permissions:
@@ -190,7 +201,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ${{ runner.temp }}/digests
-          pattern: digests-${{ matrix.python_version }}-*
+          pattern: digests-${{ matrix.python_version }}-${{ matrix.variant.name }}-*
           merge-multiple: true
 
       - name: Set up Docker Buildx
@@ -207,7 +218,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}-${{ matrix.variant.name }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ needs.build.outputs.version }},enable={{is_default_branch}}
@@ -219,11 +230,12 @@ jobs:
         working-directory: ${{ runner.temp }}/digests
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
-            $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}@sha256:%s ' *)
+            $(printf '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}-${{ matrix.variant.name }}@sha256:%s ' *)
 
       - name: Inspect image
         run: |
-          docker buildx imagetools inspect ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}:${{ steps.meta.outputs.version }}
+          docker buildx imagetools inspect \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}-${{ matrix.variant.name }}:${{ steps.meta.outputs.version }}
 
   test-demo-pipeline:
     if: github.event_name != 'pull_request'
@@ -233,6 +245,7 @@ jobs:
         python_version:
           - '3.11'
           - '3.12'
+        variant: [minimal, full]
     needs:
       - build
       - merge
@@ -244,7 +257,7 @@ jobs:
       REGISTRY: ghcr.io
 
     container:
-      image: ghcr.io/${{ github.repository }}-py${{ matrix.python_version }}:${{ needs.build.outputs.version }}
+      image: ghcr.io/${{ github.repository }}-py${{ matrix.python_version }}-${{ matrix.variant }}:${{ needs.build.outputs.version }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -268,6 +281,7 @@ jobs:
         python_version:
           - '3.11'
           - '3.12'
+        variant: [minimal, full]
     needs:
       - build
     permissions:
@@ -284,10 +298,10 @@ jobs:
 
       - uses: ./.github/actions/test-pipeline
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}:${{ needs.build.outputs.version }}
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-py${{ matrix.python_version }}-${{ matrix.variant }}:${{ needs.build.outputs.version }}
 
       - name: Move sample output for PR comment
-        if: matrix.python_version == '3.11'
+        if: matrix.python_version == '3.11' && matrix.variant == 'minimal'
         run: |
           # The sample output was written to tmp/sample-output.json via the mounted volume
           # Use sudo cp because the file is owned by root from the container
@@ -297,7 +311,7 @@ jobs:
           fi
 
       - name: Comment PR with sample output
-        if: matrix.python_version == '3.11' && hashFiles('sample-output.json') != ''
+        if: matrix.python_version == '3.11' && matrix.variant == 'minimal' && hashFiles('sample-output.json') != ''
         uses: actions/github-script@v7
         with:
           script: |

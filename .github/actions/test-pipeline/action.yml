@@ -16,7 +16,7 @@ runs:
       if: github.event_name == 'pull_request'
       uses: actions/download-artifact@v4
       with:
-        name: docker-image-${{ matrix.python_version }}
+        name: docker-image-${{ matrix.python_version }}-${{ matrix.variant }}
 
     - name: Load image
       if: github.event_name == 'pull_request'
@@ -55,6 +55,6 @@ runs:
     - name: Upload pipeline outputs as artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: pipeline-outputs-${{ matrix.python_version }}
+        name: pipeline-outputs-${{ matrix.python_version }}-${{ matrix.variant }}
         path: /usr/app/data/
         retention-days: 7
