@@ -31,6 +31,9 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+# Include manifest directory and its contents
+!tests/manifest/
+!tests/manifest/**
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
