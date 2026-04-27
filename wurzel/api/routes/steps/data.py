@@ -41,9 +41,9 @@ class StepInfo(BaseModel):
 class StepSummary(BaseModel):
     """Lightweight step entry for the list endpoint."""
 
-    class_path: str
-    name: str
-    module: str
+    class_path: str = Field(description="Fully-qualified class path, e.g. 'wurzel.steps.splitter.SimpleSplitterStep'")
+    name: str = Field(description="Class name")
+    module: str = Field(description="Module path")
 
 
 class StepListResponse(BaseModel):
@@ -51,4 +51,4 @@ class StepListResponse(BaseModel):
 
     steps: list[StepSummary]
     total: int
-    package: str
+    package: str = Field(description="Package filter applied; '*' means all installed packages were scanned")
