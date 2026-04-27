@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Unit tests for wurzel.cli.cmd_env helpers."""
+"""Tests for wurzel.cli.cmd_env."""
 
 from examples.pipeline import pipelinedemo
 from wurzel.cli import cmd_env
@@ -47,7 +47,6 @@ def test_format_env_snippet_matches_expected_layout():
 
 def test_format_env_snippet_prefers_current_env_values():
     reqs = cmd_env.collect_env_requirements(pipelinedemo.pipeline)
-
     snippet = cmd_env.format_env_snippet(
         reqs,
         current_env={
@@ -55,7 +54,6 @@ def test_format_env_snippet_prefers_current_env_values():
             "SIMPLESPLITTERSTEP__BATCH_SIZE": "256",
         },
     )
-
     assert "MANUALMARKDOWNSTEP__FOLDER_PATH=/tmp/data" in snippet
     assert "SIMPLESPLITTERSTEP__BATCH_SIZE=256" in snippet
 

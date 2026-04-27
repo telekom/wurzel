@@ -44,9 +44,9 @@ def _get_auth_settings() -> AuthSettings:
 
 def _fetch_jwks(settings: AuthSettings) -> dict[str, Any]:
     """Fetch the JWKS from the issuer and update the in-process cache."""
-    global _JWKS_CACHE, _JWKS_FETCHED_AT  # noqa: PLW0603
+    global _JWKS_CACHE, _JWKS_FETCHED_AT  # noqa: PLW0603  # pylint: disable=global-statement
     try:
-        import httpx  # noqa: PLC0415
+        import httpx  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
 
         response = httpx.get(settings.JWKS_URL, timeout=5.0)
         response.raise_for_status()
@@ -55,7 +55,7 @@ def _fetch_jwks(settings: AuthSettings) -> dict[str, Any]:
         _JWKS_FETCHED_AT = time.monotonic()
         logger.debug("JWKS refreshed from %s", settings.JWKS_URL)
         return keyset
-    except Exception as exc:  # pragma: no cover
+    except Exception as exc:  # pragma: no cover  # pylint: disable=broad-exception-caught
         logger.warning("Failed to fetch JWKS from %s: %s", settings.JWKS_URL, exc)
         return _JWKS_CACHE  # return stale cache rather than hard-failing
 
@@ -90,8 +90,8 @@ class UserClaims:
 def _decode_token(token: str, settings: AuthSettings) -> dict[str, Any]:
     """Decode and validate a JWT, refreshing JWKS on unknown kid."""
     try:
-        import jwt  # PyJWT  # noqa: PLC0415
-        from jwt import PyJWKClient  # noqa: PLC0415
+        import jwt  # PyJWT  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
+        from jwt import PyJWKClient  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
     except ImportError as exc:
         raise ImportError("PyJWT is not installed. Run: pip install wurzel[api]") from exc
 
@@ -104,7 +104,7 @@ def _decode_token(token: str, settings: AuthSettings) -> dict[str, Any]:
         jwks = _get_jwks(settings)
         keys = jwks.get("keys", [])
         if keys:
-            import base64  # noqa: PLC0415
+            import base64  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
 
             secret = base64.urlsafe_b64decode(keys[0].get("k", "") + "==")
         else:
@@ -118,7 +118,7 @@ def _decode_token(token: str, settings: AuthSettings) -> dict[str, Any]:
                 audience=settings.JWT_AUDIENCE,
                 options={"verify_exp": True},
             )
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             # Try without audience (some Supabase local setups omit aud)
             return jwt.decode(
                 token,

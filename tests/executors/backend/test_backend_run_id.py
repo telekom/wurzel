@@ -13,15 +13,10 @@ from wurzel.executors.backend import Backend
 from wurzel.executors.backend.backend_dvc import DvcBackend
 from wurzel.utils import HAS_HERA
 
+from .helpers import DummyStep
+
 if HAS_HERA:
     from wurzel.executors.backend.backend_argo import ArgoBackend
-
-
-class DummyStep(TypedStep[NoSettings, None, MarkdownDataContract]):
-    """A simple step for testing."""
-
-    def run(self, inpt: None) -> MarkdownDataContract:
-        return MarkdownDataContract(content="test")
 
 
 class TestBackendRunId:

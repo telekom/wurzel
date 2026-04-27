@@ -9,23 +9,9 @@ from pathlib import Path
 
 import pytest
 
-from wurzel.core import NoSettings, TypedStep
-from wurzel.datacontract.common import MarkdownDataContract
 from wurzel.executors.backend.backend_dvc import DvcBackend, DvcBackendSettings
 
-
-class DummyStep(TypedStep[NoSettings, None, MarkdownDataContract]):
-    """A simple step with no dependencies for testing."""
-
-    def run(self, inpt: None) -> MarkdownDataContract:
-        return MarkdownDataContract(content="test")
-
-
-class DummyFollowStep(TypedStep[NoSettings, MarkdownDataContract, MarkdownDataContract]):
-    """A step that depends on another step."""
-
-    def run(self, inpt: MarkdownDataContract) -> MarkdownDataContract:
-        return inpt
+from .helpers import DummyFollowStep, DummyStep
 
 
 class TestDvcBackend:
@@ -81,15 +67,18 @@ class TestDvcBackend:
         """Test DvcBackend.is_available() returns True."""
         assert DvcBackend.is_available() is True
 
-    def test_backend_with_middlewares(self):
-        """Test DvcBackend can be initialized with middlewares."""
-        backend = DvcBackend(middlewares=["prometheus"])
-        assert backend is not None
-
-    def test_backend_dont_encapsulate(self):
-        """Test DvcBackend with dont_encapsulate flag."""
-        backend = DvcBackend(dont_encapsulate=True)
-        assert backend is not None
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            pytest.param({"middlewares": ["prometheus"]}, id="with_middlewares"),
+            pytest.param({"dont_encapsulate": True}, id="dont_encapsulate"),
+            pytest.param({"middlewares": [], "dont_encapsulate": True}, id="both_options"),
+            pytest.param({"middlewares": []}, id="empty_middlewares"),
+        ],
+    )
+    def test_backend_initialization_with_options(self, kwargs):
+        """Test DvcBackend can be initialized with various option combinations."""
+        assert DvcBackend(**kwargs) is not None
 
     def test_backend_load_middlewares_from_env(self, monkeypatch):
         """Test DvcBackend can load middlewares from environment."""

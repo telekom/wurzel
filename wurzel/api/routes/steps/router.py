@@ -54,7 +54,7 @@ def _io_type_str(step_cls: type[TypedStep]) -> tuple[str | None, str | None]:
             in_type = args[1]
             out_type = args[2]
             return (
-                None if in_type is type(None) else _type_str(in_type),
+                None if in_type is type(None) else _type_str(in_type),  # pylint: disable=unidiomatic-typecheck
                 _type_str(out_type),
             )
     # Fallback: look for annotated run() method
@@ -111,7 +111,7 @@ def _build_step_info(step_cls: type[TypedStep]) -> StepInfo:
                 if inspect.isclass(candidate) and hasattr(candidate, "model_fields"):
                     settings_cls = candidate
                     break
-    except Exception:
+    except Exception:  # pylint: disable=broad-exception-caught
         pass
 
     if settings_cls is not None:
@@ -119,7 +119,7 @@ def _build_step_info(step_cls: type[TypedStep]) -> StepInfo:
         env_prefix = getattr(settings_cls, "model_config", {}).get("env_prefix", "") or f"{step_cls.__name__.upper()}__"
         try:
             schema = _build_field_schema(settings_cls, env_prefix)
-        except Exception as exc:
+        except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.debug("Could not build field schema for %s: %s", step_cls, exc)
 
     return StepInfo(

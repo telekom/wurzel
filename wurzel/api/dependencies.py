@@ -15,11 +15,11 @@ from pydantic import BaseModel
 from wurzel.api.errors import APIError
 from wurzel.api.settings import APISettings
 
-_settings: APISettings | None = None
+_settings: APISettings | None = None  # pylint: disable=invalid-name
 
 
 def _get_settings() -> APISettings:
-    global _settings  # noqa: PLW0603
+    global _settings  # noqa: PLW0603  # pylint: disable=global-statement
     if _settings is None:
         _settings = APISettings()
     return _settings
@@ -56,6 +56,7 @@ class PaginationParams(BaseModel):
         offset: Annotated[int, Query(ge=0, description="Number of items to skip")] = 0,
         limit: Annotated[int, Query(ge=1, le=_MAX_PAGE_SIZE, description="Maximum items to return")] = 50,
     ) -> PaginationParams:
+        """FastAPI dependency factory — parse ``offset`` and ``limit`` query params."""
         return cls(offset=offset, limit=limit)
 
 

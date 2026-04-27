@@ -21,6 +21,7 @@ Routes (all under /v1/projects/{project_id}/branches)
 ``POST   /{branch_name}/merge/{target_branch}``   — merge with resolved payload (branch-write guard on target)
 ``POST   /{branch_name}/promote/{target_branch}`` — verbatim promote (branch-write guard on target)
 """
+# pylint: disable=duplicate-code
 
 from __future__ import annotations
 
@@ -153,8 +154,8 @@ async def _ensure_branch_write_allowed(
     user: CurrentUser,
 ) -> None:
     """Raise 403 if the user cannot write to this branch."""
-    from wurzel.api.backends.supabase.client import get_branch_protection  # noqa: PLC0415
-    from wurzel.api.routes.member.data import ProjectRole  # noqa: PLC0415
+    from wurzel.api.backends.supabase.client import get_branch_protection  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
+    from wurzel.api.routes.member.data import ProjectRole  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
 
     if branch_name == "main":
         raise APIError(
@@ -196,26 +197,26 @@ async def _execute_manifest_bg(
     await db_patch_manifest_status(branch_id, "running")
     try:
         if backend_name == "inline":
-            from wurzel.executors.base_executor import BaseStepExecutor  # noqa: PLC0415
-            from wurzel.manifest.builder import ManifestBuilder  # noqa: PLC0415
+            from wurzel.executors.base_executor import BaseStepExecutor  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
+            from wurzel.manifest.builder import ManifestBuilder  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
 
             builder = ManifestBuilder(definition)
             step_graph = builder.build_step_graph()
             executor = BaseStepExecutor()
-            for step_name in builder.find_terminal_steps():
-                executor.execute_step(step_graph[step_name])
+            for step in builder.find_terminal_steps(step_graph):
+                executor.execute_step(type(step), None, None)
         else:
-            import tempfile  # noqa: PLC0415
+            import tempfile  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
 
-            from wurzel.manifest.generator import ManifestGenerator  # noqa: PLC0415
+            from wurzel.manifest.generator import ManifestGenerator  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
 
             with tempfile.TemporaryDirectory() as tmp:
                 generator = ManifestGenerator(definition)
                 generator.generate(Path(tmp) / str(branch_id))
 
         await db_patch_manifest_status(branch_id, "succeeded")
-    except Exception:
-        import logging  # noqa: PLC0415
+    except Exception:  # pylint: disable=broad-exception-caught
+        import logging  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
 
         logging.getLogger(__name__).exception("Manifest run failed for branch_id=%s", branch_id)
         await db_patch_manifest_status(branch_id, "failed")
@@ -371,7 +372,7 @@ async def set_branch_manifest(
     - Unprotected branch → admin or member
     - ``secret_editor`` → only secret-typed fields in the manifest definition are applied
     """
-    from wurzel.api.routes.member.data import ProjectRole  # noqa: PLC0415
+    from wurzel.api.routes.member.data import ProjectRole  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
 
     role = await _resolve_project_role(project_id, user)
     if role is None:
@@ -409,14 +410,14 @@ async def set_branch_manifest(
     )
 
 
-def _apply_secret_fields_only(existing: PipelineManifest, patch: PipelineManifest) -> dict:
+def _apply_secret_fields_only(existing: PipelineManifest, patch: PipelineManifest) -> dict:  # pylint: disable=too-many-locals,too-many-nested-blocks
     """Merge only the secret fields from *patch* into *existing* and return the merged dict.
 
     Uses the step discovery schema to identify which fields are SecretStr.
     """
-    from typing import get_args  # noqa: PLC0415
+    from typing import get_args  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
 
-    from pydantic import SecretStr  # noqa: PLC0415
+    from pydantic import SecretStr  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
 
     existing_dict = existing.model_dump(mode="json")
     patch_dict = patch.model_dump(mode="json")
@@ -425,27 +426,27 @@ def _apply_secret_fields_only(existing: PipelineManifest, patch: PipelineManifes
     existing_steps = existing_dict.get("spec", {}).get("steps", [])
     patch_steps = patch_dict.get("spec", {}).get("steps", [])
 
-    for i, patch_step in enumerate(patch_steps):
+    for i, patch_step in enumerate(patch_steps):  # pylint: disable=too-many-nested-blocks
         if i >= len(existing_steps):
             break
         ex_step = existing_steps[i]
         step_class_path = patch_step.get("class", "")
         try:
-            import importlib  # noqa: PLC0415
+            import importlib  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
 
             parts = step_class_path.rsplit(".", 1)
             if len(parts) == 2:
                 mod = importlib.import_module(parts[0])
                 step_cls = getattr(mod, parts[1], None)
                 if step_cls is not None:
-                    from typing import get_type_hints  # noqa: PLC0415
+                    from typing import get_type_hints  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
 
                     hints = get_type_hints(step_cls)
                     for field, annotation in hints.items():
                         is_secret = annotation is SecretStr or SecretStr in get_args(annotation)
                         if is_secret and field in patch_step:
                             ex_step[field] = patch_step[field]
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             pass
 
     return existing_dict

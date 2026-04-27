@@ -7,6 +7,7 @@
 All concrete backends (Supabase, Postgres, in-memory, …) must implement this
 interface so that route handlers can be written against a single stable API.
 """
+# pylint: disable=unnecessary-ellipsis
 
 from __future__ import annotations
 
@@ -20,7 +21,6 @@ from wurzel.api.routes.knowledge.data import (
     KnowledgeItem,
     UpdateKnowledgeRequest,
 )
-from wurzel.api.routes.manifest.data import ManifestRecord
 from wurzel.api.routes.search.data import SearchRequest, SearchResult
 
 
@@ -67,26 +67,4 @@ class KnowledgeBackend(Protocol):
 
     async def get_job(self, job_id: uuid.UUID) -> IngestJobResponse | None:
         """Return the current state of an ingest job, or *None* if not found."""
-        ...
-
-    # ── Manifest records ──────────────────────────────────────────────────────
-
-    async def create_manifest(self, record: ManifestRecord) -> ManifestRecord:
-        """Persist a new manifest record."""
-        ...
-
-    async def get_manifest(self, manifest_id: uuid.UUID) -> ManifestRecord | None:
-        """Return a manifest record by ID, or *None* if not found."""
-        ...
-
-    async def list_manifests(self, pagination: PaginationParams) -> tuple[list[ManifestRecord], int]:
-        """Return a page of manifest records and the total count."""
-        ...
-
-    async def update_manifest(self, record: ManifestRecord) -> ManifestRecord:
-        """Persist an updated manifest record."""
-        ...
-
-    async def delete_manifest(self, manifest_id: uuid.UUID) -> None:
-        """Permanently delete a manifest record."""
         ...

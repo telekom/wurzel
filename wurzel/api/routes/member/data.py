@@ -26,7 +26,7 @@ class ProjectRole(str, Enum):
 
     ADMIN = "admin"
     MEMBER = "member"
-    SECRET_EDITOR = "secret_editor"
+    SECRET_EDITOR = "secret_editor"  # pragma: allowlist secret
     VIEWER = "viewer"
 
 

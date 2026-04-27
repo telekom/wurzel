@@ -173,7 +173,11 @@ max-locals = 18
 max-returns = 10
 max-args = 10
 min-public-methods = 0
-disable = "W1203, C0114"
+disable = [
+  "W1203",   # logging-fstring-interpolation
+  "C0114",   # missing-module-docstring
+  "W0511",   # fixme — TODO comments in stub implementations are expected
+]
 
 [tool.pylint.MASTER]
 # Skip every *.md file that lives anywhere under tests/data/

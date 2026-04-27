@@ -55,10 +55,12 @@ class APIError(Exception):
         status_code: int,
         title: str,
         detail: str | None = None,
+        extensions: dict[str, Any] | None = None,
     ) -> None:
         self.status_code = status_code
         self.title = title
         self.detail = detail
+        self.extensions = extensions
         super().__init__(detail or title)
 
 
@@ -72,10 +74,11 @@ def register_exception_handlers(app: FastAPI) -> None:
             title=exc.title,
             detail=exc.detail,
             instance=str(request.url),
+            extensions=exc.extensions,
         )
 
     @app.exception_handler(status.HTTP_404_NOT_FOUND)
-    async def _not_found_handler(request: Request, exc: Exception) -> JSONResponse:
+    async def _not_found_handler(request: Request, _exc: Exception) -> JSONResponse:
         return _problem_response(
             status_code=status.HTTP_404_NOT_FOUND,
             title="Not Found",

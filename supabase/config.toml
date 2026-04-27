@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+#
+# SPDX-License-Identifier: CC0-1.0
+
 # A minimal Supabase CLI project configuration.
 # Run `supabase start` to spin up the local stack.
 # Run `supabase db reset` to re-apply all migrations from scratch.
