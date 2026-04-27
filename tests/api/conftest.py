@@ -16,8 +16,12 @@ fastapi = pytest.importorskip("fastapi", reason="wurzel[fastapi] not installed")
 from fastapi.testclient import TestClient  # noqa: E402
 
 from wurzel.api.app import create_app  # noqa: E402
+from wurzel.api.auth.jwt import UserClaims, _get_auth_settings, _verify_jwt  # noqa: E402
+from wurzel.api.auth.settings import AuthSettings  # noqa: E402
 from wurzel.api.dependencies import _get_settings  # noqa: E402
 from wurzel.api.settings import APISettings  # noqa: E402
+
+_TEST_USER = UserClaims(sub="test-user", email="test@example.com", raw={})
 
 TEST_API_KEY = "test-api-key-12345"  # pragma: allowlist secret
 
@@ -30,11 +34,15 @@ def test_settings() -> APISettings:
 
 @pytest.fixture(scope="module")
 def app(test_settings: APISettings):
-    """Fully wired FastAPI app with auth dependency overridden to use the test key."""
+    """Fully wired FastAPI app with auth dependencies overridden for tests."""
     _app = create_app(settings=test_settings)
     # Override the settings dependency so verify_api_key resolves the same key
     # without reading from environment variables.
     _app.dependency_overrides[_get_settings] = lambda: test_settings
+    # Bypass JWT validation — always return the test user.
+    _app.dependency_overrides[_verify_jwt] = lambda: _TEST_USER
+    # Disable auth settings so _get_auth_settings callers don't need AUTH__ env vars.
+    _app.dependency_overrides[_get_auth_settings] = lambda: AuthSettings(ENABLED=False, JWKS_URL="http://fake")
     return _app
 
 
@@ -47,7 +55,7 @@ def client(app) -> TestClient:
 
 @pytest.fixture
 def auth_headers() -> dict[str, str]:
-    """Valid ``X-API-Key`` header for authenticated requests."""
+    """Valid ``X-API-Key`` header for API-key-authenticated requests."""
     return {"X-API-Key": TEST_API_KEY}
 
 

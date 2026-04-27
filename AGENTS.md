@@ -17,3 +17,8 @@ Run `make lint` to run linting will run all pre-commit hooks
 - Add tests for new behavior — cover success, failure, and edge cases.
 - Use pytest patterns, not unittest.TestCase.
 - Use `@pytest.mark.parametrize` for multiple similar inputs.
+
+
+## TODOs
+
+You are only done if `make lint` and `make test` are passing.

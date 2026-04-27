@@ -21,7 +21,6 @@ Example:
 
 import logging
 import os
-from typing import Optional
 
 from .base import BaseMiddleware, MiddlewareChain  # noqa: F401
 
@@ -70,7 +69,7 @@ class MiddlewareRegistry:
         self._middlewares[name.lower()] = middleware_class
         log.debug(f"Registered middleware: {name}")
 
-    def get(self, name: str) -> Optional[type[BaseMiddleware]]:
+    def get(self, name: str) -> type[BaseMiddleware] | None:
         """Get a middleware class by name.
 
         Args:
@@ -89,7 +88,7 @@ class MiddlewareRegistry:
         """
         return list(self._middlewares.keys())
 
-    def load_middlewares(self, names: Optional[list[str]] = None, from_env: bool = True) -> list[BaseMiddleware]:
+    def load_middlewares(self, names: list[str] | None = None, from_env: bool = True) -> list[BaseMiddleware]:
         """Load middlewares by name or from environment configuration.
 
         Args:
@@ -128,7 +127,7 @@ class MiddlewareRegistry:
 
         return loaded_middlewares
 
-    def create_chain(self, names: Optional[list[str]] = None, from_env: bool = True) -> MiddlewareChain:
+    def create_chain(self, names: list[str] | None = None, from_env: bool = True) -> MiddlewareChain:
         """Create a middleware chain from names or environment configuration.
 
         Args:
@@ -155,7 +154,7 @@ def get_registry() -> MiddlewareRegistry:
     return _default_registry
 
 
-def load_middlewares(names: Optional[list[str]] = None, from_env: bool = True) -> list[BaseMiddleware]:
+def load_middlewares(names: list[str] | None = None, from_env: bool = True) -> list[BaseMiddleware]:
     """Load middlewares using the global registry.
 
     Convenience function that uses the default registry.
@@ -170,7 +169,7 @@ def load_middlewares(names: Optional[list[str]] = None, from_env: bool = True) -
     return _default_registry.load_middlewares(names, from_env)
 
 
-def create_middleware_chain(names: Optional[list[str]] = None, from_env: bool = True) -> MiddlewareChain:
+def create_middleware_chain(names: list[str] | None = None, from_env: bool = True) -> MiddlewareChain:
     """Create a middleware chain using the global registry.
 
     Convenience function that uses the default registry.

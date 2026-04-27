@@ -218,7 +218,7 @@ prerelease_token = "dev"
 
 [tool.ruff]
 
-target-version = "py39"
+target-version = "py311"
 line-length = 140
 
 [tool.ruff.lint]

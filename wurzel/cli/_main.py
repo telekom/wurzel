@@ -20,16 +20,14 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
+from wurzel.cli import (
+    cmd_manifest,
+    cmd_middlewares,
+)
+
 app = typer.Typer(
     no_args_is_help=True,
     context_settings={"help_option_names": ["-h", "--help"]},
-)
-
-# Import and add the middlewares command group
-# ruff: noqa: E402
-from wurzel.cli import (  # pylint: disable=wrong-import-position
-    cmd_manifest,
-    cmd_middlewares,
 )
 
 app.add_typer(cmd_middlewares.app, name="middlewares")
@@ -188,6 +186,9 @@ def _process_python_file(py_file: Path, search_path: Path, base_module: str, inc
     """Process a single Python file to find TypedStep classes."""
     import ast  # pylint: disable=import-outside-toplevel
 
+    from wurzel.core.meta.ast_steps import build_module_path as _build_module_path  # pylint: disable=import-outside-toplevel
+    from wurzel.core.meta.ast_steps import check_if_typed_step as _check_if_typed_step  # pylint: disable=import-outside-toplevel
+
     try:
         # Fast AST parsing without executing code
         with open(py_file, encoding="utf-8") as f:
@@ -215,39 +216,6 @@ def _process_python_file(py_file: Path, search_path: Path, base_module: str, inc
         pass
 
 
-def _check_if_typed_step(node) -> bool:
-    """Check if a class node inherits from TypedStep."""
-    import ast  # pylint: disable=import-outside-toplevel
-
-    for base in node.bases:
-        if isinstance(base, ast.Name) and base.id == "TypedStep":
-            return True
-        if isinstance(base, ast.Subscript):
-            # Handle generic TypedStep like TypedStep[Input, Output, Settings]
-            if isinstance(base.value, ast.Name) and base.value.id == "TypedStep":
-                return True
-            if isinstance(base.value, ast.Attribute) and base.value.attr == "TypedStep":
-                return True
-        if isinstance(base, ast.Attribute):
-            # Handle cases like wurzel.core.TypedStep
-            if base.attr == "TypedStep":
-                return True
-    return False
-
-
-def _build_module_path(py_file: Path, search_path: Path, base_module: str) -> str:
-    """Build module path from file location."""
-    rel_path = py_file.relative_to(search_path)
-    path_parts = list(rel_path.parts[:-1]) + [rel_path.stem]
-    if base_module:
-        # For wurzel built-in steps
-        return f"{base_module}.{'.'.join(path_parts)}"
-    # For user project steps - use relative path as module
-    if path_parts:
-        return ".".join(path_parts)
-    return rel_path.stem
-
-
 def complete_step_import(incomplete: str) -> list[str]:  # pylint: disable=too-many-statements
     """AutoComplete for steps - discover TypedStep classes from current project and wurzel."""
     hints: list[str] = []
@@ -259,24 +227,18 @@ def complete_step_import(incomplete: str) -> list[str]:  # pylint: disable=too-m
 
     def scan_directory_for_typed_steps(search_path: Path, base_module: str = "", max_files: int = 200) -> None:
         """Scan a directory for TypedStep classes and add them to hints."""
+        from wurzel.core.meta.ast_steps import _EXCLUDE_DIRS  # pylint: disable=import-outside-toplevel
+
         if not search_path.exists():
             return
 
-        # Directories to exclude from scanning (performance optimization)
-        exclude_dirs = {
+        # Directories to exclude from scanning (performance optimization).
+        # Start from the shared base set and add CLI-specific extras.
+        exclude_dirs = _EXCLUDE_DIRS | {
             ".venv",
             "venv",
             ".env",
             "env",
-            "__pycache__",
-            ".git",
-            ".svn",
-            ".hg",
-            "node_modules",
-            ".tox",
-            ".pytest_cache",
-            "build",
-            "dist",
             ".egg-info",
             "site-packages",
             "tests",  # Skip test directories - unlikely to contain user steps

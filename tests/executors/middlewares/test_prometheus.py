@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 
@@ -18,7 +18,7 @@ def test_prometheus_middleware_happy_path(dummy_report, make_call_next) -> None:
 
 
 def test_prometheus_middleware_exception_path() -> None:
-    def call_next(step_cls: type, inputs: Optional[set], output_dir: Optional[Any]):
+    def call_next(step_cls: type, inputs: set | None, output_dir: Any | None):
         raise RuntimeError("boom")
 
     m = PrometheusMiddleware()
@@ -69,7 +69,7 @@ def test_prometheus_middleware_run_id_on_failure(monkeypatch) -> None:
     test_run_id = "failure-test-999"
     monkeypatch.setenv("WURZEL_RUN_ID", test_run_id)
 
-    def call_next(step_cls: type, inputs: Optional[set], output_dir: Optional[Any]):
+    def call_next(step_cls: type, inputs: set | None, output_dir: Any | None):
         raise RuntimeError("intentional failure")
 
     m = PrometheusMiddleware()

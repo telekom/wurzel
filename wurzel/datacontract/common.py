@@ -5,8 +5,9 @@
 import logging
 import re
 import warnings
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Self
+from typing import Any, Self
 
 import pydantic
 import yaml
