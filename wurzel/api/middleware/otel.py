@@ -64,14 +64,26 @@ class OTELCorrelationMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        trace_id = "0" * 32
+        span_id = "0" * 16
+        trace_flags = "00"
+        tracestate = request.headers.get("tracestate", "")
+
         try:
             from opentelemetry import trace  # noqa: PLC0415
 
             span = trace.get_current_span()
             ctx = span.get_span_context()
-            trace_id = format(ctx.trace_id, "032x") if ctx and ctx.is_valid else "0" * 32
+            if ctx and ctx.is_valid:
+                trace_id = format(ctx.trace_id, "032x")
+                span_id = format(ctx.span_id, "016x")
+                trace_flags = "01" if ctx.trace_flags.sampled else "00"
         except ImportError:  # pragma: no cover
-            trace_id = "0" * 32
+            incoming = request.headers.get("traceparent", "")
+            if incoming:
+                parts = incoming.split("-")
+                if len(parts) == 4:
+                    trace_id, span_id, trace_flags = parts[1], parts[2], parts[3]
 
         # Inject into logging context for the duration of this request.
         old_factory = logging.getLogRecordFactory()
@@ -87,7 +99,9 @@ class OTELCorrelationMiddleware(BaseHTTPMiddleware):
         finally:
             logging.setLogRecordFactory(old_factory)
 
-        response.headers["X-Trace-Id"] = trace_id
+        response.headers["traceparent"] = f"00-{trace_id}-{span_id}-{trace_flags}"
+        if tracestate:
+            response.headers["tracestate"] = tracestate
         return response
 
 

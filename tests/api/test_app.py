@@ -47,11 +47,20 @@ class TestCreateApp:
             "/v1/ingest",
             "/v1/ingest/{job_id}",
             "/v1/search",
-            "/v1/manifest",
-            "/v1/manifest/{manifest_id}",
-            "/v1/manifest/{manifest_id}/submit",
             "/v1/steps",
             "/v1/steps/{step_path:path}",
+            "/v1/projects",
+            "/v1/projects/{project_id}",
+            "/v1/projects/{project_id}/members",
+            "/v1/projects/{project_id}/members/{user_id}",
+            "/v1/projects/{project_id}/branches",
+            "/v1/projects/{project_id}/branches/{branch_name}",
+            "/v1/projects/{project_id}/branches/{branch_name}/manifest",
+            "/v1/projects/{project_id}/branches/{branch_name}/manifest/submit",
+            "/v1/projects/{project_id}/branches/{branch_name}/protect",
+            "/v1/projects/{project_id}/branches/{branch_name}/diff/{target_branch}",
+            "/v1/projects/{project_id}/branches/{branch_name}/merge/{target_branch}",
+            "/v1/projects/{project_id}/branches/{branch_name}/promote/{target_branch}",
         }
         assert expected.issubset(paths)
 
@@ -76,5 +85,11 @@ class TestCreateApp:
         app = create_app(settings=_SETTINGS)
         with TestClient(app, raise_server_exceptions=False) as c:
             r = c.get("/v1/health/live")
-        assert "x-trace-id" in r.headers
-        assert len(r.headers["x-trace-id"]) == 32
+        assert "traceparent" in r.headers
+        tp = r.headers["traceparent"]
+        parts = tp.split("-")
+        assert len(parts) == 4
+        assert parts[0] == "00"
+        assert len(parts[1]) == 32  # trace-id
+        assert len(parts[2]) == 16  # parent-id (span-id)
+        assert len(parts[3]) == 2  # flags

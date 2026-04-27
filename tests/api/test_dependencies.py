@@ -38,7 +38,8 @@ class TestPaginationParams:
 
 class TestAuthDependency:
     """Auth is exercised through the full client in other test modules.
-    These tests verify the dependency wiring directly via the app."""
+    These tests verify the dependency wiring directly via the app.
+    """
 
     def test_missing_api_key_returns_401(self, client):
         r = client.get("/v1/knowledge")
