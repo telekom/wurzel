@@ -27,6 +27,7 @@ from wurzel.api.backends.supabase.client import (
     db_list_members,
     db_remove_member,
     db_update_member_role,
+    db_user_exists,
 )
 from wurzel.api.errors import APIError
 from wurzel.api.routes.member.data import (
@@ -72,6 +73,12 @@ async def add_member(
             status_code=http_status.HTTP_409_CONFLICT,
             title="Member already exists",
             detail=f"User '{body.user_id}' is already a member of this project.",
+        )
+    if not await db_user_exists(body.user_id):
+        raise APIError(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            title="User not found",
+            detail=f"User '{body.user_id}' does not exist.",
         )
     row = await db_add_member(project_id, body.user_id, body.role.value)
     return _row_to_member(row)

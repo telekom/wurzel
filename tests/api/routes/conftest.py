@@ -27,12 +27,14 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from wurzel.api.app import create_app  # noqa: E402
 from wurzel.api.auth.jwt import UserClaims, _verify_jwt  # noqa: E402
+from wurzel.api.middleware.otel import OTELSettings  # noqa: E402
 from wurzel.api.routes.member.data import ProjectRole  # noqa: E402
 from wurzel.api.settings import APISettings  # noqa: E402
 
 # ── Shared constants ──────────────────────────────────────────────────────────
 
 SETTINGS = APISettings(API_KEY="test-key")
+_OTEL_DISABLED = OTELSettings(ENABLED=False)
 
 _ROLE_DB_PATH = "wurzel.api.backends.supabase.client.get_project_role_from_db"
 
@@ -49,7 +51,7 @@ NO_ROLE_USER = UserClaims(sub="uid-no-role", email="norole@example.com", raw={})
 
 def make_app(user: UserClaims):
     """Return a fresh FastAPI app with JWT bypassed to *user*."""
-    _app = create_app(settings=SETTINGS)
+    _app = create_app(settings=SETTINGS, otel_settings=_OTEL_DISABLED)
     _app.dependency_overrides[_verify_jwt] = lambda: user
     return _app
 
