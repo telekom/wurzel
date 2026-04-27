@@ -130,9 +130,9 @@ workflows:
         # Middleware configuration (optional)
         # Enable Prometheus middleware for metrics collection
         MIDDLEWARES: "prometheus"
-        PROMETHEUS__PROMETHEUS_GATEWAY: "prometheus-pushgateway.monitoring.svc.cluster.local:9091"
-        PROMETHEUS__PROMETHEUS_JOB: "wurzel-pipeline"  # optional
-        PROMETHEUS__PROMETHEUS_DISABLE_CREATED_METRIC: "true"  # optional
+        PROMETHEUS__GATEWAY: "prometheus-pushgateway.monitoring.svc.cluster.local:9091"
+        PROMETHEUS__JOB: "wurzel-pipeline"  # optional
+        PROMETHEUS__DISABLE_CREATED_METRIC: "true"  # optional
 
       # Environment from Kubernetes Secrets/ConfigMaps
       envFrom:
@@ -330,11 +330,11 @@ container:
   env:
     # Enable Prometheus middleware
     MIDDLEWARES: "prometheus"
-    PROMETHEUS__PROMETHEUS_GATEWAY: "prometheus-pushgateway.monitoring.svc.cluster.local:9091"
+    PROMETHEUS__GATEWAY: "prometheus-pushgateway.monitoring.svc.cluster.local:9091"
 
     # Optional Prometheus settings
-    PROMETHEUS__PROMETHEUS_JOB: "wurzel-pipeline"
-    PROMETHEUS__PROMETHEUS_DISABLE_CREATED_METRIC: "true"
+    PROMETHEUS__JOB: "wurzel-pipeline"
+    PROMETHEUS__DISABLE_CREATED_METRIC: "true"
 ```
 
 **Available Prometheus Settings:**
@@ -342,9 +342,9 @@ container:
 | Environment Variable | Default | Description |
 |---------------------|---------|-------------|
 | `MIDDLEWARES` | - | Comma-separated list of middleware names (e.g., `"prometheus"`) |
-| `PROMETHEUS__PROMETHEUS_GATEWAY` | `localhost:9091` | Prometheus Pushgateway endpoint (host:port) |
-| `PROMETHEUS__PROMETHEUS_JOB` | `default-job-name` | Job name for Prometheus metrics |
-| `PROMETHEUS__PROMETHEUS_DISABLE_CREATED_METRIC` | `true` | Disable `*_created` metrics |
+| `PROMETHEUS__GATEWAY` | `localhost:9091` | Prometheus Pushgateway endpoint (host:port) |
+| `PROMETHEUS__JOB` | `default-job-name` | Job name for Prometheus metrics |
+| `PROMETHEUS__DISABLE_CREATED_METRIC` | `true` | Disable `*_created` metrics |
 
 **Metrics Collected:**
 

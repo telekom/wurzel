@@ -8,7 +8,7 @@ import asgi_correlation_id
 import pytest
 from fastapi import FastAPI
 
-from wurzel.utils.logging import JsonFormatter
+from wurzel.core.logging import JsonFormatter
 
 log = logging.getLogger(__name__)
 
@@ -28,9 +28,3 @@ def FastApiLog():
     configure_logging()
     app = FastAPI(on_startup=[configure_logging])
     app.add_middleware(asgi_correlation_id.CorrelationIdMiddleware)
-
-    @app.get("/{level}")
-    async def test_get_level(level: int):
-        log.log(level, "Test Log")
-
-    yield app

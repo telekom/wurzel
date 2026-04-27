@@ -32,18 +32,8 @@ def create_model(
 
 
 
-    Model takes the form of:
-    ```python
-        # For each step in fields:
-        class MetaSettings_UPPERCASESTEPNAME(SettingsLeaf):
-            # for each field_name, value pair in step.settings_cls
-            field_name: field_annotation = value
-            ...
-        ...
-        class MetaSettings_parent(SettingsBase):
-            UPPERCASESTEPNAME: MetaSettings_UPPERCASESTEPNAME
-            ...
-    ```
+    Model takes the form of a nested pydantic-settings model where each step's
+    settings become a nested field keyed by the step class name in uppercase.
 
     Args:
         fields (list[Union[TypedStep, Type[TypedStep]]]): will be fields

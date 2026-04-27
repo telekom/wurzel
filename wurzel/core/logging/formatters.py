@@ -171,8 +171,8 @@ class JsonStringFormatter(JsonFormatter):
 def get_logging_dict_config(
     level: Union[int, str],
     formatter: Literal[
-        "wurzel.utils.logging.JsonFormatter", "wurzel.utils.logging.JsonStringFormatter"
-    ] = "wurzel.utils.logging.JsonFormatter",
+        "wurzel.core.logging.JsonFormatter", "wurzel.core.logging.JsonStringFormatter"
+    ] = "wurzel.core.logging.JsonFormatter",
 ) -> dict[str, str]:
     """Generate a logging.config.dictConfig compatible dict.
 

@@ -3,6 +3,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import inspect
+import re
+import shlex
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypedDict
 
@@ -85,7 +87,7 @@ class DvcBackendSettings(BaseSettings):
     ENCAPSULATE_ENV: bool = True
 
 
-class DvcBackend(Backend):
+class DvcBackend(Backend, backend_name="dvc"):
     """DVC-specific backend implementation for the Wurzel abstraction layer.
 
     This adapter generates DVC-compatible `dvc.yaml` files from typed step definitions.
@@ -109,6 +111,12 @@ class DvcBackend(Backend):
     def is_available(cls) -> bool:
         """DVC backend has no optional dependencies."""
         return True
+
+    @classmethod
+    def from_manifest_config(cls, raw_config: dict) -> "DvcBackend":
+        """Instantiate from a raw manifest config dict."""
+        cfg = DvcConfig(**raw_config) if raw_config else None
+        return cls(config=cfg)
 
     def __init__(
         self,
@@ -164,9 +172,24 @@ class DvcBackend(Backend):
             return cls(config=config, executer=executor)
         return cls(config=config)
 
+    def _write_env_file(self, env_vars: dict[str, str]) -> Path:
+        """Write env vars to {dataDir}/.wurzel_env as shell exports and return the path."""
+        env_file = self.config.dataDir / ".wurzel_env"
+        env_file.parent.mkdir(parents=True, exist_ok=True)
+        _safe_key = re.compile(r"^[A-Z_][A-Z0-9_]*$")
+        lines = []
+        for key, value in env_vars.items():
+            if not _safe_key.match(key):
+                raise ValueError(f"Unsafe environment variable name: {key!r}")
+            escaped = value.replace("'", "'\\''")
+            lines.append(f"export {key}='{escaped}'")
+        env_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return env_file
+
     def _generate_dict(
         self,
         step: TypedStep,
+        env_file: Path | None = None,
     ) -> dict[str, DvcDict]:
         """Recursively generates a dictionary representing a full DVC pipeline,
         including all dependencies of the given step.
@@ -185,7 +208,7 @@ class DvcBackend(Backend):
         outputs_of_deps: list[Path] = []
 
         for o_step in step.required_steps:
-            dep_result = self._generate_dict(o_step)
+            dep_result = self._generate_dict(o_step, env_file)
             result |= dep_result
             outputs_of_deps += dep_result[o_step.__class__.__name__]["outs"]
 
@@ -203,7 +226,10 @@ class DvcBackend(Backend):
         run_id_output = self.config.dataDir / ".wurzel_run_id"
         deps_with_run_id = [inspect.getfile(step.__class__), run_id_output, *outputs_of_deps]
 
-        cmd = f'export WURZEL_RUN_ID="$(cat {run_id_output})" && echo "$WURZEL_RUN_ID" &&  {cli_call}'
+        env_source = f". {shlex.quote(str(env_file))} && " if env_file else ""
+        if env_file:
+            deps_with_run_id = [*deps_with_run_id, env_file]
+        cmd = f'{env_source}export WURZEL_RUN_ID="$(cat {shlex.quote(str(run_id_output))})" && echo "$WURZEL_RUN_ID" &&  {cli_call}'
 
         return result | {
             step.__class__.__name__: {
@@ -217,6 +243,8 @@ class DvcBackend(Backend):
     def generate_artifact(
         self,
         step: TypedStep,
+        *,
+        env_vars: dict[str, str] | None = None,
     ) -> str:
         """Converts the full step graph into a valid `dvc.yaml` file content.
 
@@ -242,7 +270,8 @@ class DvcBackend(Backend):
             }
         }
 
-        data = run_id_stage | self._generate_dict(step)
+        env_file = self._write_env_file(env_vars) if env_vars else None
+        data = run_id_stage | self._generate_dict(step, env_file)
 
         # Convert all Path objects to strings for YAML compatibility
         for k in data:

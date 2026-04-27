@@ -1,0 +1,31 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: wurzel.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: pipelinedemo
+spec:
+  backend: dvc
+  middlewares:
+    - name: prometheus
+    - name: secret_resolver
+      settings:
+        URL: "http://127.0.0.1:54321"
+  steps:
+    - name: source
+      class: wurzel.steps.manual_markdown.ManualMarkdownStep
+      settings:
+        FOLDER_PATH: "${secret:vault:demo_folder_path}"  # pragma: allowlist secret
+
+    - name: splitter
+      class: wurzel.steps.splitter.SimpleSplitterStep
+      dependsOn: [source]
+      settings:
+        BATCH_SIZE: "100"
+        NUM_THREADS: "4"
+
+  backendConfig:
+    dvc:
+      dataDir: ./data
+      encapsulateEnv: true

@@ -26,6 +26,7 @@ from wurzel.core.history import (
     History,
     step_history,
 )
+from wurzel.core.logging import setup_uncaught_exception_logging
 from wurzel.core.self_consuming_step import SelfConsumingLeafStep
 from wurzel.core.typed_step import (
     TypedStep,
@@ -39,7 +40,6 @@ from wurzel.exceptions import (
 )
 from wurzel.path import PathToFolderWithBaseModels
 from wurzel.utils import WZ, create_model, try_get_length
-from wurzel.utils.logging import setup_uncaught_exception_logging
 
 if TYPE_CHECKING:
     from wurzel.executors.middlewares.base import BaseMiddleware, MiddlewareChain
@@ -148,31 +148,28 @@ def step_env_encapsulation(step_cls: type[TypedStep]):
 
 
 class BaseStepExecutor:
-    """Execution Environment for Typed KP Steps.
+    """Execution environment for `TypedStep` instances.
 
-    An Executer takes care of loading & storing data from `PathToBaseModel`.
-    The Executor makes use of strong & enforced types in combination with the
-    KP step itself.
+    Handles loading inputs, running the step, and saving outputs with
+    strong type enforcement. Supports middleware chains for cross-cutting
+    concerns like metrics, logging, and tracing.
 
-    The Executor is responsible for running single KP Steps. However in the
-    future this might get extendend.
-
-
-    ### Usage:
-
-    The Executor can be used as a context manager.
     ```python
-    with BaseStepExecutor() as exc:
-        exc(MyStep, [], Path("output"))
-        # exc(...) == exc.execute_step(...)
-    ```
+    from wurzel.core import NoSettings, TypedStep
+    from wurzel.datacontract import PydanticModel
+    from wurzel.executors import BaseStepExecutor
 
-    Middlewares can be added to wrap execution with additional functionality:
-    ```python
-    with BaseStepExecutor(middlewares=["prometheus"]) as exc:
-        exc(MyStep, [], Path("output"))
-    ```
+    class Out(PydanticModel):
+        value: str = "ok"
 
+    class MyStep(TypedStep[NoSettings, None, Out]):
+        def run(self, inpt: None) -> Out:
+            return Out()
+
+    with BaseStepExecutor(load_middlewares_from_env=False) as exc:
+        results = exc(MyStep, None, None)
+    assert results[0][0].value == "ok"
+    ```
     """
 
     __dont_encapsulate: bool

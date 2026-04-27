@@ -35,6 +35,7 @@ from hera.workflows.models import (
     PodSecurityContext,
     RetryStrategy,
     SeccompProfile,
+    SecretKeySelector,
     SecurityContext,
     VolumeMount,
 )
@@ -148,12 +149,22 @@ class ContainerConfig(BaseModel):
     resources: ResourcesConfig = Field(default_factory=ResourcesConfig)
 
 
+class SecretKeyRef(BaseModel):
+    """Reference to a key inside a Kubernetes Secret."""
+
+    name: str
+    key: str
+
+
 class S3ArtifactConfig(BaseModel):
     """Storage destination for artifacts exchanged between steps."""
 
     bucket: str = "wurzel-bucket"
     endpoint: str = "s3.amazonaws.com"
+    insecure: bool = False
     defaultMode: int | None = None
+    accessKeySecret: SecretKeyRef | None = None
+    secretKeySecret: SecretKeyRef | None = None
 
 
 class WorkflowConfig(BaseModel):
@@ -191,7 +202,7 @@ def select_workflow(values: TemplateValues, workflow_name: str | None) -> Workfl
     return WorkflowConfig()
 
 
-class ArgoBackend(Backend):
+class ArgoBackend(Backend, backend_name="argo"):
     """Render Argo workflows from typed steps based on declarative YAML values."""
 
     @classmethod
@@ -200,6 +211,18 @@ class ArgoBackend(Backend):
         from wurzel.utils import HAS_HERA  # pylint: disable=import-outside-toplevel
 
         return HAS_HERA
+
+    @classmethod
+    def from_manifest_config(cls, raw_config: dict) -> ArgoBackend:
+        """Instantiate from a raw manifest config dict.
+
+        ``schedule`` is always applied (including ``None`` / ``null``) so that
+        ``schedule: null`` in the manifest produces a plain Workflow instead of
+        a CronWorkflow.
+        """
+        schedule = raw_config.pop("schedule", None) if raw_config else None
+        cfg = WorkflowConfig(schedule=schedule, **raw_config) if raw_config else WorkflowConfig(schedule=schedule)
+        return cls(config=cfg)
 
     def __init__(
         self,
@@ -349,12 +372,12 @@ class ArgoBackend(Backend):
         # container names can conflict with Argo's built-in init containers (init, wait).
         return None
 
-    def generate_artifact(self, step: TypedStep[Any, Any, Any]):
+    def generate_artifact(self, step: TypedStep[Any, Any, Any], *, env_vars: dict[str, str] | None = None):
         """Return YAML manifest(s) for workflow + optional dependent resources."""
-        workflow_manifest = self._generate_workflow(step).to_dict()
+        workflow_manifest = self._generate_workflow(step, env_vars=env_vars).to_dict()
         return yaml.safe_dump(workflow_manifest, sort_keys=False).strip()
 
-    def _generate_workflow(self, step: TypedStep[Any, Any, Any]) -> Workflow:
+    def _generate_workflow(self, step: TypedStep[Any, Any, Any], env_vars: dict[str, str] | None = None) -> Workflow:
         """Creates an Argo Workflow or CronWorkflow based on the schedule configuration.
 
         This method generates the appropriate Argo workflow type:
@@ -413,7 +436,7 @@ class ArgoBackend(Backend):
             context = Workflow(**workflow_kwargs)
 
         with context as workflow:
-            self.__generate_dag(step)
+            self.__generate_dag(step, env_vars=env_vars)
         return workflow
 
     @cache  # pylint: disable=method-cache-max-size-none
@@ -430,18 +453,28 @@ class ArgoBackend(Backend):
         # Use {{workflow.name}} to create unique artifact paths per workflow run.
         # For CronWorkflows, workflow.name includes a unique timestamp suffix (e.g., "my-workflow-1702656000").
         # This prevents data from different runs or pipelines from mixing in the same S3 location.
+        art_cfg = self.config.artifacts
+        access_key = (
+            SecretKeySelector(name=art_cfg.accessKeySecret.name, key=art_cfg.accessKeySecret.key) if art_cfg.accessKeySecret else None
+        )
+        secret_key = (
+            SecretKeySelector(name=art_cfg.secretKeySecret.name, key=art_cfg.secretKeySecret.key) if art_cfg.secretKeySecret else None
+        )
         return S3Artifact(
             name=f"wurzel-artifact-{step.__class__.__name__.lower()}",
             recurse_mode=True,
             archive=NoneArchiveStrategy(),
             key="argo-workflows/{{workflow.name}}/" + step.__class__.__name__.lower(),
             path=str((self.config.dataDir / step.__class__.__name__).absolute()),
-            bucket=self.config.artifacts.bucket,
-            endpoint=self.config.artifacts.endpoint,
-            mode=self.config.artifacts.defaultMode,
+            bucket=art_cfg.bucket,
+            endpoint=art_cfg.endpoint,
+            insecure=art_cfg.insecure,
+            access_key_secret=access_key,
+            secret_key_secret=secret_key,
+            mode=art_cfg.defaultMode,
         )
 
-    def _create_task(self, dag: DAG, step: TypedStep[Any, Any, Any]) -> Task:
+    def _create_task(self, dag: DAG, step: TypedStep[Any, Any, Any], env_vars: dict[str, str] | None = None) -> Task:
         """Creates an Argo task for a Wurzel step, linking input/output artifacts and environment.
 
         Args:
@@ -466,7 +499,9 @@ class ArgoBackend(Backend):
         commands: list[str] = [entry for entry in cli_call.split(" ") if entry.strip()]
 
         dag.__exit__()
-        env_vars = [EnvVar(name=name, value=str(value)) for name, value in self.config.container.env.items()]
+        manifest_env_vars = env_vars or {}
+        merged_env = {**manifest_env_vars, **self.config.container.env}  # container.env wins
+        env_vars = [EnvVar(name=name, value=str(value)) for name, value in merged_env.items()]
 
         # Add WURZEL_RUN_ID for tracking pipeline runs
         env_vars.append(EnvVar(name="WURZEL_RUN_ID", value="{{workflow.uid}}"))
@@ -503,7 +538,7 @@ class ArgoBackend(Backend):
 
         return task
 
-    def __generate_dag(self, step: TypedStep[Any, Any, Any]) -> DAG:
+    def __generate_dag(self, step: TypedStep[Any, Any, Any], env_vars: dict[str, str] | None = None) -> DAG:
         """Recursively builds a DAG from a step and its dependencies using Hera's DAG API.
 
         Args:
@@ -522,11 +557,11 @@ class ArgoBackend(Backend):
                 if req.required_steps:
                     req_argo = resolve_requirements(req)  # type: ignore[arg-type]
                 else:
-                    req_argo = self._create_task(dag, req)  # type: ignore[arg-type]
+                    req_argo = self._create_task(dag, req, env_vars=env_vars)  # type: ignore[arg-type]
                 artifacts.append(req_argo.result)
                 argo_reqs.append(req_argo)
 
-            step_argo: Task = self._create_task(dag, step)
+            step_argo: Task = self._create_task(dag, step, env_vars=env_vars)
 
             for argo_req in argo_reqs:
                 argo_req >> step_argo  # pylint: disable=pointless-statement

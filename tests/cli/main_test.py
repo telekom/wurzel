@@ -221,22 +221,22 @@ def test_backend_callback_invalid():
     # Check that error message contains expected backends
     error_msg = str(exc_info.value)
     assert "InvalidBackend not supported" in error_msg
-    assert "DvcBackend" in error_msg
-    # ArgoBackend should only be in the message if Hera is available
+    assert "dvc" in error_msg
+    # argo should only be in the message if Hera is available
     if HAS_HERA:
-        assert "ArgoBackend" in error_msg
+        assert "argo" in error_msg
 
 
 def test_get_available_backends_without_hera():
-    """Test get_available_backends returns DvcBackend when Hera is not available."""
+    """Test get_available_backends returns dvc when Hera is not available."""
     backends = main.get_available_backends()
     assert isinstance(backends, list)
-    assert "DvcBackend" in backends
-    # ArgoBackend should only be present if HAS_HERA is True
+    assert "dvc" in backends
+    # argo should only be present if HAS_HERA is True
     if HAS_HERA:
-        assert "ArgoBackend" in backends
+        assert "argo" in backends
     else:
-        assert "ArgoBackend" not in backends
+        assert "argo" not in backends
 
 
 @pytest.mark.skipif(not HAS_HERA, reason="Hera is not available")
@@ -244,22 +244,22 @@ def test_get_available_backends_with_hera():
     """Test get_available_backends returns both backends when Hera is available."""
     backends = main.get_available_backends()
     assert isinstance(backends, list)
-    assert "DvcBackend" in backends
-    assert "ArgoBackend" in backends
+    assert "dvc" in backends
+    assert "argo" in backends
 
 
 def test_generate_list_backends(capsys):
     """Test generate command with --list-backends flag."""
-    main.generate(pipeline=None, backend="DvcBackend", list_backends=True)
+    main.generate(pipeline=None, backend="dvc", list_backends=True)
 
     captured = capsys.readouterr()
     assert "Available backends:" in captured.out
-    assert "DvcBackend" in captured.out
+    assert "dvc" in captured.out
 
     if HAS_HERA:
-        assert "ArgoBackend" in captured.out
+        assert "argo" in captured.out
     else:
-        assert "ArgoBackend" not in captured.out
+        assert "argo" not in captured.out
 
 
 def test_env_outputs_requirements(capsys, monkeypatch):
