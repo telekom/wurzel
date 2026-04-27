@@ -9,6 +9,7 @@ Routes
 ``POST /v1/ingest``              — submit a bulk-ingest job (async)
 ``GET  /v1/ingest/{job_id}``     — poll ingest job status
 """
+# pylint: disable=duplicate-code
 
 from __future__ import annotations
 

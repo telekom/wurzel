@@ -1,0 +1,635 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+#
+# SPDX-License-Identifier: Apache-2.0
+
+"""Tests for wurzel.cli._main and the wurzel.cli public API (generate_cli_call)."""
+
+import ast
+import shutil
+import subprocess
+import tempfile
+import time
+from pathlib import Path
+from unittest.mock import Mock, patch
+
+import pytest
+import typer
+import yaml
+
+import wurzel
+import wurzel.core
+from wurzel.cli import _main as main
+from wurzel.cli import generate_cli_call
+from wurzel.cli._main import _check_if_typed_step, _process_python_file, complete_step_import
+from wurzel.executors import BaseStepExecutor
+from wurzel.executors.backend.backend_dvc import DvcBackend
+from wurzel.steps.manual_markdown import ManualMarkdownStep
+from wurzel.utils import HAS_HERA
+
+# ---------------------------------------------------------------------------
+# generate_cli_call (wurzel.cli public API)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("executor", [BaseStepExecutor])
+def test_generate_cli_call_basic(executor, tmp_path):
+    out_path = tmp_path / "out"
+    result = generate_cli_call(ManualMarkdownStep, [], out_path, executor=executor)
+    expected = (
+        f"wurzel run wurzel.steps.manual_markdown:ManualMarkdownStep -o {out_path.absolute()} -e {executor.__qualname__}  --encapsulate-env"
+    )
+    assert result == expected
+
+
+def test_generate_cli_call_with_single_input(tmp_path):
+    out_path = tmp_path / "out"
+    result = generate_cli_call(ManualMarkdownStep, [tmp_path], out_path, executor=BaseStepExecutor)
+    assert result == (
+        f"wurzel run wurzel.steps.manual_markdown:ManualMarkdownStep"
+        f" -o {out_path.absolute()} -e BaseStepExecutor -i {tmp_path.absolute()} --encapsulate-env"
+    )
+
+
+def test_generate_cli_call_with_multiple_inputs(tmp_path):
+    out_path = tmp_path / "out"
+    result = generate_cli_call(ManualMarkdownStep, [tmp_path, tmp_path], out_path, executor=BaseStepExecutor)
+    assert result == (
+        f"wurzel run wurzel.steps.manual_markdown:ManualMarkdownStep"
+        f" -o {out_path.absolute()} -e BaseStepExecutor"
+        f" -i {tmp_path.absolute()} -i {tmp_path.absolute()} --encapsulate-env"
+    )
+
+
+@pytest.mark.skipif(shutil.which("wurzel") is None, reason="wurzel binary not on PATH")
+@pytest.mark.parametrize(
+    "backend",
+    [
+        "DvcBackend",
+        pytest.param("ArgoBackend", marks=pytest.mark.skipif(not HAS_HERA, reason="Hera is not available")),
+    ],
+)
+def test_generate_cli_call_backend_subprocess(tmp_path, backend, env):
+    env.set("EMBEDDINGSTEP__API", "https://example.com/embd")
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", "./data")
+    env.set("QDRANTCONNECTORSTEP__COLLECTION", "test-collection")
+    cmd = ["wurzel", "generate", "examples.pipeline.pipelinedemo:pipeline", "--backend", backend]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+    assert proc.returncode == 0, proc
+    yaml.safe_load(proc.stdout)  # must produce valid YAML
+
+
+# ---------------------------------------------------------------------------
+# executer_callback
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "inpt_str, expected",
+    [
+        ("base", BaseStepExecutor),
+        ("BASE", BaseStepExecutor),
+        ("BaseStepExecutor", BaseStepExecutor),
+    ],
+)
+def test_executer_callback(inpt_str, expected):
+    assert main.executer_callback(None, None, inpt_str) == expected
+
+
+def test_executer_callback_bad():
+    with pytest.raises(typer.BadParameter):
+        main.executer_callback(None, None, "XX")
+
+
+# ---------------------------------------------------------------------------
+# step_callback
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "step_path",
+    [
+        "wurzel.steps.ManualMarkdownStep",
+        "wurzel.steps:ManualMarkdownStep",
+        "wurzel.steps.manual_markdown:ManualMarkdownStep",
+        "wurzel.steps.manual_markdown.ManualMarkdownStep",
+    ],
+)
+def test_step_callback(step_path):
+    assert main.step_callback(None, None, step_path) == wurzel.steps.ManualMarkdownStep
+
+
+@pytest.mark.parametrize(
+    "step_path",
+    [
+        "wurzel.steps.NotExist",
+        "Nope",
+        "wurzel.cli._main:main",
+        "doesnt_exist.steps.manual_markdown.ManualMarkdownStep",
+    ],
+)
+def test_step_callback_bad(step_path):
+    with pytest.raises(typer.BadParameter):
+        main.step_callback(None, None, step_path)
+
+
+# ---------------------------------------------------------------------------
+# backend_callback
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "backend_str",
+    ["DvcBackend", "dvcbackend", "DVCBACKEND", "DvCbAcKeNd"],
+)
+def test_backend_callback_dvc(backend_str):
+    assert main.backend_callback(None, None, backend_str) == DvcBackend
+
+
+@pytest.mark.skipif(not HAS_HERA, reason="Hera is not available")
+@pytest.mark.parametrize(
+    "backend_str",
+    ["ArgoBackend", "argobackend", "ARGOBACKEND", "ArGoBaCkEnD"],
+)
+def test_backend_callback_argo(backend_str):
+    from wurzel.executors.backend.backend_argo import ArgoBackend
+
+    assert main.backend_callback(None, None, backend_str) == ArgoBackend
+
+
+def test_backend_callback_invalid():
+    with pytest.raises(typer.BadParameter) as exc_info:
+        main.backend_callback(None, None, "InvalidBackend")
+    error_msg = str(exc_info.value)
+    assert "InvalidBackend not supported" in error_msg
+    assert "dvc" in error_msg
+    if HAS_HERA:
+        assert "argo" in error_msg
+
+
+# ---------------------------------------------------------------------------
+# update_log_level
+# ---------------------------------------------------------------------------
+
+
+def test_update_log_level_runs():
+    main.update_log_level("INFO")
+
+
+# ---------------------------------------------------------------------------
+# get_available_backends
+# ---------------------------------------------------------------------------
+
+
+def test_get_available_backends():
+    backends = main.get_available_backends()
+    assert isinstance(backends, list)
+    assert "dvc" in backends
+    if HAS_HERA:
+        assert "argo" in backends
+    else:
+        assert "argo" not in backends
+
+
+@pytest.mark.skipif(not HAS_HERA, reason="Hera is not available")
+def test_get_available_backends_includes_argo():
+    backends = main.get_available_backends()
+    assert "dvc" in backends
+    assert "argo" in backends
+
+
+# ---------------------------------------------------------------------------
+# run
+# ---------------------------------------------------------------------------
+
+
+def test_run(tmp_path, env):
+    out = tmp_path / "out"
+    inp = tmp_path / "in"
+    inp.mkdir()
+    (inp / "file.md").write_text("#Hello\n world")
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
+    main.run(step=ManualMarkdownStep, executor=BaseStepExecutor, input_folders=[], output_path=out)
+    assert list(out.glob("*"))
+    assert (out / "ManualMarkdown.json").read_text()
+
+
+def test_run_with_middleware(tmp_path, env):
+    out = tmp_path / "out"
+    inp = tmp_path / "in"
+    inp.mkdir()
+    (inp / "file.md").write_text("#Hello\n world")
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
+    main.run(
+        step=ManualMarkdownStep,
+        executor=BaseStepExecutor,
+        input_folders=[],
+        output_path=out,
+        middlewares="prometheus",
+    )
+    assert list(out.glob("*"))
+    assert (out / "ManualMarkdown.json").read_text()
+
+
+def test_run_with_empty_middleware_string(tmp_path, env):
+    out = tmp_path / "out"
+    inp = tmp_path / "in"
+    inp.mkdir()
+    (inp / "file.md").write_text("#Hello\n world")
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
+    main.run(
+        step=ManualMarkdownStep,
+        executor=BaseStepExecutor,
+        input_folders=[],
+        output_path=out,
+        middlewares="",
+    )
+    assert list(out.glob("*"))
+    assert (out / "ManualMarkdown.json").read_text()
+
+
+def test_run_with_middleware_from_env(tmp_path, env):
+    out = tmp_path / "out"
+    inp = tmp_path / "in"
+    inp.mkdir()
+    (inp / "file.md").write_text("#Hello\n world")
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
+    env.set("MIDDLEWARES", "prometheus")
+    main.run(step=ManualMarkdownStep, executor=BaseStepExecutor, input_folders=[], output_path=out)
+    assert list(out.glob("*"))
+    assert (out / "ManualMarkdown.json").read_text()
+
+
+def test_run_encapsulate_env(tmp_path, env):
+    out = tmp_path / "out"
+    inp = tmp_path / "in"
+    inp.mkdir()
+    (inp / "file.md").write_text("#Test\n content")
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
+    main.run(
+        step=ManualMarkdownStep,
+        executor=BaseStepExecutor,
+        input_folders=[],
+        output_path=out,
+        middlewares="",
+        encapsulate_env=True,
+    )
+    assert (out / "ManualMarkdown.json").exists()
+
+
+def test_run_middleware_overrides_env(tmp_path, env):
+    """Explicit empty middlewares parameter overrides MIDDLEWARES env var."""
+    out = tmp_path / "out"
+    inp = tmp_path / "in"
+    inp.mkdir()
+    (inp / "file.md").write_text("#Test\n content")
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
+    env.set("MIDDLEWARES", "prometheus")
+    main.run(
+        step=ManualMarkdownStep,
+        executor=BaseStepExecutor,
+        input_folders=[],
+        output_path=out,
+        middlewares="",
+        encapsulate_env=True,
+    )
+    assert (out / "ManualMarkdown.json").exists()
+
+
+def test_run_with_whitespace_in_middlewares(tmp_path, env):
+    out = tmp_path / "out"
+    inp = tmp_path / "in"
+    inp.mkdir()
+    (inp / "file.md").write_text("#Test\n content")
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
+    main.run(
+        step=ManualMarkdownStep,
+        executor=BaseStepExecutor,
+        input_folders=[],
+        output_path=out,
+        middlewares=" prometheus ",
+        encapsulate_env=True,
+    )
+    assert (out / "ManualMarkdown.json").exists()
+
+
+def test_run_with_invalid_middleware_continues(tmp_path, env):
+    """Invalid middleware name should log a warning and not crash execution."""
+    out = tmp_path / "out"
+    inp = tmp_path / "in"
+    inp.mkdir()
+    (inp / "file.md").write_text("#Test\n content")
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
+    main.run(
+        step=ManualMarkdownStep,
+        executor=BaseStepExecutor,
+        input_folders=[],
+        output_path=out,
+        middlewares="nonexistent",
+        encapsulate_env=True,
+    )
+    assert (out / "ManualMarkdown.json").exists()
+
+
+# ---------------------------------------------------------------------------
+# inspekt
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("gen_env", [True, False])
+def test_inspekt(gen_env):
+    main.inspekt(ManualMarkdownStep, gen_env)
+
+
+# ---------------------------------------------------------------------------
+# generate command
+# ---------------------------------------------------------------------------
+
+
+def test_generate_list_backends(capsys):
+    main.generate(pipeline=None, backend="dvc", list_backends=True)
+    captured = capsys.readouterr()
+    assert "Available backends:" in captured.out
+    assert "dvc" in captured.out
+    if HAS_HERA:
+        assert "argo" in captured.out
+    else:
+        assert "argo" not in captured.out
+
+
+# ---------------------------------------------------------------------------
+# env command
+# ---------------------------------------------------------------------------
+
+
+def test_env_outputs_requirements(capsys, monkeypatch):
+    monkeypatch.setattr(main, "console", main.console.__class__(force_terminal=False, width=200))
+    main.env_cmd("wurzel.steps.manual_markdown:ManualMarkdownStep")
+    captured = capsys.readouterr()
+    assert "Environment variables" in captured.out
+    assert "MANUALMARKDOWNSTEP__FOLDER_PATH" in captured.out
+
+
+def test_env_only_required_filters_optional(capsys, monkeypatch):
+    monkeypatch.setattr(main, "console", main.console.__class__(force_terminal=False, width=200))
+    main.env_cmd("examples.pipeline.pipelinedemo:pipeline", include_optional=False)
+    captured = capsys.readouterr()
+    assert "MANUALMARKDOWNSTEP__FOLDER_PATH" in captured.out
+    assert "SIMPLESPLITTERSTEP__BATCH_SIZE" not in captured.out
+
+
+def test_env_gen_env_outputs_env_file(capsys, monkeypatch, env):
+    monkeypatch.setattr(main, "console", main.console.__class__(force_terminal=False, width=200))
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", "/tmp/custom")
+    env.set("SIMPLESPLITTERSTEP__BATCH_SIZE", "256")
+    main.env_cmd("examples.pipeline.pipelinedemo:pipeline", gen_env=True)
+    captured = capsys.readouterr()
+    expected = (
+        "# Generated env vars\n\n"
+        "# ManualMarkdownStep\n"
+        "MANUALMARKDOWNSTEP__FOLDER_PATH=/tmp/custom\n\n"  # pragma: allowlist secret
+        "# SimpleSplitterStep\n"
+        "SIMPLESPLITTERSTEP__BATCH_SIZE=256\n"
+        "SIMPLESPLITTERSTEP__NUM_THREADS=4\n"
+        "SIMPLESPLITTERSTEP__TOKEN_COUNT_MIN=64\n"
+        "SIMPLESPLITTERSTEP__TOKEN_COUNT_MAX=1024\n"
+        "SIMPLESPLITTERSTEP__TOKEN_COUNT_BUFFER=32\n"
+        "SIMPLESPLITTERSTEP__TOKENIZER_MODEL=gpt-3.5-turbo\n"
+        "SIMPLESPLITTERSTEP__SENTENCE_SPLITTER_MODEL=de_core_news_sm\n\n\n"
+    )
+    assert captured.out == expected
+
+
+def test_env_gen_env_default_values(capsys, monkeypatch):
+    monkeypatch.setattr(main, "console", main.console.__class__(force_terminal=False, width=200))
+    main.env_cmd("examples.pipeline.pipelinedemo:pipeline", gen_env=True)
+    captured = capsys.readouterr()
+    expected = (
+        "# Generated env vars\n\n"
+        "# ManualMarkdownStep\n"
+        "MANUALMARKDOWNSTEP__FOLDER_PATH=\n\n"
+        "# SimpleSplitterStep\n"
+        "SIMPLESPLITTERSTEP__BATCH_SIZE=100\n"
+        "SIMPLESPLITTERSTEP__NUM_THREADS=4\n"
+        "SIMPLESPLITTERSTEP__TOKEN_COUNT_MIN=64\n"
+        "SIMPLESPLITTERSTEP__TOKEN_COUNT_MAX=1024\n"
+        "SIMPLESPLITTERSTEP__TOKEN_COUNT_BUFFER=32\n"
+        "SIMPLESPLITTERSTEP__TOKENIZER_MODEL=gpt-3.5-turbo\n"
+        "SIMPLESPLITTERSTEP__SENTENCE_SPLITTER_MODEL=de_core_news_sm\n\n\n"
+    )
+    assert captured.out == expected
+
+
+def test_env_check_success(env, capsys, monkeypatch):
+    monkeypatch.setattr(main, "console", main.console.__class__(force_terminal=False, width=200))
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", "/tmp")
+    main.env_cmd("wurzel.steps.manual_markdown:ManualMarkdownStep", check=True)
+    captured = capsys.readouterr()
+    assert "All required environment variables are set." in captured.out
+
+
+def test_env_check_failure(env, capsys, monkeypatch):
+    monkeypatch.setattr(main, "console", main.console.__class__(force_terminal=False, width=200))
+    env.clear()
+    with pytest.raises(typer.Exit) as exc:
+        main.env_cmd("wurzel.steps.manual_markdown:ManualMarkdownStep", check=True)
+    assert exc.value.exit_code == 1
+    captured = capsys.readouterr()
+    assert "Missing environment variables" in captured.out
+    assert "MANUALMARKDOWNSTEP__FOLDER_PATH" in captured.out
+
+
+# ---------------------------------------------------------------------------
+# complete_step_import / autocomplete
+# ---------------------------------------------------------------------------
+
+
+def test_autocomplete_returns_known_step():
+    completion = complete_step_import("")
+    assert completion
+    assert "wurzel.steps.manual_markdown.ManualMarkdownStep" in completion
+
+
+def test_autocomplete_non_matching_prefix_returns_list():
+    results = complete_step_import("no_such_prefix_hopefully")
+    assert isinstance(results, list)
+
+
+def test_autocomplete_with_mocked_distributions():
+    with (
+        patch("wurzel.cli._main.Path.cwd") as mock_cwd,
+        patch("importlib.metadata.distributions") as mock_distributions,
+        patch("importlib.util.find_spec") as mock_find_spec,
+    ):
+        mock_cwd.return_value = Path("/fake/path")
+        mock_dist = Mock()
+        mock_dist.name = "test_package"
+        mock_distributions.return_value = [mock_dist]
+        mock_spec = Mock()
+        mock_spec.origin = "/path/to/test_package/__init__.py"
+        mock_find_spec.return_value = mock_spec
+
+        result = complete_step_import("test_package.SomeClass")
+        assert isinstance(result, list)
+
+
+def test_autocomplete_handles_cwd_exception_gracefully():
+    with patch("wurzel.cli._main.Path.cwd") as mock_cwd:
+        mock_cwd.side_effect = Exception("Fake error")
+        result = complete_step_import("some_input")
+        assert isinstance(result, list)
+
+
+def test_autocomplete_many_files_does_not_crash():
+    with patch("wurzel.cli._main.Path.cwd") as mock_cwd, patch("wurzel.cli._main.Path.rglob") as mock_rglob:
+        mock_cwd.return_value = Path("/fake")
+        mock_rglob.return_value = [Path(f"/fake/file{i}.py") for i in range(300)]
+        result = complete_step_import("test")
+        assert isinstance(result, list)
+
+
+# ---------------------------------------------------------------------------
+# _build_module_path
+# ---------------------------------------------------------------------------
+
+
+def test_build_module_path_with_base(tmp_path):
+    search = tmp_path / "pkg"
+    search.mkdir()
+    (search / "sub").mkdir()
+    f = search / "sub" / "mymodule.py"
+    f.write_text("class X: pass")
+    result = main._build_module_path(f, search, "base")
+    assert result.startswith("base.")
+
+
+def test_build_module_path_without_base(tmp_path):
+    search = tmp_path / "pkg"
+    search.mkdir()
+    (search / "sub").mkdir()
+    f = search / "sub" / "mymodule.py"
+    f.write_text("class X: pass")
+    result = main._build_module_path(f, search, "")
+    assert result.count(".") >= 1
+
+
+# ---------------------------------------------------------------------------
+# _check_if_typed_step
+# ---------------------------------------------------------------------------
+
+
+def test_check_if_typed_step_true():
+    code = "class MyStep(TypedStep):\n    pass\n"
+    class_node = ast.parse(code).body[0]
+    assert _check_if_typed_step(class_node) is True
+
+
+def test_check_if_typed_step_false():
+    code = "class MyOtherClass:\n    pass\n"
+    class_node = ast.parse(code).body[0]
+    assert _check_if_typed_step(class_node) is False
+
+
+# ---------------------------------------------------------------------------
+# _process_python_file
+# ---------------------------------------------------------------------------
+
+
+def test_process_python_file_finds_typed_step(tmp_path):
+    f = tmp_path / "test_step.py"
+    f.write_text("from wurzel.core.typed_step import TypedStep\n\nclass TestStep(TypedStep):\n    pass\n\nclass NotAStep:\n    pass\n")
+    hints: list[str] = []
+    _process_python_file(f, tmp_path, "test", "test", hints)
+    assert len(hints) == 1
+    assert "TestStep" in hints[0]
+
+
+def test_process_python_file_ignores_non_typed_steps(tmp_path):
+    f = tmp_path / "no_step.py"
+    f.write_text("class RegularClass:\n    pass\n")
+    hints: list[str] = []
+    _process_python_file(f, tmp_path, "test", "test", hints)
+    assert len(hints) == 0
+
+
+# ---------------------------------------------------------------------------
+# Performance: complete_step_import
+# ---------------------------------------------------------------------------
+
+
+class TestAutocompletionPerformance:
+    def test_wurzel_project_under_threshold(self):
+        times = []
+        for _ in range(5):
+            start = time.perf_counter()
+            complete_step_import("")
+            times.append(time.perf_counter() - start)
+        assert sum(times) / len(times) < 1.0, "average must be < 1 s"
+        assert max(times) < 2.0, "max must be < 2 s"
+
+    def test_prefix_filtering_is_faster(self):
+        times = []
+        for _ in range(3):
+            start = time.perf_counter()
+            results = complete_step_import("wurzel.steps.")
+            times.append(time.perf_counter() - start)
+        assert sum(times) / len(times) < 0.7
+        for result in results:
+            assert result.startswith("wurzel.steps.")
+
+    def test_user_project_finds_custom_steps(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            import os
+
+            steps_dir = Path(tmp) / "mysteps"
+            steps_dir.mkdir()
+            (steps_dir / "custom_step.py").write_text(
+                "from wurzel.core import TypedStep\n\nclass MyCustomStep(TypedStep):\n    pass\n\nclass AnotherStep(TypedStep):\n    pass\n"
+            )
+            original = os.getcwd()
+            try:
+                os.chdir(tmp)
+                times = []
+                for _ in range(3):
+                    start = time.perf_counter()
+                    results = complete_step_import("")
+                    times.append(time.perf_counter() - start)
+                assert sum(times) / len(times) < 1.0
+                assert max(times) < 2.0
+                assert any("wurzel.steps." in r for r in results)
+                assert any("mysteps." in r for r in results)
+            finally:
+                os.chdir(original)
+
+    def test_large_project_under_threshold(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            import os
+
+            temp_path = Path(tmp)
+            for i in range(10):
+                subdir = temp_path / f"module_{i}"
+                subdir.mkdir()
+                for j in range(5):
+                    fp = subdir / f"file_{j}.py"
+                    if j % 3 == 0:
+                        fp.write_text(f"from wurzel.core import TypedStep\n\nclass Step{i}{j}(TypedStep):\n    pass\n")
+                    else:
+                        fp.write_text(f"def func_{i}_{j}(): pass\n")
+            original = os.getcwd()
+            try:
+                os.chdir(tmp)
+                start = time.perf_counter()
+                results = complete_step_import("")
+                assert time.perf_counter() - start < 1.5
+                user_steps = [r for r in results if not r.startswith("wurzel.")]
+                assert len(user_steps) > 0
+            finally:
+                os.chdir(original)
+
+    @pytest.mark.parametrize("incomplete", ["", "w", "wurzel", "wurzel.steps", "nonexistent"])
+    def test_various_inputs_under_threshold(self, incomplete: str):
+        start = time.perf_counter()
+        results = complete_step_import(incomplete)
+        assert time.perf_counter() - start < 1.0
+        if incomplete:
+            for result in results:
+                assert result.startswith(incomplete)

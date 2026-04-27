@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """Pydantic models for the knowledge route."""
+# pylint: disable=duplicate-code
 
 from __future__ import annotations
 

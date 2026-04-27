@@ -20,8 +20,9 @@ wtpsplit_missing = importlib.util.find_spec("wtpsplit") is None
 
 
 @pytest.fixture(scope="function")
-@pytest.mark.skipif(spacy_missing, reason="spacy or model not installed")
 def spacy_splitter():
+    if spacy_missing:
+        pytest.skip("spacy or model not installed")
     yield SentenceSplitter.from_name(spacy_default_model_name)
 
 

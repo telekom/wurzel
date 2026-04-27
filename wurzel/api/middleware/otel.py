@@ -70,7 +70,7 @@ class OTELCorrelationMiddleware(BaseHTTPMiddleware):
         tracestate = request.headers.get("tracestate", "")
 
         try:
-            from opentelemetry import trace  # noqa: PLC0415
+            from opentelemetry import trace  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
 
             span = trace.get_current_span()
             ctx = span.get_span_context()
@@ -120,14 +120,14 @@ def setup_otel(app: ASGIApp, settings: OTELSettings) -> None:
         return
 
     try:
-        from opentelemetry import trace  # noqa: PLC0415
-        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # noqa: PLC0415
+        from opentelemetry import trace  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
+        from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
             OTLPSpanExporter,
         )
-        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor  # noqa: PLC0415
-        from opentelemetry.sdk.resources import Resource  # noqa: PLC0415
-        from opentelemetry.sdk.trace import TracerProvider  # noqa: PLC0415
-        from opentelemetry.sdk.trace.export import BatchSpanProcessor  # noqa: PLC0415
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
+        from opentelemetry.sdk.resources import Resource  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
+        from opentelemetry.sdk.trace import TracerProvider  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
     except ImportError:
         logger.warning("opentelemetry packages not found — OTEL disabled. Install wurzel[otel] to enable tracing.")
         return

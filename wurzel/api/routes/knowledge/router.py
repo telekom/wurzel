@@ -12,6 +12,7 @@ Routes
 ``PUT    /v1/knowledge/{id}``   — update
 ``DELETE /v1/knowledge/{id}``   — delete
 """
+# pylint: disable=duplicate-code
 
 from __future__ import annotations
 
