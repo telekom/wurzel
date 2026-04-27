@@ -103,11 +103,40 @@ def warm_step_cache() -> None:
 # ---------------------------------------------------------------------------
 
 
+def _public_module(cls: type) -> str:
+    """Return the shortest parent-package path that publicly re-exports *cls*.
+
+    Walks up the module hierarchy (e.g. ``wurzel.datacontract.common`` →
+    ``wurzel.datacontract`` → ``wurzel``) and stops at the first level where
+    ``getattr(pkg, cls.__name__) is cls`` holds.  Falls back to the defining
+    ``__module__`` when no shorter path is found.
+    """
+    module: str = cls.__module__
+    parts = module.split(".")
+    for i in range(len(parts) - 1, 0, -1):
+        candidate = ".".join(parts[:i])
+        try:
+            mod = importlib.import_module(candidate)
+            if getattr(mod, cls.__name__, None) is cls:
+                return candidate
+        except Exception:  # pylint: disable=broad-exception-caught
+            pass
+    return module
+
+
 def _type_str(annotation: Any) -> str:
-    """Return a human-readable string for an annotation."""
+    """Return a fully-qualified string for an annotation."""
     if annotation is None:
         return "None"
+    # Check generics BEFORE __name__: GenericAlias (list[X]) proxies __name__ to the origin
+    origin = getattr(annotation, "__origin__", None)
+    args = getattr(annotation, "__args__", None)
+    if origin is not None and args is not None:
+        return f"{_type_str(origin)}[{', '.join(_type_str(a) for a in args)}]"
     if hasattr(annotation, "__name__"):
+        module = getattr(annotation, "__module__", None)
+        if module and module != "builtins":
+            return f"{_public_module(annotation)}.{annotation.__name__}"
         return annotation.__name__
     return str(annotation)
 
@@ -201,6 +230,20 @@ def _build_step_info(step_cls: type[TypedStep]) -> StepInfo:
     )
 
 
+@functools.lru_cache(maxsize=1024)
+def _safe_io_types(class_path: str) -> tuple[str | None, str | None]:
+    """Return (input_type, output_type) strings for *class_path*, or (None, None) on failure."""
+    try:
+        module_path, class_name = class_path.rsplit(".", 1)
+        module = importlib.import_module(module_path)
+        cls = getattr(module, class_name, None)
+        if cls is not None and inspect.isclass(cls) and issubclass(cls, TypedStep):
+            return _io_type_str(cls)
+    except Exception:  # pylint: disable=broad-exception-caught
+        pass
+    return None, None
+
+
 def _resolve_package_root(package: str) -> Path:
     """Return the filesystem root of an installed package or raise :class:`APIError`."""
     spec = importlib.util.find_spec(package)
@@ -224,6 +267,14 @@ def _resolve_package_root(package: str) -> Path:
 # ---------------------------------------------------------------------------
 # Public service functions
 # ---------------------------------------------------------------------------
+
+
+# Framework base classes that are never user-facing steps.
+_EXCLUDED_CLASS_PATHS: frozenset[str] = frozenset(
+    {
+        "wurzel.core.self_consuming_step.SelfConsumingLeafStep",
+    }
+)
 
 
 def discover_steps(cache: StepListCache, package: str | None) -> StepListResponse:
@@ -255,8 +306,11 @@ def discover_steps(cache: StepListCache, package: str | None) -> StepListRespons
             class_path=cp,
             name=cp.rsplit(".", 1)[-1],
             module=cp.rsplit(".", 1)[0],
+            input_type=_safe_io_types(cp)[0],
+            output_type=_safe_io_types(cp)[1],
         )
         for cp in class_paths
+        if cp not in _EXCLUDED_CLASS_PATHS
     ]
     return StepListResponse(steps=summaries, total=len(summaries), package=pkg_label)
 

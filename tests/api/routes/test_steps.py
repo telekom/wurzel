@@ -87,6 +87,30 @@ class TestStepsList:
         for item in r.json()["steps"]:
             assert "class_path" in item
             assert "name" in item
+            assert "input_type" in item
+            assert "output_type" in item
+
+    def test_known_step_has_output_type_in_list(self, client, auth_headers):
+        r = client.get(f"/v1/steps?package={_KNOWN_PACKAGE}", headers=auth_headers)
+        step = next(s for s in r.json()["steps"] if s["class_path"] == _KNOWN_STEP)
+        assert step["output_type"] is not None
+
+    def test_known_step_output_type_is_fully_qualified(self, client, auth_headers):
+        # ManualMarkdownStep output is list[MarkdownDataContract] — should show full module path
+        r = client.get(f"/v1/steps?package={_KNOWN_PACKAGE}", headers=auth_headers)
+        step = next(s for s in r.json()["steps"] if s["class_path"] == _KNOWN_STEP)
+        assert step["output_type"] == "list[wurzel.datacontract.MarkdownDataContract]"
+
+    def test_known_step_has_null_input_type_in_list(self, client, auth_headers):
+        # ManualMarkdownStep is a source step — its input type must be null
+        r = client.get(f"/v1/steps?package={_KNOWN_PACKAGE}", headers=auth_headers)
+        step = next(s for s in r.json()["steps"] if s["class_path"] == _KNOWN_STEP)
+        assert step["input_type"] is None
+
+    def test_excluded_base_class_not_in_list(self, client, auth_headers):
+        r = client.get("/v1/steps", headers=auth_headers)
+        class_paths = [s["class_path"] for s in r.json()["steps"]]
+        assert "wurzel.core.self_consuming_step.SelfConsumingLeafStep" not in class_paths
 
 
 class TestStepGet:

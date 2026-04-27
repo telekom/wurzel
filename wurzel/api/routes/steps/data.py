@@ -44,6 +44,8 @@ class StepSummary(BaseModel):
     class_path: str = Field(description="Fully-qualified class path, e.g. 'wurzel.steps.splitter.SimpleSplitterStep'")
     name: str = Field(description="Class name")
     module: str = Field(description="Module path")
+    input_type: str | None = Field(None, description="Fully-qualified input contract type, or None for source steps")
+    output_type: str | None = Field(None, description="Fully-qualified output contract type")
 
 
 class StepListResponse(BaseModel):
