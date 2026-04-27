@@ -136,6 +136,7 @@ docs = [
 fastapi = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",
+    "PyJWT>=2.8.0",
 ]
 otel = [
     "opentelemetry-sdk>=1.25.0",
