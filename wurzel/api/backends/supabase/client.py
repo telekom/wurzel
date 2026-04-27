@@ -196,6 +196,20 @@ async def db_count_admins(project_id: uuid.UUID) -> int:
     return result.count or 0
 
 
+async def db_user_exists(user_id: str) -> bool:
+    """Return True if *user_id* exists in Supabase Auth, False otherwise."""
+    try:
+        from gotrue.errors import AuthApiError  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
+    except ImportError:
+        AuthApiError = Exception  # type: ignore[misc,assignment]
+    db = await _get_async_client()
+    try:
+        await db.auth.admin.get_user_by_id(user_id)
+        return True
+    except AuthApiError:  # pylint: disable=broad-exception-caught
+        return False
+
+
 # ── Branch CRUD ───────────────────────────────────────────────────────────────
 
 
