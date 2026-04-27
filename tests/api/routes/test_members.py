@@ -141,6 +141,7 @@ class TestAddMember:
         row = _make_member_row(user_id=_NEW_USER_ID, role="viewer")
         with (
             patch("wurzel.api.routes.member.router.db_get_member", new_callable=AsyncMock, return_value=None),
+            patch("wurzel.api.routes.member.router.db_user_exists", new_callable=AsyncMock, return_value=True),
             patch("wurzel.api.routes.member.router.db_add_member", new_callable=AsyncMock, return_value=row),
         ):
             r = admin_client.post(_member_url(), json={"user_id": _NEW_USER_ID})
@@ -150,6 +151,7 @@ class TestAddMember:
         row = _make_member_row(user_id=_NEW_USER_ID, role="member")
         with (
             patch("wurzel.api.routes.member.router.db_get_member", new_callable=AsyncMock, return_value=None),
+            patch("wurzel.api.routes.member.router.db_user_exists", new_callable=AsyncMock, return_value=True),
             patch("wurzel.api.routes.member.router.db_add_member", new_callable=AsyncMock, return_value=row),
         ):
             r = admin_client.post(_member_url(), json={"user_id": _NEW_USER_ID, "role": "member"})
@@ -165,6 +167,14 @@ class TestAddMember:
         with patch("wurzel.api.routes.member.router.db_get_member", new_callable=AsyncMock, return_value=existing_row):
             r = admin_client.post(_member_url(), json={"user_id": _NEW_USER_ID})
         assert r.status_code == 409
+
+    def test_add_nonexistent_user_returns_404(self, admin_client):
+        with (
+            patch("wurzel.api.routes.member.router.db_get_member", new_callable=AsyncMock, return_value=None),
+            patch("wurzel.api.routes.member.router.db_user_exists", new_callable=AsyncMock, return_value=False),
+        ):
+            r = admin_client.post(_member_url(), json={"user_id": "ghost-user-uuid"})
+        assert r.status_code == 404
 
     def test_add_non_member_project_returns_404(self, no_role_client):
         r = no_role_client.post(_member_url(), json={"user_id": _NEW_USER_ID})
