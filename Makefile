@@ -45,5 +45,7 @@ documentation: install
 	@echo "📚 Serving documentation..."
 	uv run mkdocs serve
 
-reuse-lint:
-	uv run reuse lint
+api: install
+		@echo "🚀 Starting FastAPI server..."
+		@set -a && [ -f .env ] && . ./.env; set +a; \
+        uv run uvicorn wurzel.api.app:create_app --factory --host 127.0.0.1 --port 8000 --reload

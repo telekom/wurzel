@@ -95,11 +95,11 @@ class TestStepGet:
         assert r.status_code in (400, 404)
 
     def test_nonexistent_module_returns_404(self, client, auth_headers):
-        r = client.get(f"/v1/steps/nonexistent.module.FakeClass", headers=auth_headers)
+        r = client.get("/v1/steps/nonexistent.module.FakeClass", headers=auth_headers)
         assert r.status_code == 404
 
     def test_nonexistent_class_returns_404(self, client, auth_headers):
-        r = client.get(f"/v1/steps/wurzel.steps.manual_markdown.FakeStep", headers=auth_headers)
+        r = client.get("/v1/steps/wurzel.steps.manual_markdown.FakeStep", headers=auth_headers)
         assert r.status_code == 404
 
 
