@@ -137,20 +137,16 @@ class Settings(SettingsLeaf):
     Same goes for TypedStepSettings. Their prefix is *always* `STEP_NAME_IN_UPPER_CASE`.
     ## Example
     ```python
-    class KafkaSettings(Settings):
-        \"\"\"Settings for Kafka\"\"\"
-        # No default is given --> there must be a corresponding env_value
-        BROKER_URLS: list[str] = Field([
-            "kafka.example.com:9093",
-            "kafka.example.com:9094",
-            "kafka.example.com:9095"
-            ],
-            description="List of bootstrap servers")
-        SASL_USER: str = "<USER_NAME>"
-        SASL_PASSWORD: SecretStr
-        SSL_CA_FILE: str = Field("./kafka_ca.pem", description="Path to ca file")
-        TOPIC: str = "cc_mm_coupon_meta_bot"
-        CONSUMER_TIMEOUT: int = Field(5*1000, description="timeout for kafka consumer in ms")
+    from wurzel.core import Settings
+
+    class MyStepSettings(Settings):
+        # Field names must match the env var names exactly
+        HOST: str = "localhost"
+        PORT: int = 8080
+
+    s = MyStepSettings()
+    print(s.HOST)
+    #> localhost
     ```
     """
 

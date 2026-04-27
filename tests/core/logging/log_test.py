@@ -8,7 +8,7 @@ import sys
 
 import pytest
 
-from wurzel.utils.logging import JsonFormatter, JsonStringFormatter, log_uncaught_exception, setup_uncaught_exception_logging
+from wurzel.core.logging import JsonFormatter, JsonStringFormatter, log_uncaught_exception, setup_uncaught_exception_logging
 
 FOR_EACH_LOG_LEVEL = pytest.mark.parametrize(
     "level",

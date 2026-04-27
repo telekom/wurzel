@@ -4,11 +4,14 @@
 
 """Tests for wurzel.executors.backend.backend_dvc module."""
 
+import shlex
 from pathlib import Path
 
 import pytest
 import yaml
 
+from wurzel.core import NoSettings, TypedStep
+from wurzel.datacontract.common import MarkdownDataContract
 from wurzel.executors.backend.backend_dvc import (
     DvcBackend,
     DvcBackendSettings,
@@ -17,8 +20,6 @@ from wurzel.executors.backend.backend_dvc import (
     select_pipeline,
 )
 from wurzel.executors.backend.values import load_values
-from wurzel.datacontract.common import MarkdownDataContract
-from wurzel.core import NoSettings, TypedStep
 
 # ---------------------------------------------------------------------------
 # Test Fixtures
@@ -325,3 +326,44 @@ class TestDvcBackendIntegration:
         yaml_output = backend.generate_artifact(step)
 
         assert "wurzel run" in yaml_output
+
+
+class TestWriteEnvFile:
+    def test_valid_keys_written(self, tmp_path):
+        settings = DvcBackendSettings(DATA_DIR=tmp_path)
+        backend = DvcBackend(settings=settings)
+        env_file = backend._write_env_file({"FOO": "bar", "MY_VAR": "hello"})
+        content = env_file.read_text()
+        assert "export FOO='bar'" in content
+        assert "export MY_VAR='hello'" in content
+
+    @pytest.mark.parametrize(
+        "bad_key",
+        [
+            "FOO; rm -rf /",
+            "1INVALID",
+            "foo",
+            "MY VAR",
+            "KEY\nINJECT",
+            "",
+        ],
+    )
+    def test_invalid_key_raises_value_error(self, tmp_path, bad_key):
+        settings = DvcBackendSettings(DATA_DIR=tmp_path)
+        backend = DvcBackend(settings=settings)
+        with pytest.raises(ValueError, match="environment variable"):
+            backend._write_env_file({bad_key: "value"})
+
+    def test_env_file_path_is_quoted_in_command(self, tmp_path):
+        """Env file path with spaces must be quoted in the shell command."""
+        import yaml  # noqa: PLC0415
+
+        data_dir = tmp_path / "my data dir"
+        settings = DvcBackendSettings(DATA_DIR=data_dir)
+        backend = DvcBackend(settings=settings)
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step, env_vars={"MY_VAR": "value"})
+        parsed = yaml.safe_load(yaml_output)
+        cmd = parsed["stages"]["DummyStep"]["cmd"]
+        env_file = data_dir / ".wurzel_env"
+        assert shlex.quote(str(env_file)) in cmd

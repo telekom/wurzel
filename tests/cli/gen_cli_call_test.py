@@ -7,10 +7,10 @@ import subprocess
 import pytest
 import yaml
 
-from wurzel.cli import generate_cli_call
-from wurzel.executors import BaseStepExecutor
-from wurzel.steps.manual_markdown import ManualMarkdownStep
-from wurzel.utils import HAS_HERA
+from wurzel.cli import generate_cli_call  # noqa: E402
+from wurzel.executors import BaseStepExecutor  # noqa: E402
+from wurzel.steps.manual_markdown import ManualMarkdownStep  # noqa: E402
+from wurzel.utils import HAS_HERA  # noqa: E402
 
 
 @pytest.mark.parametrize("executor", [BaseStepExecutor])

@@ -17,10 +17,10 @@ import pytest
 import yaml
 
 from wurzel.cli import generate_cli_call
+from wurzel.core.meta import WZ
 from wurzel.executors import Backend, BaseStepExecutor, DvcBackend
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.utils import HAS_HERA
-from wurzel.utils.meta_settings import WZ
 
 
 def get_argo_backend():

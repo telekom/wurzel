@@ -2,7 +2,28 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Base middleware interface for step executor middlewares."""
+"""Base middleware interface for step executor middlewares.
+
+Example:
+    ```python
+    import logging
+
+    from wurzel.executors.middlewares.base import BaseMiddleware, MiddlewareChain
+
+    log = logging.getLogger(__name__)
+
+    class LoggingMiddleware(BaseMiddleware):
+        # Logs step start and end
+        def __call__(self, call_next, step_cls, inputs, output_dir):
+            log.info("Starting %s", step_cls.__name__)
+            result = call_next(step_cls, inputs, output_dir)
+            log.info("Finished %s", step_cls.__name__)
+            return result
+
+    chain = MiddlewareChain([LoggingMiddleware()])
+    assert len(chain.middlewares) == 1
+    ```
+"""
 
 from abc import ABC, abstractmethod
 from logging import getLogger

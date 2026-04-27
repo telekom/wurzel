@@ -43,4 +43,4 @@ def test_import_steps():
 
 
 def test_import_utils_meta_settings():
-    import wurzel.utils.meta_settings  # noqa: F401 I001
+    import wurzel.core.meta.meta_settings  # noqa: F401 I001

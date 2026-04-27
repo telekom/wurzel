@@ -23,10 +23,7 @@ def get_all_backends() -> dict[str, type[Backend]]:
         dict[str, type[Backend]]: Mapping of backend name to backend class.
 
     """
-    backends: dict[str, type[Backend]] = {"DvcBackend": DvcBackend}
-    if HAS_HERA:
-        backends["ArgoBackend"] = ArgoBackend
-    return backends
+    return Backend.get_registry()
 
 
 def get_available_backends() -> dict[str, type[Backend]]:
@@ -36,22 +33,23 @@ def get_available_backends() -> dict[str, type[Backend]]:
         dict[str, type[Backend]]: Mapping of backend name to backend class for available backends.
 
     """
-    return {name: cls for name, cls in get_all_backends().items() if cls.is_available()}
+    return {name: cls for name, cls in Backend.get_registry().items() if cls.is_available()}
 
 
 def get_backend_by_name(name: str) -> type[Backend] | None:
     """Get a backend class by name (case-insensitive).
 
     Args:
-        name: Backend name (e.g., 'DvcBackend', 'ArgoBackend')
+        name: Backend name (e.g., ``'dvc'``, ``'argo'``) or class name
+            (e.g., ``'DvcBackend'``).
 
     Returns:
         Backend class if found and available, None otherwise.
 
     """
-    available = get_available_backends()
     name_lower = name.lower()
-    for backend_name, backend_cls in available.items():
-        if backend_name.lower() == name_lower:
-            return backend_cls
+    for backend_name, backend_cls in Backend.get_registry().items():
+        if backend_name.lower() == name_lower or backend_cls.__name__.lower() == name_lower:
+            if backend_cls.is_available():
+                return backend_cls
     return None
