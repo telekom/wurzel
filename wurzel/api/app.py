@@ -6,6 +6,9 @@
 
 from __future__ import annotations
 
+import threading
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -20,7 +23,16 @@ from wurzel.api.routes.metrics.router import router as metrics_router
 from wurzel.api.routes.project.router import router as project_router
 from wurzel.api.routes.search.router import router as search_router
 from wurzel.api.routes.steps.router import router as steps_router
+from wurzel.api.routes.steps.service import warm_step_cache
 from wurzel.api.settings import APISettings
+
+
+@asynccontextmanager
+async def _lifespan(_app: FastAPI):
+    """App lifespan: warm the step cache in a background thread on startup."""
+    t = threading.Thread(target=warm_step_cache, daemon=True, name="step-cache-warmup")
+    t.start()
+    yield
 
 
 def create_app(
@@ -55,6 +67,7 @@ def create_app(
         docs_url="/docs",
         redoc_url="/redoc",
         openapi_url="/openapi.json",
+        lifespan=_lifespan,
     )
 
     # ── Middleware (outermost → innermost) ──────────────────────────────────

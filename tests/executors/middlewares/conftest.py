@@ -5,7 +5,7 @@
 """Shared fixtures for middleware tests."""
 
 from types import SimpleNamespace
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 
@@ -31,7 +31,7 @@ def make_call_next():
     """Factory that returns a call_next function producing a given report."""
 
     def _factory(report):
-        def call_next(step_cls: type, inputs: Optional[set], output_dir: Optional[Any]):
+        def call_next(step_cls: type, inputs: set | None, output_dir: Any | None):
             return [(None, report)]
 
         return call_next
