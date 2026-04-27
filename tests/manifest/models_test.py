@@ -5,6 +5,7 @@
 import pytest
 from pydantic import ValidationError
 
+from tests.manifest.conftest import FULL_MANIFEST_YAML, MINIMAL_MANIFEST_YAML
 from wurzel.manifest.models import (
     BackendConfig,
     Metadata,
@@ -119,21 +120,21 @@ class TestPipelineManifest:
                 ),
             )
 
-    def test_valid_manifest_round_trips(self, full_manifest_yaml):
+    def test_valid_manifest_round_trips(self):
         pytest.importorskip("hera")
         import yaml
 
-        data = yaml.safe_load(full_manifest_yaml)
+        data = yaml.safe_load(FULL_MANIFEST_YAML)
         manifest = PipelineManifest.model_validate(data)
         assert manifest.metadata.name == "full-pipeline"
         assert manifest.spec.backend == "argo"
         assert len(manifest.spec.steps) == 3
         assert len(manifest.spec.middlewares) == 2
 
-    def test_minimal_manifest_valid(self, minimal_manifest_yaml):
+    def test_minimal_manifest_valid(self):
         import yaml
 
-        data = yaml.safe_load(minimal_manifest_yaml)
+        data = yaml.safe_load(MINIMAL_MANIFEST_YAML)
         manifest = PipelineManifest.model_validate(data)
         assert manifest.spec.backend == "dvc"
         assert manifest.spec.middlewares == []
@@ -148,10 +149,10 @@ class TestPipelineManifest:
         )
         assert manifest.spec.backendConfig == BackendConfig()
 
-    def test_dvc_manifest_config(self, minimal_manifest_yaml):
+    def test_dvc_manifest_config(self):
         import yaml
 
-        data = yaml.safe_load(minimal_manifest_yaml)
+        data = yaml.safe_load(MINIMAL_MANIFEST_YAML)
         data["spec"]["backendConfig"] = {"dvc": {"dataDir": "./mydata", "encapsulateEnv": False}}
         manifest = PipelineManifest.model_validate(data)
         dvc_cfg = manifest.spec.backendConfig.get_for("dvc")
