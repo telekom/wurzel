@@ -2,8 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import pytest
-
 MINIMAL_MANIFEST_YAML = """\
 apiVersion: wurzel.dev/v1alpha1
 kind: Pipeline
@@ -64,13 +62,3 @@ spec:
       dataDir: ./data
       encapsulateEnv: true
 """
-
-
-@pytest.fixture
-def minimal_manifest_yaml() -> str:
-    return MINIMAL_MANIFEST_YAML
-
-
-@pytest.fixture
-def full_manifest_yaml() -> str:
-    return FULL_MANIFEST_YAML
