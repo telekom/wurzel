@@ -20,18 +20,23 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from wurzel.cli import (
-    cmd_manifest,
-    cmd_middlewares,
-)
-
 app = typer.Typer(
     no_args_is_help=True,
     context_settings={"help_option_names": ["-h", "--help"]},
 )
 
+# Import and add the middlewares command group
+# ruff: noqa: E402
+from wurzel.cli import (  # pylint: disable=wrong-import-position
+    cmd_manifest,
+    cmd_middlewares,
+)
+
 app.add_typer(cmd_middlewares.app, name="middlewares")
 app.add_typer(cmd_manifest.app, name="manifest")
+
+from wurzel.core.meta.ast_steps import build_module_path as _build_module_path  # noqa: E402  # pylint: disable=wrong-import-position
+from wurzel.core.meta.ast_steps import check_if_typed_step as _check_if_typed_step  # noqa: E402  # pylint: disable=wrong-import-position
 
 log = logging.getLogger(__name__)
 console = Console()
@@ -186,9 +191,6 @@ def _process_python_file(py_file: Path, search_path: Path, base_module: str, inc
     """Process a single Python file to find TypedStep classes."""
     import ast  # pylint: disable=import-outside-toplevel
 
-    from wurzel.core.meta.ast_steps import build_module_path as _build_module_path  # pylint: disable=import-outside-toplevel
-    from wurzel.core.meta.ast_steps import check_if_typed_step as _check_if_typed_step  # pylint: disable=import-outside-toplevel
-
     try:
         # Fast AST parsing without executing code
         with open(py_file, encoding="utf-8") as f:
@@ -227,18 +229,24 @@ def complete_step_import(incomplete: str) -> list[str]:  # pylint: disable=too-m
 
     def scan_directory_for_typed_steps(search_path: Path, base_module: str = "", max_files: int = 200) -> None:
         """Scan a directory for TypedStep classes and add them to hints."""
-        from wurzel.core.meta.ast_steps import _EXCLUDE_DIRS  # pylint: disable=import-outside-toplevel
-
         if not search_path.exists():
             return
 
-        # Directories to exclude from scanning (performance optimization).
-        # Start from the shared base set and add CLI-specific extras.
-        exclude_dirs = _EXCLUDE_DIRS | {
+        # Directories to exclude from scanning (performance optimization)
+        exclude_dirs = {
             ".venv",
             "venv",
             ".env",
             "env",
+            "__pycache__",
+            ".git",
+            ".svn",
+            ".hg",
+            "node_modules",
+            ".tox",
+            ".pytest_cache",
+            "build",
+            "dist",
             ".egg-info",
             "site-packages",
             "tests",  # Skip test directories - unlikely to contain user steps
