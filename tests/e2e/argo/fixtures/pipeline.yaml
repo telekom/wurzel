@@ -1,0 +1,49 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+# SPDX-License-Identifier: Apache-2.0
+#
+# Minimal end-to-end test pipeline for the Argo Workflows backend.
+# Uses ManualMarkdownStep reading from /tmp (always exists, may be empty)
+# so the step succeeds with an empty output list without needing extra data.
+
+apiVersion: wurzel.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: e2e-argo-test
+spec:
+  backend: argo
+  steps:
+    - name: source
+      class: wurzel.steps.manual_markdown.ManualMarkdownStep
+      settings:
+        FOLDER_PATH: "/tmp"
+  backendConfig:
+    argo:
+      name: wurzel-e2e-test
+      namespace: argo
+      # schedule: null  → generates a plain Workflow (not a CronWorkflow)
+      schedule: null
+      serviceAccountName: wurzel-service-account
+      dataDir: /usr/app
+      container:
+        # Tag must NOT be "latest" so k3s uses imagePullPolicy: IfNotPresent
+        # and picks up the image imported via `k3d image import`.
+        image: wurzel-e2e:test
+        securityContext:
+          runAsNonRoot: false
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          dropCapabilities: []
+          seccompProfileType: RuntimeDefault
+      podSecurityContext:
+        runAsNonRoot: false
+        seccompProfileType: RuntimeDefault
+      artifacts:
+        bucket: my-bucket
+        endpoint: minio:9000
+        insecure: true
+        accessKeySecret:
+          name: my-minio-cred
+          key: accesskey
+        secretKeySecret:
+          name: my-minio-cred
+          key: secretkey

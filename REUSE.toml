@@ -16,6 +16,13 @@ SPDX-FileCopyrightText = "2024 Deutsche Telekom AG"
 SPDX-License-Identifier = "CC0-1.0"
 [[annotations]]
 path = [
+    "Dockerfile",
+    ]
+precedence = "override"
+SPDX-FileCopyrightText = "2025 Deutsche Telekom AG"
+SPDX-License-Identifier = "CC0-1.0"
+[[annotations]]
+path = [
     "**/*/*.excalidraw*",
     "**/*/README.md",
     ".github/workflows/*.yaml",
@@ -29,6 +36,8 @@ path = [
     "**/requirements.txt",
     "**/*.pyc",
     "**/__pycache__/**",
+    "**/ub/**/*",
+    ".windsurf/**/*",
     ".python-version",
     ]
 precedence = "override"
@@ -45,6 +54,8 @@ SPDX-License-Identifier = "Apache-2.0"
 
 [[annotations]]
 path = [
+    "AGENTS.md",
+    "wurzel/executors/middlewares/AGENTS.md",
     "wurzel/utils/to_markdown/*"
     ]
 precedence = "override"

@@ -13,9 +13,9 @@ from typing import Optional
 import paramiko
 from pydantic import Field, SecretStr
 
+from wurzel.core import Settings, TypedStep
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import StepFailed
-from wurzel.step import Settings, TypedStep
 
 logger = logging.getLogger(__name__)
 
@@ -51,15 +51,6 @@ class SFTPManualMarkdownStep(TypedStep[SFTPManualMarkdownSettings, None, list[Ma
     - Recursive directory traversal
     - Automatic connection management
     - Preserves file metadata
-
-    Example usage:
-    ```python
-    from wurzel.steps.sftp import SFTPManualMarkdownStep, SFTPManualMarkdownSettings
-
-    settings = SFTPManualMarkdownSettings(HOST="sftp.example.com", USERNAME="user", PASSWORD="password", REMOTE_PATH="/documents")
-    step = SFTPManualMarkdownStep(settings=settings)
-    markdown_docs = step.run(None)
-    ```
     """
 
     def run(self, inpt: None) -> list[MarkdownDataContract]:

@@ -31,6 +31,9 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+# Include manifest directory and its contents
+!tests/manifest/
+!tests/manifest/**
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -236,3 +239,11 @@ test_file.py
 tmp.py
 tmp/
 examples/pipeline/output
+
+# Generated DVC env file — may contain credentials, never commit
+.wurzel_env
+
+# Include manifest directory and its contents
+!wurzel/manifest/
+!wurzel/manifest/**
+__pycache__/
