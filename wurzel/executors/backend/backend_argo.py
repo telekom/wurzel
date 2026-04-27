@@ -211,6 +211,13 @@ class ContainerConfig(BaseModel):
     resources: ResourcesConfig = Field(default_factory=ResourcesConfig)
 
 
+class SecretKeyRef(BaseModel):
+    """Reference to a key inside a Kubernetes Secret."""
+
+    name: str
+    key: str
+
+
 class S3ArtifactConfig(BaseModel):
     """Storage destination for artifacts exchanged between steps."""
 

@@ -145,6 +145,51 @@ class Backend(BaseStepExecutor):
         """
         return os.environ.get(WURZEL_RUN_ID_ENV, "")
 
+    @classmethod
+    def get_registry(cls) -> dict[str, type["Backend"]]:
+        """Return the mapping of registered backend names to their classes.
+
+        Returns:
+            dict[str, type[Backend]]: A copy of the registry at call time.
+
+        """
+        return dict(cls._registry)
+
+    @classmethod
+    def from_manifest_config(cls, raw_config: dict[str, Any]) -> "Backend":
+        """Instantiate this backend from a raw config dict sourced from the manifest.
+
+        Each subclass must override this to parse ``raw_config`` into its own
+        typed config model and return a ready-to-use backend instance.
+
+        Args:
+            raw_config: Arbitrary key/value config from the manifest's ``backendConfig``
+                block for this backend, plus any top-level manifest fields injected by
+                the generator (e.g. ``schedule``).
+
+        Raises:
+            NotImplementedError: Must be implemented by subclasses.
+
+        """
+        raise NotImplementedError(f"{cls.__name__} must implement from_manifest_config()")
+
+    @classmethod
+    def create(cls, name: str, raw_config: dict[str, Any]) -> "Backend":
+        """Look up ``name`` in the registry and instantiate the backend.
+
+        Args:
+            name: The registered backend name (e.g. ``"dvc"``, ``"argo"``).
+            raw_config: Config dict forwarded to ``from_manifest_config``.
+
+        Raises:
+            ValueError: If ``name`` is not in the registry.
+
+        """
+        if name not in cls._registry:
+            known = ", ".join(f"'{k}'" for k in sorted(cls._registry))
+            raise ValueError(f"Unknown backend '{name}'. Registered backends: {known}.")
+        return cls._registry[name].from_manifest_config(raw_config)
+
     @property
     def run_id(self) -> str:
         """Get the unique run ID for the current pipeline execution.
