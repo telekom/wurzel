@@ -18,7 +18,7 @@ from wurzel.utils.splitters.semantic_splitter import (
     SemanticSplitter,
 )
 
-FIXTURES_BASE_PATH = Path(__file__).parent.parent / "data/splitter/table_splitter"
+FIXTURES_BASE_PATH = Path(__file__).parent.parent.parent / "data/splitter/table_splitter"
 
 
 def assert_splitter_outputs(Splitter, fixture_path: Path, save_actual_output: bool = False):

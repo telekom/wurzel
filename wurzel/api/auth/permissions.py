@@ -52,7 +52,7 @@ async def _resolve_project_role(
     permission logic lives in one place and is testable in isolation.
     """
     # Import here to avoid circular dependency at module load time
-    from wurzel.api.backends.supabase.client import get_project_role_from_db  # noqa: PLC0415
+    from wurzel.api.backends.supabase.client import get_project_role_from_db  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
 
     return await get_project_role_from_db(project_id, user.sub)
 
@@ -120,7 +120,7 @@ async def _require_branch_write_dep(
     user: UserClaims = Depends(_verify_user),
 ) -> ProjectAccess:
     """Deny writes to `main` always; deny writes to protected branches for non-admins."""
-    from wurzel.api.backends.supabase.client import get_branch_protection  # noqa: PLC0415
+    from wurzel.api.backends.supabase.client import get_branch_protection  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
 
     role = await _resolve_project_role(project_id, user)
     if role is None:

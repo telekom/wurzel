@@ -19,7 +19,7 @@ from wurzel.api.app import create_app  # noqa: E402
 from wurzel.api.dependencies import _get_settings  # noqa: E402
 from wurzel.api.settings import APISettings  # noqa: E402
 
-TEST_API_KEY = "test-api-key-12345"
+TEST_API_KEY = "test-api-key-12345"  # pragma: allowlist secret
 
 
 @pytest.fixture(scope="module")

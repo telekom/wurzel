@@ -1,12 +1,12 @@
-import logging
-
-import pytest
-
-from wurzel.cli.logger import WithExtraFormatter
-
 # SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
 #
 # SPDX-License-Identifier: Apache-2.0
+
+"""Tests for wurzel.cli.logger."""
+
+import logging
+
+from wurzel.cli.logger import WithExtraFormatter
 
 
 class DummyRecord(logging.LogRecord):
@@ -26,14 +26,9 @@ class DummyRecord(logging.LogRecord):
             setattr(self, k, v)
 
 
-@pytest.fixture
-def formatter():
-    return WithExtraFormatter()
-
-
-def test_with_extra_formatter_basic(formatter):
+def test_with_extra_formatter_basic():
+    formatter = WithExtraFormatter()
     record = DummyRecord(msg="hello", level=logging.INFO)
-    # Patch _get_output_dict to simulate JsonFormatter output
     formatter._get_output_dict = lambda rec: {
         "message": rec.getMessage(),
         "foo": "bar",
@@ -48,3 +43,19 @@ def test_with_extra_formatter_basic(formatter):
     assert "level" not in result
     assert "@timestamp" not in result
     assert "file" not in result
+
+
+def test_with_extra_formatter_reduced_suppresses_info():
+    formatter = WithExtraFormatter(reduced=["INFO"])
+    record = logging.LogRecord(
+        name="testx",
+        level=logging.INFO,
+        pathname="/x.py",
+        lineno=1,
+        msg="hello",
+        args=(),
+        exc_info=None,
+        func="test_func",
+    )
+    out = formatter.format(record)
+    assert "'hello'" in out
