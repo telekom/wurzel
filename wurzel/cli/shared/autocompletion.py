@@ -16,6 +16,8 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from wurzel.core.meta.ast_steps import _get_wurzel_dependent_packages  # pylint: disable=import-outside-toplevel
+
 if TYPE_CHECKING:
     pass
 
@@ -24,58 +26,6 @@ log = logging.getLogger(__name__)
 # Module-level cache for autocompletion results
 # Cache key: (search_path, base_module) -> list of discovered step names
 _COMPLETION_CACHE: dict[tuple[str, str], list[str]] = {}
-
-# Module-level cache for wurzel-dependent packages
-# Built on first use, avoids repeated distributions() calls
-_WURZEL_DEPENDENT_PACKAGES_CACHE: set[str] | None = None
-
-
-def _get_wurzel_dependent_packages() -> set[str]:
-    """Get all installed packages that depend on wurzel.
-
-    Uses caching to avoid repeated distribution calls. Only scans packages that
-    actually depend on wurzel, which is much faster than scanning all packages
-    and filtering by keywords.
-
-    Returns:
-        Set of package names (normalized: hyphens -> underscores) that depend on wurzel
-    """
-    global _WURZEL_DEPENDENT_PACKAGES_CACHE  # pylint: disable=global-statement
-
-    if _WURZEL_DEPENDENT_PACKAGES_CACHE is not None:
-        return _WURZEL_DEPENDENT_PACKAGES_CACHE
-
-    try:
-        from importlib.metadata import distributions  # pylint: disable=import-outside-toplevel
-
-        wurzel_deps = set()
-
-        for dist in distributions():
-            requires = dist.requires or []
-            for req in requires:
-                # Parse requirement string (e.g., "wurzel>=1.0", "wurzel[extra]>=1.0")
-                # Extract just the package name before any operators or brackets
-                req_pkg = req.split(";")[0]  # Remove environment markers
-                req_pkg = req_pkg.split(">")[0]  # Remove >
-                req_pkg = req_pkg.split("<")[0]  # Remove <
-                req_pkg = req_pkg.split("=")[0]  # Remove =
-                req_pkg = req_pkg.split("[")[0]  # Remove extras
-                req_pkg = req_pkg.split("!")[0]  # Remove !=
-                req_pkg = req_pkg.strip()
-
-                if req_pkg.lower() == "wurzel":
-                    # Normalize package name: hyphens to underscores
-                    normalized_name = dist.name.replace("-", "_")
-                    wurzel_deps.add(normalized_name)
-                    break
-
-        _WURZEL_DEPENDENT_PACKAGES_CACHE = wurzel_deps
-        log.debug(f"Found {len(wurzel_deps)} packages depending on wurzel")
-        return wurzel_deps
-
-    except Exception as e:  # pylint: disable=broad-exception-caught
-        log.debug(f"Failed to get wurzel-dependent packages: {e}")
-        return set()
 
 
 def _process_python_file(py_file: Path, search_path: Path, base_module: str, incomplete: str, hints: list) -> None:
