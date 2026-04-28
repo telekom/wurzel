@@ -20,7 +20,16 @@ import wurzel
 import wurzel.core
 from wurzel.cli import _main as main
 from wurzel.cli import generate_cli_call
-from wurzel.cli._main import _check_if_typed_step, _process_python_file, complete_step_import
+from wurzel.cli._main import _check_if_typed_step, _process_python_file, update_log_level
+from wurzel.cli.env.command import console as env_console
+from wurzel.cli.env.command import env as env_cmd
+from wurzel.cli.generate import backend_callback, get_available_backends
+from wurzel.cli.generate.command import generate
+from wurzel.cli.inspect import main as inspect_command
+from wurzel.cli.run import executer_callback
+from wurzel.cli.run import main as run_main
+from wurzel.cli.shared import complete_step_import
+from wurzel.cli.shared.callbacks import step_callback
 from wurzel.executors import BaseStepExecutor
 from wurzel.executors.backend.backend_dvc import DvcBackend
 from wurzel.steps.manual_markdown import ManualMarkdownStep
@@ -92,12 +101,12 @@ def test_generate_cli_call_backend_subprocess(tmp_path, backend, env):
     ],
 )
 def test_executer_callback(inpt_str, expected):
-    assert main.executer_callback(None, None, inpt_str) == expected
+    assert executer_callback(None, None, inpt_str) == expected
 
 
 def test_executer_callback_bad():
     with pytest.raises(typer.BadParameter):
-        main.executer_callback(None, None, "XX")
+        executer_callback(None, None, "XX")
 
 
 # ---------------------------------------------------------------------------
@@ -115,7 +124,7 @@ def test_executer_callback_bad():
     ],
 )
 def test_step_callback(step_path):
-    assert main.step_callback(None, None, step_path) == wurzel.steps.ManualMarkdownStep
+    assert step_callback(None, None, step_path) == wurzel.steps.ManualMarkdownStep
 
 
 @pytest.mark.parametrize(
@@ -129,7 +138,7 @@ def test_step_callback(step_path):
 )
 def test_step_callback_bad(step_path):
     with pytest.raises(typer.BadParameter):
-        main.step_callback(None, None, step_path)
+        step_callback(None, None, step_path)
 
 
 # ---------------------------------------------------------------------------
@@ -142,7 +151,7 @@ def test_step_callback_bad(step_path):
     ["DvcBackend", "dvcbackend", "DVCBACKEND", "DvCbAcKeNd"],
 )
 def test_backend_callback_dvc(backend_str):
-    assert main.backend_callback(None, None, backend_str) == DvcBackend
+    assert backend_callback(None, None, backend_str) == DvcBackend
 
 
 @pytest.mark.skipif(not HAS_HERA, reason="Hera is not available")
@@ -172,7 +181,7 @@ def test_backend_callback_invalid():
 
 
 def test_update_log_level_runs():
-    main.update_log_level("INFO")
+    update_log_level("INFO")
 
 
 # ---------------------------------------------------------------------------
@@ -181,7 +190,7 @@ def test_update_log_level_runs():
 
 
 def test_get_available_backends():
-    backends = main.get_available_backends()
+    backends = get_available_backends()
     assert isinstance(backends, list)
     assert "dvc" in backends
     if HAS_HERA:
@@ -192,7 +201,7 @@ def test_get_available_backends():
 
 @pytest.mark.skipif(not HAS_HERA, reason="Hera is not available")
 def test_get_available_backends_includes_argo():
-    backends = main.get_available_backends()
+    backends = get_available_backends()
     assert "dvc" in backends
     assert "argo" in backends
 
@@ -208,7 +217,7 @@ def test_run(tmp_path, env):
     inp.mkdir()
     (inp / "file.md").write_text("#Hello\n world")
     env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
-    main.run(step=ManualMarkdownStep, executor=BaseStepExecutor, input_folders=[], output_path=out)
+    run_main(step=ManualMarkdownStep, output_path=out, input_folders=set(), executor_str_value=BaseStepExecutor)
     assert list(out.glob("*"))
     assert (out / "ManualMarkdown.json").read_text()
 
@@ -219,11 +228,11 @@ def test_run_with_middleware(tmp_path, env):
     inp.mkdir()
     (inp / "file.md").write_text("#Hello\n world")
     env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
-    main.run(
+    run_main(
         step=ManualMarkdownStep,
-        executor=BaseStepExecutor,
-        input_folders=[],
         output_path=out,
+        input_folders=set(),
+        executor_str_value=BaseStepExecutor,
         middlewares="prometheus",
     )
     assert list(out.glob("*"))
@@ -236,11 +245,11 @@ def test_run_with_empty_middleware_string(tmp_path, env):
     inp.mkdir()
     (inp / "file.md").write_text("#Hello\n world")
     env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
-    main.run(
+    run_main(
         step=ManualMarkdownStep,
-        executor=BaseStepExecutor,
-        input_folders=[],
         output_path=out,
+        input_folders=set(),
+        executor_str_value=BaseStepExecutor,
         middlewares="",
     )
     assert list(out.glob("*"))
@@ -254,7 +263,7 @@ def test_run_with_middleware_from_env(tmp_path, env):
     (inp / "file.md").write_text("#Hello\n world")
     env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
     env.set("MIDDLEWARES", "prometheus")
-    main.run(step=ManualMarkdownStep, executor=BaseStepExecutor, input_folders=[], output_path=out)
+    run_main(step=ManualMarkdownStep, output_path=out, input_folders=set(), executor_str_value=BaseStepExecutor)
     assert list(out.glob("*"))
     assert (out / "ManualMarkdown.json").read_text()
 
@@ -265,11 +274,11 @@ def test_run_encapsulate_env(tmp_path, env):
     inp.mkdir()
     (inp / "file.md").write_text("#Test\n content")
     env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
-    main.run(
+    run_main(
         step=ManualMarkdownStep,
-        executor=BaseStepExecutor,
-        input_folders=[],
         output_path=out,
+        input_folders=set(),
+        executor_str_value=BaseStepExecutor,
         middlewares="",
         encapsulate_env=True,
     )
@@ -284,11 +293,11 @@ def test_run_middleware_overrides_env(tmp_path, env):
     (inp / "file.md").write_text("#Test\n content")
     env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
     env.set("MIDDLEWARES", "prometheus")
-    main.run(
+    run_main(
         step=ManualMarkdownStep,
-        executor=BaseStepExecutor,
-        input_folders=[],
         output_path=out,
+        input_folders=set(),
+        executor_str_value=BaseStepExecutor,
         middlewares="",
         encapsulate_env=True,
     )
@@ -301,11 +310,11 @@ def test_run_with_whitespace_in_middlewares(tmp_path, env):
     inp.mkdir()
     (inp / "file.md").write_text("#Test\n content")
     env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
-    main.run(
+    run_main(
         step=ManualMarkdownStep,
-        executor=BaseStepExecutor,
-        input_folders=[],
         output_path=out,
+        input_folders=set(),
+        executor_str_value=BaseStepExecutor,
         middlewares=" prometheus ",
         encapsulate_env=True,
     )
@@ -319,11 +328,11 @@ def test_run_with_invalid_middleware_continues(tmp_path, env):
     inp.mkdir()
     (inp / "file.md").write_text("#Test\n content")
     env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
-    main.run(
+    run_main(
         step=ManualMarkdownStep,
-        executor=BaseStepExecutor,
-        input_folders=[],
         output_path=out,
+        input_folders=set(),
+        executor_str_value=BaseStepExecutor,
         middlewares="nonexistent",
         encapsulate_env=True,
     )
@@ -337,7 +346,7 @@ def test_run_with_invalid_middleware_continues(tmp_path, env):
 
 @pytest.mark.parametrize("gen_env", [True, False])
 def test_inspekt(gen_env):
-    main.inspekt(ManualMarkdownStep, gen_env)
+    inspect_command(ManualMarkdownStep, gen_env)
 
 
 # ---------------------------------------------------------------------------
@@ -346,7 +355,7 @@ def test_inspekt(gen_env):
 
 
 def test_generate_list_backends(capsys):
-    main.generate(pipeline=None, backend="dvc", list_backends=True)
+    generate(pipeline=None, backend="dvc", list_backends=True)
     captured = capsys.readouterr()
     assert "Available backends:" in captured.out
     assert "dvc" in captured.out
@@ -362,26 +371,26 @@ def test_generate_list_backends(capsys):
 
 
 def test_env_outputs_requirements(capsys, monkeypatch):
-    monkeypatch.setattr(main, "console", main.console.__class__(force_terminal=False, width=200))
-    main.env_cmd("wurzel.steps.manual_markdown:ManualMarkdownStep")
+    monkeypatch.setattr("wurzel.cli.env.command.console", env_console.__class__(force_terminal=False, width=200))
+    env_cmd("wurzel.steps.manual_markdown:ManualMarkdownStep")
     captured = capsys.readouterr()
     assert "Environment variables" in captured.out
     assert "MANUALMARKDOWNSTEP__FOLDER_PATH" in captured.out
 
 
 def test_env_only_required_filters_optional(capsys, monkeypatch):
-    monkeypatch.setattr(main, "console", main.console.__class__(force_terminal=False, width=200))
-    main.env_cmd("examples.pipeline.pipelinedemo:pipeline", include_optional=False)
+    monkeypatch.setattr("wurzel.cli.env.command.console", env_console.__class__(force_terminal=False, width=200))
+    env_cmd("examples.pipeline.pipelinedemo:pipeline", include_optional=False)
     captured = capsys.readouterr()
     assert "MANUALMARKDOWNSTEP__FOLDER_PATH" in captured.out
     assert "SIMPLESPLITTERSTEP__BATCH_SIZE" not in captured.out
 
 
 def test_env_gen_env_outputs_env_file(capsys, monkeypatch, env):
-    monkeypatch.setattr(main, "console", main.console.__class__(force_terminal=False, width=200))
+    monkeypatch.setattr("wurzel.cli.env.command.console", env_console.__class__(force_terminal=False, width=200))
     env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", "/tmp/custom")
     env.set("SIMPLESPLITTERSTEP__BATCH_SIZE", "256")
-    main.env_cmd("examples.pipeline.pipelinedemo:pipeline", gen_env=True)
+    env_cmd("examples.pipeline.pipelinedemo:pipeline", gen_env=True)
     captured = capsys.readouterr()
     expected = (
         "# Generated env vars\n\n"
@@ -400,8 +409,8 @@ def test_env_gen_env_outputs_env_file(capsys, monkeypatch, env):
 
 
 def test_env_gen_env_default_values(capsys, monkeypatch):
-    monkeypatch.setattr(main, "console", main.console.__class__(force_terminal=False, width=200))
-    main.env_cmd("examples.pipeline.pipelinedemo:pipeline", gen_env=True)
+    monkeypatch.setattr("wurzel.cli.env.command.console", env_console.__class__(force_terminal=False, width=200))
+    env_cmd("examples.pipeline.pipelinedemo:pipeline", gen_env=True)
     captured = capsys.readouterr()
     expected = (
         "# Generated env vars\n\n"
@@ -420,18 +429,18 @@ def test_env_gen_env_default_values(capsys, monkeypatch):
 
 
 def test_env_check_success(env, capsys, monkeypatch):
-    monkeypatch.setattr(main, "console", main.console.__class__(force_terminal=False, width=200))
+    monkeypatch.setattr("wurzel.cli.env.command.console", env_console.__class__(force_terminal=False, width=200))
     env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", "/tmp")
-    main.env_cmd("wurzel.steps.manual_markdown:ManualMarkdownStep", check=True)
+    env_cmd("wurzel.steps.manual_markdown:ManualMarkdownStep", check=True)
     captured = capsys.readouterr()
     assert "All required environment variables are set." in captured.out
 
 
 def test_env_check_failure(env, capsys, monkeypatch):
-    monkeypatch.setattr(main, "console", main.console.__class__(force_terminal=False, width=200))
+    monkeypatch.setattr("wurzel.cli.env.command.console", env_console.__class__(force_terminal=False, width=200))
     env.clear()
     with pytest.raises(typer.Exit) as exc:
-        main.env_cmd("wurzel.steps.manual_markdown:ManualMarkdownStep", check=True)
+        env_cmd("wurzel.steps.manual_markdown:ManualMarkdownStep", check=True)
     assert exc.value.exit_code == 1
     captured = capsys.readouterr()
     assert "Missing environment variables" in captured.out

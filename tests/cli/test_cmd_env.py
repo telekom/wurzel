@@ -2,14 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Tests for wurzel.cli.cmd_env."""
+"""Tests for wurzel.cli.env."""
 
 from examples.pipeline import pipelinedemo
-from wurzel.cli import cmd_env
+from wurzel.cli import env as env_module
 
 
 def test_collect_env_requirements_preserves_step_and_field_order():
-    reqs = cmd_env.collect_env_requirements(pipelinedemo.pipeline)
+    reqs = env_module.collect_env_requirements(pipelinedemo.pipeline)
 
     manual = [req for req in reqs if req.step_name == "ManualMarkdownStep"]
     simple = [req for req in reqs if req.step_name == "SimpleSplitterStep"]
@@ -27,8 +27,8 @@ def test_collect_env_requirements_preserves_step_and_field_order():
 
 
 def test_format_env_snippet_matches_expected_layout():
-    reqs = cmd_env.collect_env_requirements(pipelinedemo.pipeline)
-    snippet = cmd_env.format_env_snippet(reqs)
+    reqs = env_module.collect_env_requirements(pipelinedemo.pipeline)
+    snippet = env_module.format_env_snippet(reqs)
 
     assert snippet == (
         "# Generated env vars\n\n"
@@ -46,8 +46,8 @@ def test_format_env_snippet_matches_expected_layout():
 
 
 def test_format_env_snippet_prefers_current_env_values():
-    reqs = cmd_env.collect_env_requirements(pipelinedemo.pipeline)
-    snippet = cmd_env.format_env_snippet(
+    reqs = env_module.collect_env_requirements(pipelinedemo.pipeline)
+    snippet = env_module.format_env_snippet(
         reqs,
         current_env={
             "MANUALMARKDOWNSTEP__FOLDER_PATH": "/tmp/data",
@@ -60,12 +60,12 @@ def test_format_env_snippet_prefers_current_env_values():
 
 def test_validate_env_vars_reports_missing(env, monkeypatch):
     monkeypatch.delenv("MANUALMARKDOWNSTEP__FOLDER_PATH", raising=False)
-    issues = cmd_env.validate_env_vars(pipelinedemo.pipeline, allow_extra_fields=False)
+    issues = env_module.validate_env_vars(pipelinedemo.pipeline, allow_extra_fields=False)
     missing = {issue.env_var for issue in issues}
     assert "MANUALMARKDOWNSTEP__FOLDER_PATH" in missing
 
 
 def test_validate_env_vars_passes_when_required_present(env, tmp_path):
     env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(tmp_path))
-    issues = cmd_env.validate_env_vars(pipelinedemo.pipeline, allow_extra_fields=False)
+    issues = env_module.validate_env_vars(pipelinedemo.pipeline, allow_extra_fields=False)
     assert issues == []
