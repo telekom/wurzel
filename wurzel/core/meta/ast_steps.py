@@ -33,6 +33,17 @@ _EXCLUDE_DIRS: frozenset[str] = frozenset(
     }
 )
 
+# Exclude internal wurzel framework classes from discovery results
+_EXCLUDE_CLASS_PATHS: frozenset[str] = frozenset(
+    {
+        "wurzel.core.self_consuming_step.SelfConsumingLeafStep",
+    }
+)
+
+# Module-level cache for wurzel-dependent packages
+# Built on first use, avoids repeated distributions() calls
+_WURZEL_DEPENDENT_PACKAGES_CACHE: set[str] | None = None
+
 
 def check_if_typed_step(node: ast.ClassDef) -> bool:
     """Return True if the AST class node directly inherits from TypedStep."""
@@ -47,6 +58,52 @@ def check_if_typed_step(node: ast.ClassDef) -> bool:
         if isinstance(base, ast.Attribute) and base.attr == "TypedStep":
             return True
     return False
+
+
+def _get_wurzel_dependent_packages() -> set[str]:
+    """Get all installed packages that depend on wurzel.
+
+    Uses caching to avoid repeated distribution calls. Only scans packages that
+    actually depend on wurzel, which is much faster than scanning all packages
+    and filtering by keywords.
+
+    Returns:
+        Set of package names (normalized: hyphens -> underscores) that depend on wurzel
+    """
+    global _WURZEL_DEPENDENT_PACKAGES_CACHE  # pylint: disable=global-statement
+
+    if _WURZEL_DEPENDENT_PACKAGES_CACHE is not None:
+        return _WURZEL_DEPENDENT_PACKAGES_CACHE
+
+    try:
+        wurzel_deps = set()
+
+        for dist in distributions():
+            requires = dist.requires or []
+            for req in requires:
+                # Parse requirement string (e.g., "wurzel>=1.0", "wurzel[extra]>=1.0")
+                # Extract just the package name before any operators or brackets
+                req_pkg = req.split(";")[0]  # Remove environment markers
+                req_pkg = req_pkg.split(">")[0]  # Remove >
+                req_pkg = req_pkg.split("<")[0]  # Remove <
+                req_pkg = req_pkg.split("=")[0]  # Remove =
+                req_pkg = req_pkg.split("[")[0]  # Remove extras
+                req_pkg = req_pkg.split("!")[0]  # Remove !=
+                req_pkg = req_pkg.strip()
+
+                if req_pkg.lower() == "wurzel":
+                    # Normalize package name: hyphens to underscores
+                    normalized_name = dist.name.replace("-", "_")
+                    wurzel_deps.add(normalized_name)
+                    break
+
+        _WURZEL_DEPENDENT_PACKAGES_CACHE = wurzel_deps
+        logger.debug(f"Found {len(wurzel_deps)} packages depending on wurzel")
+        return wurzel_deps
+
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.debug(f"Failed to get wurzel-dependent packages: {e}")
+        return set()
 
 
 def build_module_path(py_file: Path, search_path: Path, base_module: str) -> str:
@@ -128,5 +185,52 @@ def find_typed_steps_in_venv() -> list[str]:
             except Exception:  # pylint: disable=broad-exception-caught
                 logger.debug("Could not scan package %s", pkg_name, exc_info=True)
                 continue
+
+    return list(seen)
+
+
+def find_typed_steps_from_wurzel_dependents() -> list[str]:
+    """Return TypedStep subclasses from packages that depend on wurzel.
+
+    Filtered discovery for CLI/UI use cases where only wurzel-ecosystem steps
+    should be shown. Excludes internal wurzel framework classes.
+
+    Returns:
+        Fully-qualified class paths of TypedStep subclasses from wurzel-dependent packages,
+        excluding framework classes.
+    """
+    # Use an insertion-ordered dict as a deduplication set.
+    seen: dict[str, None] = {}
+    seen_roots: set[Path] = set()
+
+    # Only scan packages that actually depend on wurzel
+    wurzel_deps = _get_wurzel_dependent_packages()
+
+    for pkg_name in wurzel_deps:
+        try:
+            spec = find_spec(pkg_name)
+            if spec is None:
+                continue
+            if spec.submodule_search_locations:
+                pkg_root = Path(list(spec.submodule_search_locations)[0])
+            elif spec.origin and spec.origin.endswith("__init__.py"):
+                # Namespace package with only an __init__.py — treat its dir as root
+                pkg_root = Path(spec.origin).parent
+            else:
+                # Single-file module — skip it
+                continue
+
+            resolved = pkg_root.resolve()
+            if resolved in seen_roots:
+                continue
+            seen_roots.add(resolved)
+
+            for class_path in scan_path_for_typed_steps(pkg_root, pkg_name):
+                # Exclude framework classes (both specific exclusions and wurzel.core.*)
+                if class_path not in _EXCLUDE_CLASS_PATHS and not class_path.startswith("wurzel.core."):
+                    seen.setdefault(class_path, None)
+        except Exception:  # pylint: disable=broad-exception-caught
+            logger.debug("Could not scan package %s", pkg_name, exc_info=True)
+            continue
 
     return list(seen)
