@@ -29,7 +29,10 @@ from pydantic_core import PydanticUndefined
 
 from wurzel.api.errors import APIError
 from wurzel.api.routes.steps.data import FieldSchema, StepInfo, StepListResponse, StepSummary
-from wurzel.core.meta import find_typed_steps_in_venv, scan_path_for_typed_steps
+from wurzel.core.meta import (
+    find_typed_steps_from_wurzel_dependents,
+    scan_path_for_typed_steps,
+)
 from wurzel.core.typed_step import TypedStep
 
 logger = logging.getLogger(__name__)
@@ -71,8 +74,11 @@ class StepListCache:
             self._data.clear()
 
     def warm(self) -> None:
-        """Pre-populate the all-venv cache entry. Call from app lifespan."""
-        class_paths = find_typed_steps_in_venv()
+        """Pre-populate the all-venv cache entry. Call from app lifespan.
+
+        Uses CLI's filtering approach: only scans packages that depend on wurzel.
+        """
+        class_paths = find_typed_steps_from_wurzel_dependents()
         self.set(None, class_paths)
         logger.info("Step cache warmed: %d steps discovered", len(class_paths))
 
@@ -278,11 +284,15 @@ _EXCLUDED_CLASS_PATHS: frozenset[str] = frozenset(
 
 
 def discover_steps(cache: StepListCache, package: str | None) -> StepListResponse:
-    """Discover all TypedStep subclasses, using *cache* to avoid repeat scans.
+    """Discover all TypedStep subclasses from wurzel-dependent packages.
+
+    Uses the CLI's filtering approach: only scans packages that actually depend
+    on wurzel, not every installed package. This matches the behavior of the
+    CLI autocompletion and ensures API results are consistent with CLI results.
 
     Args:
         cache: TTL cache instance (injected by FastAPI dependency).
-        package: Restrict scan to this installed package, or ``None`` for all.
+        package: Restrict scan to this installed package, or ``None`` for all wurzel-dependent packages.
 
     Returns:
         A :class:`StepListResponse` with summaries of every discovered step.
@@ -292,7 +302,8 @@ def discover_steps(cache: StepListCache, package: str | None) -> StepListRespons
     class_paths = cache.get(package)
     if class_paths is None:
         if package is None:
-            class_paths = find_typed_steps_in_venv()
+            # Use CLI's approach: only scan packages that depend on wurzel
+            class_paths = find_typed_steps_from_wurzel_dependents()
         else:
             pkg_root = _resolve_package_root(package)
             class_paths = scan_path_for_typed_steps(pkg_root, package)

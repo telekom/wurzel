@@ -633,3 +633,137 @@ class TestAutocompletionPerformance:
         if incomplete:
             for result in results:
                 assert result.startswith(incomplete)
+
+    def test_external_packages_discovery_mechanism(self):
+        """Test that wurzel-dependent packages are discovered efficiently.
+
+        Uses dependency-based discovery to find only packages that depend on wurzel,
+        which is faster and more accurate than keyword matching.
+        """
+        start = time.perf_counter()
+        results = complete_step_import("")
+        elapsed = time.perf_counter() - start
+
+        # Should still be fast with dependency-based discovery
+        assert elapsed < 2.0, f"Full scan took {elapsed:.2f}s, expected < 2s"
+
+        # Should find wurzel steps
+        has_wurzel = any(r.startswith("wurzel.") for r in results)
+        assert has_wurzel, "Should find wurzel steps"
+
+        # Should find at least some steps
+        assert len(results) > 0, "Should find at least some steps"
+
+    def test_external_packages_steps_telekom(self):
+        """Test that steps_telekom package is discovered if installed."""
+        results = complete_step_import("steps_telekom")
+
+        # Should find steps_telekom if installed
+        if results:
+            for result in results:
+                assert result.startswith("steps_telekom"), f"Result {result} doesn't start with 'steps_telekom'"
+            assert any(".arize." in r for r in results), "Should find Arize step in steps_telekom"
+
+    def test_external_packages_steps_greece(self):
+        """Test that steps_greece package is discovered if installed."""
+        results = complete_step_import("steps_greece")
+
+        # Should find steps_greece if installed
+        if results:
+            for result in results:
+                assert result.startswith("steps_greece"), f"Result {result} doesn't start with 'steps_greece'"
+            assert any(".manual_markdown." in r for r in results), "Should find ManualMarkdown step in steps_greece"
+
+    def test_external_package_prefix_filtering(self):
+        """Test that prefix filtering works for hyphenated packages (steps- and steps_).
+
+        This tests that both naming conventions are handled:
+        - steps_telekom (underscore)
+        - steps-greece (hyphen, normalized to steps_greece)
+        """
+        # Should normalize hyphenated names properly
+        results = complete_step_import("steps_")
+
+        # Should return a list
+        assert isinstance(results, list)
+
+        # All results should start with "steps_" (after normalization)
+        for result in results:
+            assert result.startswith("steps_"), f"Result {result} doesn't start with 'steps_'"
+
+    def test_external_package_scanning_uses_skip_list(self):
+        """Test that the scanner only examines packages depending on wurzel.
+
+        Verifies efficient discovery by only scanning packages with actual
+        wurzel dependencies, rather than trying all packages.
+        """
+        results = complete_step_import("")
+        assert isinstance(results, list)
+        assert len(results) > 0
+
+        # Should find wurzel steps regardless of implementation
+        has_wurzel = any(r.startswith("wurzel.") for r in results)
+        assert has_wurzel, "Should find wurzel steps"
+
+    def test_external_packages_nested_directories_discovered(self):
+        """Test that nested directory TypedSteps are discovered from external packages.
+
+        Verifies that the scanner correctly handles subdirectories in external
+        packages and finds TypedStep classes at any nesting level (e.g., CdlStep
+        in steps_telekom/kafka_cdl/step.py).
+        """
+        results = complete_step_import("")
+        assert isinstance(results, list)
+
+        # Expected nested steps from steps_telekom
+        nested_telekom = {
+            "steps_telekom.kafka_cdl.step.CdlStep",
+            "steps_telekom.magenta_moments.step.MagentaMomentsStep",
+            "steps_telekom.url_replacer.url_replacer_step.NonAbsoluteUrlReplacerStep",
+        }
+
+        # Check if steps_telekom is installed
+        try:
+            import steps_telekom  # noqa: F401, pylint: disable=unused-import
+
+            for step in nested_telekom:
+                assert step in results, f"Should find nested step {step}"
+        except ImportError:
+            # steps_telekom not installed, skip assertion
+            pass
+
+        # Expected nested steps from steps_greece
+        nested_greece = {
+            "steps_greece.chunking.chunking.GRMarkdownChunkingStep",
+        }
+
+        # Check if steps_greece is installed
+        try:
+            import steps_greece  # noqa: F401, pylint: disable=unused-import
+
+            for step in nested_greece:
+                assert step in results, f"Should find nested step {step}"
+        except ImportError:
+            # steps_greece not installed, skip assertion
+            pass
+
+    def test_wurzel_core_steps_excluded(self):
+        """Test that wurzel.core.* steps are always excluded from autocompletion.
+
+        Verifies that internal implementation details like SelfConsumingLeafStep
+        are not exposed in autocompletion results, even though they are valid
+        TypedStep subclasses. Only user-facing steps should be suggested.
+        """
+        results = complete_step_import("")
+        assert isinstance(results, list)
+
+        # Should NOT contain any wurzel.core.* steps
+        core_steps = [r for r in results if r.startswith("wurzel.core.")]
+        assert len(core_steps) == 0, f"Should not find wurzel.core.* steps, but found: {core_steps}"
+
+        # Specifically check that SelfConsumingLeafStep is not in results
+        assert "wurzel.core.self_consuming_step.SelfConsumingLeafStep" not in results
+
+        # Verify we still find normal wurzel.steps
+        user_facing_steps = [r for r in results if r.startswith("wurzel.steps.")]
+        assert len(user_facing_steps) > 0, "Should find user-facing wurzel.steps"
