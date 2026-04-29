@@ -104,6 +104,7 @@ def test_generate_nested_dict(nested_steps, env):
     assert all(key in dvc_pipe[step1.__class__.__name__] for key in ("deps", "outs", "cmd"))
 
 
+@pytest.mark.skipif(shutil.which("dvc") is None, reason="dvc command not available")
 def test_save_yaml(nested_steps, tmp_path: Path, env):
     step1, output_1, step2, output_2 = nested_steps
     step2: Step = step2

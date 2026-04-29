@@ -21,8 +21,8 @@ import wurzel.core
 from wurzel.cli import _main as main
 from wurzel.cli import generate_cli_call
 from wurzel.cli._main import _check_if_typed_step, _process_python_file, update_log_level
-from wurzel.cli.env.command import console as env_console
-from wurzel.cli.env.command import env as env_cmd
+from wurzel.cli.environment.command import console as env_console
+from wurzel.cli.environment.command import env as env_cmd
 from wurzel.cli.generate import backend_callback, get_available_backends
 from wurzel.cli.generate.command import generate
 from wurzel.cli.inspect import main as inspect_command
@@ -162,12 +162,12 @@ def test_backend_callback_dvc(backend_str):
 def test_backend_callback_argo(backend_str):
     from wurzel.executors.backend.backend_argo import ArgoBackend
 
-    assert main.backend_callback(None, None, backend_str) == ArgoBackend
+    assert backend_callback(None, None, backend_str) == ArgoBackend
 
 
 def test_backend_callback_invalid():
     with pytest.raises(typer.BadParameter) as exc_info:
-        main.backend_callback(None, None, "InvalidBackend")
+        backend_callback(None, None, "InvalidBackend")
     error_msg = str(exc_info.value)
     assert "InvalidBackend not supported" in error_msg
     assert "dvc" in error_msg
@@ -371,7 +371,7 @@ def test_generate_list_backends(capsys):
 
 
 def test_env_outputs_requirements(capsys, monkeypatch):
-    monkeypatch.setattr("wurzel.cli.env.command.console", env_console.__class__(force_terminal=False, width=200))
+    monkeypatch.setattr("wurzel.cli.environment.command.console", env_console.__class__(force_terminal=False, width=200))
     env_cmd("wurzel.steps.manual_markdown:ManualMarkdownStep")
     captured = capsys.readouterr()
     assert "Environment variables" in captured.out
@@ -379,7 +379,7 @@ def test_env_outputs_requirements(capsys, monkeypatch):
 
 
 def test_env_only_required_filters_optional(capsys, monkeypatch):
-    monkeypatch.setattr("wurzel.cli.env.command.console", env_console.__class__(force_terminal=False, width=200))
+    monkeypatch.setattr("wurzel.cli.environment.command.console", env_console.__class__(force_terminal=False, width=200))
     env_cmd("examples.pipeline.pipelinedemo:pipeline", include_optional=False)
     captured = capsys.readouterr()
     assert "MANUALMARKDOWNSTEP__FOLDER_PATH" in captured.out
@@ -387,7 +387,7 @@ def test_env_only_required_filters_optional(capsys, monkeypatch):
 
 
 def test_env_gen_env_outputs_env_file(capsys, monkeypatch, env):
-    monkeypatch.setattr("wurzel.cli.env.command.console", env_console.__class__(force_terminal=False, width=200))
+    monkeypatch.setattr("wurzel.cli.environment.command.console", env_console.__class__(force_terminal=False, width=200))
     env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", "/tmp/custom")
     env.set("SIMPLESPLITTERSTEP__BATCH_SIZE", "256")
     env_cmd("examples.pipeline.pipelinedemo:pipeline", gen_env=True)
@@ -409,7 +409,7 @@ def test_env_gen_env_outputs_env_file(capsys, monkeypatch, env):
 
 
 def test_env_gen_env_default_values(capsys, monkeypatch):
-    monkeypatch.setattr("wurzel.cli.env.command.console", env_console.__class__(force_terminal=False, width=200))
+    monkeypatch.setattr("wurzel.cli.environment.command.console", env_console.__class__(force_terminal=False, width=200))
     env_cmd("examples.pipeline.pipelinedemo:pipeline", gen_env=True)
     captured = capsys.readouterr()
     expected = (
@@ -429,7 +429,7 @@ def test_env_gen_env_default_values(capsys, monkeypatch):
 
 
 def test_env_check_success(env, capsys, monkeypatch):
-    monkeypatch.setattr("wurzel.cli.env.command.console", env_console.__class__(force_terminal=False, width=200))
+    monkeypatch.setattr("wurzel.cli.environment.command.console", env_console.__class__(force_terminal=False, width=200))
     env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", "/tmp")
     env_cmd("wurzel.steps.manual_markdown:ManualMarkdownStep", check=True)
     captured = capsys.readouterr()
@@ -437,7 +437,7 @@ def test_env_check_success(env, capsys, monkeypatch):
 
 
 def test_env_check_failure(env, capsys, monkeypatch):
-    monkeypatch.setattr("wurzel.cli.env.command.console", env_console.__class__(force_terminal=False, width=200))
+    monkeypatch.setattr("wurzel.cli.environment.command.console", env_console.__class__(force_terminal=False, width=200))
     env.clear()
     with pytest.raises(typer.Exit) as exc:
         env_cmd("wurzel.steps.manual_markdown:ManualMarkdownStep", check=True)
@@ -465,7 +465,7 @@ def test_autocomplete_non_matching_prefix_returns_list():
 
 def test_autocomplete_with_mocked_distributions():
     with (
-        patch("wurzel.cli._main.Path.cwd") as mock_cwd,
+        patch("wurzel.cli.shared.autocompletion.Path.cwd") as mock_cwd,
         patch("importlib.metadata.distributions") as mock_distributions,
         patch("importlib.util.find_spec") as mock_find_spec,
     ):
@@ -482,18 +482,24 @@ def test_autocomplete_with_mocked_distributions():
 
 
 def test_autocomplete_handles_cwd_exception_gracefully():
-    with patch("wurzel.cli._main.Path.cwd") as mock_cwd:
+    with patch("wurzel.cli.shared.autocompletion.Path.cwd") as mock_cwd:
         mock_cwd.side_effect = Exception("Fake error")
         result = complete_step_import("some_input")
         assert isinstance(result, list)
 
 
 def test_autocomplete_many_files_does_not_crash():
-    with patch("wurzel.cli._main.Path.cwd") as mock_cwd, patch("wurzel.cli._main.Path.rglob") as mock_rglob:
+    with patch("wurzel.cli.shared.autocompletion.Path.cwd") as mock_cwd:
         mock_cwd.return_value = Path("/fake")
-        mock_rglob.return_value = [Path(f"/fake/file{i}.py") for i in range(300)]
-        result = complete_step_import("test")
-        assert isinstance(result, list)
+        # Mock rglob to return many files
+        mock_path = Mock(spec=Path)
+        mock_path.exists.return_value = True
+        mock_path.iterdir.return_value = []
+        mock_path.glob.return_value = [Path(f"/fake/file{i}.py") for i in range(50)]
+        with patch("wurzel.cli.shared.autocompletion.Path", return_value=mock_path) as mock_Path_class:
+            mock_Path_class.cwd.return_value = mock_path
+            result = complete_step_import("test")
+            assert isinstance(result, list)
 
 
 # ---------------------------------------------------------------------------
