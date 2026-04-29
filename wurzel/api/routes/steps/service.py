@@ -310,6 +310,10 @@ def _build_step_info(step_cls: type[TypedStep]) -> StepInfo:
         except Exception as exc:  # pylint: disable=broad-exception-caught
             logger.debug("Could not build field schema for %s: %s", step_cls, exc)
 
+    # Extract file acceptance metadata from step class
+    accepted_file_extensions = getattr(step_cls, "accepted_file_extensions", [])
+    accepted_mime_types = getattr(step_cls, "accepted_mime_types", [])
+
     return StepInfo(
         class_path=class_path,
         name=step_cls.__name__,
@@ -319,6 +323,8 @@ def _build_step_info(step_cls: type[TypedStep]) -> StepInfo:
         settings_class=settings_class_path,
         env_prefix=env_prefix or None,
         settings_schema=schema,
+        accepted_file_extensions=accepted_file_extensions,
+        accepted_mime_types=accepted_mime_types,
     )
 
 
