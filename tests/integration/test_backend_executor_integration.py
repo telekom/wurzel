@@ -209,7 +209,7 @@ class TestCLIIntegration:
     )
     def test_cli_recognizes_backend(self, backend_name, backend_class):
         """Verify CLI can parse backend names (full and partial)."""
-        from wurzel.cli._main import executer_callback
+        from wurzel.cli.generate import backend_callback
 
         class FakeCtx:
             pass
@@ -221,7 +221,7 @@ class TestCLIIntegration:
         if backend_class is None:
             pytest.skip("Backend not available")
 
-        result = executer_callback(FakeCtx(), FakeParam(), backend_name)
+        result = backend_callback(FakeCtx(), FakeParam(), backend_name)
         assert result == backend_class
 
     @pytest.mark.skipif(shutil.which("wurzel") is None, reason="wurzel binary not on PATH")

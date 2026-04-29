@@ -38,7 +38,8 @@ def _setup_command_groups():
 
     # Import and add command groups
     from wurzel.cli import cmd_manifest, cmd_middlewares  # pylint: disable=import-outside-toplevel
-    from wurzel.cli.env.command import app as env_app  # pylint: disable=import-outside-toplevel
+    from wurzel.cli.completion_command import app as completion_app  # pylint: disable=import-outside-toplevel
+    from wurzel.cli.environment.command import app as env_app  # pylint: disable=import-outside-toplevel
     from wurzel.cli.generate.command import app as generate_app  # pylint: disable=import-outside-toplevel
     from wurzel.cli.inspect.command import app as inspect_app  # pylint: disable=import-outside-toplevel
     from wurzel.cli.run.command import app as run_app  # pylint: disable=import-outside-toplevel
@@ -47,6 +48,7 @@ def _setup_command_groups():
     app.add_typer(inspect_app, name="inspect")
     app.add_typer(generate_app, name="generate")
     app.add_typer(env_app, name="env")
+    app.add_typer(completion_app, name="completion")
     app.add_typer(cmd_middlewares.app, name="middlewares")
     app.add_typer(cmd_manifest.app, name="manifest")
 

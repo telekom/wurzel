@@ -5,7 +5,7 @@
 """Tests for wurzel.cli.env."""
 
 from examples.pipeline import pipelinedemo
-from wurzel.cli import env as env_module
+from wurzel.cli import environment as env_module
 
 
 def test_collect_env_requirements_preserves_step_and_field_order():

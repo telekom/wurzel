@@ -18,24 +18,15 @@ Usage in a route handler::
 from __future__ import annotations
 
 import uuid
-from dataclasses import dataclass
 from typing import Annotated
 
 from fastapi import Depends, Path
 from fastapi import status as http_status
 
-from wurzel.api.auth.jwt import CurrentUser, UserClaims
+from wurzel.api.auth.domain import ProjectAccess, UserClaims
+from wurzel.api.auth.jwt import CurrentUser
 from wurzel.api.errors import APIError
 from wurzel.api.routes.member.data import ProjectRole
-
-
-@dataclass
-class ProjectAccess:
-    """Carries both the resolved user and their project role for downstream use."""
-
-    user: UserClaims
-    role: ProjectRole
-    project_id: uuid.UUID
 
 
 async def _resolve_project_role(

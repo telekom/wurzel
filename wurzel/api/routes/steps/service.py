@@ -8,6 +8,20 @@ All application logic for browsing and introspecting TypedStep subclasses lives
 here.  The HTTP route handlers in :mod:`router` are intentionally thin and only
 delegate to the public functions :func:`discover_steps` and
 :func:`fetch_step_info`.
+
+Caching
+-------
+The step discovery process (AST scanning, parsing) is expensive. Results are
+cached in-process with a configurable TTL. The cache is injected via FastAPI
+dependency injection, making it mockable in tests.
+
+Example (testing)::
+
+    class MockCache:
+        def get(self, package): return ["my.Step"]
+        def set(self, package, paths): pass
+
+    app.dependency_overrides[get_step_list_cache] = lambda: MockCache()
 """
 
 from __future__ import annotations
@@ -45,51 +59,123 @@ _CACHE_TTL: float = 300.0  # seconds
 
 
 class StepListCache:
-    """In-process TTL cache for step discovery results.
+    """In-process cache for step discovery results.
 
-    Injected into routes via :func:`get_step_list_cache`.  Override in tests
-    via ``app.dependency_overrides[get_step_list_cache]``.
+    Thread-safe cache for memoizing expensive AST scan operations.
+    Injected into routes via FastAPI dependency injection.
+
+    Cache is only populated at startup (via warm()) or when explicitly
+    retriggered. It does NOT auto-populate on cache misses.
+
+    Args:
+        ttl: Cache entry TTL in seconds. Default: 300 (5 minutes).
+
+    Example::
+
+        cache = StepListCache(ttl=600)
+        cache.warm()  # Load at startup
+        steps = cache.get(None)  # Returns cached list if available, else None
     """
 
     def __init__(self, ttl: float = _CACHE_TTL) -> None:
         self._ttl = ttl
         self._data: dict[str | None, tuple[float, list[str]]] = {}
         self._lock = threading.Lock()
+        self._warmed_at: dict[str | None, float] = {}  # Track when each cache entry was warmed
 
     def get(self, package: str | None) -> list[str] | None:
-        """Return cached class paths if within TTL, else ``None``."""
+        """Return cached class paths if within TTL, else ``None``.
+
+        Does NOT auto-populate on cache misses. Cache must be warmed via
+        warm() or retrigger() first.
+
+        Args:
+            package: Package to look up, or None for all packages.
+
+        Returns:
+            Cached list of step class paths, or None if not cached or stale.
+        """
         entry = self._data.get(package)
         if entry is not None and time.monotonic() - entry[0] < self._ttl:
             return entry[1]
         return None
 
+    def is_warmed(self, package: str | None = None) -> bool:
+        """Check if cache entry has been warmed.
+
+        Args:
+            package: Package to check, or None for all packages.
+
+        Returns:
+            True if the cache entry has been warmed and is within TTL.
+        """
+        entry = self._data.get(package)
+        return entry is not None and time.monotonic() - entry[0] < self._ttl
+
     def set(self, package: str | None, class_paths: list[str]) -> None:
-        """Store *class_paths* for *package* with the current timestamp."""
+        """Store *class_paths* for *package* with the current timestamp.
+
+        Args:
+            package: Package identifier, or None for all packages.
+            class_paths: List of fully-qualified step class paths.
+        """
         with self._lock:
             self._data[package] = (time.monotonic(), class_paths)
+            self._warmed_at[package] = time.time()
 
     def clear(self) -> None:
-        """Evict all cached entries."""
+        """Evict all cached entries. Useful for testing."""
         with self._lock:
             self._data.clear()
+            self._warmed_at.clear()
 
-    def warm(self) -> None:
-        """Pre-populate the all-venv cache entry. Call from app lifespan.
+    def warm(self, package: str | None = None) -> None:
+        """Populate the cache entry.
 
-        Uses CLI's filtering approach: only scans packages that depend on wurzel.
+        Scans packages that depend on wurzel and caches their steps.
+        Intended to be called during app startup in a background thread.
+
+        Args:
+            package: If None, scan all wurzel-dependent packages. If specified,
+                scan only that package.
         """
-        class_paths = find_typed_steps_from_wurzel_dependents()
-        self.set(None, class_paths)
-        logger.info("Step cache warmed: %d steps discovered", len(class_paths))
+        if package is None:
+            # Use CLI's approach: only scan packages that depend on wurzel
+            class_paths = find_typed_steps_from_wurzel_dependents()
+        else:
+            pkg_root = _resolve_package_root(package)
+            class_paths = scan_path_for_typed_steps(pkg_root, package)
+        self.set(package, class_paths)
+        pkg_label = "*" if package is None else package
+        logger.info("Step cache warmed for package=%r: %d steps discovered", pkg_label, len(class_paths))
+
+    def retrigger(self, package: str | None = None) -> None:
+        """Explicitly reload the cache entry.
+
+        This forces a refresh of the cached data, resetting the TTL.
+
+        Args:
+            package: If None, refresh all packages. If specified, refresh only
+                that package.
+        """
+        self.warm(package)
+        pkg_label = "*" if package is None else package
+        logger.info("Step cache retriggered for package=%r", pkg_label)
 
 
-# Module-level singleton — overridable via dependency_overrides in tests.
-_step_list_cache = StepListCache()
+# Default cache instance (created at module load, reused for all requests).
+# Can be overridden in tests via app.dependency_overrides[get_step_list_cache].
+_DEFAULT_CACHE = StepListCache()
 
 
 def get_step_list_cache() -> StepListCache:
-    """FastAPI dependency — returns the module-level :class:`StepListCache` singleton."""
-    return _step_list_cache
+    """FastAPI dependency — returns the per-app step list cache instance.
+
+    Override in tests::
+
+        app.dependency_overrides[get_step_list_cache] = lambda: MockCache()
+    """
+    return _DEFAULT_CACHE
 
 
 CachedStepList = Annotated[StepListCache, Depends(get_step_list_cache)]
@@ -101,7 +187,7 @@ def warm_step_cache() -> None:
     Intended to be called from the app lifespan, typically in a background
     thread to avoid blocking startup.
     """
-    _step_list_cache.warm()
+    _DEFAULT_CACHE.warm()
 
 
 # ---------------------------------------------------------------------------
@@ -283,34 +369,48 @@ _EXCLUDED_CLASS_PATHS: frozenset[str] = frozenset(
 )
 
 
-def discover_steps(cache: StepListCache, package: str | None) -> StepListResponse:
+def discover_steps(cache: StepListCache, package: str | None, refresh: bool = False) -> StepListResponse:
     """Discover all TypedStep subclasses from wurzel-dependent packages.
 
     Uses the CLI's filtering approach: only scans packages that actually depend
     on wurzel, not every installed package. This matches the behavior of the
     CLI autocompletion and ensures API results are consistent with CLI results.
 
+    Cache behavior:
+    - All packages (package=None): Only loads at app startup or when explicitly
+      retriggered. Does NOT auto-populate on cache misses.
+    - Specific packages (package specified): Scanned on-demand and cached with TTL.
+
     Args:
         cache: TTL cache instance (injected by FastAPI dependency).
         package: Restrict scan to this installed package, or ``None`` for all wurzel-dependent packages.
+        refresh: If True, reload cache even if valid entry exists (e.g., after package changes).
 
     Returns:
         A :class:`StepListResponse` with summaries of every discovered step.
     """
     pkg_label = "*" if package is None else package
 
-    class_paths = cache.get(package)
-    if class_paths is None:
-        if package is None:
-            # Use CLI's approach: only scan packages that depend on wurzel
-            class_paths = find_typed_steps_from_wurzel_dependents()
-        else:
-            pkg_root = _resolve_package_root(package)
-            class_paths = scan_path_for_typed_steps(pkg_root, package)
-        cache.set(package, class_paths)
-        logger.debug("Step list cache miss for package=%r — found %d steps", pkg_label, len(class_paths))
+    # Retrigger cache if explicitly requested
+    if refresh:
+        cache.retrigger(package)
+        class_paths = cache.get(package)
+        logger.info("Step list refreshed for package=%r — found %d steps", pkg_label, class_paths and len(class_paths) or 0)
     else:
-        logger.debug("Step list cache hit for package=%r", pkg_label)
+        class_paths = cache.get(package)
+        if class_paths is None:
+            if package is None:
+                # All-packages case: don't lazy-load, cache must be warmed at startup
+                logger.warning("Step list cache empty for package=%r (cache may not be warmed at startup)", pkg_label)
+                class_paths = []
+            else:
+                # Specific package case: scan on-demand and cache the result
+                pkg_root = _resolve_package_root(package)
+                class_paths = scan_path_for_typed_steps(pkg_root, package)
+                cache.set(package, class_paths)
+                logger.debug("Step list cache miss for package=%r — scanned on-demand, found %d steps", pkg_label, len(class_paths))
+        else:
+            logger.debug("Step list cache hit for package=%r", pkg_label)
 
     summaries = [
         StepSummary(

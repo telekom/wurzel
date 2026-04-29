@@ -9,10 +9,9 @@ from __future__ import annotations
 from typing import Annotated
 
 from fastapi import Depends, Header, Query
-from fastapi import status as http_status
 from pydantic import BaseModel
 
-from wurzel.api.errors import APIError
+from wurzel.api.error_codes import ErrorCode
 from wurzel.api.settings import APISettings
 
 _settings: APISettings | None = None  # pylint: disable=invalid-name
@@ -31,11 +30,7 @@ async def verify_api_key(
 ) -> None:
     """FastAPI dependency — validates the ``X-API-Key`` request header."""
     if x_api_key is None or x_api_key != settings.API_KEY.get_secret_value():
-        raise APIError(
-            status_code=http_status.HTTP_401_UNAUTHORIZED,
-            title="Unauthorized",
-            detail="A valid X-API-Key header is required.",
-        )
+        raise ErrorCode.INVALID_API_KEY.error(detail="A valid X-API-Key header is required.")
 
 
 # Convenience type alias for route signatures
