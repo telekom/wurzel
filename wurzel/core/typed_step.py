@@ -93,6 +93,8 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     settings_class: type[SETTS]
     output_model_class: MODEL_TYPE
     input_model_class: MODEL_TYPE
+    accepted_file_extensions: list[str] = []
+    accepted_mime_types: list[str] = []
     _supported_containers: Iterable[type[Iterable]] = (list, set, patyp.DataFrame)
     settings: SETTS
 
