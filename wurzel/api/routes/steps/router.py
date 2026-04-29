@@ -32,14 +32,21 @@ async def list_steps(
         None,
         description="Python package to scan for TypedStep subclasses. Omit to scan all installed venv packages.",
     ),
+    refresh: bool = Query(
+        False,
+        description="Force reload the step cache (useful if packages were installed/updated after startup).",
+    ),
 ) -> StepListResponse:
     """Return all TypedStep subclasses discoverable in the current venv.
 
     By default scans every installed package via AST (no imports, no side
     effects).  Pass ``?package=my_pkg`` to restrict the scan to a single
     installed package.
+
+    Pass ``?refresh=true`` to force reload the cache if new packages were
+    installed or existing ones were updated after startup.
     """
-    return discover_steps(cache, package)
+    return discover_steps(cache, package, refresh=refresh)
 
 
 @router.get("/{step_path:path}", response_model=StepInfo)

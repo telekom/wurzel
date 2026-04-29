@@ -180,7 +180,7 @@ class TestStepListCache:
     def test_second_request_is_served_from_cache(self, client, auth_headers):
         """Two consecutive requests should return identical results, second much faster."""
         # Clear the cache so the first request is a cold start
-        service_module._step_list_cache.clear()
+        service_module._DEFAULT_CACHE.clear()
 
         t0 = time.monotonic()
         r1 = client.get(f"/v1/steps?package={_KNOWN_PACKAGE}", headers=auth_headers)
@@ -198,11 +198,11 @@ class TestStepListCache:
 
     def test_cache_expires_after_ttl(self, client, auth_headers):
         """After the TTL is exceeded a fresh scan is performed."""
-        service_module._step_list_cache.clear()
+        service_module._DEFAULT_CACHE.clear()
 
         # Populate cache with an artificially old timestamp
         old_entry = (time.monotonic() - service_module._CACHE_TTL - 1, ["fake.Step"])
-        service_module._step_list_cache._data[_KNOWN_PACKAGE] = old_entry
+        service_module._DEFAULT_CACHE._data[_KNOWN_PACKAGE] = old_entry
 
         with patch(
             "wurzel.api.routes.steps.service.scan_path_for_typed_steps",
@@ -215,8 +215,8 @@ class TestStepListCache:
 
     def test_cache_hit_skips_scan(self, client, auth_headers):
         """A fresh cache entry must not trigger a new scan."""
-        service_module._step_list_cache.clear()
-        service_module._step_list_cache._data[_KNOWN_PACKAGE] = (
+        service_module._DEFAULT_CACHE.clear()
+        service_module._DEFAULT_CACHE._data[_KNOWN_PACKAGE] = (
             time.monotonic(),
             ["wurzel.steps.manual_markdown.ManualMarkdownStep"],
         )

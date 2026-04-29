@@ -22,7 +22,7 @@ from fastapi import APIRouter, Depends
 from fastapi import status as http_status
 
 from wurzel.api.dependencies import Pagination, RequireAPIKey
-from wurzel.api.errors import APIError
+from wurzel.api.error_codes import ErrorCode
 from wurzel.api.routes.knowledge.data import (
     CreateKnowledgeRequest,
     KnowledgeItem,
@@ -40,11 +40,7 @@ router = APIRouter()
 
 
 def _get_backend():  # type: ignore[return]
-    raise APIError(
-        status_code=http_status.HTTP_501_NOT_IMPLEMENTED,
-        title="Not Implemented",
-        detail="No storage backend is configured. Wire up wurzel.api.backends.supabase.",
-    )
+    raise ErrorCode.BACKEND_NOT_CONFIGURED.error(detail="No storage backend is configured. Wire up wurzel.api.backends.supabase.")
 
 
 @router.post("", response_model=KnowledgeItem, status_code=http_status.HTTP_201_CREATED)
@@ -82,11 +78,7 @@ async def get_knowledge(
     """Retrieve a single knowledge item by its UUID."""
     item = await backend.get(item_id)
     if item is None:
-        raise APIError(
-            status_code=http_status.HTTP_404_NOT_FOUND,
-            title="Knowledge item not found",
-            detail=f"No item with id={item_id}",
-        )
+        raise ErrorCode.KNOWLEDGE_ITEM_NOT_FOUND.error(detail=f"No item with id={item_id}")
     return item
 
 
@@ -100,11 +92,7 @@ async def update_knowledge(
     """Update an existing knowledge item."""
     item = await backend.update(item_id, body)
     if item is None:
-        raise APIError(
-            status_code=http_status.HTTP_404_NOT_FOUND,
-            title="Knowledge item not found",
-            detail=f"No item with id={item_id}",
-        )
+        raise ErrorCode.KNOWLEDGE_ITEM_NOT_FOUND.error(detail=f"No item with id={item_id}")
     return item
 
 
