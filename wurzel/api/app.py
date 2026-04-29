@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from wurzel.api.errors import register_exception_handlers
 from wurzel.api.middleware.otel import OTELCorrelationMiddleware, OTELSettings, setup_otel
 from wurzel.api.routes.branch.router import router as branch_router
+from wurzel.api.routes.files.router import router as files_router
 from wurzel.api.routes.health.router import router as health_router
 from wurzel.api.routes.ingest.router import router as ingest_router
 from wurzel.api.routes.knowledge.router import router as knowledge_router
@@ -108,6 +109,11 @@ def create_app(
         branch_router,
         prefix=f"{prefix}/projects/{{project_id}}/branches",
         tags=["Branches"],
+    )
+    app.include_router(
+        files_router,
+        prefix=f"{prefix}/projects/{{project_id}}/steps/{{step_id}}/files",
+        tags=["Files"],
     )
 
     return app
