@@ -41,6 +41,7 @@ jq_run () { # Usage: jq_run cmd [args...] [noexit]
                 --arg logger "$0/${cmd_name}" \
                 --arg args "${cmd_args}" \
                 '{message: ., level: "WARNING", logger: $logger, args: $args}'
+            return $rc
         else
             printf "%s" "$result" | jq -MRcs \
                 --arg logger "$0/${cmd_name}" \
