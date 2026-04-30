@@ -195,7 +195,7 @@ class TestBuildDefaultProviders:
 
         import unittest.mock as mock
 
-        with mock.patch("supabase.create_client", fake_create_client):
+        with mock.patch("supabase.create_client", fake_create_client, create=True):
             import importlib
 
             from wurzel.executors.middlewares.secret_resolver import secret_resolver as sr_mod
@@ -238,7 +238,7 @@ class TestVaultSecretProvider:
 
     def test_supabase_vault_client_init(self, mocker):
         pytest.importorskip("supabase")
-        mocker.patch("supabase.create_client", return_value=mocker.MagicMock())
+        mocker.patch("supabase.create_client", return_value=mocker.MagicMock(), create=True)
         from wurzel.executors.middlewares.secret_resolver.providers.vault import SupabaseVaultClient
 
         client = SupabaseVaultClient(url="http://localhost:54321", service_role_key="fake-jwt")
