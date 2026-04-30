@@ -93,20 +93,39 @@ def pytest_addoption(parser):
         default=False,
         help="run repetition tests",
     )
+    parser.addoption(
+        "--supabase-e2e",
+        action="store_true",
+        default=False,
+        help="run Supabase CLI-backed end-to-end tests",
+    )
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "repeatability_test: mark repeatability tests")
+    config.addinivalue_line("markers", "supabase_e2e: mark Supabase CLI-backed end-to-end tests")
 
 
 def pytest_collection_modifyitems(config, items):
     do_rep_tests = config.getoption("--repeatability")
+    do_supabase_e2e = config.getoption("--supabase-e2e")
     # Explicitly run test if only one is selected :)
     if len(items) == 1:
         return
     for item in items:
-        has_repeatability_marker = pytest.mark.repeatability_test.mark in list(item.own_markers)
+        has_repeatability_marker = any(item.iter_markers(name="repeatability_test"))
+        has_supabase_e2e_marker = any(item.iter_markers(name="supabase_e2e"))
         if do_rep_tests and not has_repeatability_marker:
             item.add_marker(pytest.mark.skip(reason="need --repeatability option to run"))
             continue
         if not do_rep_tests and has_repeatability_marker:
             item.add_marker(pytest.mark.skip(reason="only running --repeatability tests"))
+            continue
+        if do_supabase_e2e and not has_supabase_e2e_marker:
+            item.add_marker(pytest.mark.skip(reason="only running --supabase-e2e tests"))
+            continue
+        if not do_supabase_e2e and has_supabase_e2e_marker:
+            item.add_marker(pytest.mark.skip(reason="only running --supabase-e2e tests"))
 
 
 @pytest.fixture(scope="function", autouse=True)

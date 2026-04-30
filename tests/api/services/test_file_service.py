@@ -1,11 +1,15 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+#
+# SPDX-License-Identifier: Apache-2.0
+
 from __future__ import annotations
 
 from unittest.mock import Mock, patch
 
 import pytest
 
-from wurzel.api.services.file_service import FileUploadService
 from tests.storage.test_file_storage import MockFileStorageService
+from wurzel.api.services.file_service import FileUploadService
 
 
 class TestFileUploadService:
@@ -99,7 +103,7 @@ class TestFileUploadService:
         mock_fetch.return_value.accepted_file_extensions = [".csv"]
         mock_fetch.return_value.accepted_mime_types = []
 
-        service.storage.upload = Mock(side_effect=IOError("Storage unavailable"))
+        service.storage.upload = Mock(side_effect=OSError("Storage unavailable"))
 
         files = [("data.csv", b"content", "text/csv")]
 

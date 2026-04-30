@@ -51,10 +51,12 @@ def env(
 ) -> None:
     """Inspect or validate pipeline environment configuration."""
     # Lazy imports to avoid circular dependency
-    from wurzel.cli.environment import (  # pylint: disable=import-outside-toplevel
-        _load_requirements,
+    from wurzel.cli.environment.display import (  # pylint: disable=import-outside-toplevel
         _print_missing,
         _print_requirements,
+    )
+    from wurzel.cli.environment.pipeline_loading import _load_requirements  # pylint: disable=import-outside-toplevel
+    from wurzel.cli.environment.requirements import (  # pylint: disable=import-outside-toplevel
         format_env_snippet,
         validate_env_vars,
     )

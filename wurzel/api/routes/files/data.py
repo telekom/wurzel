@@ -32,9 +32,7 @@ class FileUploadResponse(BaseModel):
     """Response from file upload endpoint."""
 
     files: list[FileInfo] = Field(default_factory=list, description="Successfully uploaded files")
-    errors: list[FileValidationError] = Field(
-        default_factory=list, description="Files that failed validation or upload"
-    )
+    errors: list[FileValidationError] = Field(default_factory=list, description="Files that failed validation or upload")
 
 
 class DeleteFileResponse(BaseModel):

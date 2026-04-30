@@ -31,7 +31,7 @@ def _load_requirements(pipeline: TypedStep | str, include_optional: bool) -> tup
     Returns:
         Tuple of (pipeline_obj, all_requirements, filtered_requirements)
     """
-    from wurzel.cli.environment import collect_env_requirements  # pylint: disable=import-outside-toplevel
+    from wurzel.cli.environment.requirements import collect_env_requirements  # pylint: disable=import-outside-toplevel
 
     pipeline_obj = _ensure_pipeline_obj(pipeline)
     requirements = collect_env_requirements(pipeline_obj)

@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """Settings for the JWT/OIDC authentication layer."""
+# pylint: disable=duplicate-code
 
 from __future__ import annotations
 

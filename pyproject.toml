@@ -258,3 +258,9 @@ line-ending = "auto"
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.pytest.ini_options]
+markers = [
+    "repeatability_test: mark repeatability tests (requires --repeatability)",
+    "supabase_e2e: mark Supabase CLI-backed end-to-end tests (requires --supabase-e2e)",
+]

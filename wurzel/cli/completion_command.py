@@ -184,39 +184,15 @@ def _uninstall_powershell_completion() -> None:
 
 def _generate_zsh_completion() -> str:
     """Generate zsh completion script."""
-    # Dynamically get commands from CLI app
-    from wurzel.cli._main import app as cli_app
-
-    # Extract commands from the Typer/Click app
-    commands_list = []
-    if hasattr(cli_app, "registered_commands"):
-        for cmd_info in cli_app.registered_commands:
-            cmd_name = cmd_info[0]
-            cmd_obj = cmd_info[1]
-            help_text = (cmd_obj.help or "").split("\n")[0] if cmd_obj else ""
-            commands_list.append(f'        "{cmd_name}:{help_text}"')
-    else:
-        # Fallback: try to get from the Click group
-        try:
-            click_app = cli_app
-            if hasattr(click_app, "commands"):
-                for cmd_name, cmd_obj in click_app.commands.items():
-                    help_text = (cmd_obj.help or "").split("\n")[0] if cmd_obj else ""
-                    commands_list.append(f'        "{cmd_name}:{help_text}"')
-        except Exception:
-            pass
-
-    if not commands_list:
-        # Hardcoded fallback with all commands
-        commands_list = [
-            '        "run:Run a step"',
-            '        "inspect:Display information about a step"',
-            '        "generate:Generate a pipeline artifact"',
-            '        "env:Inspect or validate environment variables"',
-            '        "completion:Manage shell completion"',
-            '        "middlewares:Manage and inspect middlewares"',
-            '        "manifest:Generate and validate Wurzel pipeline manifests"',
-        ]
+    commands_list = [
+        '        "run:Run a step"',
+        '        "inspect:Display information about a step"',
+        '        "generate:Generate a pipeline artifact"',
+        '        "env:Inspect or validate environment variables"',
+        '        "completion:Manage shell completion"',
+        '        "middlewares:Manage and inspect middlewares"',
+        '        "manifest:Generate and validate Wurzel pipeline manifests"',
+    ]
 
     commands_str = "\n".join(commands_list)
 
@@ -241,7 +217,9 @@ _wurzel() {{
             case $words[2] in
                 run|generate|inspect|env)
                     # For step completion, use dynamic completion
-                    _values "step" $(python -c "from wurzel.cli.shared import complete_step_import; steps = complete_step_import(''); print(' '.join(steps[:50]))" 2>/dev/null)
+                    steps=$(python -c 'from wurzel.cli.shared import complete_step_import; '\
+'steps = complete_step_import(""); print(" ".join(steps[:50]))' 2>/dev/null)
+                    _values "step" $steps
                     ;;
             esac
             ;;
@@ -271,7 +249,8 @@ _wurzel_completion() {
         case "${COMP_WORDS[1]}" in
             run|generate|inspect|env)
                 # For step completion, try to use Python completion function
-                steps=$(python -c "from wurzel.cli.shared import complete_step_import; print(' '.join(complete_step_import('')))" 2>/dev/null)
+                steps=$(python -c 'from wurzel.cli.shared import complete_step_import; '\
+'print(" ".join(complete_step_import("")))' 2>/dev/null)
                 COMPREPLY=( $(compgen -W "$steps" -- ${cur}) )
                 ;;
         esac

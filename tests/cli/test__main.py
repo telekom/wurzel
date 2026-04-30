@@ -365,6 +365,51 @@ def test_generate_list_backends(capsys):
         assert "argo" not in captured.out
 
 
+def test_generate_prints_artifact_to_stdout_when_no_output(monkeypatch, capsys):
+    monkeypatch.setattr("wurzel.cli.generate.command.pipeline_callback", lambda *_: "pipeline-step")
+    monkeypatch.setattr("wurzel.cli.generate.command.backend_callback", lambda *_: "backend-class")
+
+    def fake_generate_main(step, backend, *, values=None, pipeline_name=None, output=None, executor=None):  # noqa: ANN001, ANN002, ANN003
+        assert step == "pipeline-step"
+        assert backend == "backend-class"
+        assert values is None
+        assert pipeline_name is None
+        assert output is None
+        assert executor is None
+        return "artifact-yaml"
+
+    monkeypatch.setattr("wurzel.cli.generate.main", fake_generate_main)
+
+    generate("mod:pipe", backend="dvc")
+
+    captured = capsys.readouterr()
+    assert captured.out == "artifact-yaml\n"
+
+
+def test_generate_writes_artifact_and_prints_confirmation_with_output(monkeypatch, capsys, tmp_path):
+    monkeypatch.setattr("wurzel.cli.generate.command.pipeline_callback", lambda *_: "pipeline-step")
+    monkeypatch.setattr("wurzel.cli.generate.command.backend_callback", lambda *_: "backend-class")
+    output_path = tmp_path / "generated.yaml"
+
+    def fake_generate_main(step, backend, *, values=None, pipeline_name=None, output=None, executor=None):  # noqa: ANN001, ANN002, ANN003
+        assert step == "pipeline-step"
+        assert backend == "backend-class"
+        assert values is None
+        assert pipeline_name is None
+        assert executor is None
+        assert output == output_path
+        output.write_text("artifact-yaml")
+        return "artifact-yaml"
+
+    monkeypatch.setattr("wurzel.cli.generate.main", fake_generate_main)
+
+    generate("mod:pipe", backend="dvc", output=output_path)
+
+    captured = capsys.readouterr()
+    assert captured.out == f"Generated '{output_path}'.\n"
+    assert output_path.read_text() == "artifact-yaml"
+
+
 # ---------------------------------------------------------------------------
 # env command
 # ---------------------------------------------------------------------------

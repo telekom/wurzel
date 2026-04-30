@@ -12,6 +12,7 @@ Environment variables are organized by service prefix:
 - AUTH__*     → JWT/OIDC configuration
 - SUPABASE__* → Supabase backend configuration
 """
+# pylint: disable=duplicate-code
 
 from __future__ import annotations
 

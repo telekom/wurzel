@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """Settings for the Supabase storage backend."""
+# pylint: disable=duplicate-code
 
 from __future__ import annotations
 

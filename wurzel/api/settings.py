@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """Top-level settings for the Wurzel API."""
+# pylint: disable=duplicate-code
 
 from __future__ import annotations
 

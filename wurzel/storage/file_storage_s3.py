@@ -7,7 +7,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import BinaryIO
 
 from wurzel.storage.file_storage import FileMetadata, FileStorageService
@@ -52,6 +52,7 @@ class S3FileStorageService(FileStorageService):
         step_id: str,
         file_data: BinaryIO | bytes,
         filename: str,
+        *,
         mime_type: str | None = None,
     ) -> FileMetadata:
         """Upload a file to S3.
@@ -98,11 +99,11 @@ class S3FileStorageService(FileStorageService):
                 file_id=file_id,
                 filename=filename,
                 file_size=file_size,
-                uploaded_at=datetime.now(timezone.utc),
+                uploaded_at=datetime.now(UTC),
                 mime_type=mime_type,
             )
         except Exception as exc:
-            raise IOError(f"Failed to upload file '{filename}' to S3: {exc}") from exc
+            raise OSError(f"Failed to upload file '{filename}' to S3: {exc}") from exc
 
     def get_file_metadata(self, project_id: str, step_id: str, file_id: str) -> FileMetadata:
         """Retrieve metadata for a stored file from S3.
@@ -132,9 +133,7 @@ class S3FileStorageService(FileStorageService):
             )
 
             if "Contents" not in response or len(response["Contents"]) == 0:
-                raise FileNotFoundError(
-                    f"File '{file_id}' not found in S3 for project '{project_id}', step '{step_id}'"
-                )
+                raise FileNotFoundError(f"File '{file_id}' not found in S3 for project '{project_id}', step '{step_id}'")
 
             # Get the first (and should be only) object
             obj = response["Contents"][0]
@@ -150,7 +149,7 @@ class S3FileStorageService(FileStorageService):
         except FileNotFoundError:
             raise
         except Exception as exc:
-            raise IOError(f"Failed to retrieve metadata for file '{file_id}': {exc}") from exc
+            raise OSError(f"Failed to retrieve metadata for file '{file_id}': {exc}") from exc
 
     def delete(self, project_id: str, step_id: str, file_id: str) -> bool:
         """Delete a stored file from S3.
@@ -183,7 +182,7 @@ class S3FileStorageService(FileStorageService):
             self._s3_client.delete_object(Bucket=self.bucket_name, Key=key)
             return True
         except Exception as exc:
-            raise IOError(f"Failed to delete file '{file_id}': {exc}") from exc
+            raise OSError(f"Failed to delete file '{file_id}': {exc}") from exc
 
     def list_files(self, project_id: str, step_id: str) -> list[FileMetadata]:
         """List all files for a project/step combination in S3.
@@ -228,7 +227,7 @@ class S3FileStorageService(FileStorageService):
 
             return files
         except Exception as exc:
-            raise IOError(f"Failed to list files for project '{project_id}', step '{step_id}': {exc}") from exc
+            raise OSError(f"Failed to list files for project '{project_id}', step '{step_id}': {exc}") from exc
 
     def read_file(self, project_id: str, step_id: str, file_id: str) -> bytes:
         """Read the full contents of a stored file from S3.
@@ -255,9 +254,7 @@ class S3FileStorageService(FileStorageService):
             )
 
             if "Contents" not in response or len(response["Contents"]) == 0:
-                raise FileNotFoundError(
-                    f"File '{file_id}' not found in S3 for project '{project_id}', step '{step_id}'"
-                )
+                raise FileNotFoundError(f"File '{file_id}' not found in S3 for project '{project_id}', step '{step_id}'")
 
             key = response["Contents"][0]["Key"]
             response = self._s3_client.get_object(Bucket=self.bucket_name, Key=key)
@@ -265,4 +262,4 @@ class S3FileStorageService(FileStorageService):
         except FileNotFoundError:
             raise
         except Exception as exc:
-            raise IOError(f"Failed to read file '{file_id}': {exc}") from exc
+            raise OSError(f"Failed to read file '{file_id}': {exc}") from exc

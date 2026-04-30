@@ -83,7 +83,7 @@ class TestCompleteStepImport:
         import time
 
         start = time.perf_counter()
-        result = complete_step_import("wurzel.steps.m")
+        _ = complete_step_import("wurzel.steps.m")
         duration = time.perf_counter() - start
         assert duration < 0.5, f"Prefix autocompletion too slow: {duration:.2f}s (expected < 0.5s)"
 

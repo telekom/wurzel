@@ -36,7 +36,9 @@ class StepInfo(BaseModel):
     settings_class: str | None = Field(None, description="Fully-qualified settings class path")
     env_prefix: str | None = Field(None, description="Environment variable prefix for this step's settings")
     settings_schema: list[FieldSchema] = Field(default_factory=list, description="Schema of all settings fields")
-    accepted_file_extensions: list[str] = Field(default_factory=list, description="File extensions this step accepts for input, e.g. ['.csv', '.tsv']")
+    accepted_file_extensions: list[str] = Field(
+        default_factory=list, description="File extensions this step accepts for input, e.g. ['.csv', '.tsv']"
+    )
     accepted_mime_types: list[str] = Field(default_factory=list, description="MIME types this step accepts for input, e.g. ['text/csv']")
 
 

@@ -223,3 +223,74 @@ class TestCompletionIntegration:
         result = runner.invoke(app, ["completion", "install", "--help"])
         assert result.exit_code == 0
         assert "Install shell completion" in result.stdout
+
+
+class TestCompletionAdditional:
+    """Additional tests to improve coverage of completion_command.py."""
+
+    def test_install_powershell_prints_instructions(self):
+        """Installing powershell completion should print instructions."""
+        result = runner.invoke(completion_app, ["install", "--shell", "powershell"])
+        assert result.exit_code == 0
+        assert "PowerShell" in result.stdout
+
+    def test_uninstall_bash_removes_file(self):
+        """Uninstalling bash completion should remove file if it exists."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("pathlib.Path.home") as mock_home:
+                home = Path(tmpdir)
+                mock_home.return_value = home
+
+                runner.invoke(completion_app, ["install", "--shell", "bash"])
+                result = runner.invoke(completion_app, ["uninstall", "--shell", "bash"])
+                assert result.exit_code == 0
+                assert "Bash completion uninstalled" in result.stdout
+
+    def test_uninstall_bash_not_found(self):
+        """Uninstalling bash when not installed should print 'not found'."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("pathlib.Path.home") as mock_home:
+                mock_home.return_value = Path(tmpdir)
+                result = runner.invoke(completion_app, ["uninstall", "--shell", "bash"])
+                assert result.exit_code == 0
+                assert "not found" in result.stdout
+
+    def test_uninstall_fish_removes_file(self):
+        """Uninstalling fish completion should remove file if it exists."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("pathlib.Path.home") as mock_home:
+                home = Path(tmpdir)
+                mock_home.return_value = home
+
+                runner.invoke(completion_app, ["install", "--shell", "fish"])
+                result = runner.invoke(completion_app, ["uninstall", "--shell", "fish"])
+                assert result.exit_code == 0
+                assert "Fish completion uninstalled" in result.stdout
+
+    def test_uninstall_fish_not_found(self):
+        """Uninstalling fish when not installed should print 'not found'."""
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch("pathlib.Path.home") as mock_home:
+                mock_home.return_value = Path(tmpdir)
+                result = runner.invoke(completion_app, ["uninstall", "--shell", "fish"])
+                assert result.exit_code == 0
+                assert "not found" in result.stdout
+
+    def test_uninstall_powershell_prints_instructions(self):
+        """Uninstalling powershell completion should print removal instructions."""
+        result = runner.invoke(completion_app, ["uninstall", "--shell", "powershell"])
+        assert result.exit_code == 0
+        assert "PowerShell" in result.stdout
+
+    def test_uninstall_invalid_shell(self):
+        """Uninstalling for invalid shell should fail."""
+        result = runner.invoke(completion_app, ["uninstall", "--shell", "ksh"])
+        assert result.exit_code != 0

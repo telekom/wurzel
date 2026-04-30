@@ -15,8 +15,8 @@ from .backend_listing import get_available_backends
 from .callbacks import backend_callback, pipeline_callback
 
 app = typer.Typer(
-    no_args_is_help=True,
     help="Generate backend-specific YAML artifacts (dvc.yaml, Argo workflow YAML, etc.) from a pipeline.",
+    context_settings={"allow_interspersed_args": True},
 )
 
 
@@ -108,4 +108,7 @@ def generate(
         executor_obj = executer_callback(None, None, executor)
 
     result = generate_main(pipeline_obj, backend_obj, values=values, pipeline_name=pipeline_name, output=output, executor=executor_obj)
-    typer.echo(result)
+    if output is None:
+        typer.echo(result)
+        return
+    typer.echo(f"Generated '{output}'.")
