@@ -44,7 +44,7 @@ def _format_default_value(field: FieldInfo) -> str:
         return ""
     if isinstance(default, SecretStr):
         return "***"
-    if isinstance(default, list | dict | set | tuple):
+    if isinstance(default, (list, dict, set, tuple)):
         return dumps(default)
     return str(default)
 
