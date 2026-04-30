@@ -2,30 +2,20 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Inspect command module for examining step configurations and metadata."""
-
-from __future__ import annotations
-
 import json
 from inspect import getfile
 from types import NoneType
 from typing import TYPE_CHECKING
 
-from wurzel.cli.shared.callbacks import step_callback  # pylint: disable=unused-import
+from pydantic_core import PydanticUndefined
 
 if TYPE_CHECKING:
     from wurzel.core import TypedStep
 
 
-def main(step: type[TypedStep], gen_env=False):
-    """Execute step inspection command.
-
-    Prints step metadata as JSON or environment variable definitions.
-
-    Args:
-        step: The step class (as a string import path) to inspect
-        gen_env: If True, generate environment variable definitions; if False, output JSON
-    """
+def main(step: "type[TypedStep]", gen_env=False):
+    """Execute."""
+    # Lazy imports to avoid loading heavy dependencies at import time
     from wurzel.core import Settings  # pylint: disable=import-outside-toplevel
     from wurzel.core.settings import NoSettings  # pylint: disable=import-outside-toplevel
     from wurzel.utils import WZ  # pylint: disable=import-outside-toplevel
@@ -44,8 +34,6 @@ def main(step: type[TypedStep], gen_env=False):
     if set_cls != NoneType and set_cls is not None and set_cls != NoSettings:
         data["settings"]["fields"] = {k: str(v) for k, v in set_cls.model_fields.items()}
     if gen_env:
-        from pydantic_core import PydanticUndefined  # pylint: disable=import-outside-toplevel
-
         setts = {True: [], False: []}
         for name, info in set_cls.model_fields.items():
             default = info.get_default(call_default_factory=True)
@@ -58,6 +46,3 @@ def main(step: type[TypedStep], gen_env=False):
         print("\n".join(setts[False]))  # noqa: T201
     else:
         print(json.dumps(data, indent="  ", default=str))  # noqa: T201
-
-
-__all__ = ["step_callback", "main"]
