@@ -19,3 +19,7 @@ class TestSecretProviderABC:
 
     def test_k8s_provider_name(self):
         assert K8sSecretProvider.provider_name == "k8s"
+
+    def test_build_returns_none_by_default(self):
+        """Base build() classmethod returns None when provider has no env override."""
+        assert K8sSecretProvider.build() is None

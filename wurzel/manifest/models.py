@@ -64,7 +64,7 @@ class StepSpec(BaseModel):
     dependsOn: list[str] = Field(default_factory=list)
     settings: dict[str, str] = Field(default_factory=dict)
 
-    model_config = {"populate_by_name": True}
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class MiddlewareSpec(BaseModel):
@@ -72,6 +72,8 @@ class MiddlewareSpec(BaseModel):
 
     name: str
     settings: dict[str, str] = Field(default_factory=dict)
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class BackendConfig(BaseModel):
@@ -89,7 +91,7 @@ class BackendConfig(BaseModel):
             namespace: my-namespace
     """
 
-    model_config = ConfigDict(extra="allow")
+    model_config = ConfigDict(extra="allow", populate_by_name=True)
 
     def get_for(self, backend_name: str) -> dict[str, Any]:
         """Return the raw config dict for a specific backend.
@@ -111,6 +113,8 @@ class Metadata(BaseModel):
     labels: dict[str, str] = Field(default_factory=dict)
     annotations: dict[str, str] = Field(default_factory=dict)
 
+    model_config = ConfigDict(populate_by_name=True)
+
 
 class PipelineSpec(BaseModel):
     """Core pipeline specification."""
@@ -120,6 +124,8 @@ class PipelineSpec(BaseModel):
     middlewares: list[MiddlewareSpec] = Field(default_factory=list)
     steps: Annotated[list[StepSpec], Field(min_length=1)]
     backendConfig: BackendConfig = Field(default_factory=BackendConfig)
+
+    model_config = ConfigDict(populate_by_name=True)
 
     @field_validator("backend", mode="after")
     @classmethod
@@ -141,3 +147,5 @@ class PipelineManifest(BaseModel):
     kind: Literal["Pipeline"] = "Pipeline"
     metadata: Metadata
     spec: PipelineSpec
+
+    model_config = ConfigDict(populate_by_name=True)

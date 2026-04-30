@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 
-from typing import Generic, Optional, get_args
+from typing import Generic, get_args
 
 from wurzel.core import TypedStep
 from wurzel.core.typed_step import OUTCONTRACT, SETTS
@@ -12,7 +12,7 @@ from wurzel.core.typed_step import OUTCONTRACT, SETTS
 class SelfConsumingLeafStep(TypedStep[SETTS, OUTCONTRACT, OUTCONTRACT], Generic[SETTS, OUTCONTRACT]):
     """Some use cases require self awareness about their last results to reduce double work."""
 
-    def run(self, inpt: Optional[OUTCONTRACT]) -> OUTCONTRACT:
+    def run(self, inpt: OUTCONTRACT | None) -> OUTCONTRACT:
         return super().run(inpt)
 
     @classmethod

@@ -7,7 +7,7 @@
 from json.decoder import JSONDecodeError
 from logging import getLogger
 from re import Pattern as RegexPattern
-from typing import Literal, Union
+from typing import Literal
 
 import requests
 from langchain_core.embeddings import Embeddings
@@ -80,7 +80,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
         """Get the embeddings for a list of texts."""
         return [self.embed_query(text) for text in texts]
 
-    def __make_request(self, url: Url, json_body: dict, method: Union[Literal["post"], Literal["get"]]) -> dict:
+    def __make_request(self, url: Url, json_body: dict, method: Literal["post"] | Literal["get"]) -> dict:
         """Creates a request, tries to parse json.
 
         Args:

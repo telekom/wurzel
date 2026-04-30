@@ -10,7 +10,7 @@ import types
 import typing
 from ast import literal_eval
 from pathlib import Path
-from typing import Any, Self, Union, get_origin
+from typing import Any, Self, get_origin
 
 import pandera as pa
 import pandera.typing as patyp
@@ -34,7 +34,7 @@ class DataModel:
 
     @classmethod
     @abc.abstractmethod
-    def save_to_path(cls, path: Path, obj: Union[Self, list[Self]]) -> Path:
+    def save_to_path(cls, path: Path, obj: Self | list[Self]) -> Path:
         """Abstract function to save the obj at the given path."""
 
     @classmethod
@@ -49,7 +49,7 @@ class DataModel:
         - If obj is a list/tuple/set, metrics are summed by key.
         - If obj provides a `metrics()` instance method, it is used.
         """
-        if isinstance(obj, (list, tuple, set)):
+        if isinstance(obj, list | tuple | set):
             metrics: MetricMap = {}
             for item in obj:
                 _merge_metrics(metrics, cls.get_metrics(item))
@@ -70,7 +70,7 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
     """
 
     @classmethod
-    def save_to_path(cls, path: Path, obj: Union[Self, list[Self]]) -> Path:
+    def save_to_path(cls, path: Path, obj: Self | list[Self]) -> Path:
         import pandas as pd  # pylint: disable=import-outside-toplevel
 
         path = path.with_suffix(".csv")
@@ -124,7 +124,7 @@ class PydanticModel(pydantic.BaseModel, DataModel):
     """DataModel contract specified with pydantic."""
 
     @classmethod
-    def save_to_path(cls, path: Path, obj: Union[Self, list[Self]]):
+    def save_to_path(cls, path: Path, obj: Self | list[Self]):
         """Wurzel save model.
 
         Args:
@@ -148,7 +148,7 @@ class PydanticModel(pydantic.BaseModel, DataModel):
 
     # pylint: disable=arguments-differ
     @classmethod
-    def load_from_path(cls, path: Path, model_type: type[Union[Self, list[Self]]]) -> Union[Self, list[Self]]:
+    def load_from_path(cls, path: Path, model_type: type[Self | list[Self]]) -> Self | list[Self]:
         """Wurzel load model.
 
         Args:

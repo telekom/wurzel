@@ -153,3 +153,16 @@ class TestGenerate:
 
         parsed = yaml.safe_load(output.read_text())
         assert "stages" in parsed
+
+    def test_generate_raises_for_multiple_terminal_steps(self, tmp_path):
+        manifest = _manifest(
+            "dvc",
+            steps=[
+                {"name": "a", "class": "wurzel.steps.manual_markdown.ManualMarkdownStep"},
+                {"name": "b", "class": "wurzel.steps.manual_markdown.ManualMarkdownStep"},
+            ],
+        )
+        output = tmp_path / "dvc.yaml"
+
+        with pytest.raises(ValueError, match="requires exactly one terminal step"):
+            ManifestGenerator(manifest).generate(output)

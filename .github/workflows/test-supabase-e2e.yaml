@@ -1,0 +1,83 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+# SPDX-License-Identifier: Apache-2.0
+
+name: Supabase API E2E Tests
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "wurzel/api/**"
+      - "wurzel/storage/file_storage_s3.py"
+      - "tests/e2e/supabase/**"
+      - "supabase/**"
+      - ".github/workflows/test-supabase-e2e.yaml"
+  pull_request:
+    paths:
+      - "wurzel/api/**"
+      - "wurzel/storage/file_storage_s3.py"
+      - "tests/e2e/supabase/**"
+      - "supabase/**"
+      - ".github/workflows/test-supabase-e2e.yaml"
+  workflow_dispatch:
+
+jobs:
+  supabase-e2e:
+    name: Supabase API E2E
+    runs-on: ubuntu-latest
+    env:
+      LOCALSTACK_URL: http://127.0.0.1:4566
+      WURZEL_E2E_S3_BUCKET: wurzel-e2e
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test # pragma: allowlist secret
+      AWS_DEFAULT_REGION: us-east-1
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+          python-version: "3.11"
+
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+
+      - name: Start LocalStack
+        run: |
+          docker run -d --name localstack \
+            -p 4566:4566 \
+            -e SERVICES=s3 \
+            -e DEBUG=0 \
+            localstack/localstack:3.8
+
+          for i in {1..40}; do
+            if curl -fsS "${LOCALSTACK_URL}/_localstack/health" >/dev/null; then
+              echo "LocalStack is ready"
+              break
+            fi
+            echo "Waiting for LocalStack (${i}/40)..."
+            sleep 2
+          done
+
+      - name: Start Supabase local stack
+        run: |
+          supabase start
+          supabase status
+
+      - name: Install Python dependencies
+        run: uv sync --extra test --extra api --extra argo && uv pip install boto3
+
+      - name: Run Supabase + S3 e2e tests
+        run: uv run pytest tests/e2e/supabase -m supabase_e2e --supabase-e2e -v --tb=short
+
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          supabase status || true
+          docker logs localstack || true

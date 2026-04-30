@@ -80,7 +80,7 @@ class ManifestGenerator:
         2. Inject env vars so the backend can read them during generation.
         3. Instantiate the backend.
         4. Build the TypedStep graph and locate terminal steps.
-        5. Call generate_artifact on the first terminal step.
+        5. Validate there is exactly one terminal step and call generate_artifact.
         6. Write the result to output_path.
         """
         env_vars = self.collect_env_vars()
@@ -89,6 +89,14 @@ class ManifestGenerator:
             backend = self.instantiate_backend()
             graph = builder.build_step_graph()
             terminals = builder.find_terminal_steps(graph)
+            if len(terminals) != 1:
+                terminal_ids = {id(step) for step in terminals}
+                terminal_names = [name for name, step in graph.items() if id(step) in terminal_ids]
+                raise ValueError(
+                    "Manifest generation currently requires exactly one terminal step, but found "
+                    f"{len(terminals)}: {', '.join(terminal_names)}. "
+                    "Add a final merge/sink step that dependsOn all terminal branches."
+                )
             artifact = backend.generate_artifact(terminals[0], env_vars=env_vars)
 
         output_path.parent.mkdir(parents=True, exist_ok=True)

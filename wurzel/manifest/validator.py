@@ -37,6 +37,7 @@ print(errors)
 
 from __future__ import annotations
 
+from wurzel.manifest.class_import import import_step_class
 from wurzel.manifest.models import PipelineManifest
 
 
@@ -55,6 +56,13 @@ class ManifestValidator:
                 if dep not in defined:
                     errors.append(f"Step '{step.name}' depends on '{dep}', which is not defined in steps.")
         return errors
+
+    def validate_unique_step_names(self) -> list[str]:
+        """Return errors for any duplicated step name."""
+        counts: dict[str, int] = {}
+        for step in self._manifest.spec.steps:
+            counts[step.name] = counts.get(step.name, 0) + 1
+        return [f"Step name '{name}' is duplicated ({count} occurrences)." for name, count in counts.items() if count > 1]
 
     def validate_no_cycles(self) -> list[str]:
         """Return errors if the dependency graph contains cycles (including self-references)."""
@@ -82,15 +90,10 @@ class ManifestValidator:
 
     def validate_class_paths(self) -> list[str]:
         """Return errors for any step whose class path cannot be imported."""
-        from wurzel.manifest.builder import ManifestBuilder  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
-
         errors: list[str] = []
         for step in self._manifest.spec.steps:
-            if "." not in step.class_:
-                errors.append(f"Step '{step.name}': class path '{step.class_}' has no module component.")
-                continue
             try:
-                ManifestBuilder.import_step_class(step.class_)
+                import_step_class(step.class_)
             except ImportError as exc:
                 errors.append(f"Step '{step.name}': cannot import '{step.class_}': {exc}")
         return errors
@@ -110,6 +113,7 @@ class ManifestValidator:
     def validate_all(self) -> list[str]:
         """Run all validators and return a combined list of errors."""
         errors: list[str] = []
+        errors.extend(self.validate_unique_step_names())
         errors.extend(self.validate_step_refs())
         errors.extend(self.validate_no_cycles())
         errors.extend(self.validate_class_paths())
