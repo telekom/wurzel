@@ -64,7 +64,7 @@ class StepSpec(BaseModel):
     dependsOn: list[str] = Field(default_factory=list)
     settings: dict[str, str] = Field(default_factory=dict)
 
-    model_config = {"populate_by_name": True}
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class MiddlewareSpec(BaseModel):
@@ -73,7 +73,7 @@ class MiddlewareSpec(BaseModel):
     name: str
     settings: dict[str, str] = Field(default_factory=dict)
 
-    model_config = {"populate_by_name": True}
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class BackendConfig(BaseModel):
@@ -113,7 +113,7 @@ class Metadata(BaseModel):
     labels: dict[str, str] = Field(default_factory=dict)
     annotations: dict[str, str] = Field(default_factory=dict)
 
-    model_config = {"populate_by_name": True}
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class PipelineSpec(BaseModel):
@@ -125,7 +125,7 @@ class PipelineSpec(BaseModel):
     steps: Annotated[list[StepSpec], Field(min_length=1)]
     backendConfig: BackendConfig = Field(default_factory=BackendConfig)
 
-    model_config = {"populate_by_name": True}
+    model_config = ConfigDict(populate_by_name=True)
 
     @field_validator("backend", mode="after")
     @classmethod
@@ -148,4 +148,4 @@ class PipelineManifest(BaseModel):
     metadata: Metadata
     spec: PipelineSpec
 
-    model_config = {"populate_by_name": True}
+    model_config = ConfigDict(populate_by_name=True)
