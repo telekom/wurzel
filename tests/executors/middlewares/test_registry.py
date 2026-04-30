@@ -190,3 +190,11 @@ def test_middleware_chain_different_lengths(tmp_path: Path, middleware_count: in
 
     with BaseStepExecutor(middlewares=available[:middleware_count], load_middlewares_from_env=False) as exc:
         assert exc(DummyStep, None, tmp_path / f"chain_{middleware_count}") is not None
+
+
+def test_module_level_load_middlewares_returns_list():
+    """Module-level load_middlewares() function delegates to the global registry."""
+    from wurzel.executors.middlewares import load_middlewares  # noqa: PLC0415
+
+    result = load_middlewares(names=[], from_env=False)
+    assert isinstance(result, list)

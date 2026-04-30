@@ -338,3 +338,85 @@ def test_env_check_failure(env, capsys, monkeypatch):
     captured = capsys.readouterr()
     assert "Missing environment variables" in captured.out
     assert "MANUALMARKDOWNSTEP__FOLDER_PATH" in captured.out
+
+
+def test_executer_callback_none_returns_none():
+    """Passing None returns None without error."""
+    assert main.executer_callback(None, None, None) is None
+
+
+def test_executer_callback_dvc():
+    """Passing 'dvc' prefix returns DvcBackend class."""
+    from wurzel.executors.backend.backend_dvc import DvcBackend
+
+    assert main.executer_callback(None, None, "Dvc") is DvcBackend
+
+
+def test_backend_callback_argo_without_hera():
+    """backend_callback raises informative error for ArgoBackend when Hera is not installed."""
+    if HAS_HERA:
+        pytest.skip("Hera is available; cannot test the missing-Hera error path")
+    with pytest.raises(typer.BadParameter) as exc_info:
+        main.backend_callback(None, None, "ArgoBackend")
+    assert "ArgoBackend" in str(exc_info.value)
+
+
+def test_ensure_pipeline_obj_with_step_instance():
+    """_ensure_pipeline_obj returns the step unchanged when already a TypedStep."""
+    assert main._ensure_pipeline_obj(ManualMarkdownStep) is ManualMarkdownStep
+
+
+def test_build_requirements_table():
+    """_build_requirements_table returns a Rich Table with expected columns."""
+    from wurzel.cli.cmd_env import collect_env_requirements
+    from wurzel.utils import WZ
+
+    requirements = collect_env_requirements(WZ(ManualMarkdownStep))
+    table = main._build_requirements_table(requirements)
+    assert len(table.columns) > 0
+
+
+def test_build_missing_table():
+    """_build_missing_table returns a Rich Table."""
+    from wurzel.cli.cmd_env import EnvValidationIssue
+
+    issues = [EnvValidationIssue(env_var="MY_VAR", message="missing")]
+    table = main._build_missing_table(issues)
+    assert len(table.columns) > 0
+
+
+def test_print_requirements_terminal_mode(monkeypatch):
+    """_print_requirements uses Rich table when console is in terminal mode."""
+    from io import StringIO
+
+    from rich.console import Console
+
+    from wurzel.cli.cmd_env import collect_env_requirements
+    from wurzel.utils import WZ
+
+    buf = StringIO()
+    term_console = Console(file=buf, force_terminal=True, width=120, highlight=False, no_color=True)
+    monkeypatch.setattr(main, "console", term_console)
+
+    requirements = collect_env_requirements(WZ(ManualMarkdownStep))
+    main._print_requirements(requirements)
+    output = buf.getvalue()
+    assert "MANUALMARKDOWNSTEP__FOLDER_PATH" in output
+
+
+def test_print_missing_terminal_mode(monkeypatch):
+    """_print_missing uses Rich table when console is in terminal mode."""
+    from io import StringIO
+
+    from rich.console import Console
+
+    from wurzel.cli.cmd_env import EnvValidationIssue
+
+    buf = StringIO()
+    term_console = Console(file=buf, force_terminal=True, width=120, highlight=False, no_color=True)
+    monkeypatch.setattr(main, "console", term_console)
+
+    issues = [EnvValidationIssue(env_var="MISSING_VAR", message="required")]
+    main._print_missing(issues)
+    output = buf.getvalue()
+    assert "MISSING_VAR" in output

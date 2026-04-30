@@ -69,3 +69,25 @@ def test_backend_cli(tmp_path, backend, env):
     proc = subprocess.run(cmd, capture_output=True, text=True)
     assert proc.returncode == 0, proc
     _result = yaml.safe_load(proc.stdout)  # loadable
+
+
+def test_version_fallback_when_metadata_fails(monkeypatch):
+    """Test that __version__ falls back to 'dev' when importlib.metadata.version fails."""
+    import importlib.metadata
+
+    # Reload the cli module to test the version initialization
+    import wurzel.cli as cli_module
+
+    # Mock the version function to raise an exception
+    def mock_version(name):
+        raise Exception("Mock metadata error")
+
+    monkeypatch.setattr(importlib.metadata, "version", mock_version)
+
+    # Re-import to trigger the exception handler
+    import importlib
+
+    importlib.reload(cli_module)
+
+    # Check that version falls back to "dev"
+    assert cli_module.__version__ == "dev"

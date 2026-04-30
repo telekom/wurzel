@@ -43,6 +43,11 @@ class TestImportStepClass:
         with pytest.raises(ImportError, match="not a class"):
             ManifestBuilder.import_step_class("os.path.join")
 
+    def test_no_module_path_raises(self):
+        # A path with no module component (no dots) must raise ImportError
+        with pytest.raises(ImportError, match="no module component"):
+            ManifestBuilder.import_step_class("ClassName")
+
 
 class TestBuildStepGraph:
     def test_single_source_step(self):
