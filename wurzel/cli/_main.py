@@ -28,6 +28,8 @@ app = typer.Typer(
 # Import and add the middlewares command group
 # ruff: noqa: E402
 from wurzel.cli import cmd_middlewares  # pylint: disable=wrong-import-position
+from wurzel.core.meta.ast_steps import _EXCLUDE_DIRS  # pylint: disable=wrong-import-position
+from wurzel.core.meta.ast_steps import check_if_typed_step as _check_if_typed_step  # pylint: disable=wrong-import-position
 
 app.add_typer(cmd_middlewares.app, name="middlewares")
 
@@ -211,26 +213,6 @@ def _process_python_file(py_file: Path, search_path: Path, base_module: str, inc
         pass
 
 
-def _check_if_typed_step(node) -> bool:
-    """Check if a class node inherits from TypedStep."""
-    import ast  # pylint: disable=import-outside-toplevel
-
-    for base in node.bases:
-        if isinstance(base, ast.Name) and base.id == "TypedStep":
-            return True
-        if isinstance(base, ast.Subscript):
-            # Handle generic TypedStep like TypedStep[Input, Output, Settings]
-            if isinstance(base.value, ast.Name) and base.value.id == "TypedStep":
-                return True
-            if isinstance(base.value, ast.Attribute) and base.value.attr == "TypedStep":
-                return True
-        if isinstance(base, ast.Attribute):
-            # Handle cases like wurzel.core.TypedStep
-            if base.attr == "TypedStep":
-                return True
-    return False
-
-
 def _build_module_path(py_file: Path, search_path: Path, base_module: str) -> str:
     """Build module path from file location."""
     rel_path = py_file.relative_to(search_path)
@@ -259,20 +241,11 @@ def complete_step_import(incomplete: str) -> list[str]:  # pylint: disable=too-m
             return
 
         # Directories to exclude from scanning (performance optimization)
-        exclude_dirs = {
+        exclude_dirs = _EXCLUDE_DIRS | {
             ".venv",
             "venv",
             ".env",
             "env",
-            "__pycache__",
-            ".git",
-            ".svn",
-            ".hg",
-            "node_modules",
-            ".tox",
-            ".pytest_cache",
-            "build",
-            "dist",
             ".egg-info",
             "site-packages",
             "tests",  # Skip test directories - unlikely to contain user steps
@@ -571,7 +544,7 @@ def get_available_backends() -> list[str]:
     """
     from wurzel.executors.backend import get_available_backends as _get_backends  # pylint: disable=import-outside-toplevel
 
-    return list(_get_backends().keys())
+    return [cls.__name__ for cls in _get_backends().values()]
 
 
 def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str):
