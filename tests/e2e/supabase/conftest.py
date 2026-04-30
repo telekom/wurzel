@@ -186,6 +186,9 @@ def auth_users(supabase_local_config: SupabaseLocalConfig) -> E2EAuthUsers:
 
 @pytest.fixture(scope="session")
 def app(supabase_local_config: SupabaseLocalConfig, auth_users: E2EAuthUsers):
+    from fastapi import Depends  # noqa: PLC0415
+    from fastapi.security import HTTPBearer  # noqa: PLC0415
+
     from wurzel.api.auth.jwt import UserClaims, _verify_jwt  # noqa: PLC0415
 
     os.environ["SUPABASE__URL"] = supabase_local_config.api_url
@@ -214,12 +217,14 @@ def app(supabase_local_config: SupabaseLocalConfig, auth_users: E2EAuthUsers):
         auth_users.no_role_token: UserClaims(sub=auth_users.no_role_user_id, email="wurzel-e2e-no-role@example.local", raw={}),
     }
 
-    def mock_verify_jwt(credentials=None) -> UserClaims:  # type: ignore  # noqa: PLC0415
+    _bearer = HTTPBearer(auto_error=False)
+
+    async def mock_verify_jwt(credentials=Depends(_bearer)) -> UserClaims:  # noqa: PLC0415
         if credentials is None:
             from wurzel.api.error_codes import ErrorCode  # noqa: PLC0415
 
             raise ErrorCode.INVALID_TOKEN.error(detail="Authorization: Bearer <token> header is required.")
-        token = credentials.credentials if hasattr(credentials, "credentials") else str(credentials)
+        token = credentials.credentials
         if token not in token_to_user:
             from wurzel.api.error_codes import ErrorCode  # noqa: PLC0415
 
