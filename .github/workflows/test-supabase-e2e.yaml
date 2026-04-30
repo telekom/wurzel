@@ -71,7 +71,7 @@ jobs:
           supabase status
 
       - name: Install Python dependencies
-        run: uv sync --extra test --extra api && uv pip install boto3
+        run: uv sync --extra test --extra api --extra argo && uv pip install boto3
 
       - name: Run Supabase + S3 e2e tests
         run: uv run pytest tests/e2e/supabase -m supabase_e2e --supabase-e2e -v --tb=short
