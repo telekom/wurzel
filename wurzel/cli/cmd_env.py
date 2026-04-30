@@ -1,8 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
 #
 # SPDX-License-Identifier: Apache-2.0
-
-"""Environment variable requirement collection and validation for pipelines."""
+"""Helpers for CLI environment commands."""
 
 from __future__ import annotations
 
@@ -15,7 +14,7 @@ from pydantic import BaseModel, SecretStr, ValidationError
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
-if TYPE_CHECKING:
+if TYPE_CHECKING:  # pragma: no cover - typing imports only
     from wurzel.step import TypedStep
 
 
