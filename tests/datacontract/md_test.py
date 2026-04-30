@@ -271,3 +271,18 @@ def test_utf8_encoding(tmp_path):
     assert "spëcial" in s.md
     assert "çharacters" in s.md
     assert s.keywords == "test,unicode"
+
+
+def test_from_dict_w_function():
+    """Test MarkdownDataContract.from_dict_w_function classmethod."""
+    doc = {
+        "text": "hello world",
+        "metadata": {
+            "url": "docs/test.md",
+            "keywords": "hello,world",
+        },
+    }
+    result = MarkdownDataContract.from_dict_w_function(doc, str.upper)
+    assert result.md == "HELLO WORLD"
+    assert result.url == "docs/test.md"
+    assert result.keywords == "hello,world"

@@ -573,3 +573,107 @@ def test_splitter_too_short_text(Splitter):
     results = Splitter.split_markdown_document(contract)
 
     assert len(results) == 0, "Splitter should not return too short docs"
+
+
+def test_simple_splitter_sequential_fallback(monkeypatch):
+    """Test sequential processing fallback when HAS_JOBLIB is False."""
+    # Monkeypatch HAS_JOBLIB to False to force sequential path
+    monkeypatch.setattr("wurzel.steps.splitter.HAS_JOBLIB", False)
+
+    test_data = [
+        MarkdownDataContract(
+            md="""
+# Heading 1
+
+Sed euismod rutrum lorem, nec rutrum dolor accumsan in. In rhoncus urna id augue
+accumsan tristique. Quisque dictum tincidunt lacus dignissim facilisis. Suspendisse
+id magna sit amet risus bibendum maximus vel et nisi. Curabitur imperdiet, est ac
+tristique consectetur, odio ligula molestie nisi, non hendrerit nisl est quis leo.
+Nulla sagittis orci vel turpis lacinia, ut volutpat turpis tempor. Proin et nisi eget
+dui ullamcorper finibus.
+
+Duis consectetur ex elementum arcu volutpat, vitae rutrum risus vehicula. Donec urna
+lorem, mattis et justo non, interdum blandit odio. Mauris interdum lectus in mauris
+porta interdum. Maecenas rutrum, tellus vestibulum mattis ultrices, tellus velit
+iaculis lacus, a tristique orci mauris in orci.
+""",
+            url="www.dummy.url/404",
+            keywords="test",
+        )
+    ]
+
+    step = SimpleSplitterStep()
+    result = step.run(test_data)
+    assert len(result) > 0
+    assert isinstance(result[0], MarkdownDataContract)
+
+
+def test_simple_splitter_with_partial_exception_handling(monkeypatch):
+    """Test exception handling when some documents fail during splitting."""
+    from wurzel.exceptions import MarkdownException
+
+    # Create step and mock _split_markdown to raise MarkdownException
+    step = SimpleSplitterStep()
+    original_split = step._split_markdown
+
+    call_count = [0]
+
+    def mock_split_markdown(markdowns):
+        call_count[0] += 1
+        # First call succeeds, second call raises exception
+        if call_count[0] == 1:
+            return original_split(markdowns)
+        else:
+            raise MarkdownException("mock error")
+
+    monkeypatch.setattr(step, "_split_markdown", mock_split_markdown)
+
+    test_data = [
+        MarkdownDataContract(
+            md="""
+# Document 1
+
+Sed euismod rutrum lorem, nec rutrum dolor accumsan in. In rhoncus urna id augue
+accumsan tristique. Quisque dictum tincidunt lacus dignissim facilisis. Suspendisse
+id magna sit amet risus bibendum maximus vel et nisi. Curabitur imperdiet, est ac
+tristique consectetur, odio ligula molestie nisi, non hendrerit nisl est quis leo.
+
+Duis consectetur ex elementum arcu volutpat, vitae rutrum risus vehicula. Donec urna
+lorem, mattis et justo non, interdum blandit odio. Mauris interdum lectus in mauris
+porta interdum.
+""",
+            url="www.dummy.url/1",
+            keywords="doc1",
+        ),
+        MarkdownDataContract(
+            md="Short",
+            url="www.dummy.url/2",
+            keywords="doc2",
+        ),
+    ]
+
+    result = step.run(test_data)
+    # Should have results from first batch, with some skipped from second
+    assert len(result) > 0
+
+
+def test_simple_splitter_all_documents_fail():
+    """Test that SplittException is raised when all documents fail splitting."""
+    from unittest.mock import patch
+
+    from wurzel.exceptions import MarkdownException, SplittException
+
+    step = SimpleSplitterStep()
+
+    # Mock the splitter to raise MarkdownException for all inputs
+    with patch.object(step.splitter, "split_markdown_document", side_effect=MarkdownException("Mock failure")):
+        test_data = [
+            MarkdownDataContract(
+                md="Some markdown",
+                url="www.dummy.url/1",
+                keywords="doc1",
+            )
+        ]
+
+        with pytest.raises(SplittException, match="all Documents got skipped"):
+            step.run(test_data)
