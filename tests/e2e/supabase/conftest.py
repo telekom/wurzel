@@ -186,6 +186,9 @@ def auth_users(supabase_local_config: SupabaseLocalConfig) -> E2EAuthUsers:
 
 @pytest.fixture(scope="session")
 def app(supabase_local_config: SupabaseLocalConfig, auth_users: E2EAuthUsers):
+    from wurzel.api.auth.jwt import _get_auth_settings  # noqa: PLC0415
+    from wurzel.api.auth.settings import AuthSettings  # noqa: PLC0415
+
     os.environ["SUPABASE__URL"] = supabase_local_config.api_url
     os.environ["SUPABASE__SERVICE_KEY"] = supabase_local_config.service_role_key
     os.environ["AUTH__JWKS_URL"] = supabase_local_config.jwks_url
@@ -200,6 +203,13 @@ def app(supabase_local_config: SupabaseLocalConfig, auth_users: E2EAuthUsers):
     settings = APISettings(API_KEY=TEST_API_KEY)
     _app = create_app(settings=settings, otel_settings=OTELSettings(ENABLED=False))
     _app.dependency_overrides[_get_settings] = lambda: settings
+    # Override auth settings to enable JWT validation with Supabase local config
+    _app.dependency_overrides[_get_auth_settings] = lambda: AuthSettings(
+        ENABLED=True,
+        JWKS_URL=supabase_local_config.jwks_url,
+        ALGORITHM=auth_users.token_algorithm,
+        JWT_AUDIENCE="authenticated",
+    )
     return _app
 
 
