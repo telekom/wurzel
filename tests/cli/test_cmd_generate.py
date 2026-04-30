@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import pytest
 
-from wurzel.cli import generate
+from wurzel.cli import cmd_generate
 from wurzel.executors.backend.backend import Backend
 from wurzel.utils import HAS_HERA
 
@@ -37,7 +37,7 @@ def test_resolve_backend_instance_uses_from_values_for_argo(monkeypatch, tmp_pat
 
     monkeypatch.setattr(ArgoBackend, "from_values", classmethod(fake_from_values))
 
-    adapter = generate._resolve_backend_instance(ArgoBackend, [values_file], "demo")
+    adapter = cmd_generate._resolve_backend_instance(ArgoBackend, [values_file], "demo")
 
     assert adapter is sentinel
     assert captured["files"] == [values_file]
@@ -54,7 +54,7 @@ def test_resolve_backend_instance_inits_argo_without_values(monkeypatch):
 
     monkeypatch.setattr(ArgoBackend, "__init__", fake_init)
 
-    adapter = generate._resolve_backend_instance(ArgoBackend, None, None)
+    adapter = cmd_generate._resolve_backend_instance(ArgoBackend, None, None)
 
     assert isinstance(adapter, ArgoBackend)
     assert init_calls == [((), {})]
@@ -74,7 +74,7 @@ def test_resolve_backend_instance_passes_executor_to_argo_from_values(monkeypatc
 
     monkeypatch.setattr(ArgoBackend, "from_values", classmethod(fake_from_values))
 
-    generate._resolve_backend_instance(
+    cmd_generate._resolve_backend_instance(
         ArgoBackend,
         [values_file],
         "demo",
@@ -92,7 +92,7 @@ def test_resolve_backend_instance_for_non_argo_backend(tmp_path):
         def generate_artifact(self, step):  # pragma: no cover - helper stub
             return f"yaml:{step}"
 
-    adapter = generate._resolve_backend_instance(DummyBackend, [tmp_path / "ignored"], None)
+    adapter = cmd_generate._resolve_backend_instance(DummyBackend, [tmp_path / "ignored"], None)
 
     assert isinstance(adapter, DummyBackend)
     assert adapter.initialized is True
@@ -120,10 +120,10 @@ def test_cmd_generate_main_resolves_backend_with_iterable_values(monkeypatch, tm
         captured["executor"] = executor
         return Adapter()
 
-    monkeypatch.setattr(generate, "_resolve_backend_instance", fake_resolve)
+    monkeypatch.setattr(cmd_generate, "_resolve_backend_instance", fake_resolve)
 
     step = object()
-    result = generate.main(step, _MinimalBackend, values=values_iterable, pipeline_name="wf-name")
+    result = cmd_generate.main(step, _MinimalBackend, values=values_iterable, pipeline_name="wf-name")
 
     assert result == "rendered"
     assert captured["backend"] is _MinimalBackend
@@ -144,11 +144,11 @@ def test_cmd_generate_main_writes_to_output(monkeypatch, tmp_path):
         assert executor is None
         return Adapter()
 
-    monkeypatch.setattr(generate, "_resolve_backend_instance", fake_resolve)
+    monkeypatch.setattr(cmd_generate, "_resolve_backend_instance", fake_resolve)
 
     output_path = tmp_path / "manifest.yaml"
 
-    result = generate.main("pipeline", _MinimalBackend, output=output_path)
+    result = cmd_generate.main("pipeline", _MinimalBackend, output=output_path)
 
     assert result == "artifact-yaml"
     assert output_path.read_text(encoding="utf-8") == "artifact-yaml"
