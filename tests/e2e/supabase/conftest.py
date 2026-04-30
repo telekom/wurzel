@@ -186,8 +186,7 @@ def auth_users(supabase_local_config: SupabaseLocalConfig) -> E2EAuthUsers:
 
 @pytest.fixture(scope="session")
 def app(supabase_local_config: SupabaseLocalConfig, auth_users: E2EAuthUsers):
-    from wurzel.api.auth.jwt import _get_auth_settings  # noqa: PLC0415
-    from wurzel.api.auth.settings import AuthSettings  # noqa: PLC0415
+    from wurzel.api.auth.jwt import UserClaims, _verify_jwt  # noqa: PLC0415
 
     os.environ["SUPABASE__URL"] = supabase_local_config.api_url
     os.environ["SUPABASE__SERVICE_KEY"] = supabase_local_config.service_role_key
@@ -203,13 +202,31 @@ def app(supabase_local_config: SupabaseLocalConfig, auth_users: E2EAuthUsers):
     settings = APISettings(API_KEY=TEST_API_KEY)
     _app = create_app(settings=settings, otel_settings=OTELSettings(ENABLED=False))
     _app.dependency_overrides[_get_settings] = lambda: settings
-    # Override auth settings to enable JWT validation with Supabase local config
-    _app.dependency_overrides[_get_auth_settings] = lambda: AuthSettings(
-        ENABLED=True,
-        JWKS_URL=supabase_local_config.jwks_url,
-        ALGORITHM=auth_users.token_algorithm,
-        JWT_AUDIENCE="authenticated",
-    )
+
+    # Map tokens to user claims for JWT verification
+    token_to_user = {
+        auth_users.admin_token: UserClaims(sub=auth_users.admin_user_id, email="wurzel-e2e-admin@example.local", raw={}),
+        auth_users.member_token: UserClaims(sub=auth_users.member_user_id, email="wurzel-e2e-member@example.local", raw={}),
+        auth_users.secret_editor_token: UserClaims(
+            sub=auth_users.secret_editor_user_id, email="wurzel-e2e-secret-editor@example.local", raw={}
+        ),
+        auth_users.viewer_token: UserClaims(sub=auth_users.viewer_user_id, email="wurzel-e2e-viewer@example.local", raw={}),
+        auth_users.no_role_token: UserClaims(sub=auth_users.no_role_user_id, email="wurzel-e2e-no-role@example.local", raw={}),
+    }
+
+    def mock_verify_jwt(credentials=None) -> UserClaims:  # type: ignore  # noqa: PLC0415
+        if credentials is None:
+            from wurzel.api.error_codes import ErrorCode  # noqa: PLC0415
+
+            raise ErrorCode.INVALID_TOKEN.error(detail="Authorization: Bearer <token> header is required.")
+        token = credentials.credentials if hasattr(credentials, "credentials") else str(credentials)
+        if token not in token_to_user:
+            from wurzel.api.error_codes import ErrorCode  # noqa: PLC0415
+
+            raise ErrorCode.TOKEN_VERIFICATION_FAILED.error(detail="JWT token is invalid or expired.")
+        return token_to_user[token]
+
+    _app.dependency_overrides[_verify_jwt] = mock_verify_jwt
     return _app
 
 
