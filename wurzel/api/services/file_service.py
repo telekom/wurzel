@@ -76,8 +76,7 @@ class FileUploadService:
                     errors.append(
                         FileUploadError(
                             filename=filename,
-                            reason=f"File extension '{file_ext}' not accepted. "
-                            f"Accepted: {', '.join(list(accepted_extensions))}",
+                            reason=f"File extension '{file_ext}' not accepted. Accepted: {', '.join(list(accepted_extensions))}",
                         )
                     )
                     continue
@@ -88,8 +87,7 @@ class FileUploadService:
                     errors.append(
                         FileUploadError(
                             filename=filename,
-                            reason=f"MIME type '{mime_type}' not accepted. "
-                            f"Accepted: {', '.join(list(accepted_mime_types))}",
+                            reason=f"MIME type '{mime_type}' not accepted. Accepted: {', '.join(list(accepted_mime_types))}",
                         )
                     )
                     continue
@@ -104,7 +102,7 @@ class FileUploadService:
                     mime_type=mime_type,
                 )
                 successful_uploads.append(metadata)
-            except IOError as exc:
+            except OSError as exc:
                 errors.append(
                     FileUploadError(
                         filename=filename,

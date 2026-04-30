@@ -15,10 +15,10 @@ pytest.importorskip("fastapi", reason="wurzel[fastapi] not installed")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from wurzel.api.routes.files.router import get_file_upload_service  # noqa: E402
-from wurzel.api.services.file_service import FileUploadService  # noqa: E402
 from tests.api.routes.conftest import ADMIN_USER, make_app  # noqa: E402
 from tests.storage.test_file_storage import MockFileStorageService  # noqa: E402
+from wurzel.api.routes.files.router import get_file_upload_service  # noqa: E402
+from wurzel.api.services.file_service import FileUploadService  # noqa: E402
 
 _UPLOAD_URL = "/v1/projects/proj1/steps/step1/files"
 _STEP_PATH = "wurzel.steps.MyStep"
@@ -174,4 +174,3 @@ class TestDeleteFile:
 
         assert r.status_code == 200
         assert r.json()["deleted"] is False
-

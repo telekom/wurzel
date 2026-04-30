@@ -64,6 +64,28 @@ class TestValidateStepRefs:
         assert ManifestValidator(manifest).validate_step_refs() == []
 
 
+class TestValidateUniqueStepNames:
+    def test_unique_names_return_no_errors(self):
+        manifest = _make_manifest(
+            [
+                {"name": "a", "class": "x.A"},
+                {"name": "b", "class": "x.B"},
+            ]
+        )
+        assert ManifestValidator(manifest).validate_unique_step_names() == []
+
+    def test_duplicate_names_return_error(self):
+        manifest = _make_manifest(
+            [
+                {"name": "dup", "class": "x.A"},
+                {"name": "dup", "class": "x.B"},
+            ]
+        )
+        errors = ManifestValidator(manifest).validate_unique_step_names()
+        assert len(errors) == 1
+        assert "dup" in errors[0]
+
+
 class TestValidateNoCycles:
     def test_linear_chain_no_cycle(self):
         manifest = _make_manifest(
@@ -207,3 +229,13 @@ class TestValidateAll:
         errors = ManifestValidator(manifest).validate_all()
         # both a ref error and an import error should be present
         assert len(errors) >= 2
+
+    def test_duplicate_step_name_is_reported(self):
+        manifest = _make_manifest(
+            [
+                {"name": "dup", "class": "x.A"},
+                {"name": "dup", "class": "x.B"},
+            ]
+        )
+        errors = ManifestValidator(manifest).validate_all()
+        assert any("duplicated" in error and "dup" in error for error in errors)

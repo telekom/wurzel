@@ -81,7 +81,22 @@ class TestBuildStepGraph:
 
     def test_bad_class_raises(self):
         manifest = _manifest({"name": "s", "class": "nonexistent.module.Step"})
-        with pytest.raises(ImportError):
+        with pytest.raises(ValueError, match="cannot import"):
+            ManifestBuilder(manifest).build_step_graph()
+
+    def test_duplicate_step_name_raises_validation_error(self):
+        manifest = _manifest(
+            {"name": "dup", "class": "wurzel.steps.manual_markdown.ManualMarkdownStep"},
+            {"name": "dup", "class": "wurzel.steps.splitter.SimpleSplitterStep"},
+        )
+        with pytest.raises(ValueError, match="duplicated"):
+            ManifestBuilder(manifest).build_step_graph()
+
+    def test_undefined_dependency_raises_validation_error_before_wiring(self):
+        manifest = _manifest(
+            {"name": "b", "class": "wurzel.steps.splitter.SimpleSplitterStep", "dependsOn": ["missing"]},
+        )
+        with pytest.raises(ValueError, match="not defined"):
             ManifestBuilder(manifest).build_step_graph()
 
 
