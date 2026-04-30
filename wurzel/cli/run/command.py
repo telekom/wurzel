@@ -19,8 +19,8 @@ from wurzel.cli.shared.callbacks import step_callback
 from .callbacks import executer_callback
 
 app = typer.Typer(
-    no_args_is_help=True,
     help="Execute a step or pipeline with the specified executor.",
+    context_settings={"allow_interspersed_args": True},
 )
 
 log = logging.getLogger(__name__)

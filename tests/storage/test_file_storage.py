@@ -4,9 +4,10 @@
 
 """Tests for file storage services."""
 
-import pytest
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from io import BytesIO
+
+import pytest
 
 from wurzel.storage.file_storage import FileMetadata, FileStorageService
 
@@ -19,6 +20,7 @@ class MockFileStorageService(FileStorageService):
 
     def upload(self, project_id: str, step_id: str, file_data, filename: str, mime_type=None):
         import uuid
+
         file_id = str(uuid.uuid4())
 
         if isinstance(file_data, bytes):
@@ -30,7 +32,7 @@ class MockFileStorageService(FileStorageService):
             file_id=file_id,
             filename=filename,
             file_size=len(content),
-            uploaded_at=datetime.now(timezone.utc),
+            uploaded_at=datetime.now(UTC),
             mime_type=mime_type,
         )
 
@@ -50,11 +52,7 @@ class MockFileStorageService(FileStorageService):
         return False
 
     def list_files(self, project_id: str, step_id: str):
-        return [
-            metadata
-            for (p, s, _), (metadata, _) in self.files.items()
-            if p == project_id and s == step_id
-        ]
+        return [metadata for (p, s, _), (metadata, _) in self.files.items() if p == project_id and s == step_id]
 
     def read_file(self, project_id: str, step_id: str, file_id: str):
         if (project_id, step_id, file_id) not in self.files:

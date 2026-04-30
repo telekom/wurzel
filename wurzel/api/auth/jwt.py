@@ -122,22 +122,13 @@ def _decode_token(token: str, settings: AuthSettings, jwks: dict[str, Any]) -> d
             secret = base64.urlsafe_b64decode(keys[0].get("k", "") + "==")
         else:
             secret = b""
-        try:
-            return jwt.decode(
-                token,
-                secret,
-                algorithms=[settings.ALGORITHM],
-                audience=settings.JWT_AUDIENCE,
-                options={"verify_exp": True},
-            )
-        except Exception:  # pylint: disable=broad-exception-caught
-            # Fallback: some Supabase local setups omit 'aud' claim
-            return jwt.decode(
-                token,
-                secret,
-                algorithms=[settings.ALGORITHM],
-                options={"verify_exp": True, "verify_aud": False},
-            )
+        return jwt.decode(
+            token,
+            secret,
+            algorithms=[settings.ALGORITHM],
+            audience=settings.JWT_AUDIENCE,
+            options={"verify_exp": True},
+        )
 
     # Asymmetric (RS256, etc.): use PyJWKClient against JWKS endpoint
     try:

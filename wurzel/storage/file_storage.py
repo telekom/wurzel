@@ -40,6 +40,7 @@ class FileStorageService(abc.ABC):
         step_id: str,
         file_data: BinaryIO | bytes,
         filename: str,
+        *,
         mime_type: str | None = None,
     ) -> FileMetadata:
         """Upload a file to storage.
