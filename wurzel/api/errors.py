@@ -6,11 +6,15 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 
 class ProblemDetail(BaseModel):
@@ -67,6 +71,18 @@ class APIError(Exception):
 def register_exception_handlers(app: FastAPI) -> None:
     """Attach all exception handlers to *app*."""
 
+    @app.exception_handler(RequestValidationError)
+    async def _request_validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+        # Log and capture validation errors with full context
+        logger.error(f"Request validation error on {request.url}: {exc.errors()}")
+        logger.error(f"Request body: {await request.body()}")
+        return _problem_response(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            title="Unprocessable Entity",
+            detail=f"Validation error: {exc.errors()}",
+            instance=str(request.url),
+        )
+
     @app.exception_handler(APIError)
     async def _api_error_handler(request: Request, exc: APIError) -> JSONResponse:
         return _problem_response(
@@ -87,6 +103,10 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(status.HTTP_422_UNPROCESSABLE_CONTENT)
     async def _validation_handler(request: Request, exc: Exception) -> JSONResponse:
+        # Log full error details for debugging
+        if isinstance(exc, RequestValidationError):
+            logger.error(f"Validation error: {exc.errors()}")
+        logger.error(f"Validation error exception: {exc}")
         return _problem_response(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             title="Unprocessable Entity",
