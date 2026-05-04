@@ -5,7 +5,6 @@
 from __future__ import annotations
 
 import io
-import uuid
 
 import pytest
 
@@ -22,30 +21,12 @@ def test_health_and_metrics_are_available_without_auth(client):
     assert "text/plain" in metrics.headers["content-type"]
 
 
-def test_ingest_api_key_happy_and_error_paths(client, api_key_headers):
-    no_key = client.post("/v1/ingest", json={"items": [{"title": "a", "content": "b"}]})
-    assert no_key.status_code == 401
-
-    ok = client.post("/v1/ingest", json={"items": [{"title": "a", "content": "b"}]}, headers=api_key_headers)
-    assert ok.status_code == 202
-    assert ok.json()["status"] == "pending"
-
-    missing_body = client.post("/v1/ingest", json={}, headers=api_key_headers)
-    assert missing_body.status_code == 422
-
-    status_resp = client.get(f"/v1/ingest/{uuid.uuid4()}", headers=api_key_headers)
-    assert status_resp.status_code == 501
-
-
-def test_search_and_knowledge_api_key_error_paths(client, api_key_headers):
+def test_search_api_key_error_paths(client, api_key_headers):
     search_missing_key = client.post("/v1/search", json={"query": "hello"})
     assert search_missing_key.status_code == 401
 
     search_with_key = client.post("/v1/search", json={"query": "hello"}, headers=api_key_headers)
     assert search_with_key.status_code == 501
-
-    knowledge_with_key = client.get("/v1/knowledge", headers=api_key_headers)
-    assert knowledge_with_key.status_code == 501
 
 
 def test_steps_require_jwt_and_list_for_authenticated_user(client, role_headers):

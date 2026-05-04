@@ -2,67 +2,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-"""Tests for API route settings classes (ingest, knowledge, search)."""
+"""Tests for API route settings classes (search)."""
 
 import pytest
-
-
-class TestIngestSettings:
-    def test_defaults(self):
-        from wurzel.api.routes.ingest.settings import IngestSettings
-
-        s = IngestSettings()
-        assert s.MAX_BATCH_SIZE == 1000
-        assert s.CONCURRENCY == 4
-
-    def test_override_via_constructor(self):
-        from wurzel.api.routes.ingest.settings import IngestSettings
-
-        s = IngestSettings(MAX_BATCH_SIZE=500, CONCURRENCY=2)
-        assert s.MAX_BATCH_SIZE == 500
-        assert s.CONCURRENCY == 2
-
-    def test_override_via_env(self, env):
-        from wurzel.api.routes.ingest.settings import IngestSettings
-
-        env.set("INGEST__MAX_BATCH_SIZE", "250")
-        env.set("INGEST__CONCURRENCY", "8")
-        s = IngestSettings()
-        assert s.MAX_BATCH_SIZE == 250
-        assert s.CONCURRENCY == 8
-
-    def test_invalid_batch_size_raises(self):
-        from wurzel.api.routes.ingest.settings import IngestSettings
-
-        with pytest.raises(Exception):
-            IngestSettings(MAX_BATCH_SIZE=0)
-
-
-class TestKnowledgeSettings:
-    def test_defaults(self):
-        from wurzel.api.routes.knowledge.settings import KnowledgeSettings
-
-        s = KnowledgeSettings()
-        assert s.MAX_CONTENT_LENGTH == 1_000_000
-
-    def test_override_via_constructor(self):
-        from wurzel.api.routes.knowledge.settings import KnowledgeSettings
-
-        s = KnowledgeSettings(MAX_CONTENT_LENGTH=512)
-        assert s.MAX_CONTENT_LENGTH == 512
-
-    def test_override_via_env(self, env):
-        from wurzel.api.routes.knowledge.settings import KnowledgeSettings
-
-        env.set("KNOWLEDGE__MAX_CONTENT_LENGTH", "65536")
-        s = KnowledgeSettings()
-        assert s.MAX_CONTENT_LENGTH == 65536
-
-    def test_invalid_content_length_raises(self):
-        from wurzel.api.routes.knowledge.settings import KnowledgeSettings
-
-        with pytest.raises(Exception):
-            KnowledgeSettings(MAX_CONTENT_LENGTH=0)
 
 
 class TestSearchSettings:

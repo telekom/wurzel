@@ -42,15 +42,15 @@ class TestAuthDependency:
     """
 
     def test_missing_api_key_returns_401(self, client):
-        r = client.get("/v1/knowledge")
+        r = client.post("/v1/search", json={"query": "test"})
         assert r.status_code == 401
 
     def test_wrong_api_key_returns_401(self, client, wrong_headers):
-        r = client.get("/v1/knowledge", headers=wrong_headers)
+        r = client.post("/v1/search", json={"query": "test"}, headers=wrong_headers)
         assert r.status_code == 401
 
     def test_401_body_is_problem_json(self, client):
-        r = client.get("/v1/knowledge")
+        r = client.post("/v1/search", json={"query": "test"})
         assert r.headers["content-type"] == "application/problem+json"
         body = r.json()
         assert body["status"] == 401
