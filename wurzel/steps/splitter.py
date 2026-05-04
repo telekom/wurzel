@@ -9,9 +9,9 @@ from logging import getLogger
 
 from pydantic import Field
 
+from wurzel.core import Settings, TypedStep
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import MarkdownException, SplittException, StepFailed
-from wurzel.step import Settings, TypedStep
 from wurzel.utils import HAS_JOBLIB
 from wurzel.utils.splitters.semantic_splitter import SemanticSplitter
 

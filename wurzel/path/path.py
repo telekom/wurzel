@@ -25,28 +25,10 @@ class PathToFolderWithBaseModels(type(Path()), Generic[B]):  # type: ignore[misc
     as well as pydantic.BaseModel info.
 
     Inherits from Pathlib.Path:
-    - Supports all path operations like / etc.
+    - Supports all path operations like `/` etc.
 
-
-    #### Example:
-    ```python
-        class Person(pydantic.BaseModel):
-            # Could be anything that inherits from BaseModel
-            name: str
-            age: int
-        # Define new class to supply GenericType
-        class JFP(PathToBaseModel[Person]): # JsonFilePath
-            pass
-
-        path = JFP("./max.json")
-        # Load from path
-        p_max = path.load_model()
-        # Do anything
-        p_max.age = p_max.age += 1
-        # Store at path
-        # Actual path can be modified like pathlib.Path
-        path.save_model(p_max)
-    ```
+    Use a typed subclass to associate a specific `BaseModel` with a directory path.
+    The executor loads and saves models automatically based on this type information.
     """
 
     @classmethod

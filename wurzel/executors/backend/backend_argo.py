@@ -1,0 +1,574 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+#
+# SPDX-License-Identifier: Apache-2.0
+
+"""Argo backend that renders workflows from YAML values."""
+
+from __future__ import annotations
+
+import logging
+from collections.abc import Iterable
+from functools import cache
+from pathlib import Path
+from typing import Any, Literal
+
+import yaml
+from hera.workflows import (
+    DAG,
+    ConfigMapEnvFrom,
+    Container,
+    CronWorkflow,
+    ExistingVolume,
+    Resources,
+    S3Artifact,
+    SecretEnvFrom,
+    SecretVolume,
+    Task,
+    Volume,
+    Workflow,
+)
+from hera.workflows.archive import NoneArchiveStrategy
+from hera.workflows.models import (
+    Capabilities,
+    EnvVar,
+    IntOrString,
+    PodSecurityContext,
+    RetryStrategy,
+    SeccompProfile,
+    SecretKeySelector,
+    SecurityContext,
+    VolumeMount,
+)
+from pydantic import BaseModel, Field
+
+from wurzel.cli import generate_cli_call
+from wurzel.core import TypedStep
+from wurzel.executors.backend.backend import Backend
+from wurzel.executors.backend.values import load_values
+from wurzel.executors.base_executor import BaseStepExecutor
+
+log = logging.getLogger(__name__)
+
+
+def default_argo_step_executor(_config: WorkflowConfig | None = None) -> type[BaseStepExecutor]:
+    """Pick the step executor for generated Argo task commands.
+
+    Returns ``BaseStepExecutor`` by default.  Prometheus monitoring is handled
+    via the middleware system (``-m prometheus``).
+    """
+    return BaseStepExecutor
+
+
+# ---------------------------------------------------------------------------
+# Values schema
+# ---------------------------------------------------------------------------
+
+
+class SecretMapping(BaseModel):
+    """Mapping entry for mounting a secret key to a target value."""
+
+    key: str
+    value: str
+
+
+class SecretMount(BaseModel):
+    """Description of how secrets should be mounted into a container."""
+
+    source: str = Field(..., alias="from")
+    destination: Path = Field(..., alias="to")
+    mappings: list[SecretMapping]
+
+
+class EnvFromConfig(BaseModel):
+    """Configuration for inheriting environment variables from external sources."""
+
+    kind: Literal["secret", "configMap"] = "secret"
+    name: str
+    prefix: str | None = None
+    optional: bool = True
+
+
+class SecurityContextConfig(BaseModel):
+    """Security context configuration for pods and containers.
+
+    This supports the Kubernetes security context fields needed to satisfy
+    policies like require-run-as-nonroot.
+    """
+
+    runAsNonRoot: bool = True
+    runAsUser: int | None = None
+    runAsGroup: int | None = None
+    fsGroup: int | None = None
+    fsGroupChangePolicy: Literal["OnRootMismatch", "Always"] | None = None
+    supplementalGroups: list[int] = Field(default_factory=list)
+    allowPrivilegeEscalation: bool | None = False
+    readOnlyRootFilesystem: bool | None = None
+    dropCapabilities: list[str] = Field(default_factory=lambda: ["ALL"])
+    seccompProfileType: Literal["RuntimeDefault", "Localhost"] = "RuntimeDefault"
+    seccompLocalhostProfile: str | None = None
+
+
+class ResourcesConfig(BaseModel):
+    """Container resource requests/limits using Hera's Resources API."""
+
+    cpu_request: str = "100m"
+    cpu_limit: str = "500m"
+    memory_request: str = "128Mi"
+    memory_limit: str = "512Mi"
+
+
+class TokenizerCacheConfig(BaseModel):
+    """Configuration for mounting a persistent volume for tokenizer model cache.
+
+    When enabled, mounts a PVC to the container and sets the HF_HOME environment
+    variable so HuggingFace tokenizers use the shared cache.
+    """
+
+    enabled: bool = False
+    claimName: str = "tokenizer-cache-pvc"
+    mountPath: str = "/cache/huggingface"
+    readOnly: bool = True
+    createPvc: bool = False
+    storageSize: str = "10Gi"
+    storageClassName: str | None = None
+    accessModes: list[str] = Field(default_factory=lambda: ["ReadWriteOnce"])
+
+
+class ContainerConfig(BaseModel):
+    """Runtime configuration applied to workflow containers."""
+
+    image: str = "ghcr.io/telekom/wurzel"
+    env: dict[str, str] = Field(default_factory=dict)
+    envFrom: list[EnvFromConfig] = Field(default_factory=list)
+    secretRef: list[str] = Field(default_factory=list)
+    configMapRef: list[str] = Field(default_factory=list)
+    mountSecrets: list[SecretMount] = Field(default_factory=list)
+    tokenizerCache: TokenizerCacheConfig = Field(default_factory=TokenizerCacheConfig)
+    annotations: dict[str, str] = Field(default_factory=lambda: {})
+    securityContext: SecurityContextConfig = Field(default_factory=SecurityContextConfig)
+    resources: ResourcesConfig = Field(default_factory=ResourcesConfig)
+
+
+class SecretKeyRef(BaseModel):
+    """Reference to a key inside a Kubernetes Secret."""
+
+    name: str
+    key: str
+
+
+class S3ArtifactConfig(BaseModel):
+    """Storage destination for artifacts exchanged between steps."""
+
+    bucket: str = "wurzel-bucket"
+    endpoint: str = "s3.amazonaws.com"
+    insecure: bool = False
+    defaultMode: int | None = None
+    accessKeySecret: SecretKeyRef | None = None
+    secretKeySecret: SecretKeyRef | None = None
+
+
+class WorkflowConfig(BaseModel):
+    """Workflow-level defaults rendered into the Argo manifest."""
+
+    name: str = "wurzel"
+    namespace: str = "argo-workflows"
+    schedule: str | None = "0 4 * * *"
+    entrypoint: str = "wurzel-pipeline"
+    serviceAccountName: str = "wurzel-service-account"
+    dataDir: Path = Path("/usr/app")
+    annotations: dict[str, str] = Field(default_factory=lambda: {})
+    container: ContainerConfig = Field(default_factory=ContainerConfig)
+    artifacts: S3ArtifactConfig = Field(default_factory=S3ArtifactConfig)
+    podSecurityContext: SecurityContextConfig = Field(default_factory=SecurityContextConfig)
+    podSpecPatch: str | None = None
+
+
+class TemplateValues(BaseModel):
+    """Helm-like values file parsed into strongly typed configuration."""
+
+    workflows: dict[str, WorkflowConfig] = Field(default_factory=dict)
+
+
+def select_workflow(values: TemplateValues, workflow_name: str | None) -> WorkflowConfig:
+    """Select a workflow configuration either by name or falling back to the first entry."""
+    if workflow_name:
+        try:
+            return values.workflows[workflow_name]
+        except KeyError as exc:  # pragma: no cover - validated via tests
+            raise ValueError(f"workflow '{workflow_name}' not found in values") from exc
+    if values.workflows:
+        first_key = next(iter(values.workflows))
+        return values.workflows[first_key]
+    return WorkflowConfig()
+
+
+class ArgoBackend(Backend, backend_name="argo"):
+    """Render Argo workflows from typed steps based on declarative YAML values."""
+
+    @classmethod
+    def is_available(cls) -> bool:
+        """Check if Hera is installed."""
+        from wurzel.utils import HAS_HERA  # pylint: disable=import-outside-toplevel
+
+        return HAS_HERA
+
+    @classmethod
+    def from_manifest_config(cls, raw_config: dict) -> ArgoBackend:
+        """Instantiate from a raw manifest config dict.
+
+        ``schedule`` is always applied (including ``None`` / ``null``) so that
+        ``schedule: null`` in the manifest produces a plain Workflow instead of
+        a CronWorkflow.
+        """
+        schedule = raw_config.pop("schedule", None) if raw_config else None
+        cfg = WorkflowConfig(schedule=schedule, **raw_config) if raw_config else WorkflowConfig(schedule=schedule)
+        return cls(config=cfg)
+
+    def __init__(
+        self,
+        config: WorkflowConfig | None = None,
+        *,
+        values: TemplateValues | None = None,
+        workflow_name: str | None = None,
+        executor: type[BaseStepExecutor] | None = None,
+    ) -> None:
+        super().__init__()
+        self.values = values or TemplateValues()
+        self.config = config or select_workflow(self.values, workflow_name)
+        self.executor: type[BaseStepExecutor] = executor if executor is not None else default_argo_step_executor(self.config)
+        self._volumes, self._volume_mounts = self._build_volumes()
+
+    @classmethod
+    def from_values(
+        cls,
+        files: Iterable[Path],
+        workflow_name: str | None = None,
+        *,
+        executor: type[BaseStepExecutor] | None = None,
+    ) -> ArgoBackend:
+        """Instantiate the backend from values files."""
+        values = load_values(files, TemplateValues)
+        return cls(values=values, workflow_name=workflow_name, executor=executor)
+
+    # ------------------------------------------------------------------ helpers
+    def _build_volumes(self) -> tuple[list[SecretVolume | ExistingVolume | Volume], list[VolumeMount]]:
+        volumes: list[SecretVolume | ExistingVolume | Volume] = []
+        mounts: list[VolumeMount] = []
+
+        for idx, secret_mount in enumerate(self.config.container.mountSecrets):
+            volume_name = f"secret-mount-{idx}"
+            volumes.append(
+                SecretVolume(
+                    name=volume_name,
+                    secret_name=secret_mount.source,
+                    mount_path=str(secret_mount.destination),
+                )
+            )
+            for mapping in secret_mount.mappings:
+                mount_path = secret_mount.destination / mapping.value
+                mounts.append(
+                    VolumeMount(
+                        name=volume_name,
+                        mount_path=mount_path.as_posix(),
+                        sub_path=mapping.key,
+                    )
+                )
+
+        # Add tokenizer cache volume if enabled
+        tokenizer_cache = self.config.container.tokenizerCache
+        if tokenizer_cache.enabled:
+            volume_name = "tokenizer-cache"
+            if tokenizer_cache.createPvc:
+                # Use Hera's Volume class to create PVC via volumeClaimTemplates
+                volumes.append(
+                    Volume(
+                        name=volume_name,
+                        size=tokenizer_cache.storageSize,
+                        mount_path=tokenizer_cache.mountPath,
+                        storage_class_name=tokenizer_cache.storageClassName,
+                        access_modes=tokenizer_cache.accessModes,
+                    )
+                )
+            else:
+                # Use existing PVC
+                volumes.append(
+                    ExistingVolume(
+                        name=volume_name,
+                        claim_name=tokenizer_cache.claimName,
+                    )
+                )
+            mounts.append(
+                VolumeMount(
+                    name=volume_name,
+                    mount_path=tokenizer_cache.mountPath,
+                    read_only=tokenizer_cache.readOnly,
+                )
+            )
+
+        return volumes, mounts
+
+    def _build_env_from(self) -> list[ConfigMapEnvFrom | SecretEnvFrom]:
+        env_from: list[ConfigMapEnvFrom | SecretEnvFrom] = []
+        for value in self.config.container.envFrom:
+            prefix = value.prefix or ""
+            if value.kind == "configMap":
+                env_from.append(ConfigMapEnvFrom(name=value.name, prefix=prefix, optional=value.optional))
+            else:
+                env_from.append(SecretEnvFrom(name=value.name, prefix=prefix, optional=value.optional))
+        for secret_name in self.config.container.secretRef:
+            env_from.append(SecretEnvFrom(name=secret_name, prefix="", optional=True))
+        for configmap_name in self.config.container.configMapRef:
+            env_from.append(ConfigMapEnvFrom(name=configmap_name, prefix="", optional=True))
+        return env_from
+
+    def _build_pod_security_context(self) -> PodSecurityContext:
+        """Build pod-level security context from configuration."""
+        ctx = self.config.podSecurityContext
+        return PodSecurityContext(
+            run_as_non_root=ctx.runAsNonRoot,
+            run_as_user=ctx.runAsUser,
+            run_as_group=ctx.runAsGroup,
+            fs_group=ctx.fsGroup,
+            fs_group_change_policy=ctx.fsGroupChangePolicy,
+            supplemental_groups=ctx.supplementalGroups or None,
+            seccomp_profile=SeccompProfile(
+                type=ctx.seccompProfileType,
+                localhost_profile=ctx.seccompLocalhostProfile,
+            ),
+        )
+
+    def _build_container_security_context(self) -> SecurityContext:
+        """Build container-level security context from configuration."""
+        ctx = self.config.container.securityContext
+        return SecurityContext(
+            run_as_non_root=ctx.runAsNonRoot,
+            run_as_user=ctx.runAsUser,
+            run_as_group=ctx.runAsGroup,
+            allow_privilege_escalation=ctx.allowPrivilegeEscalation,
+            read_only_root_filesystem=ctx.readOnlyRootFilesystem,
+            capabilities=Capabilities(drop=ctx.dropCapabilities),
+            seccomp_profile=SeccompProfile(
+                type=ctx.seccompProfileType,
+                localhost_profile=ctx.seccompLocalhostProfile,
+            ),
+        )
+
+    def _build_container_resources(self) -> Resources:
+        """Build container resources using Hera's Resources class."""
+        res = self.config.container.resources
+        return Resources(
+            cpu_request=res.cpu_request,
+            cpu_limit=res.cpu_limit,
+            memory_request=res.memory_request,
+            memory_limit=res.memory_limit,
+        )
+
+    def _build_pod_spec_patch(self) -> str | None:
+        if self.config.podSpecPatch is not None:
+            return self.config.podSpecPatch
+
+        # Don't generate podSpecPatch - let Argo Workflows handle init containers
+        # with the pod-level security context. Generating a podSpecPatch with init
+        # container names can conflict with Argo's built-in init containers (init, wait).
+        return None
+
+    def generate_artifact(self, step: TypedStep[Any, Any, Any], *, env_vars: dict[str, str] | None = None):
+        """Return YAML manifest(s) for workflow + optional dependent resources."""
+        workflow_manifest = self._generate_workflow(step, env_vars=env_vars).to_dict()
+        return yaml.safe_dump(workflow_manifest, sort_keys=False).strip()
+
+    def _generate_workflow(self, step: TypedStep[Any, Any, Any], env_vars: dict[str, str] | None = None) -> Workflow:
+        """Creates an Argo Workflow or CronWorkflow based on the schedule configuration.
+
+        This method generates the appropriate Argo workflow type:
+        - If `config.schedule` is set (e.g., "0 4 * * *"), creates a CronWorkflow
+          that runs on the specified schedule.
+        - If `config.schedule` is None, creates a normal Workflow that can be
+          triggered manually or by other workflows.
+
+        The workflow includes:
+        - Complete DAG constructed from the root step and its dependencies
+        - Security contexts (pod and container level)
+        - Volume mounts for secrets and tokenizer cache
+        - Service account and namespace configuration
+        - Artifact storage configuration (S3)
+
+        Args:
+            step (TypedStep): The root step to generate the workflow from.
+                All required steps will be recursively included in the DAG.
+
+        Returns:
+            Workflow: A Hera `Workflow` or `CronWorkflow` object representing
+                the complete pipeline with all tasks and dependencies.
+
+        Examples:
+            Create a CronWorkflow that runs daily at 4 AM:
+
+            >>> from wurzel.executors.backend.backend_argo import ArgoBackend, WorkflowConfig
+            >>> config = WorkflowConfig(schedule="0 4 * * *")
+            >>> backend = ArgoBackend(config=config)
+            >>> # Assuming 'step' is a TypedStep instance
+            >>> workflow = backend._generate_workflow(step)
+            >>> assert workflow.kind == "CronWorkflow"
+
+            Create a normal Workflow for manual execution:
+
+            >>> config = WorkflowConfig(schedule=None)
+            >>> backend = ArgoBackend(config=config)
+            >>> workflow = backend._generate_workflow(step)
+            >>> assert workflow.kind == "Workflow"
+
+        """
+        workflow_kwargs = {
+            "name": self.config.name,
+            "namespace": self.config.namespace,
+            "entrypoint": self.config.entrypoint,
+            "annotations": self.config.annotations,
+            "service_account_name": self.config.serviceAccountName,
+            "volumes": self._volumes or None,
+            "security_context": self._build_pod_security_context(),
+            "pod_spec_patch": self._build_pod_spec_patch(),
+        }
+
+        if self.config.schedule:
+            context = CronWorkflow(schedule=self.config.schedule, **workflow_kwargs)
+        else:
+            context = Workflow(**workflow_kwargs)
+
+        with context as workflow:
+            self.__generate_dag(step, env_vars=env_vars)
+        return workflow
+
+    @cache  # pylint: disable=method-cache-max-size-none
+    def _create_artifact_from_step(self, step: TypedStep[Any, Any, Any]) -> S3Artifact:
+        """Generates an S3Artifact reference for the step output.
+
+        Args:
+            step (TypedStep): The step to generate the output artifact for.
+
+        Returns:
+            S3Artifact: Hera object for artifact input/output.
+
+        """
+        # Use {{workflow.name}} to create unique artifact paths per workflow run.
+        # For CronWorkflows, workflow.name includes a unique timestamp suffix (e.g., "my-workflow-1702656000").
+        # This prevents data from different runs or pipelines from mixing in the same S3 location.
+        art_cfg = self.config.artifacts
+        access_key = (
+            SecretKeySelector(name=art_cfg.accessKeySecret.name, key=art_cfg.accessKeySecret.key) if art_cfg.accessKeySecret else None
+        )
+        secret_key = (
+            SecretKeySelector(name=art_cfg.secretKeySecret.name, key=art_cfg.secretKeySecret.key) if art_cfg.secretKeySecret else None
+        )
+        return S3Artifact(
+            name=f"wurzel-artifact-{step.__class__.__name__.lower()}",
+            recurse_mode=True,
+            archive=NoneArchiveStrategy(),
+            key="argo-workflows/{{workflow.name}}/" + step.__class__.__name__.lower(),
+            path=str((self.config.dataDir / step.__class__.__name__).absolute()),
+            bucket=art_cfg.bucket,
+            endpoint=art_cfg.endpoint,
+            insecure=art_cfg.insecure,
+            access_key_secret=access_key,
+            secret_key_secret=secret_key,
+            mode=art_cfg.defaultMode,
+        )
+
+    def _create_task(self, dag: DAG, step: TypedStep[Any, Any, Any], env_vars: dict[str, str] | None = None) -> Task:
+        """Creates an Argo task for a Wurzel step, linking input/output artifacts and environment.
+
+        Args:
+            dag (DAG): The DAG object to add the task to.
+            step (TypedStep): The step to convert to an Argo Task.
+
+        Returns:
+            Task: The configured Hera Task instance.
+
+        """
+        if step.required_steps:
+            inputs = [self._create_artifact_from_step(req) for req in step.required_steps]
+        else:
+            inputs = []
+
+        cli_call = generate_cli_call(
+            step.__class__,
+            inputs=[Path(inpt.path) for inpt in inputs if inpt.path],
+            output=self.config.dataDir / step.__class__.__name__,
+            executor=self.executor,
+        )
+        commands: list[str] = [entry for entry in cli_call.split(" ") if entry.strip()]
+
+        dag.__exit__()
+        manifest_env_vars = env_vars or {}
+        merged_env = {**manifest_env_vars, **self.config.container.env}  # container.env wins
+        env_vars = [EnvVar(name=name, value=str(value)) for name, value in merged_env.items()]
+
+        # Add WURZEL_RUN_ID for tracking pipeline runs
+        env_vars.append(EnvVar(name="WURZEL_RUN_ID", value="{{workflow.uid}}"))
+
+        # Add HF_HOME env var if tokenizer cache is enabled
+        tokenizer_cache = self.config.container.tokenizerCache
+        if tokenizer_cache.enabled:
+            env_vars.append(EnvVar(name="HF_HOME", value=tokenizer_cache.mountPath))
+        wurzel_call = Container(
+            name=f"wurzel-run-template-{step.__class__.__name__.lower()}",
+            image=self.config.container.image,
+            security_context=self._build_container_security_context(),
+            resources=self._build_container_resources(),
+            command=commands,
+            annotations=self.config.container.annotations,
+            inputs=inputs,
+            env=env_vars,
+            env_from=self._build_env_from(),
+            volume_mounts=self._volume_mounts or None,
+            outputs=self._create_artifact_from_step(step),
+            retry_strategy=RetryStrategy(limit=IntOrString(4), retry_policy="OnError"),
+        )
+
+        dag.__enter__()  # pylint: disable=unnecessary-dunder-call
+
+        input_refs = [self._create_artifact_from_step(req) for req in step.required_steps]
+        task = wurzel_call(
+            name=step.__class__.__name__.lower(),
+            arguments=input_refs,
+        )
+
+        if not isinstance(task, Task):
+            raise RuntimeError(f"Expected Task from Container call, got {type(task)}")
+
+        return task
+
+    def __generate_dag(self, step: TypedStep[Any, Any, Any], env_vars: dict[str, str] | None = None) -> DAG:
+        """Recursively builds a DAG from a step and its dependencies using Hera's DAG API.
+
+        Args:
+            step (TypedStep): The root step to construct the graph from.
+
+        Returns:
+            DAG: A complete DAG with all tasks and their dependency edges.
+
+        """
+
+        def resolve_requirements(step: TypedStep[Any, Any, Any]) -> Task:
+            artifacts = []
+            argo_reqs: list[Task] = []
+
+            for req in step.required_steps:
+                if req.required_steps:
+                    req_argo = resolve_requirements(req)  # type: ignore[arg-type]
+                else:
+                    req_argo = self._create_task(dag, req, env_vars=env_vars)  # type: ignore[arg-type]
+                artifacts.append(req_argo.result)
+                argo_reqs.append(req_argo)
+
+            step_argo: Task = self._create_task(dag, step, env_vars=env_vars)
+
+            for argo_req in argo_reqs:
+                argo_req >> step_argo  # pylint: disable=pointless-statement
+
+            return step_argo
+
+        with DAG(name="wurzel-pipeline") as dag:
+            resolve_requirements(step)
+
+        return dag

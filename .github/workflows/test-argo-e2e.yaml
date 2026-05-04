@@ -1,0 +1,123 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+# SPDX-License-Identifier: Apache-2.0
+
+name: Argo Workflows E2E Tests
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'wurzel/executors/backend/backend_argo.py'
+      - 'wurzel/manifest/**'
+      - 'tests/e2e/argo/**'
+      - '.github/workflows/test-argo-e2e.yaml'
+  pull_request:
+    paths:
+      - 'wurzel/executors/backend/backend_argo.py'
+      - 'wurzel/manifest/**'
+      - 'tests/e2e/argo/**'
+      - '.github/workflows/test-argo-e2e.yaml'
+  workflow_dispatch:
+
+env:
+  K3D_CLUSTER: wurzel-argo-e2e
+  ARGO_NAMESPACE: argo
+  ARGO_VERSION: v3.6.4
+  E2E_IMAGE: wurzel-e2e:test
+
+jobs:
+  argo-e2e:
+    name: Argo Workflows E2E Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Cluster ────────────────────────────────────────────────────────────
+      - name: Install k3d
+        run: |
+          curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+          k3d version
+
+      - name: Create k3d cluster
+        run: |
+          k3d cluster create ${{ env.K3D_CLUSTER }} --wait --timeout 120s
+          kubectl cluster-info
+
+      # ── Argo Workflows ─────────────────────────────────────────────────────
+      - name: Install Argo Workflows ${{ env.ARGO_VERSION }}
+        run: |
+          kubectl create namespace ${{ env.ARGO_NAMESPACE }}
+          kubectl apply -n ${{ env.ARGO_NAMESPACE }} \
+            -f https://github.com/argoproj/argo-workflows/releases/download/${{ env.ARGO_VERSION }}/quick-start-minimal.yaml
+          kubectl -n ${{ env.ARGO_NAMESPACE }} rollout status deployment/workflow-controller --timeout=120s
+          kubectl -n ${{ env.ARGO_NAMESPACE }} rollout status deployment/argo-server --timeout=120s
+
+      - name: Wait for MinIO
+        # The quick-start manifest ships a MinIO deployment used as the artifact repository.
+        run: kubectl -n ${{ env.ARGO_NAMESPACE }} wait --for=condition=available deployment/minio --timeout=60s || true
+
+      - name: Create MinIO credentials secret
+        # Matches the Argo quick-start-minimal default credentials. Idempotent via --dry-run | apply.
+        run: |
+          kubectl -n ${{ env.ARGO_NAMESPACE }} create secret generic my-minio-cred \
+            --from-literal=accesskey=admin \
+            --from-literal=secretkey=password \
+            --dry-run=client -o yaml | kubectl apply -f -  # pragma: allowlist secret
+
+      - name: Create wurzel service account and RBAC
+        run: |
+          kubectl -n ${{ env.ARGO_NAMESPACE }} create serviceaccount wurzel-service-account \
+            --dry-run=client -o yaml | kubectl apply -f -
+          kubectl -n ${{ env.ARGO_NAMESPACE }} create rolebinding wurzel-executor \
+            --role=executor \
+            --serviceaccount=${{ env.ARGO_NAMESPACE }}:wurzel-service-account \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      # ── Python / uv ────────────────────────────────────────────────────────
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: "**/pyproject.toml"
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: uv sync --extra argo --extra test
+
+      # ── Docker image ───────────────────────────────────────────────────────
+      - name: Build e2e Docker image
+        run: docker build -f tests/e2e/argo/Dockerfile.e2e -t ${{ env.E2E_IMAGE }} .
+
+      - name: Import image into k3d cluster
+        run: k3d image import ${{ env.E2E_IMAGE }} --cluster ${{ env.K3D_CLUSTER }}
+
+      # ── Tests ──────────────────────────────────────────────────────────────
+      - name: Run manifest-generation tests
+        env:
+          ARGO_E2E: "1"
+        run: uv run pytest tests/e2e/argo/ -v -k "TestArgoManifestGeneration" --tb=short
+
+      - name: Run workflow-execution tests
+        env:
+          ARGO_E2E: "1"
+          ARGO_E2E_CONTEXT: k3d-${{ env.K3D_CLUSTER }}
+          ARGO_E2E_NAMESPACE: ${{ env.ARGO_NAMESPACE }}
+          ARGO_E2E_TIMEOUT: "180"
+        run: uv run pytest tests/e2e/argo/ -v -k "TestArgoWorkflowExecution" --tb=short
+
+      # ── Diagnostics on failure ─────────────────────────────────────────────
+      - name: Dump workflow diagnostics
+        if: failure()
+        run: |
+          echo "=== Workflows ==="
+          kubectl -n ${{ env.ARGO_NAMESPACE }} get workflows || true
+          echo "=== Workflow details ==="
+          kubectl -n ${{ env.ARGO_NAMESPACE }} get workflow wurzel-e2e-test -o yaml || true
+          echo "=== Pod logs ==="
+          kubectl -n ${{ env.ARGO_NAMESPACE }} get pods \
+            --selector='workflows.argoproj.io/workflow=wurzel-e2e-test' -o name \
+            | xargs -I{} kubectl -n ${{ env.ARGO_NAMESPACE }} logs {} --all-containers || true

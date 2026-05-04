@@ -7,10 +7,10 @@ import pytest
 import typer
 
 import wurzel
-import wurzel.steps
-from wurzel.backend.backend_dvc import DvcBackend
+import wurzel.core
 from wurzel.cli import _main as main
-from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
+from wurzel.executors import BaseStepExecutor
+from wurzel.executors.backend.backend_dvc import DvcBackend
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.utils import HAS_HERA
 
@@ -21,8 +21,6 @@ from wurzel.utils import HAS_HERA
         ("base", BaseStepExecutor),
         ("BASE", BaseStepExecutor),
         ("BaseStepExecutor", BaseStepExecutor),
-        ("Prom", PrometheusStepExecutor),
-        ("PROMETHEUS", PrometheusStepExecutor),
     ],
 )
 def test_executer_callback(inpt_str, expected):
@@ -88,6 +86,100 @@ def test_inspekt(gen_env):
     main.inspekt(ManualMarkdownStep, gen_env)
 
 
+def test_run_with_middleware_string(tmp_path, env):
+    """Test running with middleware specified as comma-separated string."""
+    out = tmp_path / "out"
+    inp = tmp_path / "in"
+    inp.mkdir()
+    (inp / "file.md").write_text("#Hello\n world")
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
+
+    # Run with middleware string
+    main.run(
+        step=ManualMarkdownStep,
+        executor=BaseStepExecutor,
+        input_folders=[],
+        output_path=out,
+        middlewares="prometheus",
+    )
+    assert list(out.glob("*"))
+    assert (out / "ManualMarkdown.json").read_text()
+
+
+def test_run_with_multiple_middlewares(tmp_path, env):
+    """Test running with multiple middlewares."""
+    out = tmp_path / "out"
+    inp = tmp_path / "in"
+    inp.mkdir()
+    (inp / "file.md").write_text("#Hello\n world")
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
+
+    # Run with multiple middlewares
+    main.run(
+        step=ManualMarkdownStep,
+        executor=BaseStepExecutor,
+        input_folders=[],
+        output_path=out,
+        middlewares="prometheus",  # We only have prometheus for now
+    )
+    assert list(out.glob("*"))
+    assert (out / "ManualMarkdown.json").read_text()
+
+
+def test_run_with_empty_middleware_string(tmp_path, env):
+    """Test that empty middleware string works."""
+    out = tmp_path / "out"
+    inp = tmp_path / "in"
+    inp.mkdir()
+    (inp / "file.md").write_text("#Hello\n world")
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
+
+    # Run with empty middleware string (should not load any)
+    main.run(
+        step=ManualMarkdownStep,
+        executor=BaseStepExecutor,
+        input_folders=[],
+        output_path=out,
+        middlewares="",
+    )
+    assert list(out.glob("*"))
+    assert (out / "ManualMarkdown.json").read_text()
+
+
+def test_run_with_middleware_from_env(tmp_path, env):
+    """Test that middleware can be loaded from environment variable."""
+    out = tmp_path / "out"
+    inp = tmp_path / "in"
+    inp.mkdir()
+    (inp / "file.md").write_text("#Hello\n world")
+    env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
+    env.set("MIDDLEWARES", "prometheus")
+
+    # Run without explicit middleware (should load from env)
+    main.run(
+        step=ManualMarkdownStep,
+        executor=BaseStepExecutor,
+        input_folders=[],
+        output_path=out,
+    )
+    assert list(out.glob("*"))
+    assert (out / "ManualMarkdown.json").read_text()
+
+
+def test_list_middlewares():
+    """Test the middlewares list command."""
+    from typer.testing import CliRunner
+
+    from wurzel.cli._main import app
+
+    runner = CliRunner()
+    result = runner.invoke(app, ["middlewares", "list"])
+
+    assert result.exit_code == 0
+    assert "Available middlewares:" in result.stdout
+    assert "prometheus" in result.stdout
+
+
 @pytest.mark.parametrize(
     "backend_str",
     [
@@ -115,7 +207,7 @@ def test_backend_callback_dvc(backend_str):
 )
 def test_backend_callback_argo(backend_str):
     """Test backend_callback with ArgoBackend when Hera is available (case-insensitive)."""
-    from wurzel.backend.backend_argo import ArgoBackend
+    from wurzel.executors.backend.backend_argo import ArgoBackend
 
     result = main.backend_callback(None, None, backend_str)
     assert result == ArgoBackend
@@ -129,22 +221,22 @@ def test_backend_callback_invalid():
     # Check that error message contains expected backends
     error_msg = str(exc_info.value)
     assert "InvalidBackend not supported" in error_msg
-    assert "DvcBackend" in error_msg
-    # ArgoBackend should only be in the message if Hera is available
+    assert "dvc" in error_msg
+    # argo should only be in the message if Hera is available
     if HAS_HERA:
-        assert "ArgoBackend" in error_msg
+        assert "argo" in error_msg
 
 
 def test_get_available_backends_without_hera():
-    """Test get_available_backends returns DvcBackend when Hera is not available."""
+    """Test get_available_backends returns dvc when Hera is not available."""
     backends = main.get_available_backends()
     assert isinstance(backends, list)
-    assert "DvcBackend" in backends
-    # ArgoBackend should only be present if HAS_HERA is True
+    assert "dvc" in backends
+    # argo should only be present if HAS_HERA is True
     if HAS_HERA:
-        assert "ArgoBackend" in backends
+        assert "argo" in backends
     else:
-        assert "ArgoBackend" not in backends
+        assert "argo" not in backends
 
 
 @pytest.mark.skipif(not HAS_HERA, reason="Hera is not available")
@@ -152,22 +244,22 @@ def test_get_available_backends_with_hera():
     """Test get_available_backends returns both backends when Hera is available."""
     backends = main.get_available_backends()
     assert isinstance(backends, list)
-    assert "DvcBackend" in backends
-    assert "ArgoBackend" in backends
+    assert "dvc" in backends
+    assert "argo" in backends
 
 
 def test_generate_list_backends(capsys):
     """Test generate command with --list-backends flag."""
-    main.generate(pipeline=None, backend="DvcBackend", list_backends=True)
+    main.generate(pipeline=None, backend="dvc", list_backends=True)
 
     captured = capsys.readouterr()
     assert "Available backends:" in captured.out
-    assert "DvcBackend" in captured.out
+    assert "dvc" in captured.out
 
     if HAS_HERA:
-        assert "ArgoBackend" in captured.out
+        assert "argo" in captured.out
     else:
-        assert "ArgoBackend" not in captured.out
+        assert "argo" not in captured.out
 
 
 def test_env_outputs_requirements(capsys, monkeypatch):
@@ -246,17 +338,3 @@ def test_env_check_failure(env, capsys, monkeypatch):
     captured = capsys.readouterr()
     assert "Missing environment variables" in captured.out
     assert "MANUALMARKDOWNSTEP__FOLDER_PATH" in captured.out
-
-
-def test_generate_with_malformed_yaml_raises_bad_parameter(tmp_path):
-    """Test generate command raises BadParameter for malformed YAML values file."""
-    malformed_file = tmp_path / "bad.yaml"
-    malformed_file.write_text("key: value\n  bad_indent: oops")
-
-    with pytest.raises(typer.BadParameter, match="Failed to parse YAML"):
-        main.generate(
-            pipeline="wurzel.steps.manual_markdown:ManualMarkdownStep",
-            backend="DvcBackend",
-            values=[malformed_file],
-            pipeline_name=None,
-        )

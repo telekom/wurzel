@@ -9,9 +9,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from wurzel.backend.backend import Backend
-    from wurzel.step.typed_step import TypedStep
-    from wurzel.step_executor import BaseStepExecutor
+    from wurzel.core.typed_step import TypedStep
+    from wurzel.executors.backend.backend import Backend
+    from wurzel.executors.base_executor import BaseStepExecutor
 
 
 def _resolve_backend_instance(

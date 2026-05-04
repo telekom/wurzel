@@ -10,14 +10,14 @@ from typing import TYPE_CHECKING
 from pydantic_core import PydanticUndefined
 
 if TYPE_CHECKING:
-    from wurzel.step import TypedStep
+    from wurzel.core import TypedStep
 
 
 def main(step: "type[TypedStep]", gen_env=False):
     """Execute."""
     # Lazy imports to avoid loading heavy dependencies at import time
-    from wurzel.step import Settings  # pylint: disable=import-outside-toplevel
-    from wurzel.step.settings import NoSettings  # pylint: disable=import-outside-toplevel
+    from wurzel.core import Settings  # pylint: disable=import-outside-toplevel
+    from wurzel.core.settings import NoSettings  # pylint: disable=import-outside-toplevel
     from wurzel.utils import WZ  # pylint: disable=import-outside-toplevel
 
     ins = WZ(step)

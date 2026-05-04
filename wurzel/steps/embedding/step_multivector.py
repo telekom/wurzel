@@ -12,9 +12,9 @@ import numpy as np
 from joblib import Parallel, delayed
 from pandera.typing import DataFrame
 
+from wurzel.core import TypedStep
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import EmbeddingAPIException, SplittException, StepFailed
-from wurzel.step import TypedStep
 from wurzel.steps.data import EmbeddingMultiVectorResult
 from wurzel.steps.embedding import EmbeddingStep
 

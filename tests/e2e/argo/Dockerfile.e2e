@@ -1,0 +1,20 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+# SPDX-License-Identifier: CC0-1.0
+#
+# Minimal image for Argo e2e tests.  Avoids BuildKit --mount=type=cache so it
+# can be built with any Docker daemon (no buildx required).
+
+FROM python:3.11-slim
+
+WORKDIR /usr/app
+
+COPY pyproject.toml ./
+COPY wurzel ./wurzel
+
+# Install core + argo extra only (no heavy ML deps needed for e2e tests)
+RUN pip install --no-cache-dir -e ".[argo]"
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+ENTRYPOINT ["wurzel"]

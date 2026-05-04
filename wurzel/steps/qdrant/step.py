@@ -12,8 +12,8 @@ from logging import getLogger
 from pandera.typing import DataFrame
 from qdrant_client import QdrantClient, models
 
+from wurzel.core import TypedStep, step_history
 from wurzel.exceptions import CustomQdrantException, StepFailed
-from wurzel.step import TypedStep, step_history
 from wurzel.steps.data import EmbeddingResult
 from wurzel.utils import HAS_TLSH
 

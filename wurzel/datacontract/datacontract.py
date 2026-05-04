@@ -5,15 +5,26 @@
 import abc
 import hashlib
 import json
+import numbers
 import types
 import typing
 from ast import literal_eval
 from pathlib import Path
-from typing import Self, Union, get_origin
+from typing import Any, Self, Union, get_origin
 
 import pandera as pa
 import pandera.typing as patyp
 import pydantic
+
+MetricMap = dict[str, float]
+
+
+def _merge_metrics(target: MetricMap, source: dict[str, Any]) -> None:
+    for name, value in source.items():
+        if isinstance(value, bool):
+            value = int(value)
+        if isinstance(value, numbers.Real):
+            target[name] = target.get(name, 0.0) + float(value)
 
 
 class DataModel:
@@ -30,6 +41,27 @@ class DataModel:
     @abc.abstractmethod
     def load_from_path(cls, path: Path, *args) -> Self:
         """Abstract function to load the data from the given Path."""
+
+    @classmethod
+    def get_metrics(cls, obj: Any) -> MetricMap:
+        """Return numeric metrics for an object produced by this contract.
+
+        - If obj is a list/tuple/set, metrics are summed by key.
+        - If obj provides a `metrics()` instance method, it is used.
+        """
+        if isinstance(obj, (list, tuple, set)):
+            metrics: MetricMap = {}
+            for item in obj:
+                _merge_metrics(metrics, cls.get_metrics(item))
+            return metrics
+        metrics_fn = getattr(obj, "metrics", None)
+        if callable(metrics_fn):
+            metrics = metrics_fn()
+            if isinstance(metrics, dict):
+                normalized: MetricMap = {}
+                _merge_metrics(normalized, metrics)
+                return normalized
+        return {}
 
 
 class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
@@ -76,6 +108,16 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
                 read_data[key] = read_data[key].apply(_literal_eval_or_passthrough)
 
         return patyp.DataFrame[cls](read_data)
+
+    @classmethod
+    def get_metrics(cls, obj: Any) -> MetricMap:
+        import pandas as pd  # pylint: disable=import-outside-toplevel
+
+        metrics = super().get_metrics(obj)
+        if isinstance(obj, pd.DataFrame):
+            metrics["rows"] = float(obj.shape[0])
+            metrics["columns"] = float(obj.shape[1])
+        return metrics
 
 
 class PydanticModel(pydantic.BaseModel, DataModel):
@@ -162,3 +204,7 @@ class PydanticModel(pydantic.BaseModel, DataModel):
 
     def __lt__(self, other: object) -> bool:
         return hash(self) < hash(other)
+
+    def metrics(self) -> MetricMap:
+        """Optional per-instance metrics hook used by DataModel.get_metrics."""
+        return {}

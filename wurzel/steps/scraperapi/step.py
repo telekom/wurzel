@@ -13,9 +13,9 @@ from joblib import Parallel, delayed
 from requests.adapters import HTTPAdapter, Retry
 from tqdm import tqdm
 
+from wurzel.core.typed_step import TypedStep
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import StepFailed
-from wurzel.step.typed_step import TypedStep
 from wurzel.steps.scraperapi.data import UrlItem
 from wurzel.steps.scraperapi.settings import ScraperAPISettings
 from wurzel.utils.to_markdown.html2md import html2str, to_markdown

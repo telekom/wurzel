@@ -18,6 +18,7 @@ _REPO_ROOT = Path(__file__).resolve().parent.parent
 DOC_PATHS = [
     _REPO_ROOT / "README.md",
     _REPO_ROOT / "docs",
+    _REPO_ROOT / "wurzel",
 ]
 
 
@@ -33,12 +34,13 @@ def _collect_examples():
 
 
 @pytest.mark.parametrize("example", _collect_examples(), ids=str)
-def test_doc_examples_lint_and_run(example: CodeExample, eval_example: EvalExample) -> None:
+def test_doc_examples_lint_and_run(example: CodeExample, eval_example: EvalExample, tmp_path, monkeypatch) -> None:
     """Lint and run each Python example in README and docs.
 
     Run with `pytest --update-examples` to format examples in place (black/ruff)
     and update print output checks.
     """
+    monkeypatch.chdir(tmp_path)
     if eval_example.update_examples:
         eval_example.format(example)
         eval_example.run_print_update(example)
