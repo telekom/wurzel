@@ -17,8 +17,6 @@ from wurzel.api.middleware.otel import OTELCorrelationMiddleware, OTELSettings, 
 from wurzel.api.routes.branch.router import router as branch_router
 from wurzel.api.routes.files.router import router as files_router
 from wurzel.api.routes.health.router import router as health_router
-from wurzel.api.routes.ingest.router import router as ingest_router
-from wurzel.api.routes.knowledge.router import router as knowledge_router
 from wurzel.api.routes.member.router import router as member_router
 from wurzel.api.routes.metrics.router import router as metrics_router
 from wurzel.api.routes.project.router import router as project_router
@@ -93,8 +91,6 @@ def create_app(
     app.include_router(metrics_router, tags=["Metrics"])
 
     # X-API-Key authenticated, versioned (legacy / machine-to-machine)
-    app.include_router(knowledge_router, prefix=f"{prefix}/knowledge", tags=["Knowledge"])
-    app.include_router(ingest_router, prefix=f"{prefix}/ingest", tags=["Ingest"])
     app.include_router(search_router, prefix=f"{prefix}/search", tags=["Search"])
     app.include_router(steps_router, prefix=f"{prefix}/steps", tags=["Steps"])
 
