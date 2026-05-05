@@ -12,7 +12,7 @@ from wurzel.api.routes.files.data import DeleteFileResponse, FileInfo, FileUploa
 from wurzel.api.services.file_service import FileUploadService
 from wurzel.storage.file_storage import FileMetadata
 
-router = APIRouter(tags=["files"])
+router = APIRouter(tags=["Files"])
 
 
 def _to_file_info(metadata: FileMetadata) -> FileInfo:

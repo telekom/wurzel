@@ -129,6 +129,21 @@ class StepListCache:
             self._data.clear()
             self._warmed_at.clear()
 
+    def clear_project(self, project_id) -> None:  # type: ignore[type-arg]
+        """Evict the per-project step cache entry for *project_id*.
+
+        Called by the background installer after a successful package install
+        so that the next request to ``GET /v1/projects/{id}/steps`` picks up
+        the newly installed steps.
+
+        Args:
+            project_id: UUID of the project whose cache should be cleared.
+        """
+        key = str(project_id)
+        with self._lock:
+            self._data.pop(key, None)
+            self._warmed_at.pop(key, None)
+
     def warm(self, package: str | None = None) -> None:
         """Populate the cache entry.
 
@@ -473,3 +488,65 @@ def fetch_step_info(step_path: str) -> StepInfo:
         )
 
     return _build_step_info(step_cls)
+
+
+def discover_steps_for_project(
+    project_id: str,
+    extra_path: Path | None,
+    cache: StepListCache,
+    refresh: bool = False,
+) -> StepListResponse:
+    """Discover TypedStep subclasses for a specific project.
+
+    Returns the union of:
+    * Global steps (all wurzel-dependent packages, same as the old ``GET /v1/steps``).
+    * Steps found in *extra_path* — the project's installed-packages directory.
+
+    The per-project result is cached under the key ``project_id`` (a string) in
+    the same :class:`StepListCache` instance.  The cache entry is invalidated by
+    the background installer after a successful package install.
+
+    Args:
+        project_id: String UUID of the project.
+        extra_path: Path to the project's ``--target`` directory on the shared
+                    volume.  If ``None`` or the path does not exist, only global
+                    steps are returned.
+        cache: Injected step-list cache.
+        refresh: If ``True``, force-refresh both the global and project caches.
+
+    Returns:
+        A :class:`StepListResponse` with summaries of all discovered steps.
+    """
+    # Global steps
+    global_response = discover_steps(cache, package=None, refresh=refresh)
+    global_paths: set[str] = {s.class_path for s in global_response.steps}
+
+    # Project-specific steps from extra_path
+    project_paths: list[str] = []
+    if extra_path is not None and extra_path.exists():
+        cache_key = project_id
+        if refresh:
+            cached = None
+        else:
+            cached = cache.get(cache_key)  # type: ignore[arg-type]
+
+        if cached is None:
+            project_paths = scan_path_for_typed_steps(extra_path, str(extra_path))
+            cache.set(cache_key, project_paths)  # type: ignore[arg-type]
+        else:
+            project_paths = cached
+
+    all_paths = list(global_paths) + [p for p in project_paths if p not in global_paths and p not in _EXCLUDED_CLASS_PATHS]
+
+    summaries = [
+        StepSummary(
+            class_path=cp,
+            name=cp.rsplit(".", 1)[-1],
+            module=cp.rsplit(".", 1)[0],
+            input_type=_safe_io_types(cp)[0],
+            output_type=_safe_io_types(cp)[1],
+        )
+        for cp in all_paths
+        if cp not in _EXCLUDED_CLASS_PATHS
+    ]
+    return StepListResponse(steps=summaries, total=len(summaries), package="*")

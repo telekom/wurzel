@@ -41,7 +41,8 @@ path = [
     ".python-version",
     "pyproject.toml",
     "docs/icon.png",
-     "wurzel/utils/to_markdown/*",
+    "wurzel/utils/to_markdown/*",
+    "supabase/.branches/_current_branch",
     ]
 precedence = "override"
 SPDX-FileCopyrightText = "NONE"
