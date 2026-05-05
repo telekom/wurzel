@@ -10,7 +10,7 @@ import re
 from collections import defaultdict
 from io import StringIO
 from logging import getLogger
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 import numpy as np
 from markdown import Markdown
@@ -177,7 +177,7 @@ class BaseEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract],
         return " ".join(filtered_tokens)
 
     @classmethod
-    def __md_to_plain(cls, element, stream: Optional[StringIO] = None):
+    def __md_to_plain(cls, element, stream: StringIO | None = None):
         """Converts a markdown element into plain text.
 
         Parameters

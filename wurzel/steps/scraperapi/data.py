@@ -5,7 +5,6 @@
 """interacts with the scraperAPI service and converts the retrieved Documents to Markdown."""
 
 # Standard library imports
-from typing import Optional
 
 from wurzel.datacontract.datacontract import PydanticModel
 
@@ -17,5 +16,5 @@ class UrlItem(PydanticModel):
 
     url: str
     title: str
-    description: Optional[str] = None
-    category: Optional[str] = None
+    description: str | None = None
+    category: str | None = None

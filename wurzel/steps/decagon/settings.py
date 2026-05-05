@@ -4,8 +4,9 @@
 
 """Settings for the Decagon Knowledge Base connector step."""
 
-from pydantic import Field, SecretStr, model_validator
 from typing import Self
+
+from pydantic import Field, SecretStr, model_validator
 
 from wurzel.step.settings import Settings
 

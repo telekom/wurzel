@@ -4,7 +4,7 @@
 
 import os
 from logging import getLogger
-from typing import Any, Optional, Self
+from typing import Any, Self
 
 from prometheus_client import REGISTRY, Counter, Histogram, push_to_gateway
 
@@ -78,8 +78,8 @@ class PrometheusStepExecutor(BaseStepExecutor):
     def execute_step(
         self,
         step_cls: TypedStep,
-        inputs: Optional[set[PathToFolderWithBaseModels]],
-        output_dir: Optional[PathToFolderWithBaseModels],
+        inputs: set[PathToFolderWithBaseModels] | None,
+        output_dir: PathToFolderWithBaseModels | None,
     ) -> list[tuple[Any, StepReport]]:
         """Run a given Step.
 
