@@ -18,6 +18,7 @@ Note:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from typing import Annotated, Any
@@ -43,6 +44,9 @@ class JWKSCache:
     Injected into JWT verification via FastAPI dependency injection.
     Can be overridden in tests via ``app.dependency_overrides``.
 
+    Uses asyncio.Lock to prevent race conditions where multiple concurrent
+    requests could both detect the cache as expired and attempt to fetch simultaneously.
+
     Example (testing)::
 
         class MockJWKSCache:
@@ -56,11 +60,18 @@ class JWKSCache:
         self._ttl = ttl
         self._cache: dict[str, Any] = {}
         self._fetched_at: float = 0.0
+        self._lock = asyncio.Lock()
 
     async def get_keys(self, settings: AuthSettings) -> dict[str, Any]:
-        """Return cached JWKS, fetching if TTL expired."""
-        if time.monotonic() - self._fetched_at > self._ttl or not self._cache:
-            await self._fetch(settings)
+        """Return cached JWKS, fetching if TTL expired.
+
+        Uses asyncio.Lock to ensure cache updates are serialized across concurrent requests.
+        """
+        async with self._lock:
+            # Double-check pattern: re-check TTL inside the lock in case another
+            # coroutine just refreshed the cache while we were waiting for the lock
+            if time.monotonic() - self._fetched_at > self._ttl or not self._cache:
+                await self._fetch(settings)
         return self._cache
 
     async def _fetch(self, settings: AuthSettings) -> None:
