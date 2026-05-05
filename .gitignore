@@ -248,3 +248,5 @@ examples/pipeline/output
 !wurzel/manifest/
 !wurzel/manifest/**
 __pycache__/
+supabase/.branches
+supabase/.temp
