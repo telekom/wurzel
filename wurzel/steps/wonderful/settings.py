@@ -62,7 +62,7 @@ class WonderfulRAGSettings(Settings):
             name
             for name, value in (
                 ("BASE_URL", self.BASE_URL),
-                ("API_KEY", self.API_KEY.get_secret_value()),
+                ("API_KEY", self.API_KEY.get_secret_value()),  # pylint: disable=no-member
                 ("KNOWLEDGEBASE_ID", self.KNOWLEDGEBASE_ID),
             )
             if not value

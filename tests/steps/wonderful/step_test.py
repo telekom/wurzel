@@ -24,6 +24,7 @@ PRESIGNED = "https://s3.example.com/presigned"
 
 # ── Response shape helpers ────────────────────────────────────────────────────
 
+
 def kb_list_payload(*files: tuple[str, str]) -> dict:
     """Wonderful's /kb/files response shape: {data: [{name, id}, ...]}."""
     return {"data": [{"name": name, "id": fid} for name, fid in files]}
@@ -35,6 +36,7 @@ def kb_create_payload(file_id: str, presigned: str = PRESIGNED) -> dict:
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
+
 
 @pytest.fixture
 def wonderful_env(env):
@@ -71,8 +73,8 @@ def two_docs():
 
 # ── Init ──────────────────────────────────────────────────────────────────────
 
-class TestInit:
 
+class TestInit:
     def test_uses_kb_id_from_settings(self, step):
         assert step._kb_id == KB_ID
 
@@ -82,16 +84,16 @@ class TestInit:
 
 # ── Empty input ───────────────────────────────────────────────────────────────
 
-class TestEmptyInput:
 
+class TestEmptyInput:
     def test_returns_empty_list(self, step):
         assert step.run([]) == []
 
 
 # ── Filename generation ───────────────────────────────────────────────────────
 
-class TestGenerateFilename:
 
+class TestGenerateFilename:
     @pytest.mark.parametrize(
         "url, idx, expected",
         [
@@ -118,8 +120,8 @@ class TestGenerateFilename:
 
 # ── Upload ────────────────────────────────────────────────────────────────────
 
-class TestUpload:
 
+class TestUpload:
     def test_new_file_passthrough(self, step, sample_doc, requests_mock):
         requests_mock.get(KB_FILES, json=kb_list_payload())
         requests_mock.post(KB_FILES, json=kb_create_payload("file-abc"))
@@ -133,10 +135,13 @@ class TestUpload:
 
     def test_multiple_new_files_passthrough(self, step, two_docs, requests_mock):
         requests_mock.get(KB_FILES, json=kb_list_payload())
-        requests_mock.post(KB_FILES, [
-            {"json": kb_create_payload("file-1")},
-            {"json": kb_create_payload("file-2")},
-        ])
+        requests_mock.post(
+            KB_FILES,
+            [
+                {"json": kb_create_payload("file-1")},
+                {"json": kb_create_payload("file-2")},
+            ],
+        )
         requests_mock.put(PRESIGNED)
         requests_mock.post(KB_SYNC, json={})
 
@@ -167,8 +172,8 @@ class TestUpload:
 
 # ── Failure scenarios ─────────────────────────────────────────────────────────
 
-class TestFailureScenarios:
 
+class TestFailureScenarios:
     def test_all_fail_raises_step_failed(self, step, sample_doc, requests_mock):
         requests_mock.get(KB_FILES, json=kb_list_payload())
         requests_mock.post(KB_FILES, exc=requests.exceptions.ConnectionError("Failed"))
@@ -185,25 +190,34 @@ class TestFailureScenarios:
 
     def test_sync_failure_does_not_raise_when_others_succeed(self, step, two_docs, requests_mock):
         requests_mock.get(KB_FILES, json=kb_list_payload())
-        requests_mock.post(KB_FILES, [
-            {"json": kb_create_payload("file-1")},
-            {"json": kb_create_payload("file-2")},
-        ])
+        requests_mock.post(
+            KB_FILES,
+            [
+                {"json": kb_create_payload("file-1")},
+                {"json": kb_create_payload("file-2")},
+            ],
+        )
         requests_mock.put(PRESIGNED)
         # First sync raises, second succeeds — both docs still pass through.
-        requests_mock.post(KB_SYNC, [
-            {"exc": requests.exceptions.ConnectionError("sync failed")},
-            {"json": {}},
-        ])
+        requests_mock.post(
+            KB_SYNC,
+            [
+                {"exc": requests.exceptions.ConnectionError("sync failed")},
+                {"json": {}},
+            ],
+        )
 
         assert step.run(two_docs) == two_docs
 
     def test_partial_kb_create_failure_does_not_raise(self, step, two_docs, requests_mock):
         requests_mock.get(KB_FILES, json=kb_list_payload())
-        requests_mock.post(KB_FILES, [
-            {"exc": requests.exceptions.ConnectionError("Failed")},
-            {"json": kb_create_payload("file-2")},
-        ])
+        requests_mock.post(
+            KB_FILES,
+            [
+                {"exc": requests.exceptions.ConnectionError("Failed")},
+                {"json": kb_create_payload("file-2")},
+            ],
+        )
         requests_mock.put(PRESIGNED)
         requests_mock.post(KB_SYNC, json={})
 
@@ -211,15 +225,21 @@ class TestFailureScenarios:
 
     def test_s3_upload_failure_does_not_abort_remaining(self, step, two_docs, requests_mock):
         requests_mock.get(KB_FILES, json=kb_list_payload())
-        requests_mock.post(KB_FILES, [
-            {"json": kb_create_payload("file-1")},
-            {"json": kb_create_payload("file-2")},
-        ])
+        requests_mock.post(
+            KB_FILES,
+            [
+                {"json": kb_create_payload("file-1")},
+                {"json": kb_create_payload("file-2")},
+            ],
+        )
         # First S3 PUT fails, second succeeds.
-        requests_mock.put(PRESIGNED, [
-            {"exc": requests.exceptions.ConnectionError("S3 failed")},
-            {"status_code": 200},
-        ])
+        requests_mock.put(
+            PRESIGNED,
+            [
+                {"exc": requests.exceptions.ConnectionError("S3 failed")},
+                {"status_code": 200},
+            ],
+        )
         requests_mock.post(KB_SYNC, json={})
 
         assert step.run(two_docs) == two_docs
@@ -227,8 +247,8 @@ class TestFailureScenarios:
 
 # ── Skip (no-op) mode ─────────────────────────────────────────────────────────
 
-class TestSkip:
 
+class TestSkip:
     def test_constructs_without_credentials_when_skipped(self, env, requests_mock):
         env.set("SKIP", "true")
         # No BASE_URL / API_KEY / KNOWLEDGEBASE_ID set.
@@ -264,8 +284,8 @@ class TestSkip:
 
 # ── Finalize ──────────────────────────────────────────────────────────────────
 
-class TestFinalize:
 
+class TestFinalize:
     def test_closes_session(self, wonderful_env, mocker):
         session_cls = mocker.patch("wurzel.steps.wonderful.step.requests.Session")
         step = WonderfulRAGStep()
