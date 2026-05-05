@@ -182,6 +182,16 @@ def test_branch_admin_happy_and_error_paths(client, role_headers, project_contex
     )
     assert invalid_name.status_code == 422
 
+    invalid_promotes_to = client.post(
+        f"/v1/projects/{project_id}/branches",
+        json={
+            "name": f"invalid-target-{uuid.uuid4().hex[:4]}",
+            "promotes_to_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        },
+        headers=role_headers["admin"],
+    )
+    assert invalid_promotes_to.status_code == 404
+
     protect_feature = client.post(
         f"/v1/projects/{project_id}/branches/feature-a/protect",
         json={"is_protected": True},

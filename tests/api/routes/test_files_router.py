@@ -7,7 +7,8 @@
 from __future__ import annotations
 
 from io import BytesIO
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
+from uuid import UUID
 
 import pytest
 
@@ -18,9 +19,11 @@ from fastapi.testclient import TestClient  # noqa: E402
 from tests.api.routes.conftest import ADMIN_USER, make_app  # noqa: E402
 from tests.storage.test_file_storage import MockFileStorageService  # noqa: E402
 from wurzel.api.routes.files.router import get_file_upload_service  # noqa: E402
+from wurzel.api.routes.member.data import ProjectRole  # noqa: E402
 from wurzel.api.services.file_service import FileUploadService  # noqa: E402
 
-_UPLOAD_URL = "/v1/projects/proj1/steps/step1/files"
+_PROJECT_ID = "11111111-1111-1111-1111-111111111111"
+_UPLOAD_URL = f"/v1/projects/{_PROJECT_ID}/steps/step1/files"
 _STEP_PATH = "wurzel.steps.MyStep"
 
 
@@ -38,7 +41,10 @@ def app(file_service):
 
 @pytest.fixture
 def client(app):
-    with TestClient(app, raise_server_exceptions=False) as c:
+    with (
+        patch("wurzel.api.backends.supabase.client.get_project_role_from_db", new_callable=AsyncMock, return_value=ProjectRole.ADMIN),
+        TestClient(app, raise_server_exceptions=False) as c,
+    ):
         yield c
 
 
@@ -51,7 +57,7 @@ def _step_info(extensions=None, mime_types=None):
 
 
 class TestUploadFiles:
-    @patch("wurzel.api.services.file_service.fetch_step_info")
+    @patch("wurzel.api.services.file_service.fetch_step_info_for_project")
     def test_upload_single_file(self, mock_fetch, client):
         mock_fetch.return_value = _step_info(extensions=[".csv"], mime_types=["text/csv"])
 
@@ -67,7 +73,7 @@ class TestUploadFiles:
         assert data["files"][0]["filename"] == "data.csv"
         assert data["errors"] == []
 
-    @patch("wurzel.api.services.file_service.fetch_step_info")
+    @patch("wurzel.api.services.file_service.fetch_step_info_for_project")
     def test_upload_multiple_files(self, mock_fetch, client):
         mock_fetch.return_value = _step_info(extensions=[".csv", ".tsv"])
 
@@ -85,7 +91,7 @@ class TestUploadFiles:
         assert len(data["files"]) == 2
         assert data["errors"] == []
 
-    @patch("wurzel.api.services.file_service.fetch_step_info")
+    @patch("wurzel.api.services.file_service.fetch_step_info_for_project")
     def test_invalid_extension_is_rejected(self, mock_fetch, client):
         mock_fetch.return_value = _step_info(extensions=[".csv"])
 
@@ -105,7 +111,7 @@ class TestUploadFiles:
         assert data["errors"][0]["filename"] == "invalid.txt"
         assert "not accepted" in data["errors"][0]["reason"]
 
-    @patch("wurzel.api.services.file_service.fetch_step_info")
+    @patch("wurzel.api.services.file_service.fetch_step_info_for_project")
     def test_response_has_file_id_and_size(self, mock_fetch, client):
         mock_fetch.return_value = _step_info()
         content = b"hello,world"
@@ -123,7 +129,7 @@ class TestUploadFiles:
 
 
 class TestListFiles:
-    @patch("wurzel.api.services.file_service.fetch_step_info")
+    @patch("wurzel.api.services.file_service.fetch_step_info_for_project")
     def test_lists_previously_uploaded_files(self, mock_fetch, client):
         mock_fetch.return_value = _step_info()
 
@@ -150,7 +156,7 @@ class TestListFiles:
 
 
 class TestDeleteFile:
-    @patch("wurzel.api.services.file_service.fetch_step_info")
+    @patch("wurzel.api.services.file_service.fetch_step_info_for_project")
     def test_delete_existing_file(self, mock_fetch, client):
         mock_fetch.return_value = _step_info()
 
@@ -168,9 +174,34 @@ class TestDeleteFile:
         assert r.json()["deleted"] is True
         assert r.json()["file_id"] == file_id
 
-    @patch("wurzel.api.services.file_service.fetch_step_info")
+    @patch("wurzel.api.services.file_service.fetch_step_info_for_project")
     def test_delete_nonexistent_returns_false(self, mock_fetch, client):
         r = client.delete(f"{_UPLOAD_URL}/nonexistent-id")
 
         assert r.status_code == 200
         assert r.json()["deleted"] is False
+
+
+class TestFileRoutePermissions:
+    def test_non_member_gets_404(self, app, file_service):
+        app.dependency_overrides[get_file_upload_service] = lambda: file_service
+        with (
+            patch("wurzel.api.backends.supabase.client.get_project_role_from_db", new_callable=AsyncMock, return_value=None),
+            TestClient(app, raise_server_exceptions=False) as client,
+        ):
+            response = client.get(_UPLOAD_URL)
+
+        assert response.status_code == 404
+
+    def test_route_uses_uuid_project_id(self):
+        assert str(UUID(_PROJECT_ID)) == _PROJECT_ID
+
+    def test_missing_service_override_returns_503(self):
+        app = make_app(ADMIN_USER)
+        with (
+            patch("wurzel.api.backends.supabase.client.get_project_role_from_db", new_callable=AsyncMock, return_value=ProjectRole.ADMIN),
+            TestClient(app, raise_server_exceptions=False) as client,
+        ):
+            response = client.get(_UPLOAD_URL)
+
+        assert response.status_code == 503

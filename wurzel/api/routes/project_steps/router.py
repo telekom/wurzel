@@ -13,6 +13,7 @@ Routes
 from __future__ import annotations
 
 import uuid
+from pathlib import Path
 
 from fastapi import APIRouter, Query
 
@@ -20,13 +21,21 @@ from wurzel.api.auth.permissions import RequireAnyRole
 from wurzel.api.package_manager.installer import get_project_package_dir
 from wurzel.api.package_manager.settings import PackageManagerSettings
 from wurzel.api.routes.steps.data import StepInfo, StepListResponse
-from wurzel.api.routes.steps.service import CachedStepList, discover_steps_for_project, fetch_step_info
+from wurzel.api.routes.steps.service import CachedStepList, discover_steps_for_project, fetch_step_info_for_project
 
 router = APIRouter()
 
 
 def _get_pkg_settings() -> PackageManagerSettings:
     return PackageManagerSettings()
+
+
+def _get_project_package_path(project_id: uuid.UUID) -> Path | None:
+    try:
+        settings = _get_pkg_settings()
+    except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+        return None
+    return get_project_package_dir(project_id, settings.PACKAGES_DIR)
 
 
 @router.get("", response_model=StepListResponse)
@@ -44,8 +53,7 @@ async def list_project_steps(
     Includes both globally installed steps (from all wurzel-dependent packages)
     and any steps installed into this project's private package directory.
     """
-    settings = _get_pkg_settings()
-    extra_path = get_project_package_dir(project_id, settings.PACKAGES_DIR)
+    extra_path = _get_project_package_path(project_id)
     return discover_steps_for_project(str(project_id), extra_path, cache, refresh=refresh)
 
 
@@ -64,4 +72,4 @@ async def get_project_step(
     itself is resolved from the global environment and the project's installed
     packages directory.
     """
-    return fetch_step_info(step_path)
+    return fetch_step_info_for_project(step_path, _get_project_package_path(project_id))

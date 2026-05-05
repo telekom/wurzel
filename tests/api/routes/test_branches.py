@@ -173,6 +173,25 @@ class TestCreateBranch:
             r = client.post(_branch_url(), json={"name": "feature-x"})
         assert r.status_code == 409
 
+    def test_create_with_unknown_promotes_to_id_returns_404(self, client):
+        with (
+            patch(
+                "wurzel.api.backends.supabase.client.get_project_role_from_db",
+                new_callable=AsyncMock,
+                return_value=ProjectRole.ADMIN,
+            ),
+            patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, return_value=None),
+            patch("wurzel.api.routes.branch.router.db_get_branch_by_id", new_callable=AsyncMock, return_value=None),
+            patch("wurzel.api.routes.branch.router.db_create_branch", new_callable=AsyncMock) as mock_create,
+        ):
+            r = client.post(
+                _branch_url(),
+                json={"name": "feature-x", "promotes_to_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"},
+            )
+
+        assert r.status_code == 404
+        mock_create.assert_not_called()
+
     def test_create_non_member_returns_404(self, client):
         with patch(
             "wurzel.api.backends.supabase.client.get_project_role_from_db",
@@ -317,6 +336,26 @@ class TestUpdateBranch:
         ):
             r = client.put(_branch_url("/ghost"), json={})
         assert r.status_code == 404
+
+    def test_update_with_unknown_promotes_to_id_returns_404(self, client):
+        row = _make_branch_row("feature-x")
+        with (
+            patch(
+                "wurzel.api.backends.supabase.client.get_project_role_from_db",
+                new_callable=AsyncMock,
+                return_value=ProjectRole.ADMIN,
+            ),
+            patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, return_value=row),
+            patch("wurzel.api.routes.branch.router.db_get_branch_by_id", new_callable=AsyncMock, return_value=None),
+            patch("wurzel.api.routes.branch.router.db_update_branch", new_callable=AsyncMock) as mock_update,
+        ):
+            r = client.put(
+                _branch_url("/feature-x"),
+                json={"promotes_to_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"},
+            )
+
+        assert r.status_code == 404
+        mock_update.assert_not_called()
 
     @pytest.mark.parametrize("role_client", ["member_client", "secret_editor_client", "viewer_client"])
     def test_update_non_admin_returns_403(self, role_client, request):

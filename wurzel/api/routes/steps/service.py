@@ -31,8 +31,11 @@ import importlib
 import importlib.util
 import inspect
 import logging
+import sys
 import threading
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Annotated, Any, get_args, get_type_hints
 
@@ -377,6 +380,57 @@ def _resolve_package_root(package: str) -> Path:
     )
 
 
+@contextmanager
+def _temporary_import_path(extra_path: Path | None) -> Iterator[None]:
+    """Temporarily prepend *extra_path* to ``sys.path`` for imports."""
+    if extra_path is None or not extra_path.exists():
+        yield
+        return
+
+    path_str = str(extra_path)
+    sys.path.insert(0, path_str)
+    importlib.invalidate_caches()
+    try:
+        yield
+    finally:
+        try:
+            sys.path.remove(path_str)
+        except ValueError:
+            pass
+        importlib.invalidate_caches()
+
+
+def _load_step_class(step_path: str, extra_path: Path | None = None) -> type[TypedStep]:
+    """Import and return the TypedStep class at *step_path*."""
+    parts = step_path.rsplit(".", 1)
+    if len(parts) != 2:
+        raise APIError(
+            status_code=http_status.HTTP_400_BAD_REQUEST,
+            title="Invalid step path",
+            detail="step_path must be a fully-qualified class path, e.g. 'wurzel.steps.splitter.SimpleSplitterStep'",
+        )
+    module_path, class_name = parts
+
+    try:
+        with _temporary_import_path(extra_path):
+            module = importlib.import_module(module_path)
+    except ImportError as exc:
+        raise APIError(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            title="Module not found",
+            detail=f"Could not import module '{module_path}': {exc}",
+        ) from exc
+
+    step_cls = getattr(module, class_name, None)
+    if step_cls is None or not (inspect.isclass(step_cls) and issubclass(step_cls, TypedStep)):
+        raise APIError(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            title="Step not found",
+            detail=f"'{class_name}' is not a TypedStep in module '{module_path}'",
+        )
+    return step_cls
+
+
 # ---------------------------------------------------------------------------
 # Public service functions
 # ---------------------------------------------------------------------------
@@ -461,33 +515,12 @@ def fetch_step_info(step_path: str) -> StepInfo:
         :class:`~wurzel.api.errors.APIError`: 400 if *step_path* is not a
             valid dotted class path; 404 if the module or class cannot be found.
     """
-    parts = step_path.rsplit(".", 1)
-    if len(parts) != 2:
-        raise APIError(
-            status_code=http_status.HTTP_400_BAD_REQUEST,
-            title="Invalid step path",
-            detail="step_path must be a fully-qualified class path, e.g. 'wurzel.steps.splitter.SimpleSplitterStep'",
-        )
-    module_path, class_name = parts
+    return _build_step_info(_load_step_class(step_path))
 
-    try:
-        module = importlib.import_module(module_path)
-    except ImportError as exc:
-        raise APIError(
-            status_code=http_status.HTTP_404_NOT_FOUND,
-            title="Module not found",
-            detail=f"Could not import module '{module_path}': {exc}",
-        ) from exc
 
-    step_cls = getattr(module, class_name, None)
-    if step_cls is None or not (inspect.isclass(step_cls) and issubclass(step_cls, TypedStep)):
-        raise APIError(
-            status_code=http_status.HTTP_404_NOT_FOUND,
-            title="Step not found",
-            detail=f"'{class_name}' is not a TypedStep in module '{module_path}'",
-        )
-
-    return _build_step_info(step_cls)
+def fetch_step_info_for_project(step_path: str, extra_path: Path | None) -> StepInfo:
+    """Import and introspect the TypedStep at *step_path* for one project."""
+    return _build_step_info(_load_step_class(step_path, extra_path=extra_path))
 
 
 def discover_steps_for_project(
@@ -531,7 +564,7 @@ def discover_steps_for_project(
             cached = cache.get(cache_key)  # type: ignore[arg-type]
 
         if cached is None:
-            project_paths = scan_path_for_typed_steps(extra_path, str(extra_path))
+            project_paths = scan_path_for_typed_steps(extra_path)
             cache.set(cache_key, project_paths)  # type: ignore[arg-type]
         else:
             project_paths = cached

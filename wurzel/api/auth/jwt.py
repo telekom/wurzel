@@ -78,9 +78,12 @@ class JWKSCache:
             # Return stale cache if fetch fails
 
 
+_DEFAULT_JWKS_CACHE = JWKSCache()
+
+
 def get_jwks_cache() -> JWKSCache:
     """FastAPI dependency — returns the per-app JWKS cache instance."""
-    return JWKSCache()
+    return _DEFAULT_JWKS_CACHE
 
 
 def _get_auth_settings() -> AuthSettings:

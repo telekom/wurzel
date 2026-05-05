@@ -43,6 +43,7 @@ from wurzel.api.backends.supabase.client import (
     db_create_branch,
     db_delete_branch,
     db_get_branch,
+    db_get_branch_by_id,
     db_get_branch_manifest,
     db_list_branches,
     db_patch_manifest_status,
@@ -92,6 +93,17 @@ async def _get_branch_or_404(project_id: uuid.UUID, branch_name: str) -> dict:
             detail=f"No branch '{branch_name}' in project {project_id}",
         )
     return row
+
+
+async def _validate_promotes_to_branch_or_404(project_id: uuid.UUID, promotes_to_id: uuid.UUID) -> None:
+    """Ensure *promotes_to_id* exists and belongs to *project_id*."""
+    target = await db_get_branch_by_id(promotes_to_id)
+    if target is None or target.get("project_id") != str(project_id):
+        raise APIError(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            title="Promotion target branch not found",
+            detail=f"No branch with id={promotes_to_id} exists in project {project_id}.",
+        )
 
 
 def _flatten_dict(obj: Any, prefix: str = "") -> dict[str, Any]:
@@ -245,6 +257,10 @@ async def create_branch(
             title="Branch already exists",
             detail=f"A branch named '{body.name}' already exists in this project.",
         )
+
+    if body.promotes_to_id is not None:
+        await _validate_promotes_to_branch_or_404(project_id, body.promotes_to_id)
+
     row = await db_create_branch(
         project_id,
         body.name,
@@ -285,6 +301,7 @@ async def update_branch(
     await _get_branch_or_404(project_id, branch_name)
     fields: dict = {}
     if body.promotes_to_id is not None:
+        await _validate_promotes_to_branch_or_404(project_id, body.promotes_to_id)
         fields["promotes_to_id"] = str(body.promotes_to_id)
     elif "promotes_to_id" in body.model_fields_set:
         fields["promotes_to_id"] = None

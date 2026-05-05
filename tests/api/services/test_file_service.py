@@ -21,7 +21,7 @@ class TestFileUploadService:
     def service(self, storage):
         return FileUploadService(storage)
 
-    @patch("wurzel.api.services.file_service.fetch_step_info")
+    @patch("wurzel.api.services.file_service.fetch_step_info_for_project")
     def test_upload_valid_files(self, mock_fetch, service):
         mock_fetch.return_value.accepted_file_extensions = [".csv", ".tsv"]
         mock_fetch.return_value.accepted_mime_types = ["text/csv"]
@@ -38,7 +38,7 @@ class TestFileUploadService:
         assert successful[0].filename == "data.csv"
         assert successful[1].filename == "data.tsv"
 
-    @patch("wurzel.api.services.file_service.fetch_step_info")
+    @patch("wurzel.api.services.file_service.fetch_step_info_for_project")
     def test_upload_invalid_extension(self, mock_fetch, service):
         mock_fetch.return_value.accepted_file_extensions = [".csv"]
         mock_fetch.return_value.accepted_mime_types = []
@@ -55,7 +55,7 @@ class TestFileUploadService:
         assert errors[0].filename == "data.txt"
         assert "not accepted" in errors[0].reason
 
-    @patch("wurzel.api.services.file_service.fetch_step_info")
+    @patch("wurzel.api.services.file_service.fetch_step_info_for_project")
     def test_upload_invalid_mime_type(self, mock_fetch, service):
         mock_fetch.return_value.accepted_file_extensions = []
         mock_fetch.return_value.accepted_mime_types = ["text/csv"]
@@ -71,7 +71,7 @@ class TestFileUploadService:
         assert len(errors) == 1
         assert errors[0].filename == "data.json"
 
-    @patch("wurzel.api.services.file_service.fetch_step_info")
+    @patch("wurzel.api.services.file_service.fetch_step_info_for_project")
     def test_upload_no_restrictions(self, mock_fetch, service):
         mock_fetch.return_value.accepted_file_extensions = []
         mock_fetch.return_value.accepted_mime_types = []
@@ -86,7 +86,7 @@ class TestFileUploadService:
         assert len(successful) == 2
         assert len(errors) == 0
 
-    @patch("wurzel.api.services.file_service.fetch_step_info")
+    @patch("wurzel.api.services.file_service.fetch_step_info_for_project")
     def test_extension_case_insensitive(self, mock_fetch, service):
         mock_fetch.return_value.accepted_file_extensions = [".CSV"]
         mock_fetch.return_value.accepted_mime_types = []
@@ -98,7 +98,7 @@ class TestFileUploadService:
         assert len(successful) == 1
         assert len(errors) == 0
 
-    @patch("wurzel.api.services.file_service.fetch_step_info")
+    @patch("wurzel.api.services.file_service.fetch_step_info_for_project")
     def test_upload_with_storage_error(self, mock_fetch, service):
         mock_fetch.return_value.accepted_file_extensions = [".csv"]
         mock_fetch.return_value.accepted_mime_types = []
