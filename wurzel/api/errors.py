@@ -75,11 +75,10 @@ def register_exception_handlers(app: FastAPI) -> None:
     async def _request_validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
         # Log and capture validation errors with full context
         logger.error(f"Request validation error on {request.url}: {exc.errors()}")
-        logger.error(f"Request body: {await request.body()}")
         return _problem_response(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             title="Unprocessable Entity",
-            detail=f"Validation error: {exc.errors()}",
+            detail="Validation error",
             instance=str(request.url),
         )
 
@@ -110,15 +109,17 @@ def register_exception_handlers(app: FastAPI) -> None:
         return _problem_response(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             title="Unprocessable Entity",
-            detail=str(exc),
+            detail="Validation error",
             instance=str(request.url),
         )
 
     @app.exception_handler(Exception)
     async def _generic_handler(request: Request, exc: Exception) -> JSONResponse:
+        # Log full error details for debugging but don't expose to client
+        logger.error(f"Unhandled exception on {request.url}", exc_info=exc)
         return _problem_response(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             title="Internal Server Error",
-            detail=str(exc),
+            detail="An internal error occurred",
             instance=str(request.url),
         )
