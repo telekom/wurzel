@@ -34,10 +34,15 @@ def _get_settings() -> SupabaseSettings:
 
 _async_client: Any = None  # pylint: disable=invalid-name
 _async_client_loop_id: int | None = None  # pylint: disable=invalid-name
+_async_client_lock = asyncio.Lock()  # pylint: disable=invalid-name
 
 
 async def _get_async_client():
-    """Return (or lazily create) the module-level async Supabase client."""
+    """Return (or lazily create) the module-level async Supabase client.
+
+    Uses asyncio.Lock to prevent race conditions where multiple concurrent
+    requests could both see the client as None and attempt to create it.
+    """
     global _async_client  # noqa: PLW0603  # pylint: disable=global-statement
     global _async_client_loop_id  # noqa: PLW0603  # pylint: disable=global-statement
 
@@ -46,19 +51,22 @@ async def _get_async_client():
         _async_client = None
         _async_client_loop_id = None
 
-    if _async_client is None:
-        try:
-            from supabase import acreate_client  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
-        except ImportError as exc:
-            raise ImportError("supabase is not installed. Run: pip install wurzel[supabase]") from exc
+    async with _async_client_lock:
+        # Double-check pattern: re-check inside the lock in case another
+        # coroutine created the client while we were waiting for the lock
+        if _async_client is None:
+            try:
+                from supabase import acreate_client  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
+            except ImportError as exc:
+                raise ImportError("supabase is not installed. Run: pip install wurzel[supabase]") from exc
 
-        settings = _get_settings()
-        _async_client = await acreate_client(
-            settings.URL,
-            settings.SERVICE_KEY.get_secret_value(),  # pylint: disable=no-member
-        )
-        _async_client_loop_id = current_loop_id
-        logger.info("Async Supabase client created for %s", settings.URL)
+            settings = _get_settings()
+            _async_client = await acreate_client(
+                settings.URL,
+                settings.SERVICE_KEY.get_secret_value(),  # pylint: disable=no-member
+            )
+            _async_client_loop_id = current_loop_id
+            logger.info("Async Supabase client created for %s", settings.URL)
     return _async_client
 
 

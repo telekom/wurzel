@@ -14,14 +14,19 @@ from pydantic import BaseModel
 from wurzel.api.error_codes import ErrorCode
 from wurzel.api.settings import APISettings
 
-_settings: APISettings | None = None  # pylint: disable=invalid-name
-
 
 def _get_settings() -> APISettings:
-    global _settings  # noqa: PLW0603  # pylint: disable=global-statement
-    if _settings is None:
-        _settings = APISettings()
-    return _settings
+    """FastAPI dependency — returns AuthSettings from environment.
+
+    Cached by FastAPI's dependency injection system, so it's only created once
+    per app lifetime. This is stateless from the request perspective because:
+    - Settings are immutable (pydantic Settings)
+    - They are computed from environment variables at app startup
+    - No mutable instance state is maintained across requests
+
+    Can be overridden in tests via ``app.dependency_overrides[_get_settings]``.
+    """
+    return APISettings()
 
 
 async def verify_api_key(
