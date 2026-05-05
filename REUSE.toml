@@ -39,6 +39,7 @@ path = [
     "**/ub/**/*",
     ".windsurf/**/*",
     ".python-version",
+    "supabase/.branches/_current_branch",
     ]
 precedence = "override"
 SPDX-FileCopyrightText = "NONE"

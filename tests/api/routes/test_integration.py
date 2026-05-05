@@ -36,6 +36,7 @@ from __future__ import annotations
 import contextlib
 import uuid
 from collections.abc import Generator
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -517,20 +518,27 @@ class TestStepsDiscoveryFlow:
 
     def test_step_list_includes_known_step(self, admin_client, fake_db):
         with fake_db.patch_all():
-            r = admin_client.get("/v1/steps?package=wurzel.steps")
+            project_id, _feature = _create_project_and_branch(admin_client)
+            with patch("wurzel.api.routes.project_steps.router._get_pkg_settings") as mock_settings:
+                mock_settings.return_value.PACKAGES_DIR = Path("/tmp")
+                r = admin_client.get(f"/v1/projects/{project_id}/steps?refresh=true")
             assert r.status_code == 200
             assert _KNOWN_STEP in [s["class_path"] for s in r.json()["steps"]]
 
     def test_step_list_includes_input_output_types(self, admin_client, fake_db):
         with fake_db.patch_all():
-            r = admin_client.get("/v1/steps?package=wurzel.steps")
+            project_id, _feature = _create_project_and_branch(admin_client)
+            with patch("wurzel.api.routes.project_steps.router._get_pkg_settings") as mock_settings:
+                mock_settings.return_value.PACKAGES_DIR = Path("/tmp")
+                r = admin_client.get(f"/v1/projects/{project_id}/steps?refresh=true")
             step = next(s for s in r.json()["steps"] if s["class_path"] == _KNOWN_STEP)
             assert step["output_type"] == "list[wurzel.datacontract.MarkdownDataContract]"
             assert step["input_type"] is None  # source step
 
     def test_step_detail_endpoint_returns_schema(self, admin_client, fake_db):
         with fake_db.patch_all():
-            r = admin_client.get(f"/v1/steps/{_KNOWN_STEP}")
+            project_id, _feature = _create_project_and_branch(admin_client)
+            r = admin_client.get(f"/v1/projects/{project_id}/steps/{_KNOWN_STEP}")
             assert r.status_code == 200
             info = r.json()
             assert info["class_path"] == _KNOWN_STEP
@@ -539,7 +547,8 @@ class TestStepsDiscoveryFlow:
 
     def test_discovered_class_path_valid_in_manifest(self, admin_client, fake_db):
         with fake_db.patch_all():
-            r = admin_client.get(f"/v1/steps/{_KNOWN_STEP}")
+            project_id, feature = _create_project_and_branch(admin_client)
+            r = admin_client.get(f"/v1/projects/{project_id}/steps/{_KNOWN_STEP}")
             class_path = r.json()["class_path"]
 
             manifest = {
@@ -548,7 +557,6 @@ class TestStepsDiscoveryFlow:
                 "metadata": {"name": "discovered-pipeline"},
                 "spec": {"backend": "dvc", "steps": [{"name": "source", "class": class_path}]},
             }
-            project_id, feature = _create_project_and_branch(admin_client)
             assert admin_client.put(_branch_url(project_id, f"/{feature}/manifest"), json=manifest).status_code == 200
 
             r = admin_client.get(_branch_url(project_id, f"/{feature}/manifest"))
@@ -556,7 +564,10 @@ class TestStepsDiscoveryFlow:
 
     def test_framework_base_class_excluded_from_list(self, admin_client, fake_db):
         with fake_db.patch_all():
-            r = admin_client.get("/v1/steps")
+            project_id, _feature = _create_project_and_branch(admin_client)
+            with patch("wurzel.api.routes.project_steps.router._get_pkg_settings") as mock_settings:
+                mock_settings.return_value.PACKAGES_DIR = Path("/tmp")
+                r = admin_client.get(f"/v1/projects/{project_id}/steps?refresh=true")
             class_paths = [s["class_path"] for s in r.json()["steps"]]
             assert "wurzel.core.self_consuming_step.SelfConsumingLeafStep" not in class_paths
 
@@ -786,29 +797,48 @@ class TestStepsApiErrors:
         user = UserClaims(sub="u", email="u@u.com", raw={})
         app = create_app(settings=APISettings(API_KEY="k"))
         app.dependency_overrides[_verify_jwt] = lambda: user
-        with TestClient(app, raise_server_exceptions=False) as c:
+        with (
+            patch("wurzel.api.backends.supabase.client.get_project_role_from_db", new_callable=AsyncMock, return_value=ProjectRole.ADMIN),
+            patch("wurzel.api.routes.project_steps.router._get_pkg_settings") as mock_settings,
+            TestClient(app, raise_server_exceptions=False) as c,
+        ):
+            mock_settings.return_value.PACKAGES_DIR = Path("/tmp")
             yield c
 
-    def test_unknown_package_returns_400(self, steps_client):
-        r = steps_client.get("/v1/steps?package=totally_nonexistent_xyz_pkg", headers={"Authorization": "Bearer t"})
-        assert r.status_code == 400
-        assert r.headers["content-type"] == "application/problem+json"
-        assert r.json()["status"] == 400
+    def test_unknown_project_member_returns_404(self):
+        from wurzel.api.app import create_app  # noqa: PLC0415
+        from wurzel.api.auth.jwt import UserClaims, _verify_jwt  # noqa: PLC0415
+        from wurzel.api.settings import APISettings  # noqa: PLC0415
+
+        user = UserClaims(sub="u", email="u@u.com", raw={})
+        app = create_app(settings=APISettings(API_KEY="k"))
+        app.dependency_overrides[_verify_jwt] = lambda: user
+        with (
+            patch("wurzel.api.backends.supabase.client.get_project_role_from_db", new_callable=AsyncMock, return_value=None),
+            patch("wurzel.api.routes.project_steps.router._get_pkg_settings") as mock_settings,
+            TestClient(app, raise_server_exceptions=False) as c,
+        ):
+            mock_settings.return_value.PACKAGES_DIR = Path("/tmp")
+            r = c.get(f"/v1/projects/{uuid.uuid4()}/steps", headers={"Authorization": "Bearer t"})
+        assert r.status_code == 404
 
     def test_step_path_without_dot_returns_400(self, steps_client):
-        r = steps_client.get("/v1/steps/nodothere", headers={"Authorization": "Bearer t"})
+        r = steps_client.get(f"/v1/projects/{uuid.uuid4()}/steps/nodothere", headers={"Authorization": "Bearer t"})
         assert r.status_code == 400
 
     def test_nonexistent_module_returns_404(self, steps_client):
-        r = steps_client.get("/v1/steps/nonexistent.module.FakeStep", headers={"Authorization": "Bearer t"})
+        r = steps_client.get(f"/v1/projects/{uuid.uuid4()}/steps/nonexistent.module.FakeStep", headers={"Authorization": "Bearer t"})
         assert r.status_code == 404
 
     def test_nonexistent_class_in_real_module_returns_404(self, steps_client):
-        r = steps_client.get("/v1/steps/wurzel.steps.manual_markdown.FakeStep", headers={"Authorization": "Bearer t"})
+        r = steps_client.get(
+            f"/v1/projects/{uuid.uuid4()}/steps/wurzel.steps.manual_markdown.FakeStep",
+            headers={"Authorization": "Bearer t"},
+        )
         assert r.status_code == 404
 
     def test_400_body_is_problem_json(self, steps_client):
-        r = steps_client.get("/v1/steps?package=no_such_pkg_xyz", headers={"Authorization": "Bearer t"})
+        r = steps_client.get(f"/v1/projects/{uuid.uuid4()}/steps/nodothere", headers={"Authorization": "Bearer t"})
         body = r.json()
         assert "title" in body
         assert "status" in body

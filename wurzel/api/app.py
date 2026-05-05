@@ -19,18 +19,40 @@ from wurzel.api.routes.files.router import router as files_router
 from wurzel.api.routes.health.router import router as health_router
 from wurzel.api.routes.member.router import router as member_router
 from wurzel.api.routes.metrics.router import router as metrics_router
+from wurzel.api.routes.packages.router import router as packages_router
 from wurzel.api.routes.project.router import router as project_router
+from wurzel.api.routes.project_steps.router import router as project_steps_router
 from wurzel.api.routes.search.router import router as search_router
-from wurzel.api.routes.steps.router import router as steps_router
 from wurzel.api.routes.steps.service import warm_step_cache
 from wurzel.api.settings import APISettings
 
 
 @asynccontextmanager
 async def _lifespan(_app: FastAPI):
-    """App lifespan: warm the step cache in a background thread on startup."""
-    t = threading.Thread(target=warm_step_cache, daemon=True, name="step-cache-warmup")
-    t.start()
+    """App lifespan: warm the step cache and recover pending installs on startup."""
+    t_cache = threading.Thread(target=warm_step_cache, daemon=True, name="step-cache-warmup")
+    t_cache.start()
+
+    try:
+        from wurzel.api.package_manager.background import (  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
+            recover_and_reinstall_on_startup,
+        )
+        from wurzel.api.package_manager.settings import (  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
+            PackageManagerSettings,
+        )
+
+        pkg_settings = PackageManagerSettings()
+        t_recovery = threading.Thread(
+            target=recover_and_reinstall_on_startup,
+            args=(pkg_settings,),
+            daemon=True,
+            name="package-recovery",
+        )
+        t_recovery.start()
+    except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+        # PackageManagerSettings requires PACKAGE_MANAGER__PACKAGES_DIR; skip if not configured
+        pass
+
     yield
 
 
@@ -92,7 +114,6 @@ def create_app(
 
     # X-API-Key authenticated, versioned (legacy / machine-to-machine)
     app.include_router(search_router, prefix=f"{prefix}/search", tags=["Search"])
-    app.include_router(steps_router, prefix=f"{prefix}/steps", tags=["Steps"])
 
     # JWT-authenticated project hierarchy
     app.include_router(project_router, prefix=f"{prefix}/projects", tags=["Projects"])
@@ -110,6 +131,16 @@ def create_app(
         files_router,
         prefix=f"{prefix}/projects/{{project_id}}/steps/{{step_id}}/files",
         tags=["Files"],
+    )
+    app.include_router(
+        packages_router,
+        prefix=f"{prefix}/projects/{{project_id}}/packages",
+        tags=["Packages"],
+    )
+    app.include_router(
+        project_steps_router,
+        prefix=f"{prefix}/projects/{{project_id}}/steps",
+        tags=["Steps"],
     )
 
     return app
