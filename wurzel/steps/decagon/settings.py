@@ -4,7 +4,8 @@
 
 """Settings for the Decagon Knowledge Base connector step."""
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
+from typing import Self
 
 from wurzel.step.settings import Settings
 
@@ -49,3 +50,10 @@ class DecagonSettings(Settings):
         default=True,
         description="When False, skip pushing to Decagon and return the input data unchanged",
     )
+
+    @model_validator(mode="after")
+    def validate_api_key_when_push_enabled(self) -> Self:
+        """Ensure API_KEY is provided when PUSH_ENABLED is True."""
+        if self.PUSH_ENABLED and self.API_KEY is None:
+            raise ValueError("API_KEY is required when PUSH_ENABLED is True")
+        return self
