@@ -11,6 +11,7 @@ Install the optional dependency::
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from functools import lru_cache
@@ -32,11 +33,19 @@ def _get_settings() -> SupabaseSettings:
 # ── Async client singleton ────────────────────────────────────────────────────
 
 _async_client: Any = None  # pylint: disable=invalid-name
+_async_client_loop_id: int | None = None  # pylint: disable=invalid-name
 
 
 async def _get_async_client():
     """Return (or lazily create) the module-level async Supabase client."""
     global _async_client  # noqa: PLW0603  # pylint: disable=global-statement
+    global _async_client_loop_id  # noqa: PLW0603  # pylint: disable=global-statement
+
+    current_loop_id = id(asyncio.get_running_loop())
+    if _async_client is not None and _async_client_loop_id != current_loop_id:
+        _async_client = None
+        _async_client_loop_id = None
+
     if _async_client is None:
         try:
             from supabase import acreate_client  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
@@ -48,6 +57,7 @@ async def _get_async_client():
             settings.URL,
             settings.SERVICE_KEY.get_secret_value(),  # pylint: disable=no-member
         )
+        _async_client_loop_id = current_loop_id
         logger.info("Async Supabase client created for %s", settings.URL)
     return _async_client
 
