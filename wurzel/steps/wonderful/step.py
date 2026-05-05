@@ -184,18 +184,29 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
             log.warning("No documents to process")
             return []
 
-        log.info(f"Uploading {len(inpt)} documents to Wonderful KB {self._kb_id}")
+        # Pre-dedup by generated filename so two input docs with the same KB
+        # filename don't race in the worker pool and create duplicate KB records.
+        # When two docs map to the same filename, the later occurrence wins.
+        unique: dict[str, tuple[int, MarkdownDataContract]] = {}
+        for idx, doc in enumerate(inpt):
+            unique[self._generate_filename(doc, idx)] = (idx, doc)
+        deduped = list(unique.values())
+        if len(deduped) < len(inpt):
+            log.info(f"Deduped input: {len(inpt)} → {len(deduped)} unique filenames")
+
+        log.info(f"Uploading {len(deduped)} documents to Wonderful KB {self._kb_id}")
         with self._build_session() as session:
             existing = self._fetch_existing_filenames(session)
 
         with ThreadPoolExecutor(max_workers=self.settings.MAX_WORKERS) as executor:
-            futures = [executor.submit(self._process_doc, idx, doc, existing) for idx, doc in enumerate(inpt)]
+            futures = [executor.submit(self._process_doc, idx, doc, existing) for idx, doc in deduped]
             success_count = sum(1 for f in as_completed(futures) if f.result())
 
-        failed = len(inpt) - success_count
+        failed = len(deduped) - success_count
         log.info(f"Completed: {success_count} succeeded, {failed} failed")
 
-        if failed == len(inpt):
+        if failed == len(deduped):
             raise StepFailed(f"All {failed} documents failed to process")
 
+        # Passthrough preserves the original input length and order.
         return inpt

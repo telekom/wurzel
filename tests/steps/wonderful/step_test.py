@@ -153,6 +153,28 @@ class TestUpload:
         assert methods.count("POST") == 4  # 2× create + 2× sync
         assert methods.count("PUT") == 2
 
+    def test_input_deduped_by_filename(self, step, requests_mock):
+        """Two input docs that map to the same filename should issue only one create
+        (avoids the worker-pool race Copilot flagged). Passthrough still returns both.
+        """
+        same_url_docs = [
+            MarkdownDataContract(md="# v1", url="https://example.com/same/path", keywords=""),
+            MarkdownDataContract(md="# v2", url="https://example.com/same/path", keywords=""),
+        ]
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(KB_FILES, json=kb_create_payload("file-1"))
+        requests_mock.put(PRESIGNED)
+        requests_mock.post(KB_SYNC, json={})
+
+        result = step.run(same_url_docs)
+
+        # Output preserves both input docs (passthrough contract).
+        assert result == same_url_docs
+        # But only one create + one sync hit the KB — not two of each.
+        methods = [r.method for r in requests_mock.request_history]
+        assert methods.count("POST") == 2  # 1× create + 1× sync
+        assert methods.count("PUT") == 1
+
     def test_existing_file_updates_in_place(self, step, sample_doc, requests_mock):
         existing_filename = step._generate_filename(sample_doc, 0)
         existing_id = "existing-file-id"
