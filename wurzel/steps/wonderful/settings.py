@@ -12,35 +12,36 @@ from wurzel.step.settings import Settings
 class WonderfulRAGSettings(Settings):
     """Configuration for the Wonderful RAG connector.
 
-    Set ``WONDERFULRAGSTEP__ENABLED=false`` to make the step a no-op
-    (passthrough only, no API calls, no credentials required). Useful for
-    pipeline environments where the Wonderful sink is intentionally disabled
-    (e.g. DT's dev environment).
+    Set ``WONDERFULRAGSTEP__SKIP=true`` to make the step a no-op (passthrough
+    only, no API calls, no credentials required). Used to avoid concurrency
+    in lower DT environments where dev and staging share a cron schedule
+    (both run at 6:30 CET on Mondays and Wednesdays) and would otherwise hit
+    Wonderful staging twice in the same minute.
 
     Environment Variables (with WONDERFULRAGSTEP prefix):
-        WONDERFULRAGSTEP__ENABLED:          Whether the step performs uploads (default: true)
-        WONDERFULRAGSTEP__BASE_URL:         Wonderful API base URL (required when ENABLED)
-        WONDERFULRAGSTEP__API_KEY:          API key for authentication (required when ENABLED)
-        WONDERFULRAGSTEP__KNOWLEDGEBASE_ID: Knowledge base ID (required when ENABLED)
+        WONDERFULRAGSTEP__SKIP:             When true, skip processing (default: false)
+        WONDERFULRAGSTEP__BASE_URL:         Wonderful API base URL (required when not SKIP)
+        WONDERFULRAGSTEP__API_KEY:          API key for authentication (required when not SKIP)
+        WONDERFULRAGSTEP__KNOWLEDGEBASE_ID: Knowledge base ID (required when not SKIP)
         WONDERFULRAGSTEP__TIMEOUT:          Request timeout in seconds
         WONDERFULRAGSTEP__MAX_WORKERS:      Concurrent upload workers
     """
 
-    ENABLED: bool = Field(
-        default=True,
-        description="When false, the step skips all API calls and passes input through unchanged.",
+    SKIP: bool = Field(
+        default=False,
+        description="When true, the step skips all API calls and passes input through unchanged.",
     )
     BASE_URL: str = Field(
         default="",
-        description="Wonderful API base URL (required when ENABLED)",
+        description="Wonderful API base URL (required when SKIP=false)",
     )
     API_KEY: SecretStr = Field(
         default=SecretStr(""),
-        description="API key for authentication with Wonderful (required when ENABLED)",
+        description="API key for authentication with Wonderful (required when SKIP=false)",
     )
     KNOWLEDGEBASE_ID: str = Field(
         default="",
-        description="Knowledge base ID to push documents to (required when ENABLED)",
+        description="Knowledge base ID to push documents to (required when SKIP=false)",
     )
     TIMEOUT: int = Field(
         default=120,
@@ -54,8 +55,8 @@ class WonderfulRAGSettings(Settings):
     )
 
     @model_validator(mode="after")
-    def _require_credentials_when_enabled(self) -> "WonderfulRAGSettings":
-        if not self.ENABLED:
+    def _require_credentials_unless_skipped(self) -> "WonderfulRAGSettings":
+        if self.SKIP:
             return self
         missing = [
             name
@@ -68,7 +69,7 @@ class WonderfulRAGSettings(Settings):
         ]
         if missing:
             raise ValueError(
-                "WonderfulRAGStep is enabled but missing required settings: "
+                "WonderfulRAGStep is active (SKIP=false) but missing required settings: "
                 + ", ".join(f"WONDERFULRAGSTEP__{name}" for name in missing)
             )
         return self

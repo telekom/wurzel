@@ -329,12 +329,12 @@ class TestFailureScenarios:
         assert result == docs
 
 
-# ── Disabled (no-op) mode ─────────────────────────────────────────────────────
+# ── Skip (no-op) mode ─────────────────────────────────────────────────────────
 
-class TestDisabled:
+class TestSkip:
 
-    def test_constructs_without_credentials_when_disabled(self, env):
-        env.set("ENABLED", "false")
+    def test_constructs_without_credentials_when_skipped(self, env):
+        env.set("SKIP", "true")
         # No BASE_URL / API_KEY / KNOWLEDGEBASE_ID set.
         with patch("wurzel.steps.wonderful.step.requests.Session") as mock_session_cls:
             step = WonderfulRAGStep()
@@ -342,7 +342,7 @@ class TestDisabled:
             step.finalize()  # must not raise even though no session was created
 
     def test_run_passes_through_inputs_without_api_calls(self, env, sample_doc):
-        env.set("ENABLED", "false")
+        env.set("SKIP", "true")
         with patch("wurzel.steps.wonderful.step.requests.Session") as mock_session_cls:
             mock_sess = MagicMock()
             mock_session_cls.return_value = mock_sess
@@ -354,14 +354,14 @@ class TestDisabled:
             assert result == [sample_doc]
             step.finalize()
 
-    def test_run_passes_through_empty_input_when_disabled(self, env):
-        env.set("ENABLED", "false")
+    def test_run_passes_through_empty_input_when_skipped(self, env):
+        env.set("SKIP", "true")
         step = WonderfulRAGStep()
         assert step.run([]) == []
         step.finalize()
 
-    def test_enabled_true_with_missing_credentials_raises(self, env):
-        # Default ENABLED is true; omitting credentials must fail at init.
+    def test_active_step_with_missing_credentials_raises(self, env):
+        # Default SKIP is false (active); omitting credentials must fail at init.
         with pytest.raises(Exception, match="WONDERFULRAGSTEP__"):
             WonderfulRAGStep()
 

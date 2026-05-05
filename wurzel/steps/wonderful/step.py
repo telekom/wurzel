@@ -31,15 +31,17 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
     Per-doc failures are logged but do not affect the output. If every document fails,
     raises ``StepFailed``.
 
-    When ``WONDERFULRAGSTEP__ENABLED=false`` the step is a no-op: it skips all API
-    calls, requires no credentials, and returns its input unchanged. Used to disable
-    the sink in environments that should not push to Wonderful (e.g. DT's dev tier).
+    When ``WONDERFULRAGSTEP__SKIP=true`` the step is a no-op: it skips all API calls,
+    requires no credentials, and returns its input unchanged. Used to avoid concurrency
+    in lower DT environments where dev and staging share a cron schedule (both run at
+    6:30 CET on Mon/Wed) and would otherwise hit Wonderful staging twice in the same
+    minute.
 
     Environment Variables:
-        WONDERFULRAGSTEP__ENABLED:          Whether to perform uploads (default: true)
-        WONDERFULRAGSTEP__BASE_URL:         Wonderful API base URL (required when ENABLED)
-        WONDERFULRAGSTEP__API_KEY:          API key (required when ENABLED)
-        WONDERFULRAGSTEP__KNOWLEDGEBASE_ID: Knowledge base ID (required when ENABLED)
+        WONDERFULRAGSTEP__SKIP:             When true, skip processing (default: false)
+        WONDERFULRAGSTEP__BASE_URL:         Wonderful API base URL (required when not SKIP)
+        WONDERFULRAGSTEP__API_KEY:          API key (required when not SKIP)
+        WONDERFULRAGSTEP__KNOWLEDGEBASE_ID: Knowledge base ID (required when not SKIP)
         WONDERFULRAGSTEP__TIMEOUT:          Request timeout in seconds (default: 120)
         WONDERFULRAGSTEP__MAX_WORKERS:      Concurrent workers — each handles upload + sync (default: 10)
     """
@@ -48,8 +50,8 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
         super().__init__()
         self._session: requests.Session | None = None
         self._kb_id: str = ""
-        if not self.settings.ENABLED:
-            log.info("WonderfulRAGStep disabled — running in no-op (passthrough) mode")
+        if self.settings.SKIP:
+            log.info("WonderfulRAGStep skipped — running in no-op (passthrough) mode")
             return
         self._session = requests.Session()
         self._session.headers.update({"x-api-key": self.settings.API_KEY.get_secret_value()})
@@ -162,8 +164,8 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
 
     def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
         """Upload and sync markdown documents to the Wonderful RAG knowledge base."""
-        if not self.settings.ENABLED:
-            log.info(f"WonderfulRAGStep disabled — passing through {len(inpt)} documents unchanged")
+        if self.settings.SKIP:
+            log.info(f"WonderfulRAGStep skipped — passing through {len(inpt)} documents unchanged")
             return inpt
         if not inpt:
             log.warning("No documents to process")
