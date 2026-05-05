@@ -329,6 +329,43 @@ class TestFailureScenarios:
         assert result == docs
 
 
+# ── Disabled (no-op) mode ─────────────────────────────────────────────────────
+
+class TestDisabled:
+
+    def test_constructs_without_credentials_when_disabled(self, env):
+        env.set("ENABLED", "false")
+        # No BASE_URL / API_KEY / KNOWLEDGEBASE_ID set.
+        with patch("wurzel.steps.wonderful.step.requests.Session") as mock_session_cls:
+            step = WonderfulRAGStep()
+            mock_session_cls.assert_not_called()
+            step.finalize()  # must not raise even though no session was created
+
+    def test_run_passes_through_inputs_without_api_calls(self, env, sample_doc):
+        env.set("ENABLED", "false")
+        with patch("wurzel.steps.wonderful.step.requests.Session") as mock_session_cls:
+            mock_sess = MagicMock()
+            mock_session_cls.return_value = mock_sess
+            step = WonderfulRAGStep()
+            with patch("wurzel.steps.wonderful.step.requests.put") as mock_put:
+                result = step.run([sample_doc])
+            mock_sess.request.assert_not_called()
+            mock_put.assert_not_called()
+            assert result == [sample_doc]
+            step.finalize()
+
+    def test_run_passes_through_empty_input_when_disabled(self, env):
+        env.set("ENABLED", "false")
+        step = WonderfulRAGStep()
+        assert step.run([]) == []
+        step.finalize()
+
+    def test_enabled_true_with_missing_credentials_raises(self, env):
+        # Default ENABLED is true; omitting credentials must fail at init.
+        with pytest.raises(Exception, match="WONDERFULRAGSTEP__"):
+            WonderfulRAGStep()
+
+
 # ── Finalize ──────────────────────────────────────────────────────────────────
 
 class TestFinalize:
