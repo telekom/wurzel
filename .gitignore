@@ -236,4 +236,5 @@ tmp.py
 tmp/
 local/
 .claude/
+wonderful_pipeline.py
 examples/pipeline/output

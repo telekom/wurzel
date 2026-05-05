@@ -13,7 +13,6 @@ import requests
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import StepFailed
 from wurzel.steps.wonderful import WonderfulRAGStep
-from wurzel.steps.wonderful.data import FileUploadInfo
 
 KB_ID = "kb-123"
 
@@ -104,11 +103,9 @@ class TestInit:
 
 class TestEmptyInput:
 
-    def test_returns_empty_dataframe_with_correct_schema(self, mock_session):
+    def test_returns_empty_list(self, mock_session):
         step, _ = mock_session
-        result = step.run([])
-        assert len(result) == 0
-        assert set(result.columns) == {"file_id", "url", "filename", "content", "status", "error"}
+        assert step.run([]) == []
 
 
 # ── Filename generation ───────────────────────────────────────────────────────
@@ -151,7 +148,7 @@ class TestGenerateFilename:
 
 class TestUpload:
 
-    def test_new_file(self, mock_session, sample_doc):
+    def test_new_file_passthrough(self, mock_session, sample_doc):
         step, mock_sess = mock_session
         mock_sess.request.side_effect = [
             make_kb_list_response(),              # GET  existing files
@@ -163,10 +160,9 @@ class TestUpload:
             result = step.run([sample_doc])
 
         assert methods_called(mock_sess) == ["GET", "POST", "POST"]
-        assert result.iloc[0]["status"] == "success"
-        assert result.iloc[0]["file_id"] == "file-abc"
+        assert result == [sample_doc]
 
-    def test_multiple_new_files(self, mock_session):
+    def test_multiple_new_files_passthrough(self, mock_session):
         step, mock_sess = mock_session
         docs = [
             MarkdownDataContract(md="# Doc 1", url="https://example.com/doc1", keywords=""),
@@ -189,8 +185,7 @@ class TestUpload:
             result = step.run(docs)
 
         assert mock_sess.request.call_count == 5  # GET + 2x POST /kb/files + 2x POST /sync
-        assert len(result) == 2
-        assert all(result["status"] == "success")
+        assert result == docs
 
     def test_existing_file_updates_in_place(self, mock_session, sample_doc):
         """Re-run updates S3 content via /storage/upload — no new record, no delete."""
@@ -207,8 +202,9 @@ class TestUpload:
 
         assert methods_called(mock_sess) == ["GET", "POST", "POST"]
         assert "DELETE" not in methods_called(mock_sess)
-        assert result.iloc[0]["status"] == "success"
-        assert result.iloc[0]["file_id"] == existing_id
+        # Second POST should hit /storage/upload, not the KB files endpoint.
+        assert "/storage/upload" in mock_sess.request.call_args_list[1].args[1]
+        assert result == [sample_doc]
 
 
 # ── Failure scenarios ─────────────────────────────────────────────────────────
@@ -239,8 +235,8 @@ class TestFailureScenarios:
         with pytest.raises(StepFailed, match="All 1 documents failed"):
             step.run([sample_doc])
 
-    def test_sync_failure_marks_file_as_failed(self, mock_session):
-        """Sync failure for one doc marks only that doc as failed; others succeed."""
+    def test_sync_failure_does_not_raise_when_others_succeed(self, mock_session):
+        """Sync failure for one doc is logged but does not affect output (passthrough)."""
         step, mock_sess = mock_session
         docs = [
             MarkdownDataContract(md="# Doc 1", url="https://example.com/doc1", keywords=""),
@@ -267,8 +263,7 @@ class TestFailureScenarios:
         with patch("wurzel.steps.wonderful.step.requests.put", return_value=make_ok_response()):
             result = step.run(docs)
 
-        assert (result["status"] == "failed").sum() == 1
-        assert (result["status"] == "success").sum() == 1
+        assert result == docs
 
     def test_partial_upload_failure_does_not_raise(self, mock_session):
         step, mock_sess = mock_session
@@ -295,8 +290,7 @@ class TestFailureScenarios:
         with patch("wurzel.steps.wonderful.step.requests.put", return_value=make_ok_response()):
             result = step.run(docs)
 
-        assert (result["status"] == "success").sum() == 1
-        assert (result["status"] == "failed").sum() == 1
+        assert result == docs
 
     def test_upload_failure_does_not_abort_remaining(self, mock_session):
         step, mock_sess = mock_session
@@ -332,26 +326,7 @@ class TestFailureScenarios:
         with patch("wurzel.steps.wonderful.step.requests.put", side_effect=put_side_effect):
             result = step.run(docs)
 
-        assert (result["status"] == "failed").sum() == 1
-        assert (result["status"] == "success").sum() == 1
-
-
-# ── Result builder ────────────────────────────────────────────────────────────
-
-class TestBuildResult:
-
-    def test_truncates_long_content(self, mock_session):
-        step, _ = mock_session
-        doc = MarkdownDataContract(md="x" * 600, url="https://example.com/doc", keywords="")
-        result = step._build_result(doc, "doc.md", FileUploadInfo("id", "success", None))
-        assert len(result["content"]) == 503
-        assert result["content"].endswith("...")
-
-    def test_preserves_short_content(self, mock_session):
-        step, _ = mock_session
-        doc = MarkdownDataContract(md="short", url="https://example.com/doc", keywords="")
-        result = step._build_result(doc, "doc.md", FileUploadInfo("id", "success", None))
-        assert result["content"] == "short"
+        assert result == docs
 
 
 # ── Finalize ──────────────────────────────────────────────────────────────────

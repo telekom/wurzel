@@ -9,26 +9,27 @@ from logging import getLogger
 from typing import Any
 from urllib.parse import urlparse
 
-import pandas as pd
 import requests
-from pandera.typing import DataFrame
 
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import StepFailed
 from wurzel.step import TypedStep
 
-from .data import FileUploadInfo, WonderfulRAGResult
 from .settings import WonderfulRAGSettings
 
 log = getLogger(__name__)
 
 
-class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract], DataFrame[WonderfulRAGResult]]):
+class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract], list[MarkdownDataContract]]):
     """Wonderful RAG connector step.
 
     Each document runs fully concurrently (upload + sync in the same worker thread):
       New file:      POST /knowledgebases/{kb_id}/files  → PUT <presigned-url>  → POST /kb/files/sync
       Existing file: POST /storage/upload (multipart, file_id=<id>)             → POST /kb/files/sync
+
+    Returns the input documents unchanged (passthrough sink) so the step can chain.
+    Per-doc failures are logged but do not affect the output. If every document fails,
+    raises ``StepFailed``.
 
     Environment Variables:
         WONDERFULRAGSTEP__BASE_URL:         Wonderful API base URL (required)
@@ -84,6 +85,7 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
 
     def _upload_to_presigned_url(self, presigned_url: str, content: bytes) -> None:
         """PUT file content directly to S3 via a presigned URL."""
+        # Bare requests.put: presigned URL must not carry the x-api-key header.
         response = requests.put(
             presigned_url,
             data=content,
@@ -122,32 +124,10 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
                 return path if path.endswith(".md") else path + ".md"
         return f"document_{idx:04d}.md"
 
-    # ── Result builder ────────────────────────────────────────────────────────
-
-    def _format_error(self, e: requests.exceptions.RequestException) -> str:
-        if hasattr(e, "response") and e.response is not None:
-            try:
-                detail = e.response.json().get("detail", str(e))
-                return f"{e.response.status_code}: {detail}"
-            except (ValueError, KeyError):
-                return f"{e.response.status_code}: {e.response.text or str(e)}"
-        return str(e)
-
-    def _build_result(self, doc: MarkdownDataContract, filename: str, info: FileUploadInfo) -> dict[str, Any]:
-        content = doc.md
-        return {
-            "file_id": info.file_id,
-            "url": doc.url or "",
-            "filename": filename,
-            "content": content[:500] + "..." if len(content) > 500 else content,
-            "status": info.status,
-            "error": info.error,
-        }
-
     # ── Per-document: upload + sync in one worker ─────────────────────────────
 
-    def _process_doc(self, idx: int, doc: MarkdownDataContract, existing: dict[str, str]) -> dict[str, Any]:
-        """Upload (or update) a single document and sync it. Runs fully in one worker thread."""
+    def _process_doc(self, idx: int, doc: MarkdownDataContract, existing: dict[str, str]) -> bool:
+        """Upload (or update) a single document and sync it. Returns True on success."""
         filename = self._generate_filename(doc, idx)
         existing_id = existing.get(filename)
         try:
@@ -162,40 +142,34 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
                 log.info(f"Uploading: {filename}")
 
             self._sync_kb_file(file_id)
-            return self._build_result(doc, filename, FileUploadInfo(file_id, "success", None))
+            return True
 
         except (requests.exceptions.RequestException, KeyError) as e:
-            error_msg = self._format_error(e) if isinstance(e, requests.exceptions.RequestException) else str(e)
-            log.error(f"Failed to process {filename}: {error_msg}")
-            return self._build_result(doc, filename, FileUploadInfo(None, "failed", error_msg))
+            log.error(f"Failed to process {filename}: {e}")
+            return False
 
     # ── Main run ──────────────────────────────────────────────────────────────
 
-    def run(self, inpt: list[MarkdownDataContract]) -> DataFrame[WonderfulRAGResult]:
+    def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
         """Upload and sync markdown documents to the Wonderful RAG knowledge base."""
         if not inpt:
             log.warning("No documents to process")
-            return DataFrame[WonderfulRAGResult](
-                {col: pd.array([], dtype="str") for col in ["file_id", "url", "filename", "content", "status", "error"]}
-            )
+            return []
 
         log.info(f"Uploading {len(inpt)} documents to Wonderful KB {self._kb_id}")
         existing = self._fetch_existing_filenames()
 
         with ThreadPoolExecutor(max_workers=self.settings.MAX_WORKERS) as executor:
-            futures = {executor.submit(self._process_doc, idx, doc, existing): idx for idx, doc in enumerate(inpt)}
-            results: list[dict[str, Any]] = [None] * len(inpt)  # type: ignore[list-item]
-            for future in as_completed(futures):
-                results[futures[future]] = future.result()
+            futures = [executor.submit(self._process_doc, idx, doc, existing) for idx, doc in enumerate(inpt)]
+            success_count = sum(1 for f in as_completed(futures) if f.result())
 
-        success = sum(1 for r in results if r["status"] == "success")
-        failed = len(results) - success
-        log.info(f"Completed: {success} succeeded, {failed} failed")
+        failed = len(inpt) - success_count
+        log.info(f"Completed: {success_count} succeeded, {failed} failed")
 
-        if failed == len(results):
+        if failed == len(inpt):
             raise StepFailed(f"All {failed} documents failed to process")
 
-        return DataFrame[WonderfulRAGResult](results)
+        return inpt
 
     def finalize(self) -> None:
         self._session.close()
