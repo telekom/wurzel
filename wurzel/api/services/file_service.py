@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from wurzel.api.routes.steps.service import fetch_step_info
+from wurzel.api.routes.steps.service import fetch_step_info_for_project
 from wurzel.storage.file_storage import FileMetadata, FileStorageService
 
 
@@ -42,6 +42,8 @@ class FileUploadService:
         step_id: str,
         step_path: str,
         files: list[tuple[str, bytes, str | None]],
+        *,
+        project_package_dir: Path | None = None,
     ) -> tuple[list[FileMetadata], list[FileUploadError]]:
         """Validate and upload files for a specific step.
 
@@ -60,7 +62,7 @@ class FileUploadService:
             APIError: 404 if step not found.
         """
         # Fetch step info to get file acceptance criteria
-        step_info = fetch_step_info(step_path)
+        step_info = fetch_step_info_for_project(step_path, project_package_dir)
 
         accepted_extensions: list[str] = step_info.accepted_file_extensions
         accepted_mime_types: list[str] = step_info.accepted_mime_types

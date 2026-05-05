@@ -6,8 +6,14 @@
 
 from __future__ import annotations
 
+import uuid
+
 from fastapi import APIRouter, Depends, File, UploadFile, status
 
+from wurzel.api.auth.permissions import RequireAnyRole
+from wurzel.api.errors import APIError
+from wurzel.api.package_manager.installer import get_project_package_dir
+from wurzel.api.package_manager.settings import PackageManagerSettings
 from wurzel.api.routes.files.data import DeleteFileResponse, FileInfo, FileUploadResponse, FileValidationError
 from wurzel.api.services.file_service import FileUploadService
 from wurzel.storage.file_storage import FileMetadata
@@ -34,8 +40,19 @@ def get_file_upload_service() -> FileUploadService:
 
     For now, this is a placeholder that will be configured by the main app.
     """
-    # This will be injected by the main application
-    raise NotImplementedError("FileUploadService must be configured in the main app")
+    raise APIError(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        title="File upload service unavailable",
+        detail="FileUploadService must be configured in the main app.",
+    )
+
+
+def _get_project_package_path(project_id: uuid.UUID):
+    try:
+        settings = PackageManagerSettings()
+    except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+        return None
+    return get_project_package_dir(project_id, settings.PACKAGES_DIR)
 
 
 @router.post(
@@ -47,11 +64,12 @@ def get_file_upload_service() -> FileUploadService:
     "Files are validated against the step's accepted file types.",
 )
 async def upload_files(
-    project_id: str,
+    project_id: uuid.UUID,
     step_id: str,
     step_path: str,
     files: list[UploadFile] = File(...),
     file_service: FileUploadService = Depends(get_file_upload_service),
+    _access: RequireAnyRole = None,  # type: ignore[assignment]
 ) -> FileUploadResponse:
     """Upload files for a step.
 
@@ -78,10 +96,11 @@ async def upload_files(
 
     # Validate and upload
     uploaded_files, errors = file_service.validate_and_upload(
-        project_id=project_id,
+        project_id=str(project_id),
         step_id=step_id,
         step_path=step_path,
         files=file_tuples,
+        project_package_dir=_get_project_package_path(project_id),
     )
 
     return FileUploadResponse(
@@ -98,12 +117,13 @@ async def upload_files(
     description="List all files that have been uploaded for a specific step.",
 )
 async def list_files(
-    project_id: str,
+    project_id: uuid.UUID,
     step_id: str,
     file_service: FileUploadService = Depends(get_file_upload_service),
+    _access: RequireAnyRole = None,  # type: ignore[assignment]
 ) -> list[FileInfo]:
     """List all uploaded files for a step."""
-    return [_to_file_info(m) for m in file_service.list_files(project_id, step_id)]
+    return [_to_file_info(m) for m in file_service.list_files(str(project_id), step_id)]
 
 
 @router.delete(
@@ -114,11 +134,12 @@ async def list_files(
     description="Delete a file that was previously uploaded for a step.",
 )
 async def delete_file(
-    project_id: str,
+    project_id: uuid.UUID,
     step_id: str,
     file_id: str,
     file_service: FileUploadService = Depends(get_file_upload_service),
+    _access: RequireAnyRole = None,  # type: ignore[assignment]
 ) -> DeleteFileResponse:
     """Delete an uploaded file."""
-    deleted = file_service.delete_file(project_id, step_id, file_id)
+    deleted = file_service.delete_file(str(project_id), step_id, file_id)
     return DeleteFileResponse(deleted=deleted, file_id=file_id)

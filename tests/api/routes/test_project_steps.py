@@ -142,6 +142,35 @@ class TestDiscoverStepsForProject:
 
         assert result.total == 0
 
+    def test_project_steps_use_importable_module_paths(self, tmp_path):
+        from wurzel.api.routes.steps.data import StepListResponse
+        from wurzel.api.routes.steps.service import StepListCache, discover_steps_for_project, fetch_step_info_for_project
+
+        package_dir = tmp_path / "mypkg"
+        package_dir.mkdir()
+        (package_dir / "__init__.py").write_text("", encoding="utf-8")
+        (package_dir / "steps.py").write_text(
+            "from wurzel.core import TypedStep\n"
+            "\n"
+            "class ProjectOnlyStep(TypedStep[None, None, str]):\n"
+            "    def run(self, inpt=None) -> str:\n"
+            "        return 'ok'\n",
+            encoding="utf-8",
+        )
+
+        cache = StepListCache()
+        with patch(
+            "wurzel.api.routes.steps.service.discover_steps",
+            return_value=StepListResponse(steps=[], total=0, package="*"),
+        ):
+            result = discover_steps_for_project(str(uuid.uuid4()), tmp_path, cache)
+
+        step = next(summary for summary in result.steps if summary.name == "ProjectOnlyStep")
+        assert step.class_path == "mypkg.steps.ProjectOnlyStep"
+
+        info = fetch_step_info_for_project(step.class_path, tmp_path)
+        assert info.class_path == step.class_path
+
 
 class TestProjectStepsRouterHelpers:
     def test_get_pkg_settings_constructs_settings(self):

@@ -13,7 +13,7 @@ import pytest
 
 jwt = pytest.importorskip("jwt", reason="wurzel[fastapi] not installed")
 
-from wurzel.api.auth.jwt import _decode_token  # noqa: E402
+from wurzel.api.auth.jwt import _decode_token, get_jwks_cache  # noqa: E402
 from wurzel.api.auth.settings import AuthSettings  # noqa: E402
 
 _SECRET = b"0123456789abcdef0123456789abcdef"  # pragma: allowlist secret
@@ -87,3 +87,7 @@ def test_decode_token_hs256_rejects_expired_token():
 
     with pytest.raises(jwt.exceptions.ExpiredSignatureError):
         _decode_token(_token(payload, _SECRET), _auth_settings(), _jwks_for_secret(_SECRET))
+
+
+def test_get_jwks_cache_returns_singleton():
+    assert get_jwks_cache() is get_jwks_cache()
