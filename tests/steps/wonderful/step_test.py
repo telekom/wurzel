@@ -78,8 +78,9 @@ class TestInit:
     def test_uses_kb_id_from_settings(self, step):
         assert step._kb_id == KB_ID
 
-    def test_sets_api_key_header(self, step):
-        assert step._session.headers["x-api-key"] == "test-api-key"
+    def test_build_session_sets_api_key_header(self, step):
+        with step._build_session() as session:
+            assert session.headers["x-api-key"] == "test-api-key"
 
 
 # ── Empty input ───────────────────────────────────────────────────────────────
@@ -254,7 +255,7 @@ class TestSkip:
         # No BASE_URL / API_KEY / KNOWLEDGEBASE_ID set.
         step = WonderfulRAGStep()
         try:
-            assert step._session is None
+            assert step._kb_id == ""
             assert requests_mock.request_history == []
         finally:
             step.finalize()
@@ -282,12 +283,28 @@ class TestSkip:
             WonderfulRAGStep()
 
 
-# ── Finalize ──────────────────────────────────────────────────────────────────
+# ── Per-worker session ────────────────────────────────────────────────────────
 
 
-class TestFinalize:
-    def test_closes_session(self, wonderful_env, mocker):
-        session_cls = mocker.patch("wurzel.steps.wonderful.step.requests.Session")
-        step = WonderfulRAGStep()
-        step.finalize()
-        session_cls.return_value.close.assert_called_once()
+class TestPerWorkerSession:
+    """Each worker must use its own requests.Session — Session is not thread-safe
+    for concurrent mutation.
+    """
+
+    def test_each_worker_creates_fresh_session(self, step, two_docs, requests_mock, mocker):
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(
+            KB_FILES,
+            [
+                {"json": kb_create_payload("file-1")},
+                {"json": kb_create_payload("file-2")},
+            ],
+        )
+        requests_mock.put(PRESIGNED)
+        requests_mock.post(KB_SYNC, json={})
+
+        spy = mocker.spy(step, "_build_session")
+        step.run(two_docs)
+
+        # 1× main thread (existing-files fetch) + 2× workers (one per doc).
+        assert spy.call_count == 3

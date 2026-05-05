@@ -48,20 +48,27 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
 
     def __init__(self) -> None:
         super().__init__()
-        self._session: requests.Session | None = None
         self._kb_id: str = ""
         if self.settings.SKIP:
             log.info("WonderfulRAGStep skipped — running in no-op (passthrough) mode")
             return
-        self._session = requests.Session()
-        self._session.headers.update({"x-api-key": self.settings.API_KEY.get_secret_value()})
         self._kb_id = self.settings.KNOWLEDGEBASE_ID
+
+    # ── Session factory ───────────────────────────────────────────────────────
+
+    def _build_session(self) -> requests.Session:
+        """Build a fresh `requests.Session`. Used per worker — `requests.Session` is
+        not safe for concurrent mutation across threads.
+        """
+        s = requests.Session()
+        s.headers.update({"x-api-key": self.settings.API_KEY.get_secret_value()})  # pylint: disable=no-member
+        return s
 
     # ── HTTP helpers ──────────────────────────────────────────────────────────
 
-    def _api_request(self, method: str, endpoint: str, payload: dict | None = None) -> dict[str, Any]:
+    def _api_request(self, session: requests.Session, method: str, endpoint: str, payload: dict | None = None) -> dict[str, Any]:
         req_headers = {"Content-Type": "application/json", "Accept": "application/json"} if payload is not None else {}
-        response = self._session.request(
+        response = session.request(
             method,
             f"{self.settings.BASE_URL}/api/v1{endpoint}",
             json=payload,
@@ -75,10 +82,10 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
 
     # ── KB file operations ────────────────────────────────────────────────────
 
-    def _fetch_existing_filenames(self) -> dict[str, str]:
+    def _fetch_existing_filenames(self, session: requests.Session) -> dict[str, str]:
         """Returns {filename: file_id} for all enabled files currently in the KB."""
         try:
-            result = self._api_request("GET", f"/knowledgebases/{self._kb_id}/files")
+            result = self._api_request(session, "GET", f"/knowledgebases/{self._kb_id}/files")
             files = result.get("data", result)
             if isinstance(files, list):
                 return {f["name"]: f["id"] for f in files}
@@ -86,9 +93,10 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
             log.warning(f"Could not fetch existing KB files, duplicates may occur: {e}")
         return {}
 
-    def _create_kb_file(self, filename: str) -> dict[str, Any]:
+    def _create_kb_file(self, session: requests.Session, filename: str) -> dict[str, Any]:
         """POST /kb/files — create a new file record, returns {id, url} where url is a presigned S3 URL."""
         result = self._api_request(
+            session,
             "POST",
             f"/knowledgebases/{self._kb_id}/files",
             {"filename": filename, "contentType": "text/markdown"},
@@ -106,9 +114,9 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
         )
         response.raise_for_status()
 
-    def _update_existing_file(self, file_id: str, filename: str, content: bytes) -> None:
+    def _update_existing_file(self, session: requests.Session, file_id: str, filename: str, content: bytes) -> None:
         """POST /storage/upload — overwrite S3 content of an existing file record in-place."""
-        response = self._session.request(
+        response = session.request(
             "POST",
             f"{self.settings.BASE_URL}/api/v1/storage/upload",
             files={"file": (filename, content, "text/markdown")},
@@ -119,9 +127,9 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
             log.debug(f"Response body ({response.status_code}): {response.text}")
         response.raise_for_status()
 
-    def _sync_kb_file(self, file_id: str) -> None:
+    def _sync_kb_file(self, session: requests.Session, file_id: str) -> None:
         """POST /kb/files/sync — trigger provider re-indexing for a single file."""
-        self._api_request("POST", f"/knowledgebases/{self._kb_id}/files/sync", {"file_id": file_id})
+        self._api_request(session, "POST", f"/knowledgebases/{self._kb_id}/files/sync", {"file_id": file_id})
 
     # ── Filename generation ───────────────────────────────────────────────────
 
@@ -139,26 +147,31 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
     # ── Per-document: upload + sync in one worker ─────────────────────────────
 
     def _process_doc(self, idx: int, doc: MarkdownDataContract, existing: dict[str, str]) -> bool:
-        """Upload (or update) a single document and sync it. Returns True on success."""
+        """Upload (or update) a single document and sync it. Returns True on success.
+
+        Each worker uses its own `requests.Session` because `Session` is not
+        thread-safe for concurrent use.
+        """
         filename = self._generate_filename(doc, idx)
         existing_id = existing.get(filename)
-        try:
-            if existing_id:
-                self._update_existing_file(existing_id, filename, doc.md.encode("utf-8"))
-                file_id = existing_id
-                log.info(f"Updating: {filename}")
-            else:
-                kb_file = self._create_kb_file(filename)
-                self._upload_to_presigned_url(kb_file["url"], doc.md.encode("utf-8"))
-                file_id = kb_file["id"]
-                log.info(f"Uploading: {filename}")
+        with self._build_session() as session:
+            try:
+                if existing_id:
+                    self._update_existing_file(session, existing_id, filename, doc.md.encode("utf-8"))
+                    file_id = existing_id
+                    log.info(f"Updating: {filename}")
+                else:
+                    kb_file = self._create_kb_file(session, filename)
+                    self._upload_to_presigned_url(kb_file["url"], doc.md.encode("utf-8"))
+                    file_id = kb_file["id"]
+                    log.info(f"Uploading: {filename}")
 
-            self._sync_kb_file(file_id)
-            return True
+                self._sync_kb_file(session, file_id)
+                return True
 
-        except (requests.exceptions.RequestException, KeyError) as e:
-            log.error(f"Failed to process {filename}: {e}")
-            return False
+            except (requests.exceptions.RequestException, KeyError) as e:
+                log.error(f"Failed to process {filename}: {e}")
+                return False
 
     # ── Main run ──────────────────────────────────────────────────────────────
 
@@ -172,7 +185,8 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
             return []
 
         log.info(f"Uploading {len(inpt)} documents to Wonderful KB {self._kb_id}")
-        existing = self._fetch_existing_filenames()
+        with self._build_session() as session:
+            existing = self._fetch_existing_filenames(session)
 
         with ThreadPoolExecutor(max_workers=self.settings.MAX_WORKERS) as executor:
             futures = [executor.submit(self._process_doc, idx, doc, existing) for idx, doc in enumerate(inpt)]
@@ -185,8 +199,3 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
             raise StepFailed(f"All {failed} documents failed to process")
 
         return inpt
-
-    def finalize(self) -> None:
-        if self._session is not None:
-            self._session.close()
-        super().finalize()
