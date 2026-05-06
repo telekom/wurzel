@@ -4,7 +4,9 @@
 
 """Settings for the Decagon Knowledge Base connector step."""
 
-from pydantic import Field, SecretStr
+from typing import Self
+
+from pydantic import Field, SecretStr, model_validator
 
 from wurzel.core.settings import Settings
 
@@ -14,24 +16,27 @@ class DecagonSettings(Settings):
 
     Attributes:
         API_URL: Base URL for the Decagon API.
-        API_KEY: API key for authentication (required).
+        API_KEY: API key for authentication (required when PUSH_ENABLED is True).
         SOURCE: Source identifier for articles - all created articles will
             have this source value.
         TIMEOUT: Request timeout in seconds.
+        PUSH_ENABLED: When False, skip pushing to Decagon and return the input data unchanged.
 
     Environment Variables (with DECAGONKBSTEP prefix):
         DECAGONKBSTEP__API_URL: Decagon API base URL
-        DECAGONKBSTEP__API_KEY: API key for authentication (required)
+        DECAGONKBSTEP__API_KEY: API key for authentication
         DECAGONKBSTEP__SOURCE: Source identifier for articles
         DECAGONKBSTEP__TIMEOUT: Request timeout in seconds
+        DECAGONKBSTEP__PUSH_ENABLED: Whether to push documents to Decagon (default: True)
     """
 
     API_URL: str = Field(
         default="https://eu.api.decagon.ai",
         description="Base URL for the Decagon API",
     )
-    API_KEY: SecretStr = Field(
-        description="API key for authentication with Decagon",
+    API_KEY: SecretStr | None = Field(
+        default=None,
+        description="API key for authentication with Decagon (required when PUSH_ENABLED is True)",
     )
     SOURCE: str = Field(
         default="Wurzel",
@@ -42,3 +47,14 @@ class DecagonSettings(Settings):
         gt=0,
         description="Request timeout in seconds",
     )
+    PUSH_ENABLED: bool = Field(
+        default=True,
+        description="When False, skip pushing to Decagon and return the input data unchanged",
+    )
+
+    @model_validator(mode="after")
+    def validate_api_key_when_push_enabled(self) -> Self:
+        """Ensure API_KEY is provided when PUSH_ENABLED is True."""
+        if self.PUSH_ENABLED and self.API_KEY is None:
+            raise ValueError("API_KEY is required when PUSH_ENABLED is True")
+        return self
