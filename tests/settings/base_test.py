@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
-from typing import Literal, Union
+from typing import Literal
 
 import pytest
 from pydantic import Field
@@ -194,7 +194,7 @@ def test_nested_twice_mapping_no_defaults(env_values, validator, mapping_default
     assert validator(p)
 
 
-def url_param(scheme: Union[Literal["http"], Literal["https"]], host: str, port: int, path: str) -> pytest.param:
+def url_param(scheme: Literal["http"] | Literal["https"], host: str, port: int, path: str) -> pytest.param:
     tpl = (scheme, host, port, path)
     return pytest.param(*tpl, id=f"{scheme}://{host}:{port}/{path}")
 
@@ -206,8 +206,8 @@ def url_param(scheme: Union[Literal["http"], Literal["https"]], host: str, port:
 )
 def test_url_parsing(
     env,
-    url_class: type[Union[pyd_c_Url, str]],
-    scheme: Union[Literal["http"], Literal["https"]],
+    url_class: type[pyd_c_Url | str],
+    scheme: Literal["http"] | Literal["https"],
     host: str,
     port: int,
     path: str,

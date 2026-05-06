@@ -7,13 +7,13 @@
 import json
 import os
 import time
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from contextvars import copy_context
 from logging import getLogger
 from pathlib import Path
 from types import NoneType
-from typing import Any, Callable, Optional, Self, TypeAlias, Union
+from typing import Any, Self, TypeAlias
 
 import pandas
 import pandera.typing as patyp
@@ -44,7 +44,7 @@ from wurzel.utils.logging import setup_uncaught_exception_logging
 log = getLogger(__name__)
 
 
-StepReturnType: TypeAlias = Union[pandas.DataFrame, PydanticModel, list[PydanticModel]]
+StepReturnType: TypeAlias = pandas.DataFrame | PydanticModel | list[PydanticModel]
 
 
 class StepReport(pydantic.BaseModel):
@@ -172,7 +172,7 @@ class BaseStepExecutor:
         self,
         step: TypedStep,
         hist: History,
-        obj: Union[PanderaDataFrameModel, PydanticModel, list[PydanticModel]],
+        obj: PanderaDataFrameModel | PydanticModel | list[PydanticModel],
         path: PathToFolderWithBaseModels,
     ) -> Path:
         """Store step result.
@@ -213,23 +213,12 @@ class BaseStepExecutor:
     def _load_data(
         self,
         step: TypedStep,
-        inputs: set[
-            Union[
-                PydanticModel,
-                patyp.DataFrame[PanderaDataFrameModel],
-                PathToFolderWithBaseModels,
-            ]
-        ],
+        inputs: set[PydanticModel | patyp.DataFrame[PanderaDataFrameModel] | PathToFolderWithBaseModels],
         output_path: Path,
     ) -> Generator[
         tuple[
             tuple[
-                Union[
-                    PydanticModel,
-                    patyp.DataFrame[PanderaDataFrameModel],
-                    list[PydanticModel],
-                    None,
-                ],
+                PydanticModel | patyp.DataFrame[PanderaDataFrameModel] | list[PydanticModel] | None,
                 History,
             ],
             float,
@@ -272,7 +261,7 @@ class BaseStepExecutor:
         self,
         step_cls: type[TypedStep],
         inputs: set[PathToFolderWithBaseModels],
-        output_path: Optional[PathToFolderWithBaseModels],
+        output_path: PathToFolderWithBaseModels | None,
     ):
         """Exceute specified step."""
         step = step_cls()
@@ -331,8 +320,8 @@ class BaseStepExecutor:
     def execute_step(
         self,
         step_cls: type[TypedStep],
-        inputs: Optional[set[PathToFolderWithBaseModels]],
-        output_dir: Optional[PathToFolderWithBaseModels],
+        inputs: set[PathToFolderWithBaseModels] | None,
+        output_dir: PathToFolderWithBaseModels | None,
     ) -> list[tuple[Any, StepReport]]:
         """Execute a step.
 
@@ -363,7 +352,7 @@ class BaseStepExecutor:
             correlation_id.set(None)
 
     def __call__(
-        self, step_cls: type[TypedStep], inputs: Optional[set[PathToFolderWithBaseModels]], output_dir: Optional[PathToFolderWithBaseModels]
+        self, step_cls: type[TypedStep], inputs: set[PathToFolderWithBaseModels] | None, output_dir: PathToFolderWithBaseModels | None
     ):
         return self.execute_step(step_cls, inputs, output_dir)
 

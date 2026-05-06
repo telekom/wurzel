@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import json
-from typing import Optional
 
 import pytest
 
@@ -17,7 +16,7 @@ class MySettings(Settings):
     A: int
     B: str
     C: list[int]
-    D: Optional[int] = None
+    D: int | None = None
 
 
 class MyResult(PydanticModel):
