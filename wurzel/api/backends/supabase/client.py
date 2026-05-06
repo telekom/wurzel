@@ -14,37 +14,51 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from functools import lru_cache
 from typing import Any
+
+from fastapi import Depends
 
 from wurzel.api.backends.supabase.settings import SupabaseSettings
 
 logger = logging.getLogger(__name__)
 
 
-# ── Settings singleton ────────────────────────────────────────────────────────
+# ── Settings (FastAPI dependency) ────────────────────────────────────────────
 
 
-@lru_cache(maxsize=1)
-def _get_settings() -> SupabaseSettings:
+def get_supabase_settings() -> SupabaseSettings:
+    """FastAPI dependency — returns SupabaseSettings from environment.
+
+    Cached by FastAPI's dependency injection system, so it's only created once
+    per app lifetime.
+
+    Can be overridden in tests via ``app.dependency_overrides[get_supabase_settings]``.
+    """
     return SupabaseSettings()
 
 
-# ── Async client singleton ────────────────────────────────────────────────────
+# ── Async client ───────────────────────────────────────────────────────────
 
 _async_client: Any = None  # pylint: disable=invalid-name
 _async_client_loop_id: int | None = None  # pylint: disable=invalid-name
 _async_client_lock = asyncio.Lock()  # pylint: disable=invalid-name
 
 
-async def _get_async_client():
-    """Return (or lazily create) the module-level async Supabase client.
+async def _get_async_client(settings: SupabaseSettings | None = None) -> Any:
+    """Return (or lazily create) the async Supabase client.
+
+    Args:
+        settings: Supabase settings. If None, loaded from environment.
 
     Uses asyncio.Lock to prevent race conditions where multiple concurrent
     requests could both see the client as None and attempt to create it.
     """
     global _async_client  # noqa: PLW0603  # pylint: disable=global-statement
     global _async_client_loop_id  # noqa: PLW0603  # pylint: disable=global-statement
+
+    # Lazy load settings if not provided
+    if settings is None:
+        settings = get_supabase_settings()
 
     current_loop_id = id(asyncio.get_running_loop())
     if _async_client is not None and _async_client_loop_id != current_loop_id:
@@ -60,7 +74,6 @@ async def _get_async_client():
             except ImportError as exc:
                 raise ImportError("supabase is not installed. Run: pip install wurzel[supabase]") from exc
 
-            settings = _get_settings()
             _async_client = await acreate_client(
                 settings.URL,
                 settings.SERVICE_KEY.get_secret_value(),  # pylint: disable=no-member
@@ -70,9 +83,9 @@ async def _get_async_client():
     return _async_client
 
 
-async def get_db():
-    """FastAPI dependency: yield the async Supabase client."""
-    return await _get_async_client()
+async def get_db(settings: SupabaseSettings = Depends(get_supabase_settings)) -> Any:
+    """FastAPI dependency — returns the async Supabase client."""
+    return await _get_async_client(settings)
 
 
 # ── Role resolution (used by permissions.py) ─────────────────────────────────
