@@ -6,6 +6,7 @@
 
 # pylint: disable=duplicate-code
 import itertools
+import re
 from hashlib import sha256
 from logging import getLogger
 
@@ -18,6 +19,7 @@ from wurzel.steps.data import EmbeddingResult
 from wurzel.utils import HAS_TLSH
 
 from .data import QdrantResult
+from .retirement import CollectionRetirer
 from .settings import QdrantSettings
 
 log = getLogger(__name__)
@@ -213,16 +215,8 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             field_schema=models.TextIndexParams(type=models.TextIndexType.TEXT, tokenizer=models.TokenizerType.WORD),
         )
 
-    def _retire_collections(self):
-        collections_versioned: dict[int, str] = self._get_collection_versions()
-        to_delete = list(collections_versioned.keys())[: -self.settings.COLLECTION_HISTORY_LEN]
-        if not to_delete:
-            return
-
-        for col_v in to_delete:
-            col = collections_versioned[col_v]
-            log.info(f"deleting {col} collection caused by retirement")
-            self.client.delete_collection(col)
+    def _retire_collections(self) -> None:
+        CollectionRetirer(self.client, self.settings).retire(self._get_collection_versions())
 
     def _update_alias(self):
         success = self.client.update_collection_aliases(
@@ -247,12 +241,16 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         return f"{self.settings.COLLECTION}_v{previous_version + 1}"
 
     def _get_collection_versions(self) -> dict[int, str]:
+        version_pattern = re.compile(rf"^{re.escape(self.settings.COLLECTION)}_v(\d+)$")
         previous_collections = self.client.get_collections().collections
-        versioned_collections = {
-            int(previous.name.split("_v")[-1]): previous.name
-            for previous in previous_collections
-            if f"{self.settings.COLLECTION}_v" in previous.name
-        }
+        versioned_collections = {}
+
+        for collection in previous_collections:
+            match = version_pattern.match(collection.name)
+            if match:
+                version = int(match.group(1))
+                versioned_collections[version] = collection.name
+
         return dict(sorted(versioned_collections.items()))
 
     @staticmethod
