@@ -4,6 +4,7 @@
 
 """Tests for wurzel.api.package_manager.background."""
 
+import asyncio
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -28,7 +29,7 @@ class TestPerformInstall:
         ):
             # Simulate the async function claiming failure (returns without marking installed)
             mock_async.return_value = None
-            perform_install(package_id, settings)
+            asyncio.run(perform_install(package_id, settings))
             mock_async.assert_called_once_with(package_id, settings)
 
     def test_perform_install_swallows_unhandled_exception(self, tmp_path):
@@ -43,7 +44,7 @@ class TestPerformInstall:
             new_callable=AsyncMock,
             side_effect=RuntimeError("boom"),
         ):
-            perform_install(package_id, settings)
+            asyncio.run(perform_install(package_id, settings))
 
     def test_marks_failed_on_install_error(self, tmp_path):
         """Runtime errors from install_package are caught and persisted as 'failed'."""
@@ -82,6 +83,43 @@ class TestPerformInstall:
             asyncio.run(_perform_install_async(package_id, settings))
             mock_failed.assert_called_once()
             assert "uv install failed" in mock_failed.call_args[0][1]
+
+    def test_marks_failed_when_uv_executable_missing(self, tmp_path):
+        """Unexpected installer exceptions (e.g., FileNotFoundError) are persisted as failed."""
+        import asyncio
+
+        from wurzel.api.package_manager.background import _perform_install_async
+
+        settings = self._make_settings(tmp_path)
+        package_id = uuid.uuid4()
+
+        pkg_row = {
+            "id": str(package_id),
+            "project_id": str(uuid.uuid4()),
+            "package_spec": "mypkg==1.0.0",
+            "index_secret_name": None,
+        }
+
+        mock_db_client = MagicMock()
+        mock_result = MagicMock()
+        mock_result.data = pkg_row
+        mock_db_client.table.return_value.select.return_value.eq.return_value.maybe_single.return_value.execute = AsyncMock(
+            return_value=mock_result
+        )
+
+        with (
+            patch("wurzel.api.package_manager.db.db_claim_pending_package", new_callable=AsyncMock, return_value=True),
+            patch("wurzel.api.package_manager.db.db_mark_installed", new_callable=AsyncMock),
+            patch("wurzel.api.package_manager.db.db_mark_failed", new_callable=AsyncMock) as mock_failed,
+            patch("wurzel.api.backends.supabase.client._get_async_client", new_callable=AsyncMock, return_value=mock_db_client),
+            patch(
+                "wurzel.api.package_manager.installer.install_package",
+                side_effect=FileNotFoundError("[Errno 2] No such file or directory: 'uv'"),
+            ),
+        ):
+            asyncio.run(_perform_install_async(package_id, settings))
+            mock_failed.assert_called_once()
+            assert "Package install failed unexpectedly" in mock_failed.call_args[0][1]
 
     def test_returns_when_not_claimed(self, tmp_path):
         from wurzel.api.package_manager.background import _perform_install_async
@@ -318,7 +356,7 @@ class TestRecoverAndReinstallOnStartup:
             patch("wurzel.api.package_manager.db.db_reset_stale_installing", new_callable=AsyncMock, return_value=0),
             patch("wurzel.api.package_manager.db.db_get_installed_packages_with_locks", new_callable=AsyncMock, return_value=[]),
             patch("wurzel.api.package_manager.db.db_get_pending_packages", new_callable=AsyncMock, return_value=[{"id": pending_id}]),
-            patch("wurzel.api.package_manager.background.perform_install") as mock_perform,
+            patch("wurzel.api.package_manager.background.perform_install", new_callable=AsyncMock) as mock_perform,
         ):
             recover_and_reinstall_on_startup(settings)
 

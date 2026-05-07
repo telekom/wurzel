@@ -29,11 +29,14 @@ def test_search_api_key_error_paths(client, api_key_headers):
     assert search_with_key.status_code == 501
 
 
-def test_steps_require_jwt_and_list_for_authenticated_user(client, role_headers):
-    no_auth = client.get("/v1/steps")
+def test_steps_require_jwt_and_list_for_authenticated_user(client, role_headers, project_context):
+    project_id = project_context["project_id"]
+    endpoint = f"/v1/projects/{project_id}/steps"
+
+    no_auth = client.get(endpoint)
     assert no_auth.status_code == 401
 
-    authenticated = client.get("/v1/steps", headers=role_headers["admin"])
+    authenticated = client.get(endpoint, headers=role_headers["admin"])
     assert authenticated.status_code == 200
     body = authenticated.json()
     assert "steps" in body
@@ -49,4 +52,4 @@ def test_files_endpoint_currently_returns_server_error_without_wiring(client, ro
         files={"files": ("test.md", io.BytesIO(b"# hello"), "text/markdown")},
         headers=role_headers[role],
     )
-    assert response.status_code == 500
+    assert response.status_code == 503

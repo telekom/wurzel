@@ -73,6 +73,11 @@ class TestAddPackage:
         try:
             with (
                 patch("wurzel.api.routes.packages.router.db_add_project_package", new_callable=AsyncMock, return_value=_PACKAGE_ROW),
+                patch(
+                    "wurzel.api.routes.packages.router.db_get_active_project_package",
+                    new_callable=AsyncMock,
+                    return_value=None,
+                ),
                 patch("wurzel.api.package_manager.background.perform_install"),
                 patch("wurzel.api.routes.packages.router._get_pkg_settings"),
             ):
@@ -120,6 +125,50 @@ class TestAddPackage:
                 json={"package_spec": "pkg; rm -rf /"},
             )
             assert resp.status_code == 422
+        finally:
+            client.__exit__(None, None, None)
+            patcher.stop()
+
+    def test_package_manager_not_configured_returns_503(self):
+        from pydantic import ValidationError
+
+        client, patcher = _make_client(_ADMIN_USER, ProjectRole.ADMIN)
+        try:
+            with patch(
+                "wurzel.api.routes.packages.router._get_pkg_settings",
+                side_effect=ValidationError.from_exception_data("PackageManagerSettings", []),
+            ):
+                resp = client.post(
+                    f"/v1/projects/{_PROJECT_ID}/packages",
+                    json={"package_spec": "mypkg==1.0.0"},
+                )
+            assert resp.status_code == 503
+        finally:
+            client.__exit__(None, None, None)
+            patcher.stop()
+
+    def test_duplicate_active_package_returns_409(self):
+        existing_row = {
+            **_PACKAGE_ROW,
+            "status": "installing",
+        }
+        client, patcher = _make_client(_ADMIN_USER, ProjectRole.ADMIN)
+        try:
+            with (
+                patch("wurzel.api.routes.packages.router._get_pkg_settings"),
+                patch(
+                    "wurzel.api.routes.packages.router.db_get_active_project_package",
+                    new_callable=AsyncMock,
+                    return_value=existing_row,
+                ),
+                patch("wurzel.api.routes.packages.router.db_add_project_package", new_callable=AsyncMock) as add_mock,
+            ):
+                resp = client.post(
+                    f"/v1/projects/{_PROJECT_ID}/packages",
+                    json={"package_spec": "mypkg==1.0.0"},
+                )
+            assert resp.status_code == 409
+            add_mock.assert_not_awaited()
         finally:
             client.__exit__(None, None, None)
             patcher.stop()

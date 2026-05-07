@@ -24,11 +24,12 @@ from fastapi import status as http_status
 
 from wurzel.api.auth.jwt import CurrentUser
 from wurzel.api.auth.permissions import RequireAdmin, RequireAnyRole, RequireSecretEditor
-from wurzel.api.errors import APIError
+from wurzel.api.errors import RESPONSE_401, RESPONSE_403, RESPONSE_404, RESPONSE_409, APIError
 from wurzel.api.package_manager.db import (
     db_add_project_package,
     db_delete_project_package,
     db_delete_project_secret,
+    db_get_active_project_package,
     db_list_project_packages,
     db_list_project_secrets,
     db_upsert_project_secret,
@@ -79,6 +80,7 @@ def _row_to_secret_meta(row: dict) -> SecretMetaResponse:
     "",
     response_model=PackageResponse,
     status_code=http_status.HTTP_202_ACCEPTED,
+    responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404, **RESPONSE_409},
 )
 async def add_package(
     project_id: uuid.UUID,
@@ -102,6 +104,23 @@ async def add_package(
             detail=str(exc),
         ) from exc
 
+    try:
+        settings = _get_pkg_settings()
+    except Exception as exc:  # pylint: disable=broad-exception-caught
+        raise APIError(
+            status_code=http_status.HTTP_503_SERVICE_UNAVAILABLE,
+            title="Package manager not configured",
+            detail="PACKAGE_MANAGER__PACKAGES_DIR is not set. Configure the package manager before installing packages.",
+        ) from exc
+
+    existing = await db_get_active_project_package(project_id, body.package_spec, body.index_secret_name)
+    if existing is not None:
+        raise APIError(
+            status_code=http_status.HTTP_409_CONFLICT,
+            title="Package already exists",
+            detail=(f"Package '{body.package_spec}' already exists for project {project_id} with status '{existing.get('status')}'."),
+        )
+
     row = await db_add_project_package(
         project_id,
         body.package_spec,
@@ -110,7 +129,6 @@ async def add_package(
     )
     package_id = uuid.UUID(row["id"])
 
-    settings = _get_pkg_settings()
     from wurzel.api.package_manager.background import perform_install  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
 
     background_tasks.add_task(perform_install, package_id, settings)
@@ -118,7 +136,7 @@ async def add_package(
     return _row_to_package(row)
 
 
-@router.get("", response_model=list[PackageResponse])
+@router.get("", response_model=list[PackageResponse], responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404})
 async def list_packages(
     project_id: uuid.UUID,
     _access: RequireAnyRole,
@@ -128,7 +146,7 @@ async def list_packages(
     return [_row_to_package(r) for r in rows]
 
 
-@router.delete("/{package_id}", status_code=http_status.HTTP_204_NO_CONTENT)
+@router.delete("/{package_id}", status_code=http_status.HTTP_204_NO_CONTENT, responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404})
 async def delete_package(
     project_id: uuid.UUID,
     package_id: uuid.UUID = Path(...),
@@ -150,6 +168,7 @@ async def delete_package(
     "/secrets/{secret_name}",
     response_model=SecretMetaResponse,
     status_code=http_status.HTTP_200_OK,
+    responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404},
 )
 async def upsert_secret(
     project_id: uuid.UUID,
@@ -167,7 +186,9 @@ async def upsert_secret(
     return _row_to_secret_meta(row)
 
 
-@router.delete("/secrets/{secret_name}", status_code=http_status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/secrets/{secret_name}", status_code=http_status.HTTP_204_NO_CONTENT, responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404}
+)
 async def delete_secret(
     project_id: uuid.UUID,
     secret_name: str = Path(...),
@@ -177,7 +198,7 @@ async def delete_secret(
     await db_delete_project_secret(project_id, secret_name)
 
 
-@router.get("/secrets", response_model=list[SecretMetaResponse])
+@router.get("/secrets", response_model=list[SecretMetaResponse], responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404})
 async def list_secrets(
     project_id: uuid.UUID,
     _access: RequireSecretEditor = None,  # type: ignore[assignment]

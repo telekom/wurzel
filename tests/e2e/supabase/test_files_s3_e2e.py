@@ -26,7 +26,7 @@ def test_s3_upload_list_read_delete_roundtrip(
     endpoint = f"/v1/projects/{project_id}/steps/{step_id}/files"
 
     with patch(
-        "wurzel.api.services.file_service.fetch_step_info",
+        "wurzel.api.services.file_service.fetch_step_info_for_project",
         return_value=step_info_factory(extensions=[".md"], mime_types=["text/markdown"]),
     ):
         upload = s3_client.post(
@@ -71,7 +71,7 @@ def test_s3_upload_validation_and_partial_success(
     endpoint = f"/v1/projects/{project_id}/steps/{step_id}/files"
 
     with patch(
-        "wurzel.api.services.file_service.fetch_step_info",
+        "wurzel.api.services.file_service.fetch_step_info_for_project",
         return_value=step_info_factory(extensions=[".md"], mime_types=["text/markdown"]),
     ):
         upload = s3_client.post(
