@@ -3,7 +3,6 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from types import NoneType
-from typing import Union
 
 from pydantic import BaseModel
 from pydantic import create_model as py_create_model
@@ -19,7 +18,7 @@ def WZ(typ: type[TypedStep]):
 
 
 def create_model(
-    fields: Union[list[Union[TypedStep, type[TypedStep]]], TypedStep],
+    fields: list[TypedStep | type[TypedStep]] | TypedStep,
     allow_extra_fields=False,
 ) -> type[SettingsBase]:
     """Takes all fields.setting_class and creates a pydantic_settings Model.
@@ -45,7 +44,7 @@ def create_model(
     """
 
     def clean(
-        flds: Union[list[Union[TypedStep, type[TypedStep]]], TypedStep],
+        flds: list[TypedStep | type[TypedStep]] | TypedStep,
     ) -> list[TypedStep]:
         if isinstance(flds, TypedStep):
             return list(flds.traverse())

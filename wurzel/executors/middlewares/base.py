@@ -26,8 +26,9 @@ Example:
 """
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from logging import getLogger
-from typing import Any, Callable, Optional
+from typing import Any
 
 from wurzel.core.typed_step import TypedStep
 from wurzel.path import PathToFolderWithBaseModels
@@ -36,7 +37,7 @@ log = getLogger(__name__)
 
 
 ExecuteStepCallable = Callable[
-    [type[TypedStep], Optional[set[PathToFolderWithBaseModels]], Optional[PathToFolderWithBaseModels]],
+    [type[TypedStep], set[PathToFolderWithBaseModels] | None, PathToFolderWithBaseModels | None],
     list[tuple[Any, Any]],
 ]
 
@@ -54,15 +55,15 @@ class BaseMiddleware(ABC):
 
     def __init__(self):
         """Initialize the middleware."""
-        self.next_middleware: Optional[BaseMiddleware] = None
+        self.next_middleware: BaseMiddleware | None = None
 
     @abstractmethod
     def __call__(
         self,
         call_next: ExecuteStepCallable,
         step_cls: type[TypedStep],
-        inputs: Optional[set[PathToFolderWithBaseModels]],
-        output_dir: Optional[PathToFolderWithBaseModels],
+        inputs: set[PathToFolderWithBaseModels] | None,
+        output_dir: PathToFolderWithBaseModels | None,
     ) -> list[tuple[Any, Any]]:
         """Execute the middleware logic and call the next middleware or executor.
 
@@ -94,7 +95,7 @@ class BaseMiddleware(ABC):
 class MiddlewareChain:
     """Manages a chain of middlewares and executes them in order."""
 
-    def __init__(self, middlewares: Optional[list[BaseMiddleware]] = None):
+    def __init__(self, middlewares: list[BaseMiddleware] | None = None):
         """Initialize the middleware chain.
 
         Args:
@@ -149,8 +150,8 @@ class MiddlewareChain:
 
         def wrapped(
             step_cls: type[TypedStep],
-            inputs: Optional[set[PathToFolderWithBaseModels]],
-            output_dir: Optional[PathToFolderWithBaseModels],
+            inputs: set[PathToFolderWithBaseModels] | None,
+            output_dir: PathToFolderWithBaseModels | None,
         ) -> list[tuple[Any, Any]]:
             return middleware(call_next, step_cls, inputs, output_dir)
 

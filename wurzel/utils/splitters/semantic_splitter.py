@@ -7,7 +7,7 @@
 import re
 from hashlib import sha256
 from logging import getLogger
-from typing import Optional, TypedDict
+from typing import TypedDict
 
 import mdformat
 from mistletoe import Document as MisDocument
@@ -273,7 +273,7 @@ class SemanticSplitter:
             new_doc.children += children
         return new_doc
 
-    def _find_highest_level(self, children: list[DocumentNode], min_level: int = 0) -> tuple[int, Optional[Token], Optional[DocumentNode]]:
+    def _find_highest_level(self, children: list[DocumentNode], min_level: int = 0) -> tuple[int, Token | None, DocumentNode | None]:
         """Among a list of children nodes find the one with the highest level.
 
         Return a tuple of that level, level node type and that child.
@@ -287,8 +287,8 @@ class SemanticSplitter:
             return False
 
         highest_level: int = LEVEL_UNDEFINED
-        highest_type: Optional[type[Token]] = None
-        highest_element: Optional[DocumentNode] = None
+        highest_type: type[Token] | None = None
+        highest_element: DocumentNode | None = None
 
         if children is None:
             return (LEVEL_UNDEFINED, None, None)

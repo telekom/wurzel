@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from types import SimpleNamespace
-from typing import Any, Optional
+from typing import Any
 
 import pytest
 
@@ -22,7 +22,7 @@ def test_prometheus_middleware_happy_path() -> None:
     # call_next returns list of (result, report)
     report = DummyReport(results=1, inputs=2, time_to_save=0.1, time_to_load=0.2, time_to_execute=0.3)
 
-    def call_next(step_cls: type, inputs: Optional[set], output_dir: Optional[Any]):
+    def call_next(step_cls: type, inputs: set | None, output_dir: Any | None):
         return [(None, report)]
 
     m = PrometheusMiddleware()
@@ -31,7 +31,7 @@ def test_prometheus_middleware_happy_path() -> None:
 
 
 def test_prometheus_middleware_exception_path() -> None:
-    def call_next(step_cls: type, inputs: Optional[set], output_dir: Optional[Any]):
+    def call_next(step_cls: type, inputs: set | None, output_dir: Any | None):
         raise RuntimeError("boom")
 
     m = PrometheusMiddleware()
@@ -50,7 +50,7 @@ def test_prometheus_middleware_uses_run_id_from_environment(monkeypatch) -> None
 
     report = DummyReport(results=1, inputs=2, time_to_save=0.1, time_to_load=0.2, time_to_execute=0.3)
 
-    def call_next(step_cls: type, inputs: Optional[set], output_dir: Optional[Any]):
+    def call_next(step_cls: type, inputs: set | None, output_dir: Any | None):
         return [(None, report)]
 
     m = PrometheusMiddleware()
@@ -68,7 +68,7 @@ def test_prometheus_middleware_run_id_defaults_to_unknown(monkeypatch) -> None:
 
     report = DummyReport(results=1, inputs=2, time_to_save=0.1, time_to_load=0.2, time_to_execute=0.3)
 
-    def call_next(step_cls: type, inputs: Optional[set], output_dir: Optional[Any]):
+    def call_next(step_cls: type, inputs: set | None, output_dir: Any | None):
         return [(None, report)]
 
     m = PrometheusMiddleware()
@@ -86,7 +86,7 @@ def test_prometheus_middleware_run_id_in_all_metrics(monkeypatch) -> None:
 
     report = DummyReport(results=5, inputs=3, time_to_save=0.5, time_to_load=0.3, time_to_execute=0.7)
 
-    def call_next(step_cls: type, inputs: Optional[set], output_dir: Optional[Any]):
+    def call_next(step_cls: type, inputs: set | None, output_dir: Any | None):
         return [(None, report)]
 
     m = PrometheusMiddleware()
@@ -108,7 +108,7 @@ def test_prometheus_middleware_run_id_on_failure(monkeypatch) -> None:
     test_run_id = "failure-test-999"
     monkeypatch.setenv("WURZEL_RUN_ID", test_run_id)
 
-    def call_next(step_cls: type, inputs: Optional[set], output_dir: Optional[Any]):
+    def call_next(step_cls: type, inputs: set | None, output_dir: Any | None):
         raise RuntimeError("intentional failure")
 
     m = PrometheusMiddleware()
@@ -125,7 +125,7 @@ def test_prometheus_middleware_different_run_ids_create_separate_metrics(monkeyp
     """Test that different run_ids create separate metric series."""
     report = DummyReport(results=1, inputs=1, time_to_save=0.1, time_to_load=0.1, time_to_execute=0.1)
 
-    def call_next(step_cls: type, inputs: Optional[set], output_dir: Optional[Any]):
+    def call_next(step_cls: type, inputs: set | None, output_dir: Any | None):
         return [(None, report)]
 
     m = PrometheusMiddleware()
@@ -152,7 +152,7 @@ def test_prometheus_middleware_run_id_with_step_name_label(monkeypatch) -> None:
 
     report = DummyReport(results=1, inputs=1, time_to_save=0.1, time_to_load=0.1, time_to_execute=0.1)
 
-    def call_next(step_cls: type, inputs: Optional[set], output_dir: Optional[Any]):
+    def call_next(step_cls: type, inputs: set | None, output_dir: Any | None):
         return [(None, report)]
 
     m = PrometheusMiddleware()
@@ -179,7 +179,7 @@ def test_prometheus_middleware_datacontract_metrics(monkeypatch) -> None:
         metrics={"md_char_len": 5.0},
     )
 
-    def call_next(step_cls: type, inputs: Optional[set], output_dir: Optional[Any]):
+    def call_next(step_cls: type, inputs: set | None, output_dir: Any | None):
         return [(None, report)]
 
     m = PrometheusMiddleware()

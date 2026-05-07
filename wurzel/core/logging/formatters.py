@@ -9,7 +9,7 @@ import os
 import sys
 from collections.abc import Mapping
 from types import TracebackType
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
 
 from asgi_correlation_id import correlation_id
 
@@ -99,11 +99,11 @@ class JsonFormatter(logging.Formatter):
 
     def __init__(
         self,
-        datefmt: Optional[str] = "%Y-%m-%dT%H:%M:%S%z",
-        reduced: Optional[list[str]] = None,
-        indent: Optional[str] = None,
+        datefmt: str | None = "%Y-%m-%dT%H:%M:%S%z",
+        reduced: list[str] | None = None,
+        indent: str | None = None,
         *,
-        defaults: Optional[Mapping[str, Any]] = None,
+        defaults: Mapping[str, Any] | None = None,
     ) -> None:
         """Create a new Formatter.
 
@@ -169,7 +169,7 @@ class JsonStringFormatter(JsonFormatter):
 
 
 def get_logging_dict_config(
-    level: Union[int, str],
+    level: int | str,
     formatter: Literal[
         "wurzel.core.logging.JsonFormatter", "wurzel.core.logging.JsonStringFormatter"
     ] = "wurzel.core.logging.JsonFormatter",

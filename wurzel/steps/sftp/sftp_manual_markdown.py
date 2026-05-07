@@ -8,7 +8,6 @@ import logging
 import stat
 import tempfile
 from pathlib import Path, PurePosixPath
-from typing import Optional
 
 import paramiko
 from pydantic import Field, SecretStr
@@ -32,7 +31,7 @@ class SFTPManualMarkdownSettings(Settings):
     PORT: int = Field(22, description="SFTP server port")
     USERNAME: str = Field(..., description="SFTP username")
     PASSWORD: SecretStr = SecretStr("")
-    PRIVATE_KEY_PATH: Optional[Path] = Field(None, description="Path to SSH private key file")
+    PRIVATE_KEY_PATH: Path | None = Field(None, description="Path to SSH private key file")
     PRIVATE_KEY_PASSPHRASE: SecretStr = SecretStr("")
     REMOTE_PATH: str = Field(..., description="Remote path on SFTP server to search for .md files")
     RECURSIVE: bool = Field(True, description="Whether to search recursively for .md files")
@@ -189,7 +188,7 @@ class SFTPManualMarkdownStep(TypedStep[SFTPManualMarkdownSettings, None, list[Ma
             return False
         return stat.S_ISDIR(attr.st_mode)
 
-    def _load_markdown_from_sftp(self, sftp: paramiko.SFTPClient, remote_file: str) -> Optional[MarkdownDataContract]:
+    def _load_markdown_from_sftp(self, sftp: paramiko.SFTPClient, remote_file: str) -> MarkdownDataContract | None:
         """Load a Markdown file from SFTP and convert to MarkdownDataContract.
 
         Args:

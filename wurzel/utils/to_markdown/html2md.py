@@ -8,7 +8,6 @@ import subprocess
 import tempfile
 import threading
 from pathlib import Path
-from typing import Optional
 
 # Related third-party imports
 import lxml.etree
@@ -52,7 +51,7 @@ class MarkdownConverterSettings(BaseModel):
     HTML2MD_BINARY_FLAGS: str = Field(default="", description="Flags for the html2md binary")
 
 
-def to_markdown(html: str, settings: Optional[MarkdownConverterSettings] = None, binary_path: Path = __HTML2MD) -> str:
+def to_markdown(html: str, settings: MarkdownConverterSettings | None = None, binary_path: Path = __HTML2MD) -> str:
     """Convert HTML XML string to Markdown using an external binary or a Python library.
 
     In acknowledge to https://github.com/suntong/html2md.
@@ -127,7 +126,7 @@ def remove_images(markdown: str) -> str:
     def _remove_image_from_document(doc: Document) -> Document:
         if not hasattr(doc, "children") or not doc.children:
             return doc
-        doc.children = [_remove_image_from_document(x) for x in doc.children if not isinstance(x, (Image, ThematicBreak))]
+        doc.children = [_remove_image_from_document(x) for x in doc.children if not isinstance(x, Image | ThematicBreak)]
         return doc
 
     doc = Document(markdown)
