@@ -7,13 +7,13 @@
 import json
 import os
 import time
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from contextvars import copy_context
 from logging import getLogger
 from pathlib import Path
 from types import NoneType
-from typing import TYPE_CHECKING, Any, Callable, Optional, Self, TypeAlias, Union
+from typing import TYPE_CHECKING, Any, Optional, Self, TypeAlias
 
 import pandas
 import pandera.typing as patyp
@@ -47,7 +47,7 @@ if TYPE_CHECKING:
 log = getLogger(__name__)
 
 
-StepReturnType: TypeAlias = Union[pandas.DataFrame, PydanticModel, list[PydanticModel]]
+StepReturnType: TypeAlias = pandas.DataFrame | PydanticModel | list[PydanticModel]
 
 
 class StepReport(pydantic.BaseModel):
@@ -72,7 +72,7 @@ def _try_sort(x: StepReturnType) -> StepReturnType:
     if isinstance(x, PydanticModel):
         return x
     try:
-        if isinstance(x, (list, set)):
+        if isinstance(x, list | set):
             return sorted(x)
         if isinstance(x, pandas.DataFrame):
             # Only sort if DataFrame has columns and is not empty
@@ -131,7 +131,7 @@ def step_env_encapsulation(step_cls: type[TypedStep]):
                     value = secret_value.get_secret_value()
                 else:
                     value = ""
-            elif isinstance(value, (list, dict, set, tuple)):
+            elif isinstance(value, list | dict | set | tuple):
                 value = json.dumps(value)
             else:
                 value = str(value)
@@ -191,7 +191,7 @@ class BaseStepExecutor:
     def __init__(
         self,
         dont_encapsulate: bool = False,
-        middlewares: Optional[Union[list[str], list["BaseMiddleware"]]] = None,
+        middlewares: list[str] | list["BaseMiddleware"] | None = None,
         load_middlewares_from_env: bool = False,
     ) -> None:
         """Initialize the step executor.
@@ -232,7 +232,7 @@ class BaseStepExecutor:
         self,
         step: TypedStep,
         hist: History,
-        obj: Union[PanderaDataFrameModel, PydanticModel, list[PydanticModel]],
+        obj: PanderaDataFrameModel | PydanticModel | list[PydanticModel],
         path: PathToFolderWithBaseModels,
     ) -> Path:
         """Store step result.
@@ -273,23 +273,12 @@ class BaseStepExecutor:
     def _load_data(
         self,
         step: TypedStep,
-        inputs: set[
-            Union[
-                PydanticModel,
-                patyp.DataFrame[PanderaDataFrameModel],
-                PathToFolderWithBaseModels,
-            ]
-        ],
+        inputs: set[PydanticModel | patyp.DataFrame[PanderaDataFrameModel] | PathToFolderWithBaseModels],
         output_path: Path,
     ) -> Generator[
         tuple[
             tuple[
-                Union[
-                    PydanticModel,
-                    patyp.DataFrame[PanderaDataFrameModel],
-                    list[PydanticModel],
-                    None,
-                ],
+                PydanticModel | patyp.DataFrame[PanderaDataFrameModel] | list[PydanticModel] | None,
                 History,
             ],
             float,
@@ -320,9 +309,9 @@ class BaseStepExecutor:
             # Only yield once
             yield (None, History(step)), 0
         for inpt in inputs:
-            if isinstance(inpt, (datacontract.DataModel, PydanticModel, patyp.DataFrame, list)):
+            if isinstance(inpt, datacontract.DataModel | PydanticModel | patyp.DataFrame | list):
                 yield (inpt, History("[Memory]", step)), 0
-            elif isinstance(inpt, (Path, PathToFolderWithBaseModels)):
+            elif isinstance(inpt, Path | PathToFolderWithBaseModels):
                 for (inpt, hist), took in self.load(step, inpt):
                     yield (inpt, hist), took
             else:
@@ -332,7 +321,7 @@ class BaseStepExecutor:
         self,
         step_cls: type[TypedStep],
         inputs: set[PathToFolderWithBaseModels],
-        output_path: Optional[PathToFolderWithBaseModels],
+        output_path: PathToFolderWithBaseModels | None,
     ):
         """Exceute specified step."""
         step = step_cls()
@@ -393,8 +382,8 @@ class BaseStepExecutor:
     def execute_step(
         self,
         step_cls: type[TypedStep],
-        inputs: Optional[set[PathToFolderWithBaseModels]],
-        output_dir: Optional[PathToFolderWithBaseModels],
+        inputs: set[PathToFolderWithBaseModels] | None,
+        output_dir: PathToFolderWithBaseModels | None,
     ) -> list[tuple[Any, StepReport]]:
         """Execute a step.
 
@@ -422,8 +411,8 @@ class BaseStepExecutor:
     def _execute_step_internal(
         self,
         step_cls: type[TypedStep],
-        inputs: Optional[set[PathToFolderWithBaseModels]],
-        output_dir: Optional[PathToFolderWithBaseModels],
+        inputs: set[PathToFolderWithBaseModels] | None,
+        output_dir: PathToFolderWithBaseModels | None,
     ) -> list[tuple[Any, StepReport]]:
         """Internal method that actually executes the step (wrapped by middlewares).
 
@@ -453,7 +442,7 @@ class BaseStepExecutor:
             correlation_id.set(None)
 
     def __call__(
-        self, step_cls: type[TypedStep], inputs: Optional[set[PathToFolderWithBaseModels]], output_dir: Optional[PathToFolderWithBaseModels]
+        self, step_cls: type[TypedStep], inputs: set[PathToFolderWithBaseModels] | None, output_dir: PathToFolderWithBaseModels | None
     ):
         return self.execute_step(step_cls, inputs, output_dir)
 

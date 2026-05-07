@@ -9,11 +9,9 @@ from pathlib import Path
 from types import NoneType
 from typing import (
     Generic,
-    Optional,
     Self,
     TypeAlias,
     TypeVar,
-    Union,
     get_args,
 )
 
@@ -27,7 +25,7 @@ from wurzel.exceptions import ContractFailedException, StaticTypeError
 from wurzel.path import PathToFolderWithBaseModels
 
 # pylint: disable-next=invalid-name
-MODEL_TYPE: TypeAlias = type[Union[PydanticModel, PanderaDataFrameModel]]
+MODEL_TYPE: TypeAlias = type[PydanticModel | PanderaDataFrameModel]
 #  ^Should be a Intersection between DataModel & {BaseModel, DataFrameModel}
 log = getLogger(__name__)
 INCONTRACT = TypeVar("INCONTRACT")
@@ -90,8 +88,8 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
 
     _internal_input_class: type[PathToFolderWithBaseModels]
     _internal_output_class: type[PathToFolderWithBaseModels]
-    input_model_type: Union[MODEL_TYPE, list[MODEL_TYPE], None]
-    output_model_type: Union[MODEL_TYPE, list[MODEL_TYPE], None]
+    input_model_type: MODEL_TYPE | list[MODEL_TYPE] | None
+    output_model_type: MODEL_TYPE | list[MODEL_TYPE] | None
     settings_class: type[SETTS]
     output_model_class: MODEL_TYPE
     input_model_class: MODEL_TYPE
@@ -106,9 +104,9 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     @classmethod  #
     def _unpack_list_containers(
         cls,
-        list_or_type: Union[list, type, None],
-        containers: Optional[list[type[Iterable]]] = None,
-    ) -> tuple[Optional[Iterable[type[Iterable]]], type]:
+        list_or_type: list | type | None,
+        containers: list[type[Iterable]] | None = None,
+    ) -> tuple[Iterable[type[Iterable]] | None, type]:
         """Unpacks the containers around a given nested Type.
 
         Args:
@@ -124,7 +122,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         """
         if containers is None:
             containers = []
-        origin_t: Union[type[Iterable], type, None] = get_origin(list_or_type)
+        origin_t: type[Iterable] | type | None = get_origin(list_or_type)
         if origin_t is None:
             # list_or_type is now a type/class
             if list_or_type is None:
@@ -148,7 +146,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
                 f"No type-annotation provided when creating subclass of {cls.__name__}" + f"Use: MyStep({cls.__name__}[INPUT_T, OUTPUT_T])"
             )
         cls._prepare_datamodels(type_annotations)
-        if not issubclass(cls.settings_class, (Settings, NoneType)):
+        if not issubclass(cls.settings_class, Settings | NoneType):
             raise StaticTypeError("Settings provided in TypedStep[<>, ...]" + " is not a subclass of settings_class")
         _ = cls._unpack_list_containers(cls.input_model_type)
         out_t = cls._unpack_list_containers(cls.output_model_type)

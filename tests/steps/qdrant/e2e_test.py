@@ -7,7 +7,6 @@ import shutil
 import unittest
 import unittest.mock
 from pathlib import Path
-from typing import Union
 
 import pytest
 
@@ -165,8 +164,8 @@ def test_qdrant_connector_csv_partially_not_same_shape(
 def test_qdrant_connector_true_csv(
     input_output_folder: tuple[Path, Path],
     dummy_collection,
-    step: type[Union[QdrantConnectorStep, QdrantConnectorMultiVectorStep]],
-    result_type: Union[QdrantResult, QdrantMultiVectorResult],
+    step: type[QdrantConnectorStep | QdrantConnectorMultiVectorStep],
+    result_type: QdrantResult | QdrantMultiVectorResult,
     inpt_file: str,
     tlsh: bool,
 ):

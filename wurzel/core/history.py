@@ -7,7 +7,7 @@ import json
 from collections.abc import Iterable
 from contextvars import ContextVar
 from types import NoneType
-from typing import Optional, Union
+from typing import Optional
 
 from .typed_step import TypedStep
 
@@ -21,7 +21,7 @@ class History:
     __SEP_STR = "-"
     _history: list[str]
 
-    def __init__(self, *args: Union[TypedStep, str, list[str]], initial: list[str] = None) -> NoneType:
+    def __init__(self, *args: TypedStep | str | list[str], initial: list[str] = None) -> NoneType:
         if initial is None:
             initial = []
         self._history = initial
@@ -30,7 +30,7 @@ class History:
     def __add(self, s: str):
         self._history.append(s[:-4] if s.endswith("Step") else s)
 
-    def __iadd__(self, other: Union[TypedStep, str, list[str]]):
+    def __iadd__(self, other: TypedStep | str | list[str]):
         if isinstance(other, str):
             self.__add(other)
         elif isinstance(other, Iterable):
@@ -70,7 +70,7 @@ class History:
     def __repr__(self) -> str:
         return f"History({self._history})"
 
-    def __getitem__(self, key: Union[str, int, slice]):
+    def __getitem__(self, key: str | int | slice):
         if isinstance(key, str):
             raise TypeError
         return History(self._history[key])
