@@ -49,7 +49,7 @@ class DataModel:
         - If obj is a list/tuple/set, metrics are summed by key.
         - If obj provides a `metrics()` instance method, it is used.
         """
-        if isinstance(obj, (list, tuple, set)):
+        if isinstance(obj, list | tuple | set):
             metrics: MetricMap = {}
             for item in obj:
                 _merge_metrics(metrics, cls.get_metrics(item))

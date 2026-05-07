@@ -126,7 +126,7 @@ def remove_images(markdown: str) -> str:
     def _remove_image_from_document(doc: Document) -> Document:
         if not hasattr(doc, "children") or not doc.children:
             return doc
-        doc.children = [_remove_image_from_document(x) for x in doc.children if not isinstance(x, (Image, ThematicBreak))]
+        doc.children = [_remove_image_from_document(x) for x in doc.children if not isinstance(x, Image | ThematicBreak)]
         return doc
 
     doc = Document(markdown)

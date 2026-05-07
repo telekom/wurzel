@@ -146,7 +146,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
                 f"No type-annotation provided when creating subclass of {cls.__name__}" + f"Use: MyStep({cls.__name__}[INPUT_T, OUTPUT_T])"
             )
         cls._prepare_datamodels(type_annotations)
-        if not issubclass(cls.settings_class, (Settings, NoneType)):
+        if not issubclass(cls.settings_class, Settings | NoneType):
             raise StaticTypeError("Settings provided in TypedStep[<>, ...]" + " is not a subclass of settings_class")
         _ = cls._unpack_list_containers(cls.input_model_type)
         out_t = cls._unpack_list_containers(cls.output_model_type)

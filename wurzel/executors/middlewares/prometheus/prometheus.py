@@ -6,7 +6,7 @@
 
 import os
 from logging import getLogger
-from typing import Any, Optional
+from typing import Any
 
 from prometheus_client import REGISTRY, CollectorRegistry, Counter, Gauge, Histogram, push_to_gateway
 
@@ -39,7 +39,7 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
 
     def __init__(
         self,
-        settings: Optional[PrometheusMiddlewareSettings] = None,
+        settings: PrometheusMiddlewareSettings | None = None,
         *,
         registry: CollectorRegistry | None = None,
     ):
@@ -84,8 +84,8 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
         self,
         call_next: ExecuteStepCallable,
         step_cls: type[TypedStep],
-        inputs: Optional[set[PathToFolderWithBaseModels]],
-        output_dir: Optional[PathToFolderWithBaseModels],
+        inputs: set[PathToFolderWithBaseModels] | None,
+        output_dir: PathToFolderWithBaseModels | None,
     ) -> list[tuple[Any, Any]]:
         """Execute step with Prometheus metrics collection.
 

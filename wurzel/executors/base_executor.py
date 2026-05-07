@@ -13,7 +13,7 @@ from contextvars import copy_context
 from logging import getLogger
 from pathlib import Path
 from types import NoneType
-from typing import TYPE_CHECKING, Any, Optional, Self, TypeAlias, Union
+from typing import TYPE_CHECKING, Any, Optional, Self, TypeAlias
 
 import pandas
 import pandera.typing as patyp
@@ -72,7 +72,7 @@ def _try_sort(x: StepReturnType) -> StepReturnType:
     if isinstance(x, PydanticModel):
         return x
     try:
-        if isinstance(x, (list, set)):
+        if isinstance(x, list | set):
             return sorted(x)
         if isinstance(x, pandas.DataFrame):
             # Only sort if DataFrame has columns and is not empty
@@ -188,7 +188,7 @@ class BaseStepExecutor:
     def __init__(
         self,
         dont_encapsulate: bool = False,
-        middlewares: Optional[Union[list[str], list["BaseMiddleware"]]] = None,
+        middlewares: list[str] | list["BaseMiddleware"] | None = None,
         load_middlewares_from_env: bool = False,
     ) -> None:
         """Initialize the step executor.
@@ -306,9 +306,9 @@ class BaseStepExecutor:
             # Only yield once
             yield (None, History(step)), 0
         for inpt in inputs:
-            if isinstance(inpt, (datacontract.DataModel, PydanticModel, patyp.DataFrame, list)):
+            if isinstance(inpt, datacontract.DataModel | PydanticModel | patyp.DataFrame | list):
                 yield (inpt, History("[Memory]", step)), 0
-            elif isinstance(inpt, (Path, PathToFolderWithBaseModels)):
+            elif isinstance(inpt, Path | PathToFolderWithBaseModels):
                 for (inpt, hist), took in self.load(step, inpt):
                     yield (inpt, hist), took
             else:
@@ -408,8 +408,8 @@ class BaseStepExecutor:
     def _execute_step_internal(
         self,
         step_cls: type[TypedStep],
-        inputs: Optional[set[PathToFolderWithBaseModels]],
-        output_dir: Optional[PathToFolderWithBaseModels],
+        inputs: set[PathToFolderWithBaseModels] | None,
+        output_dir: PathToFolderWithBaseModels | None,
     ) -> list[tuple[Any, StepReport]]:
         """Internal method that actually executes the step (wrapped by middlewares).
 
