@@ -50,7 +50,7 @@ from wurzel.api.backends.supabase.client import (
     db_update_branch,
     db_upsert_branch_manifest,
 )
-from wurzel.api.errors import APIError
+from wurzel.api.errors import RESPONSE_401, RESPONSE_403, RESPONSE_404, RESPONSE_409, APIError
 from wurzel.api.routes.branch.data import (
     Branch,
     BranchDiff,
@@ -237,7 +237,12 @@ async def _execute_manifest_bg(
 # ── Branch CRUD ───────────────────────────────────────────────────────────────
 
 
-@router.post("", response_model=Branch, status_code=http_status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=Branch,
+    status_code=http_status.HTTP_201_CREATED,
+    responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404, **RESPONSE_409},
+)
 async def create_branch(
     project_id: uuid.UUID,
     body: CreateBranchRequest,
@@ -269,7 +274,7 @@ async def create_branch(
     return _row_to_branch(row)
 
 
-@router.get("", response_model=list[Branch])
+@router.get("", response_model=list[Branch], responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404})
 async def list_branches(
     project_id: uuid.UUID,
     _access: RequireAnyRole,
@@ -279,54 +284,14 @@ async def list_branches(
     return [_row_to_branch(r) for r in rows]
 
 
-@router.get("/{branch_name}", response_model=Branch)
-async def get_branch(
-    project_id: uuid.UUID,
-    branch_name: str,
-    _access: RequireAnyRole,
-) -> Branch:
-    """Return branch metadata (any member)."""
-    row = await _get_branch_or_404(project_id, branch_name)
-    return _row_to_branch(row)
+# NOTE: The generic GET/PUT/DELETE /{branch_name:path} routes are registered at the
+# BOTTOM of this module so that the more-specific sub-resource routes (protect,
+# manifest, diff, merge, promote) are matched first by FastAPI's router.
 
 
-@router.put("/{branch_name}", response_model=Branch)
-async def update_branch(
-    project_id: uuid.UUID,
-    branch_name: str,
-    body: UpdateBranchRequest,
-    _access: RequireAdmin,
-) -> Branch:
-    """Update a branch's promotes_to pointer (admin only)."""
-    await _get_branch_or_404(project_id, branch_name)
-    fields: dict = {}
-    if body.promotes_to_id is not None:
-        await _validate_promotes_to_branch_or_404(project_id, body.promotes_to_id)
-        fields["promotes_to_id"] = str(body.promotes_to_id)
-    elif "promotes_to_id" in body.model_fields_set:
-        fields["promotes_to_id"] = None
-    row = await db_update_branch(project_id, branch_name, fields) if fields else await db_get_branch(project_id, branch_name)
-    return _row_to_branch(row)  # type: ignore[arg-type]
-
-
-@router.delete("/{branch_name}", status_code=http_status.HTTP_204_NO_CONTENT)
-async def delete_branch(
-    project_id: uuid.UUID,
-    branch_name: str,
-    _access: RequireAdmin,
-) -> None:
-    """Delete a branch (admin only). The 'main' branch cannot be deleted."""
-    if branch_name == "main":
-        raise APIError(
-            status_code=http_status.HTTP_409_CONFLICT,
-            title="Cannot delete main",
-            detail="The 'main' branch is permanent and cannot be deleted.",
-        )
-    await _get_branch_or_404(project_id, branch_name)
-    await db_delete_branch(project_id, branch_name)
-
-
-@router.post("/{branch_name}/protect", response_model=Branch)
+@router.post(
+    "/{branch_name:path}/protect", response_model=Branch, responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404, **RESPONSE_409}
+)
 async def protect_branch(
     project_id: uuid.UUID,
     branch_name: str,
@@ -351,7 +316,7 @@ async def protect_branch(
 # ── Manifest ──────────────────────────────────────────────────────────────────
 
 
-@router.get("/{branch_name}/manifest", response_model=BranchManifest)
+@router.get("/{branch_name:path}/manifest", response_model=BranchManifest, responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404})
 async def get_branch_manifest(
     project_id: uuid.UUID,
     branch_name: str,
@@ -374,7 +339,11 @@ async def get_branch_manifest(
     )
 
 
-@router.put("/{branch_name}/manifest", response_model=BranchManifest)
+@router.put(
+    "/{branch_name:path}/manifest",
+    response_model=BranchManifest,
+    responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404, **RESPONSE_409},
+)
 async def set_branch_manifest(
     project_id: uuid.UUID,
     branch_name: str,
@@ -469,7 +438,11 @@ def _apply_secret_fields_only(existing: PipelineManifest, patch: PipelineManifes
     return existing_dict
 
 
-@router.post("/{branch_name}/manifest/submit", status_code=http_status.HTTP_202_ACCEPTED)
+@router.post(
+    "/{branch_name:path}/manifest/submit",
+    status_code=http_status.HTTP_202_ACCEPTED,
+    responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404, **RESPONSE_409},
+)
 async def submit_branch_manifest(
     project_id: uuid.UUID,
     branch_name: str,
@@ -495,7 +468,9 @@ async def submit_branch_manifest(
 # ── Diff / Merge / Promote ────────────────────────────────────────────────────
 
 
-@router.get("/{branch_name}/diff/{target_branch}", response_model=BranchDiff)
+@router.get(
+    "/{branch_name:path}/diff/{target_branch:path}", response_model=BranchDiff, responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404}
+)
 async def diff_branches(
     project_id: uuid.UUID,
     branch_name: str,
@@ -515,7 +490,11 @@ async def diff_branches(
     return _compute_diff(source_def, target_def, branch_name, target_branch)
 
 
-@router.post("/{branch_name}/merge/{target_branch}", response_model=BranchManifest)
+@router.post(
+    "/{branch_name:path}/merge/{target_branch:path}",
+    response_model=BranchManifest,
+    responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404},
+)
 async def merge_into_target(
     project_id: uuid.UUID,
     branch_name: str,
@@ -543,7 +522,11 @@ async def merge_into_target(
     )
 
 
-@router.post("/{branch_name}/promote/{target_branch}", response_model=PromoteResponse)
+@router.post(
+    "/{branch_name:path}/promote/{target_branch:path}",
+    response_model=PromoteResponse,
+    responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404, **RESPONSE_409},
+)
 async def promote_to_target(
     project_id: uuid.UUID,
     branch_name: str,
@@ -570,3 +553,58 @@ async def promote_to_target(
         target_branch=target_branch,
         manifest_id=uuid.UUID(row["id"]),
     )
+
+
+# ── Branch CRUD (generic /{branch_name:path} — registered last so sub-resource
+# routes above are matched first by FastAPI's router) ─────────────────────────
+
+
+@router.get("/{branch_name:path}", response_model=Branch, responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404})
+async def get_branch(
+    project_id: uuid.UUID,
+    branch_name: str,
+    _access: RequireAnyRole,
+) -> Branch:
+    """Return branch metadata (any member)."""
+    row = await _get_branch_or_404(project_id, branch_name)
+    return _row_to_branch(row)
+
+
+@router.put("/{branch_name:path}", response_model=Branch, responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404})
+async def update_branch(
+    project_id: uuid.UUID,
+    branch_name: str,
+    body: UpdateBranchRequest,
+    _access: RequireAdmin,
+) -> Branch:
+    """Update a branch's promotes_to pointer (admin only)."""
+    await _get_branch_or_404(project_id, branch_name)
+    fields: dict = {}
+    if body.promotes_to_id is not None:
+        await _validate_promotes_to_branch_or_404(project_id, body.promotes_to_id)
+        fields["promotes_to_id"] = str(body.promotes_to_id)
+    elif "promotes_to_id" in body.model_fields_set:
+        fields["promotes_to_id"] = None
+    row = await db_update_branch(project_id, branch_name, fields) if fields else await db_get_branch(project_id, branch_name)
+    return _row_to_branch(row)  # type: ignore[arg-type]
+
+
+@router.delete(
+    "/{branch_name:path}",
+    status_code=http_status.HTTP_204_NO_CONTENT,
+    responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404, **RESPONSE_409},
+)
+async def delete_branch(
+    project_id: uuid.UUID,
+    branch_name: str,
+    _access: RequireAdmin,
+) -> None:
+    """Delete a branch (admin only). The 'main' branch cannot be deleted."""
+    if branch_name == "main":
+        raise APIError(
+            status_code=http_status.HTTP_409_CONFLICT,
+            title="Cannot delete main",
+            detail="The 'main' branch is permanent and cannot be deleted.",
+        )
+    await _get_branch_or_404(project_id, branch_name)
+    await db_delete_branch(project_id, branch_name)

@@ -112,6 +112,34 @@ async def db_add_project_package(
     return result.data[0]
 
 
+async def db_get_active_project_package(
+    project_id: uuid.UUID,
+    package_spec: str,
+    index_secret_name: str | None,
+) -> dict | None:
+    """Return an existing active package row for the same spec, if any.
+
+    Active means the package is not deleted and is currently pending,
+    installing, or already installed.
+    """
+    db = await _get_client()
+    query = (
+        db.table("project_packages")
+        .select("*")
+        .eq("project_id", str(project_id))
+        .eq("package_spec", package_spec)
+        .in_("status", ["pending", "installing", "installed"])
+    )
+    if index_secret_name is None:
+        query = query.is_("index_secret_name", "null")
+    else:
+        query = query.eq("index_secret_name", index_secret_name)
+
+    result = await query.limit(1).execute()
+    rows = result.data or []
+    return rows[0] if rows else None
+
+
 async def db_list_project_packages(project_id: uuid.UUID) -> list[dict]:
     """Return all non-deleted package rows for *project_id*."""
     db = await _get_client()

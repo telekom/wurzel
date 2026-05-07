@@ -910,3 +910,228 @@ class TestPromoteBranch:
         ):
             r = client.post(_branch_url("/feature-x/promote/main"))
         assert r.status_code == 403
+
+
+# ── Slash-containing Branch Names ─────────────────────────────────────────────
+
+
+class TestBranchNamesWithSlashes:
+    """Test that branch names containing '/' are routed correctly (e.g., feature/new-thing)."""
+
+    @pytest.mark.parametrize(
+        "branch_name",
+        [
+            pytest.param("feature/new-feature", id="feature/branch"),
+            pytest.param("releases/v1-0-0", id="releases/version"),
+            pytest.param("bugfix/issue-123/something", id="deeply/nested"),
+        ],
+    )
+    def test_get_branch_with_slash_returns_200(self, client, branch_name):
+        """GET /{branch_name:path} should match branch names with slashes."""
+        row = _make_branch_row(name=branch_name)
+        with (
+            patch(
+                "wurzel.api.backends.supabase.client.get_project_role_from_db",
+                new_callable=AsyncMock,
+                return_value=ProjectRole.VIEWER,
+            ),
+            patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, return_value=row),
+        ):
+            r = client.get(_branch_url(f"/{branch_name}"))
+        assert r.status_code == 200
+        assert r.json()["name"] == branch_name
+
+    @pytest.mark.parametrize("branch_name", ["feature/test", "releases/v1"])
+    def test_update_branch_with_slash_returns_200(self, client, branch_name):
+        """PUT /{branch_name:path} should match branch names with slashes."""
+        row = _make_branch_row(name=branch_name)
+        with (
+            patch(
+                "wurzel.api.backends.supabase.client.get_project_role_from_db",
+                new_callable=AsyncMock,
+                return_value=ProjectRole.ADMIN,
+            ),
+            patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, return_value=row),
+            patch("wurzel.api.routes.branch.router.db_update_branch", new_callable=AsyncMock, return_value=row),
+        ):
+            r = client.put(_branch_url(f"/{branch_name}"), json={})
+        assert r.status_code == 200
+
+    @pytest.mark.parametrize("branch_name", ["feature/test", "hotfix/urgent"])
+    def test_delete_branch_with_slash_returns_204(self, client, branch_name):
+        """DELETE /{branch_name:path} should match branch names with slashes."""
+        row = _make_branch_row(name=branch_name)
+        with (
+            patch(
+                "wurzel.api.backends.supabase.client.get_project_role_from_db",
+                new_callable=AsyncMock,
+                return_value=ProjectRole.ADMIN,
+            ),
+            patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, return_value=row),
+            patch("wurzel.api.routes.branch.router.db_delete_branch", new_callable=AsyncMock),
+        ):
+            r = client.delete(_branch_url(f"/{branch_name}"))
+        assert r.status_code == 204
+
+    @pytest.mark.parametrize("branch_name", ["feature/test", "wip/refactor"])
+    def test_protect_branch_with_slash_returns_200(self, client, branch_name):
+        """POST /{branch_name:path}/protect should match branch names with slashes."""
+        row = _make_branch_row(name=branch_name, is_protected=False)
+        with (
+            patch(
+                "wurzel.api.backends.supabase.client.get_project_role_from_db",
+                new_callable=AsyncMock,
+                return_value=ProjectRole.ADMIN,
+            ),
+            patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, return_value=row),
+            patch("wurzel.api.routes.branch.router.db_update_branch", new_callable=AsyncMock, return_value=row),
+        ):
+            r = client.post(_branch_url(f"/{branch_name}/protect"), json={"is_protected": True})
+        assert r.status_code == 200
+
+    @pytest.mark.parametrize("branch_name", ["feature/test", "staging/prep"])
+    def test_get_manifest_with_slash_branch_returns_200(self, client, branch_name):
+        """GET /{branch_name:path}/manifest should match branch names with slashes."""
+        branch_row = _make_branch_row(name=branch_name)
+        manifest_row = _make_manifest_row()
+        with (
+            patch(
+                "wurzel.api.backends.supabase.client.get_project_role_from_db",
+                new_callable=AsyncMock,
+                return_value=ProjectRole.VIEWER,
+            ),
+            patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, return_value=branch_row),
+            patch("wurzel.api.routes.branch.router.db_get_branch_manifest", new_callable=AsyncMock, return_value=manifest_row),
+        ):
+            r = client.get(_branch_url(f"/{branch_name}/manifest"))
+        assert r.status_code == 200
+
+    @pytest.mark.parametrize("branch_name", ["feature/test", "develop/next"])
+    def test_set_manifest_with_slash_branch_returns_200(self, client, branch_name):
+        """PUT /{branch_name:path}/manifest should match branch names with slashes."""
+        branch_row = _make_branch_row(name=branch_name)
+        manifest_row = _make_manifest_row()
+        with (
+            patch(
+                "wurzel.api.backends.supabase.client.get_project_role_from_db",
+                new_callable=AsyncMock,
+                return_value=ProjectRole.ADMIN,
+            ),
+            patch("wurzel.api.backends.supabase.client.get_branch_protection", new_callable=AsyncMock, return_value=False),
+            patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, return_value=branch_row),
+            patch("wurzel.api.routes.branch.router.db_upsert_branch_manifest", new_callable=AsyncMock, return_value=manifest_row),
+        ):
+            r = client.put(_branch_url(f"/{branch_name}/manifest"), json=_MINIMAL_MANIFEST)
+        assert r.status_code == 200
+
+    @pytest.mark.parametrize("branch_name", ["feature/test", "work/in/progress"])
+    def test_submit_manifest_with_slash_branch_returns_202(self, client, branch_name):
+        """POST /{branch_name:path}/manifest/submit should match branch names with slashes."""
+        branch_row = _make_branch_row(name=branch_name)
+        manifest_row = _make_manifest_row()
+        with (
+            patch(
+                "wurzel.api.backends.supabase.client.get_project_role_from_db",
+                new_callable=AsyncMock,
+                return_value=ProjectRole.ADMIN,
+            ),
+            patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, return_value=branch_row),
+            patch("wurzel.api.routes.branch.router.db_get_branch_manifest", new_callable=AsyncMock, return_value=manifest_row),
+        ):
+            r = client.post(_branch_url(f"/{branch_name}/manifest/submit"))
+        assert r.status_code == 202
+
+    @pytest.mark.parametrize(
+        "source,target",
+        [
+            pytest.param("feature/test", "staging", id="slash_source"),
+            pytest.param("main", "feature/test", id="slash_target"),
+            pytest.param("feature/a", "feature/b", id="slash_both"),
+        ],
+    )
+    def test_diff_with_slash_branches_returns_200(self, client, source, target):
+        """GET /{branch_name:path}/diff/{target_branch:path} should match slash-containing names."""
+        source_row = _make_branch_row(name=source)
+        target_row = _make_branch_row(name=target)
+        source_manifest = _make_manifest_row()
+        target_manifest = _make_manifest_row()
+        with (
+            patch(
+                "wurzel.api.backends.supabase.client.get_project_role_from_db",
+                new_callable=AsyncMock,
+                return_value=ProjectRole.VIEWER,
+            ),
+            patch(
+                "wurzel.api.routes.branch.router.db_get_branch",
+                new_callable=AsyncMock,
+                side_effect=[source_row, target_row],
+            ),
+            patch(
+                "wurzel.api.routes.branch.router.db_get_branch_manifest",
+                new_callable=AsyncMock,
+                side_effect=[source_manifest, target_manifest],
+            ),
+        ):
+            r = client.get(_branch_url(f"/{source}/diff/{target}"))
+        assert r.status_code == 200
+
+    @pytest.mark.parametrize(
+        "source,target",
+        [
+            pytest.param("feature/test", "staging", id="slash_source"),
+            pytest.param("main", "feature/test", id="slash_target"),
+            pytest.param("feature/a", "feature/b", id="slash_both"),
+        ],
+    )
+    def test_merge_with_slash_branches_returns_200(self, client, source, target):
+        """POST /{branch_name:path}/merge/{target_branch:path} should match slash-containing names."""
+        source_row = _make_branch_row(name=source)
+        target_row = _make_branch_row(name=target)
+        manifest_row = _make_manifest_row()
+        with (
+            patch(
+                "wurzel.api.backends.supabase.client.get_project_role_from_db",
+                new_callable=AsyncMock,
+                return_value=ProjectRole.ADMIN,
+            ),
+            patch("wurzel.api.backends.supabase.client.get_branch_protection", new_callable=AsyncMock, return_value=False),
+            patch(
+                "wurzel.api.routes.branch.router.db_get_branch",
+                new_callable=AsyncMock,
+                side_effect=[source_row, target_row],
+            ),
+            patch("wurzel.api.routes.branch.router.db_upsert_branch_manifest", new_callable=AsyncMock, return_value=manifest_row),
+        ):
+            r = client.post(_branch_url(f"/{source}/merge/{target}"), json={"resolved_definition": _MINIMAL_MANIFEST})
+        assert r.status_code == 200
+
+    @pytest.mark.parametrize(
+        "source,target",
+        [
+            pytest.param("feature/test", "staging", id="slash_source"),
+            pytest.param("main", "feature/test", id="slash_target"),
+            pytest.param("feature/a", "feature/b", id="slash_both"),
+        ],
+    )
+    def test_promote_with_slash_branches_returns_200(self, client, source, target):
+        """POST /{branch_name:path}/promote/{target_branch:path} should match slash-containing names."""
+        source_row = _make_branch_row(name=source)
+        target_row = _make_branch_row(name=target)
+        manifest_row = _make_manifest_row()
+        with (
+            patch(
+                "wurzel.api.backends.supabase.client.get_project_role_from_db",
+                new_callable=AsyncMock,
+                return_value=ProjectRole.ADMIN,
+            ),
+            patch("wurzel.api.backends.supabase.client.get_branch_protection", new_callable=AsyncMock, return_value=False),
+            patch(
+                "wurzel.api.routes.branch.router.db_get_branch",
+                new_callable=AsyncMock,
+                side_effect=[source_row, target_row],
+            ),
+            patch("wurzel.api.routes.branch.router.db_get_branch_manifest", new_callable=AsyncMock, return_value=manifest_row),
+            patch("wurzel.api.routes.branch.router.db_upsert_branch_manifest", new_callable=AsyncMock, return_value=manifest_row),
+        ):
+            r = client.post(_branch_url(f"/{source}/promote/{target}"))
+        assert r.status_code == 200

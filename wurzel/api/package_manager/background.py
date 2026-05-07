@@ -6,9 +6,8 @@
 
 Two entry points:
 
-* :func:`perform_install` — plain ``def`` (not async) so FastAPI/Starlette's
-  ``BackgroundTasks`` runs it in a thread-pool, keeping the event loop free
-  during the blocking ``subprocess.run`` call.  Triggered via
+* :func:`perform_install` — async entry point used by FastAPI/Starlette
+    ``BackgroundTasks``. Triggered via
   ``background_tasks.add_task(perform_install, package_id, settings)`` on the
   POST /packages endpoint.
 
@@ -29,12 +28,12 @@ import uuid
 logger = logging.getLogger(__name__)
 
 
-def perform_install(package_id: uuid.UUID, settings) -> None:  # type: ignore[type-arg]
+async def perform_install(package_id: uuid.UUID, settings) -> None:  # type: ignore[type-arg]
     """Claim and install a single package row.
 
     Designed to be scheduled via FastAPI ``BackgroundTasks`` so it runs after
-    the HTTP response is sent.  Uses ``asyncio.run`` internally because the
-    Supabase client is async and this function is called from a thread.
+    the HTTP response is sent.  Declared ``async`` so FastAPI awaits it directly
+    in the running event loop rather than requiring a new one.
 
     Args:
         package_id: UUID of the ``project_packages`` row to install.
@@ -42,7 +41,7 @@ def perform_install(package_id: uuid.UUID, settings) -> None:  # type: ignore[ty
                   instance.
     """
     try:
-        asyncio.run(_perform_install_async(package_id, settings))
+        await _perform_install_async(package_id, settings)
     except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
         logger.exception("Unhandled error in perform_install for package %s", package_id)
 
@@ -123,6 +122,9 @@ async def _install_and_persist(
     except RuntimeError as exc:
         await db_mark_failed(package_id, str(exc))
         return False
+    except Exception as exc:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+        await db_mark_failed(package_id, f"Package install failed unexpectedly: {exc}")
+        return False
 
     target_dir = get_project_package_dir(project_id, settings.PACKAGES_DIR)
     lock_entries = read_lock_entries(target_dir)
@@ -184,7 +186,7 @@ async def _recover_and_reinstall_async(settings) -> None:  # type: ignore[type-a
     for row in pending:
         package_id = uuid.UUID(row["id"])
         logger.info("Startup recovery: triggering deferred install for package %s", package_id)
-        perform_install(package_id, settings)
+        await perform_install(package_id, settings)
 
 
 async def _reinstall_missing_package(row: dict, settings) -> None:  # type: ignore[type-arg]

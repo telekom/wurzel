@@ -18,6 +18,7 @@ from pathlib import Path
 from fastapi import APIRouter, Query
 
 from wurzel.api.auth.permissions import RequireAnyRole
+from wurzel.api.errors import RESPONSE_401, RESPONSE_403, RESPONSE_404
 from wurzel.api.package_manager.installer import get_project_package_dir
 from wurzel.api.package_manager.settings import PackageManagerSettings
 from wurzel.api.routes.steps.data import StepInfo, StepListResponse
@@ -38,7 +39,7 @@ def _get_project_package_path(project_id: uuid.UUID) -> Path | None:
     return get_project_package_dir(project_id, settings.PACKAGES_DIR)
 
 
-@router.get("", response_model=StepListResponse)
+@router.get("", response_model=StepListResponse, responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404})
 async def list_project_steps(
     project_id: uuid.UUID,
     cache: CachedStepList,
@@ -57,7 +58,7 @@ async def list_project_steps(
     return discover_steps_for_project(str(project_id), extra_path, cache, refresh=refresh)
 
 
-@router.get("/{step_path:path}", response_model=StepInfo)
+@router.get("/{step_path:path}", response_model=StepInfo, responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404})
 async def get_project_step(
     project_id: uuid.UUID,  # pylint: disable=unused-argument
     step_path: str,

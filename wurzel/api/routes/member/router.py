@@ -29,7 +29,7 @@ from wurzel.api.backends.supabase.client import (
     db_update_member_role,
     db_user_exists,
 )
-from wurzel.api.errors import APIError
+from wurzel.api.errors import RESPONSE_401, RESPONSE_403, RESPONSE_404, RESPONSE_409, APIError
 from wurzel.api.routes.member.data import (
     AddMemberRequest,
     ProjectMember,
@@ -50,7 +50,7 @@ def _row_to_member(row: dict) -> ProjectMember:
     )
 
 
-@router.get("", response_model=list[ProjectMember])
+@router.get("", response_model=list[ProjectMember], responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404})
 async def list_members(
     project_id: uuid.UUID,
     _access: RequireAnyRole,
@@ -60,7 +60,12 @@ async def list_members(
     return [_row_to_member(r) for r in rows]
 
 
-@router.post("", response_model=ProjectMember, status_code=http_status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=ProjectMember,
+    status_code=http_status.HTTP_201_CREATED,
+    responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404, **RESPONSE_409},
+)
 async def add_member(
     project_id: uuid.UUID,
     body: AddMemberRequest,
@@ -84,7 +89,7 @@ async def add_member(
     return _row_to_member(row)
 
 
-@router.put("/{user_id}", response_model=ProjectMember)
+@router.put("/{user_id}", response_model=ProjectMember, responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404, **RESPONSE_409})
 async def update_role(
     project_id: uuid.UUID,
     user_id: str,
@@ -123,7 +128,9 @@ async def update_role(
     return _row_to_member(row)
 
 
-@router.delete("/{user_id}", status_code=http_status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{user_id}", status_code=http_status.HTTP_204_NO_CONTENT, responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404, **RESPONSE_409}
+)
 async def remove_member(
     project_id: uuid.UUID,
     user_id: str,

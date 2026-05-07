@@ -32,7 +32,7 @@ from wurzel.api.backends.supabase.client import (
     db_update_project,
 )
 from wurzel.api.dependencies import Pagination
-from wurzel.api.errors import APIError
+from wurzel.api.errors import RESPONSE_401, RESPONSE_403, RESPONSE_404, APIError
 from wurzel.api.routes.project.data import (
     CreateProjectRequest,
     PaginatedProjectResponse,
@@ -54,7 +54,7 @@ def _row_to_project(row: dict) -> Project:
     )
 
 
-@router.post("", response_model=Project, status_code=http_status.HTTP_201_CREATED)
+@router.post("", response_model=Project, status_code=http_status.HTTP_201_CREATED, responses={**RESPONSE_401})
 async def create_project(
     body: CreateProjectRequest,
     user: CurrentUser,
@@ -83,7 +83,7 @@ async def create_project(
     return _row_to_project(row)
 
 
-@router.get("", response_model=PaginatedProjectResponse)
+@router.get("", response_model=PaginatedProjectResponse, responses={**RESPONSE_401})
 async def list_projects(
     user: CurrentUser,
     pagination: Pagination,
@@ -98,7 +98,7 @@ async def list_projects(
     )
 
 
-@router.get("/{project_id}", response_model=Project)
+@router.get("/{project_id}", response_model=Project, responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404})
 async def get_project(
     project_id: uuid.UUID,
     _access: RequireAnyRole,
@@ -114,7 +114,7 @@ async def get_project(
     return _row_to_project(row)
 
 
-@router.put("/{project_id}", response_model=Project)
+@router.put("/{project_id}", response_model=Project, responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404})
 async def update_project(
     project_id: uuid.UUID,
     body: UpdateProjectRequest,
@@ -135,7 +135,7 @@ async def update_project(
     return _row_to_project(row)
 
 
-@router.delete("/{project_id}", status_code=http_status.HTTP_204_NO_CONTENT)
+@router.delete("/{project_id}", status_code=http_status.HTTP_204_NO_CONTENT, responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404})
 async def delete_project(
     project_id: uuid.UUID,
     _access: RequireAdmin,

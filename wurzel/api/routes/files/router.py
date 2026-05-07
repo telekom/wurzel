@@ -11,7 +11,7 @@ import uuid
 from fastapi import APIRouter, Depends, File, UploadFile, status
 
 from wurzel.api.auth.permissions import RequireAnyRole
-from wurzel.api.errors import APIError
+from wurzel.api.errors import RESPONSE_401, RESPONSE_403, RESPONSE_404, APIError
 from wurzel.api.package_manager.installer import get_project_package_dir
 from wurzel.api.package_manager.settings import PackageManagerSettings
 from wurzel.api.routes.files.data import DeleteFileResponse, FileInfo, FileUploadResponse, FileValidationError
@@ -62,6 +62,7 @@ def _get_project_package_path(project_id: uuid.UUID):
     summary="Upload files for a step",
     description="Upload one or more files to be used as input for a specific step. "
     "Files are validated against the step's accepted file types.",
+    responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404},
 )
 async def upload_files(
     project_id: uuid.UUID,
@@ -115,6 +116,7 @@ async def upload_files(
     status_code=status.HTTP_200_OK,
     summary="List uploaded files for a step",
     description="List all files that have been uploaded for a specific step.",
+    responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404},
 )
 async def list_files(
     project_id: uuid.UUID,
@@ -132,6 +134,7 @@ async def list_files(
     status_code=status.HTTP_200_OK,
     summary="Delete an uploaded file",
     description="Delete a file that was previously uploaded for a step.",
+    responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404},
 )
 async def delete_file(
     project_id: uuid.UUID,

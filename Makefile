@@ -46,6 +46,8 @@ documentation: install
 	uv run mkdocs serve
 
 api: install
-		@echo "🚀 Starting FastAPI server..."
-		@set -a && [ -f .env ] && . ./.env; set +a; \
-        uv run uvicorn wurzel.api.app:create_app --factory --host 127.0.0.1 --port 8000 --reload
+	@echo "🚀 Starting FastAPI server..."
+	@set -a && [ -f .env ] && . ./.env; set +a; \
+	PACKAGE_MANAGER__PACKAGES_DIR=$${PACKAGE_MANAGER__PACKAGES_DIR:-./packages} \
+	PACKAGE_MANAGER__UV_EXECUTABLE=$${PACKAGE_MANAGER__UV_EXECUTABLE:-uv} \
+	uv run uvicorn wurzel.api.app:create_app --factory --host 127.0.0.1 --port 8000 --reload

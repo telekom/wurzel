@@ -51,6 +51,21 @@ def _problem_response(
     )
 
 
+# ── Shared OpenAPI response dicts ────────────────────────────────────────────
+# Use these in route decorators: `responses={**RESPONSE_401, **RESPONSE_403}`
+# They tell OpenAPI/Swagger that the endpoint can return these status codes.
+
+RESPONSE_401: dict = {401: {"model": ProblemDetail, "description": "Missing or invalid authentication token / API key"}}
+RESPONSE_403: dict = {403: {"model": ProblemDetail, "description": "Insufficient permissions or protected branch"}}
+RESPONSE_404: dict = {404: {"model": ProblemDetail, "description": "Resource not found"}}
+RESPONSE_409: dict = {
+    409: {
+        "model": ProblemDetail,
+        "description": "Conflict — duplicate resource, last-admin guard, reserved branch name, or missing manifest",
+    }
+}
+
+
 class APIError(Exception):
     """Raise this inside route handlers to produce an RFC 7807 response."""
 

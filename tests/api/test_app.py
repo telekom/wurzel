@@ -54,13 +54,13 @@ class TestCreateApp:
             "/v1/projects/{project_id}/members",
             "/v1/projects/{project_id}/members/{user_id}",
             "/v1/projects/{project_id}/branches",
-            "/v1/projects/{project_id}/branches/{branch_name}",
-            "/v1/projects/{project_id}/branches/{branch_name}/manifest",
-            "/v1/projects/{project_id}/branches/{branch_name}/manifest/submit",
-            "/v1/projects/{project_id}/branches/{branch_name}/protect",
-            "/v1/projects/{project_id}/branches/{branch_name}/diff/{target_branch}",
-            "/v1/projects/{project_id}/branches/{branch_name}/merge/{target_branch}",
-            "/v1/projects/{project_id}/branches/{branch_name}/promote/{target_branch}",
+            "/v1/projects/{project_id}/branches/{branch_name:path}",
+            "/v1/projects/{project_id}/branches/{branch_name:path}/manifest",
+            "/v1/projects/{project_id}/branches/{branch_name:path}/manifest/submit",
+            "/v1/projects/{project_id}/branches/{branch_name:path}/protect",
+            "/v1/projects/{project_id}/branches/{branch_name:path}/diff/{target_branch:path}",
+            "/v1/projects/{project_id}/branches/{branch_name:path}/merge/{target_branch:path}",
+            "/v1/projects/{project_id}/branches/{branch_name:path}/promote/{target_branch:path}",
         }
         assert expected.issubset(paths)
 
