@@ -4,6 +4,9 @@
 
 """CLI Entry."""
 
+# Transitional compatibility module while commands are split into subpackages.
+# pylint: disable=duplicate-code
+
 from __future__ import annotations
 
 import importlib
@@ -30,8 +33,10 @@ app = typer.Typer(
 from wurzel.cli import (  # pylint: disable=wrong-import-position
     cmd_manifest,
     cmd_middlewares,
+    completion_command,
 )
 
+app.add_typer(completion_command.app, name="completion")
 app.add_typer(cmd_middlewares.app, name="middlewares")
 app.add_typer(cmd_manifest.app, name="manifest")
 
@@ -40,7 +45,7 @@ console = Console()
 
 
 if TYPE_CHECKING:  # pragma: no cover - only for typing
-    from wurzel.cli.cmd_env import EnvValidationIssue
+    from wurzel.cli.environment.requirements import EnvValidationIssue
     from wurzel.core import TypedStep
 
 
@@ -127,7 +132,7 @@ def _ensure_pipeline_obj(pipeline: TypedStep | str):
 
 
 def _load_requirements(pipeline: TypedStep | str, include_optional: bool):
-    from wurzel.cli.cmd_env import collect_env_requirements  # pylint: disable=import-outside-toplevel
+    from wurzel.cli.environment.requirements import collect_env_requirements  # pylint: disable=import-outside-toplevel
 
     pipeline_obj = _ensure_pipeline_obj(pipeline)
     requirements = collect_env_requirements(pipeline_obj)
@@ -448,7 +453,7 @@ def run(
     encapsulate_env: Annotated[bool, typer.Option()] = True,
 ):
     """Run."""
-    from wurzel.cli.cmd_run import main as cmd_run  # pylint: disable=import-outside-toplevel
+    from wurzel.cli.run import main as run_main  # pylint: disable=import-outside-toplevel
 
     output_path = Path(str(output_path.absolute()).replace("<step-name>", step.__name__))
     log.debug(
@@ -464,7 +469,7 @@ def run(
             }
         },
     )
-    return cmd_run(step, output_path, input_folders, executor, encapsulate_env, middlewares)
+    return run_main(step, output_path, input_folders, executor, encapsulate_env, middlewares)
 
 
 @app.command("inspect", no_args_is_help=True, help="Display information about a step")
@@ -481,9 +486,9 @@ def inspekt(
     gen_env: Annotated[bool, typer.Option()] = False,
 ):
     """Inspect."""
-    from wurzel.cli.cmd_inspect import main as cmd_inspect  # pylint: disable=import-outside-toplevel
+    from wurzel.cli.inspect import main as inspect_main  # pylint: disable=import-outside-toplevel
 
-    return cmd_inspect(step, gen_env)
+    return inspect_main(step, gen_env)
 
 
 # Env helpers -----------------------------------------------------------------
@@ -533,7 +538,7 @@ def env_cmd(
     ] = False,
 ):
     """Inspect or validate pipeline env configuration."""
-    from wurzel.cli.cmd_env import format_env_snippet, validate_env_vars  # pylint: disable=import-outside-toplevel
+    from wurzel.cli.environment.requirements import format_env_snippet, validate_env_vars  # pylint: disable=import-outside-toplevel
 
     pipeline_obj, requirements, to_display = _run_with_progress(
         "Collecting step settings...",
@@ -683,7 +688,7 @@ def generate(  # pylint: disable=too-many-positional-arguments
     pipeline_obj = pipeline_callback(None, None, pipeline)
     backend_obj = backend_callback(None, None, backend)
 
-    from wurzel.cli.cmd_generate import main as cmd_generate  # pylint: disable=import-outside-toplevel
+    from wurzel.cli.generate import main as generate_main  # pylint: disable=import-outside-toplevel
     from wurzel.executors.backend import Backend  # pylint: disable=import-outside-toplevel
     from wurzel.executors.backend.values import ValuesFileError  # pylint: disable=import-outside-toplevel
 
@@ -701,7 +706,7 @@ def generate(  # pylint: disable=too-many-positional-arguments
         },
     )
     try:
-        rendered = cmd_generate(
+        rendered = generate_main(
             pipeline_obj,
             backend=cast(type[Backend], backend_obj),
             values=values or [],
