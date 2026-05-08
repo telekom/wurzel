@@ -21,7 +21,7 @@ log = getLogger(__name__)
 class DropStettings(Settings):
     """specify DROP_BY_FIELDS to field."""
 
-    DROP_BY_FIELDS: list[str] = ["md"]
+    DROP_BY_FIELDS: list[str] | None = ["md"]
 
 
 class DropDuplicationStep(TypedStep[DropStettings, list[MarkdownDataContract], list[MarkdownDataContract]]):
@@ -32,7 +32,7 @@ class DropDuplicationStep(TypedStep[DropStettings, list[MarkdownDataContract], l
         by preserving the headline.
         """
         if self.settings.DROP_BY_FIELDS == ["*"]:
-            self.settings.DROP_BY_FIELDS = None  # ty: ignore[invalid-assignment]
+            self.settings.DROP_BY_FIELDS = None
         df = pd.DataFrame(i.model_dump() for i in inpt)
         if not df.duplicated(self.settings.DROP_BY_FIELDS).any():
             return inpt

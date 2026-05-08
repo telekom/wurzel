@@ -22,7 +22,8 @@ from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import EmbeddingAPIException, StepFailed
 from wurzel.steps.data import EmbeddingResult
 from wurzel.steps.embedding.huggingface import HuggingFaceInferenceAPIEmbeddings, PrefixedAPIEmbeddings
-from wurzel.steps.splitter import SimpleSplitterStep
+from wurzel.steps.splitter import build_semantic_splitter, split_markdown_batch
+from wurzel.utils.splitters.semantic_splitter import SemanticSplitter
 from wurzel.utils.tokenizers import Tokenizer
 
 # Local application/library specific imports
@@ -53,6 +54,7 @@ class BaseEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract],
     n_jobs: int
     markdown: Markdown
     stopwords: list[str]
+    splitter: SemanticSplitter
     settings: EmbeddingSettings
 
     def __init__(self) -> None:
@@ -64,6 +66,7 @@ class BaseEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract],
         self.markdown = Markdown(output_format="plain")  # type: ignore[arg-type]
         self.markdown.stripTopLevelTags = False
         self.stopwords = self._load_stopwords()
+        self.splitter = build_semantic_splitter(self.settings)
 
     def _load_stopwords(self) -> list[str]:
         """Load stopwords from path (stop words are used by `get_simple_context`)."""
@@ -177,6 +180,10 @@ class BaseEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract],
         filtered_tokens = [token for token in tokens if not self.is_stopword(token)]
         return " ".join(filtered_tokens)
 
+    def _split_markdown(self, markdowns: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
+        """Creates data rows from a batch of markdown texts by splitting them and counting tokens."""
+        return split_markdown_batch(self.splitter, markdowns)
+
     @classmethod
     def __md_to_plain(cls, element, stream: StringIO | None = None):
         """Converts a markdown element into plain text.
@@ -222,7 +229,7 @@ class BaseEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract],
         # Use precompiled pattern for better performance
         links = sorted(_URL_PATTERN.findall(text), key=len, reverse=True)
         for link in links:
-            text = text.replace(link, "LINK")  # ty: ignore[no-matching-overload]
+            text = text.replace(str(link), "LINK")
         return text
 
     def preprocess_inputs(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
@@ -271,7 +278,7 @@ class BaseEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract],
         return DataFrame[EmbeddingResult](output_rows)
 
 
-class EmbeddingStep(BaseEmbeddingStep, SimpleSplitterStep):  # ty: ignore[invalid-generic-class]
+class EmbeddingStep(BaseEmbeddingStep):
     """Step for consuming list[MarkdownDataContract] and returning DataFrame[EmbeddingResult].
 
     This step inherits both from BaseEmbeddingStep and SimpleSplitterStep, meaning that

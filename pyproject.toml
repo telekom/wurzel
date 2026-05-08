@@ -235,3 +235,6 @@ line-ending = "auto"
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.ty.analysis]
+allowed-unresolved-imports = ["tlsh"]

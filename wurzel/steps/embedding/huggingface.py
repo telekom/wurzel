@@ -26,11 +26,13 @@ log = getLogger(__name__)
 
 @validate_call
 def _url_with_path(base: Url, path: str) -> Url:
+    if base.host is None:
+        raise EmbeddingException(f"Invalid URL without host: {base}")
     return Url.build(
         scheme=base.scheme,
         username=base.username,
         password=base.password,
-        host=base.host,  # ty: ignore[invalid-argument-type]
+        host=base.host,
         port=base.port,
         path=path,
         query=base.query,
@@ -47,7 +49,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
     _timeout: int = 10
     embedding_url: Url
     info_url: Url
-    _last_model: str
+    _last_model: str | None
     _on_model_change: Callable | None = None
     _normalize: bool = False
 
@@ -56,7 +58,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
         self._normalize = normalize
         self.embedding_url = _url_with_path(url, "embed")
         self.info_url = _url_with_path(url, "info")
-        self._last_model = None  # ty: ignore[invalid-assignment]
+        self._last_model = None
         self._update_model_history(self.get_info()["model_id"])
 
     def _update_model_history(self, model: str) -> bool:

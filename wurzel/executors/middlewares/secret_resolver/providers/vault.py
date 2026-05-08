@@ -53,7 +53,11 @@ class SupabaseVaultClient:
         response = self._client.rpc("get_vault_secret", {"secret_name": ref}).execute()
         if not response.data:
             raise KeyError(f"Supabase Vault secret '{ref}' not found")
-        return response.data  # ty: ignore[invalid-return-type]
+        if isinstance(response.data, str):
+            return response.data
+        if isinstance(response.data, list) and response.data and isinstance(response.data[0], str):
+            return response.data[0]
+        raise TypeError(f"Supabase Vault returned unexpected response type for '{ref}': {type(response.data)}")
 
 
 class VaultSecretProvider(SecretProvider, provider_name="vault"):

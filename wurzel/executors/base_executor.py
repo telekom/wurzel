@@ -7,7 +7,7 @@
 import json
 import os
 import time
-from collections.abc import Callable, Generator
+from collections.abc import Callable, Generator, Set
 from contextlib import contextmanager
 from contextvars import copy_context
 from logging import getLogger
@@ -47,7 +47,7 @@ if TYPE_CHECKING:
 log = getLogger(__name__)
 
 
-StepReturnType: TypeAlias = pandas.DataFrame | PydanticModel | list[PydanticModel]
+StepReturnType: TypeAlias = Any
 
 
 class StepReport(pydantic.BaseModel):
@@ -245,11 +245,11 @@ class BaseStepExecutor:
         """
         if not path.is_dir():
             path.mkdir(parents=True, exist_ok=True)
-        obj = _try_sort(obj)  # ty: ignore[invalid-assignment, invalid-argument-type]
+        obj = _try_sort(obj)
         output_model_class: type[datacontract.DataModel] = step.output_model_class
-        return output_model_class.save_to_path(path / f"{hist}", obj)  # ty: ignore[invalid-argument-type]
+        return output_model_class.save_to_path(path / f"{hist}", obj)
 
-    def load(self, step: TypedStep, path: PathToFolderWithBaseModels):
+    def load(self, step: TypedStep, path: Path | PathToFolderWithBaseModels):
         """Load step input.
 
         Args:
@@ -262,9 +262,9 @@ class BaseStepExecutor:
 
         """
         input_model_class: type[datacontract.DataModel] = step.input_model_class
-        for p in path.glob("*"):
+        for p in Path(path).glob("*"):
             start = time.time()
-            data = input_model_class.load_from_path(p, step.input_model_type)  # ty: ignore[invalid-argument-type]
+            data = input_model_class.load_from_path(p, step.input_model_type)
             yield (
                 (data, History(".".join(p.name.split(".")[:-1]), step)),
                 time.time() - start,
@@ -273,16 +273,10 @@ class BaseStepExecutor:
     def _load_data(
         self,
         step: TypedStep,
-        inputs: set[PydanticModel | patyp.DataFrame[PanderaDataFrameModel] | PathToFolderWithBaseModels],
-        output_path: Path,
+        inputs: Set[object],
+        output_path: Path | PathToFolderWithBaseModels | None,
     ) -> Generator[
-        tuple[
-            tuple[
-                PydanticModel | patyp.DataFrame[PanderaDataFrameModel] | list[PydanticModel] | None,
-                History,
-            ],
-            float,
-        ],
+        tuple[tuple[Any, History], float],
         Any,
         NoneType,
     ]:
@@ -297,9 +291,9 @@ class BaseStepExecutor:
 
         """
         no_inputs_supplied = inputs in [[], set()]
-        if no_inputs_supplied and isinstance(step, SelfConsumingLeafStep):
+        if output_path is not None and no_inputs_supplied and isinstance(step, SelfConsumingLeafStep):
             is_run_already = False
-            for (inpt, hist), took in self.load(step, output_path):  # ty: ignore[invalid-argument-type]
+            for (inpt, hist), took in self.load(step, output_path):
                 is_run_already = True
                 yield (inpt, hist), took
             if is_run_already:
@@ -328,10 +322,13 @@ class BaseStepExecutor:
         # pylint: disable=protected-access
         if output_path:
             output_path = step._internal_output_class(output_path)
-        run: Callable[[list], Any] = pydantic.validate_call(step.run, validate_return=True)  # ty: ignore[no-matching-overload]
+        run: Callable[[Any], Any] = cast(
+            Callable[[Any], Any],
+            pydantic.validate_call(validate_return=True)(cast(Callable[..., Any], step.run)),
+        )
         was_called_once = False
         try:
-            for (inpt, history), load_time in self._load_data(step, inputs, output_path):  # ty: ignore[invalid-argument-type]
+            for (inpt, history), load_time in self._load_data(step, inputs, output_path):
                 was_called_once = True
                 log.info(
                     f"Start: {step_cls.__name__}.run({history[:-1]}) -> {output_path}",
@@ -342,7 +339,7 @@ class BaseStepExecutor:
                 token = step_history.set(history)
                 ctx.run(step_history.set, history)
                 try:
-                    res = ctx.run(run, inpt)  # ty: ignore[invalid-argument-type]
+                    res = ctx.run(run, inpt)
                 finally:
                     step_history.reset(token)
                 run_time = time.time() - run_start
@@ -429,10 +426,11 @@ class BaseStepExecutor:
         try:
             correlation_id.set(step_cls.__name__)
             log.info(f"{self.__class__.__name__} - start: {step_cls.__name__}")
+            typed_inputs = cast(set[PathToFolderWithBaseModels], inputs or set())
             if self.__dont_encapsulate:
-                return list(self._execute_step(step_cls, inputs, output_dir))  # ty: ignore[invalid-argument-type]
+                return list(self._execute_step(step_cls, typed_inputs, output_dir))
             with step_env_encapsulation(step_cls):
-                return list(self._execute_step(step_cls, inputs, output_dir))  # ty: ignore[invalid-argument-type]
+                return list(self._execute_step(step_cls, typed_inputs, output_dir))
         except LoggedCustomException:
             raise
         except Exception as e:

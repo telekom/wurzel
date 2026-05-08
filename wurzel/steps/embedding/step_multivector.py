@@ -16,9 +16,7 @@ from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import EmbeddingAPIException, SplittException, StepFailed
 from wurzel.steps.data import EmbeddingMultiVectorResult
 from wurzel.steps.embedding import EmbeddingStep
-
-# Local application/library specific imports
-from .settings import EmbeddingSettings
+from wurzel.steps.embedding.settings import EmbeddingSettings
 
 log = getLogger(__name__)
 
@@ -66,7 +64,7 @@ class EmbeddingMultiVectorStep(  # ty: ignore[invalid-generic-class]
 
         def process_document(doc):
             try:
-                return self._get_embedding(doc)
+                return self._get_multivector_embedding(doc)
             except EmbeddingAPIException as err:
                 log.warning(
                     f"Skipped because EmbeddingAPIException: {err.message}",
@@ -86,7 +84,7 @@ class EmbeddingMultiVectorStep(  # ty: ignore[invalid-generic-class]
 
         return DataFrame[EmbeddingMultiVectorResult](DataFrame[EmbeddingMultiVectorResult](rows))
 
-    def _get_embedding(self, doc: MarkdownDataContract) -> _EmbeddedMultiVector:  # ty: ignore[invalid-method-override]
+    def _get_multivector_embedding(self, doc: MarkdownDataContract) -> _EmbeddedMultiVector:
         """Generates an embedding for a given text and context.
 
         Parameters

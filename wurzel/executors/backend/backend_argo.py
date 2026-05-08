@@ -286,7 +286,7 @@ class ArgoBackend(Backend, backend_name="argo"):
                         size=tokenizer_cache.storageSize,
                         mount_path=tokenizer_cache.mountPath,
                         storage_class_name=tokenizer_cache.storageClassName,
-                        access_modes=tokenizer_cache.accessModes,  # ty: ignore[invalid-argument-type]
+                        access_modes=cast(Any, tokenizer_cache.accessModes),
                     )
                 )
             else:
@@ -419,21 +419,29 @@ class ArgoBackend(Backend, backend_name="argo"):
             >>> assert workflow.kind == "Workflow"
 
         """
-        workflow_kwargs = {
-            "name": self.config.name,
-            "namespace": self.config.namespace,
-            "entrypoint": self.config.entrypoint,
-            "annotations": self.config.annotations,
-            "service_account_name": self.config.serviceAccountName,
-            "volumes": self._volumes or None,
-            "security_context": self._build_pod_security_context(),
-            "pod_spec_patch": self._build_pod_spec_patch(),
-        }
-
         if self.config.schedule:
-            context = CronWorkflow(schedule=self.config.schedule, **workflow_kwargs)  # ty: ignore[invalid-argument-type]
+            context = CronWorkflow(
+                schedule=self.config.schedule,
+                name=self.config.name,
+                namespace=self.config.namespace,
+                entrypoint=self.config.entrypoint,
+                annotations=self.config.annotations,
+                service_account_name=self.config.serviceAccountName,
+                volumes=self._volumes or None,
+                security_context=self._build_pod_security_context(),
+                pod_spec_patch=self._build_pod_spec_patch(),
+            )
         else:
-            context = Workflow(**workflow_kwargs)  # ty: ignore[invalid-argument-type]
+            context = Workflow(
+                name=self.config.name,
+                namespace=self.config.namespace,
+                entrypoint=self.config.entrypoint,
+                annotations=self.config.annotations,
+                service_account_name=self.config.serviceAccountName,
+                volumes=self._volumes or None,
+                security_context=self._build_pod_security_context(),
+                pod_spec_patch=self._build_pod_spec_patch(),
+            )
 
         with context as workflow:
             self.__generate_dag(step, env_vars=env_vars)

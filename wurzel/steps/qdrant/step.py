@@ -91,7 +91,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         payload = {
             "url": row["url"],
             "text": row["text"],
-            **self.get_available_hashes(row["text"]),  # ty: ignore[invalid-argument-type]
+            **self.get_available_hashes(str(row["text"])),
             "keywords": row["keywords"],
             "history": str(step_history.get()),
             "metadata": row.get("metadata", None),
@@ -163,7 +163,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         """
         result_data = [
             {
-                **entry.payload,  # ty: ignore[invalid-argument-type]
+                **dict(entry.payload or {}),
                 self.vector_key: entry.vector,
                 "collection": self.collection_name,
                 "id": entry.id,
@@ -175,7 +175,8 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
     def _insert_embeddings(self, data: DataFrame[EmbeddingResult]):
         log.info("Inserting embeddings", extra={"count": len(data), "collection": self.collection_name})
 
-        points = [self._create_point(row) for _, row in data.iterrows()]  # ty: ignore[invalid-argument-type]
+        rows = data.to_dict(orient="records")
+        points = [self._create_point(row) for row in rows]
 
         self._upsert_points(points)
 
@@ -275,7 +276,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         encoded_text = text.encode(encoding)
         if HAS_TLSH:
             # pylint: disable=no-name-in-module, import-outside-toplevel
-            from tlsh import hash as tlsh_hash  # ty: ignore[unresolved-import]
+            from tlsh import hash as tlsh_hash
 
             hashes["text_tlsh_hash"] = tlsh_hash(encoded_text)
         hashes["text_sha256_hash"] = sha256(encoded_text).hexdigest()

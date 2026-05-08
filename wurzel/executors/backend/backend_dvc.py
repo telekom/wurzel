@@ -6,7 +6,7 @@ import inspect
 import re
 import shlex
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, TypedDict
+from typing import TYPE_CHECKING, Any, TypedDict, cast
 
 import yaml
 from pydantic import BaseModel, Field
@@ -208,9 +208,9 @@ class DvcBackend(Backend, backend_name="dvc"):
         outputs_of_deps: list[Path] = []
 
         for o_step in step.required_steps:
-            dep_result = self._generate_dict(o_step, env_file)  # ty: ignore[invalid-argument-type]
+            dep_result = self._generate_dict(cast(TypedStep, o_step), env_file)
             result |= dep_result
-            outputs_of_deps += dep_result[o_step.__class__.__name__]["outs"]  # ty: ignore[unsupported-operator]
+            outputs_of_deps.extend(Path(out) for out in dep_result[o_step.__class__.__name__]["outs"])
 
         output_path = self.config.dataDir / step.__class__.__name__
 
@@ -274,9 +274,16 @@ class DvcBackend(Backend, backend_name="dvc"):
         data = run_id_stage | self._generate_dict(step, env_file)
 
         # Convert all Path objects to strings for YAML compatibility
-        for k in data:
-            for key in ["outs", "deps"]:
-                if key in data[k]:
-                    data[k][key] = [str(p) for p in data[k][key]]  # ty: ignore[invalid-assignment, invalid-key, not-iterable]
+        normalized_data: dict[str, dict[str, Any]] = {}
+        for stage_name, stage in data.items():
+            outs_value = stage.get("outs", [])
+            deps_value = stage.get("deps", [])
+            stage_outs = outs_value if isinstance(outs_value, list) else []
+            stage_deps = deps_value if isinstance(deps_value, list) else []
+            normalized_data[stage_name] = {
+                **stage,
+                "outs": [str(p) for p in stage_outs],
+                "deps": [str(p) for p in stage_deps],
+            }
 
-        return yaml.dump({"stages": data})
+        return yaml.dump({"stages": normalized_data})

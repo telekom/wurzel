@@ -2,7 +2,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import inspect
 from types import NoneType
+from typing import Any, cast
 
 from pydantic import BaseModel
 from pydantic import create_model as py_create_model
@@ -48,26 +50,33 @@ def create_model(
     ) -> list[TypedStep]:
         if isinstance(flds, TypedStep):
             return list(flds.traverse())
-        cleaned: list[TypedStep] = [WZ(f) if isinstance(f, type) else f for f in flds]  # ty: ignore[invalid-argument-type]
+        cleaned: list[TypedStep] = [cast(TypedStep, WZ(cast(type[TypedStep], f))) if inspect.isclass(f) else f for f in flds]
         return cleaned
 
     clean_fields = clean(fields)
+    create_model_any = cast(Any, py_create_model)
     base_class = py_create_model("SettingsLeaf_allow_extra", __base__=Settings)
     if allow_extra_fields:
         base_class.model_config["extra"] = "allow"
     inner_models: dict[str, Settings] = {
-        step.__class__.__name__.upper(): py_create_model(
-            "MetaSettings_" + step.__class__.__name__,
-            **{name: (v.annotation, v) for name, v in step.settings_class.model_fields.items()},
-            __base__=base_class,
-        )  # ty: ignore[no-matching-overload]
+        step.__class__.__name__.upper(): cast(
+            Settings,
+            create_model_any(
+                "MetaSettings_" + step.__class__.__name__,
+                **{name: (v.annotation, v) for name, v in step.settings_class.model_fields.items()},
+                __base__=base_class,
+            ),
+        )
         for step in clean_fields
         if step.settings_class != NoneType
     }
 
-    new_model_class: type[BaseModel] = py_create_model(
-        "MetaSettings_Parent",
-        **{name: (typ, ...) for name, typ in inner_models.items()},
-        __base__=SettingsBase,
-    )  # ty: ignore[no-matching-overload]
-    return new_model_class  # ty: ignore[invalid-return-type]
+    new_model_class: type[BaseModel] = cast(
+        type[BaseModel],
+        create_model_any(
+            "MetaSettings_Parent",
+            **{name: (typ, ...) for name, typ in inner_models.items()},
+            __base__=SettingsBase,
+        ),
+    )
+    return cast(type[SettingsBase], new_model_class)

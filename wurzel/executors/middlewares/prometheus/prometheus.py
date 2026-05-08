@@ -137,9 +137,8 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
 
     def __exit__(self, *exc_details):
         """Context manager exit - push metrics to gateway."""
-        args = {"gateway": self.settings.GATEWAY, "job": self.settings.JOB}
-        log.info("Pushing metrics", extra=args)
+        log.info("Pushing metrics", extra={"gateway": self.settings.GATEWAY, "job": self.settings.JOB})
         try:
-            push_to_gateway(**args, registry=self.registry or REGISTRY)  # ty: ignore[invalid-argument-type]
+            push_to_gateway(self.settings.GATEWAY, job=self.settings.JOB, registry=self.registry or REGISTRY)
         except Exception:  # pylint: disable=broad-exception-caught
             log.warning("Could not push prometheus metrics to gateway", exc_info=True)

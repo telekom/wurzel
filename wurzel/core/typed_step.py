@@ -12,6 +12,7 @@ from typing import (
     Self,
     TypeAlias,
     TypeVar,
+    cast,
     get_args,
 )
 
@@ -20,12 +21,12 @@ from typing_inspect import get_origin
 
 from wurzel.core.settings import Settings
 from wurzel.core.step import Step
-from wurzel.datacontract import PanderaDataFrameModel, PydanticModel
+from wurzel.datacontract import DataModel
 from wurzel.exceptions import ContractFailedException, StaticTypeError
 from wurzel.path import PathToFolderWithBaseModels
 
 # pylint: disable-next=invalid-name
-MODEL_TYPE: TypeAlias = type[PydanticModel | PanderaDataFrameModel]
+MODEL_TYPE: TypeAlias = type[DataModel]
 #  ^Should be a Intersection between DataModel & {BaseModel, DataFrameModel}
 log = getLogger(__name__)
 INCONTRACT = TypeVar("INCONTRACT")
@@ -99,7 +100,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     def output_path(self, folder: Path) -> Path:
         """Used in generate dvc yml. Creates a path."""
         pth = folder / self.__class__.__name__
-        return pth.with_suffix(self.output_model_class.kt_file_extension())  # ty: ignore[unresolved-attribute]
+        return pth.with_suffix(self.output_model_class.kt_file_extension())
 
     @classmethod  #
     def _unpack_list_containers(
@@ -127,7 +128,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
             # list_or_type is now a type/class
             if list_or_type is None:
                 list_or_type = NoneType
-            return containers, list_or_type  # type: ignore[return-value] # list_or_type is now a type.  # ty: ignore[invalid-return-type]
+            return containers, cast(type, list_or_type)  # list_or_type is now a type.
         if origin_t in cls._supported_containers:
             containers.insert(0, origin_t)
         else:
@@ -154,7 +155,8 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         def has_no_annotation(c: list, t: type):
             return c == [] and t == NoneType
 
-        if has_no_annotation(*out_t):  # ty: ignore[invalid-argument-type]
+        out_containers, out_type = out_t
+        if has_no_annotation(list(out_containers or []), out_type):
             raise StaticTypeError(f"Type-annotation for output of {cls.__name__}[..., None] can't be None")
 
     @classmethod
@@ -191,10 +193,10 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
             run_retur_cons, run_retur_orig = cls._unpack_list_containers(run_retur)
             # construct type using only list instead of List
             return_annotation = run_retur_orig
-            for container in run_retur_cons:  # ty: ignore[not-iterable]
+            for container in run_retur_cons or []:
                 return_annotation = container[return_annotation]
             input_annotation = run_input_orig
-            for container in run_input_cons:  # ty: ignore[not-iterable]
+            for container in run_input_cons or []:
                 input_annotation = container[input_annotation]
             # Check if inputs was in list
             if input_annotation != expected_run_input:
@@ -206,7 +208,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
             if return_annotation != cls.output_model_type:
                 raise StaticTypeError(
                     "Incorrect function signature (return) for run method:\n"
-                    + f"\tis       run(...) -> {run_retur.__name__}\n"  # ty: ignore[unresolved-attribute]
+                    + f"\tis       run(...) -> {getattr(run_retur, '__name__', str(run_retur))}\n"
                     + f"\texpected {expected_signature_str}"
                 )
         except IndexError as i:
@@ -255,7 +257,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     def __init__(self) -> None:
         self.settings = self.settings_class()
 
-    def add_required_step(self, step: "TypedStep"):  # ty: ignore[invalid-method-override]
+    def add_required_step(self, step: Step):
         """Add step to execution graph.
 
         Args:
@@ -265,6 +267,8 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
             TypeError: On incompatible types
 
         """
+        if not isinstance(step, TypedStep):
+            raise TypeError(f"Cannot chain {self} to non-TypedStep {step}")
         if self.input_model_type != step.output_model_type:
             raise TypeError(f"Cannot chain {self} to {step} ({step.output_model_type} -> {self.input_model_type})")
         super().add_required_step(step)
@@ -272,7 +276,8 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     def _traverse(self, set_of: set["TypedStep"]):
         set_of.add(self)
         for step in self.required_steps:
-            TypedStep._traverse(step, set_of)  # ty: ignore[invalid-argument-type]
+            if isinstance(step, TypedStep):
+                TypedStep._traverse(step, set_of)
         return set_of
 
     def traverse(self) -> set["TypedStep"]:
