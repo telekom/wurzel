@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
+from functools import lru_cache
 from typing import Any
 
 from fastapi import Depends
@@ -26,7 +27,8 @@ logger = logging.getLogger(__name__)
 # ── Settings (FastAPI dependency) ────────────────────────────────────────────
 
 
-def get_supabase_settings() -> SupabaseSettings:
+@lru_cache(maxsize=1)
+def _get_settings() -> SupabaseSettings:
     """FastAPI dependency — returns SupabaseSettings from environment.
 
     Cached by FastAPI's dependency injection system, so it's only created once
@@ -35,6 +37,11 @@ def get_supabase_settings() -> SupabaseSettings:
     Can be overridden in tests via ``app.dependency_overrides[get_supabase_settings]``.
     """
     return SupabaseSettings()
+
+
+def get_supabase_settings() -> SupabaseSettings:
+    """Return cached Supabase settings."""
+    return _get_settings()
 
 
 # ── Async client ───────────────────────────────────────────────────────────
