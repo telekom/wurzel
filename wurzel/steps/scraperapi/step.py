@@ -8,7 +8,6 @@
 import logging
 from typing import Any
 
-import lxml
 import lxml.html
 import requests
 from joblib import Parallel, delayed

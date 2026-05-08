@@ -235,6 +235,3 @@ line-ending = "auto"
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
-
-[tool.ty.environment]
-python = ".venv/bin/python"

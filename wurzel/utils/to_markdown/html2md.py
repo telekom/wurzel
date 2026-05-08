@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Any
 
 # Related third-party imports
-import lxml.etree  # ty: ignore[unresolved-import]
 import lxml.html
 from mistletoe import Document
 from mistletoe.block_token import ThematicBreak
@@ -136,7 +135,7 @@ def remove_images(markdown: str) -> str:
 
 
 def clean_tree(div: Any) -> Any:
-    """Cleans the lxml.html tree from html unneded html obstacales."""
+    """Clean an ``lxml.html`` tree by removing non-content elements."""
     # Remove all link or script tags
     for tag in ["script", "link", "style", "svg", "footer"]:
         for bad in div.xpath("//" + tag):

@@ -5,6 +5,7 @@
 """Semantic Markdown Splitter."""
 
 import re
+from collections.abc import Iterable
 from hashlib import sha256
 from logging import getLogger
 from typing import TypedDict
@@ -273,13 +274,13 @@ class SemanticSplitter:
             new_doc.children += children  # ty: ignore[unsupported-operator]
         return new_doc
 
-    def _find_highest_level(self, children: list[DocumentNode], min_level: int = 0) -> tuple[int, Token | None, DocumentNode | None]:
+    def _find_highest_level(self, children: Iterable[Token] | None, min_level: int = 0) -> tuple[int, type[Token] | None, Token | None]:
         """Among a list of children nodes find the one with the highest level.
 
         Return a tuple of that level, level node type and that child.
         """
 
-        def is_any_children(children: list[DocumentNode], block_type: type[Token]):
+        def is_any_children(children: Iterable[Token], block_type: type[Token]):
             """Check if any Mistletoe Node (child) is of specific type."""
             for child in children:
                 if isinstance(child, block_type):
@@ -288,7 +289,7 @@ class SemanticSplitter:
 
         highest_level: int = LEVEL_UNDEFINED
         highest_type: type[Token] | None = None
-        highest_element: DocumentNode | None = None
+        highest_element: Token | None = None
 
         if children is None:
             return (LEVEL_UNDEFINED, None, None)
@@ -318,7 +319,7 @@ class SemanticSplitter:
                 highest_element = [child for child in children if isinstance(child, block_type)][0]
                 break
 
-        return highest_level, highest_type, highest_element  # ty: ignore[invalid-return-type]
+        return highest_level, highest_type, highest_element
 
     def _split_children(self, children: list[MisDocument], min_level: int = 0) -> list[MisDocument]:
         """Split a list of children in the most semantic way and return a list of Documents with them merged."""
@@ -326,7 +327,7 @@ class SemanticSplitter:
             if "children" in vars(children[0]) or "_children" in vars(children[0]):
                 return self._split_children(children[0].children)  # ty: ignore[invalid-argument-type]
             return [children[0]]
-        highest_level, highest_type, _ = self._find_highest_level(children, min_level)  # ty: ignore[invalid-argument-type]
+        highest_level, highest_type, _ = self._find_highest_level(children, min_level)
 
         # No higher splitter found
         if highest_level == LEVEL_UNDEFINED:
@@ -335,7 +336,7 @@ class SemanticSplitter:
         # Find point to split the list of children
         split_points: list[int] = []
         for i, child in enumerate(children):
-            if isinstance(child, highest_type):  # ty: ignore[invalid-argument-type]
+            if isinstance(child, highest_type):
                 if highest_level == self._get_custom_level(child):
                     split_points.append(i)
 
@@ -379,7 +380,7 @@ class SemanticSplitter:
         controlling the maximum depth of the hierarchy.
         """
         md_doc = MisDocument(text)
-        highest_level, _, _ = self._find_highest_level(md_doc.children)  # ty: ignore[invalid-argument-type]
+        highest_level, _, _ = self._find_highest_level(md_doc.children)
         token_len = self._get_token_len(text)
 
         # Reached max recursion depth
@@ -394,12 +395,12 @@ class SemanticSplitter:
             )
 
         # Do further hierarchy parsing
-        splits: MisDocument = self._split_children(md_doc.children)  # ty: ignore[invalid-assignment, invalid-argument-type]
+        splits: list[MisDocument] = self._split_children(md_doc.children)  # ty: ignore[invalid-argument-type]
 
         def has_node_a_known_level(x):
             return any(isinstance(x.children[0] if isinstance(x, MisDocument) else x, cl) for cl in LEVEL_MAPPING)
 
-        no_child_has_a_known_level = not any(has_node_a_known_level(x) for x in splits)  # ty: ignore[not-iterable]
+        no_child_has_a_known_level = not any(has_node_a_known_level(x) for x in splits)
         # No child has a known level this means we only have sentences and no more semantic information
         if no_child_has_a_known_level:
             return DocumentNode(
@@ -421,7 +422,7 @@ class SemanticSplitter:
 
         # Further split the child nodes until we reach the token limit for each
         children: list[DocumentNode] = []
-        for s in splits:  # ty: ignore[not-iterable]
+        for s in splits:
             if not hasattr(s, "children"):
                 continue
             md_child = self._render_doc(s)
@@ -719,7 +720,7 @@ class SemanticSplitter:
             text = doc.md.strip()
             md_doc = MisDocument(text)
             # Create Header
-            highest_level, highest_type, highest_child = self._find_highest_level(md_doc.children)  # ty: ignore[invalid-argument-type]
+            highest_level, highest_type, highest_child = self._find_highest_level(md_doc.children)
             if str(highest_type) == str(block_token.Heading):
                 # Discuss this
                 # highest_header_until_now[highest_level] = _get_heading_text(highest_child)

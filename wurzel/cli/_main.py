@@ -701,7 +701,7 @@ def generate(  # pylint: disable=too-many-positional-arguments
         },
     )
     try:
-        cmd_generate(
+        rendered = cmd_generate(
             pipeline_obj,
             backend=cast(type[Backend], backend_obj),
             values=values or [],
@@ -709,6 +709,8 @@ def generate(  # pylint: disable=too-many-positional-arguments
             output=output,
             executor=executor,  # ty: ignore[invalid-argument-type]
         )
+        if output is None:
+            typer.echo(rendered)
     except ValuesFileError as exc:
         raise typer.BadParameter(str(exc)) from exc
     return None
