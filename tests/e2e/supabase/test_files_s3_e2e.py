@@ -20,6 +20,7 @@ def test_s3_upload_list_read_delete_roundtrip(
     s3_file_service,
     project_context,
     step_info_factory,
+    role_headers,
 ):
     project_id = project_context["project_id"]
     step_id = f"s3-step-{uuid.uuid4().hex[:6]}"
@@ -32,6 +33,7 @@ def test_s3_upload_list_read_delete_roundtrip(
         upload = s3_client.post(
             endpoint,
             params={"step_path": _STEP_PATH},
+            headers=role_headers["admin"],
             files=[
                 ("files", ("doc1.md", io.BytesIO(b"# one"), "text/markdown")),
                 ("files", ("doc2.md", io.BytesIO(b"# two"), "text/markdown")),
@@ -44,7 +46,7 @@ def test_s3_upload_list_read_delete_roundtrip(
     assert payload["errors"] == []
     assert any(item["file_size"] == 0 for item in payload["files"])
 
-    listed = s3_client.get(endpoint)
+    listed = s3_client.get(endpoint, headers=role_headers["admin"])
     assert listed.status_code == 200
     assert {item["filename"] for item in listed.json()} == {"doc1.md", "doc2.md", "empty.md"}
 
@@ -52,11 +54,11 @@ def test_s3_upload_list_read_delete_roundtrip(
     content = s3_file_service.read_file(project_id=project_id, step_id=step_id, file_id=first["file_id"])
     assert content in (b"# one", b"# two", b"")
 
-    deleted = s3_client.delete(f"{endpoint}/{first['file_id']}")
+    deleted = s3_client.delete(f"{endpoint}/{first['file_id']}", headers=role_headers["admin"])
     assert deleted.status_code == 200
     assert deleted.json()["deleted"] is True
 
-    deleted_again = s3_client.delete(f"{endpoint}/{first['file_id']}")
+    deleted_again = s3_client.delete(f"{endpoint}/{first['file_id']}", headers=role_headers["admin"])
     assert deleted_again.status_code == 200
     assert deleted_again.json()["deleted"] is False
 
@@ -65,6 +67,7 @@ def test_s3_upload_validation_and_partial_success(
     s3_client,
     project_context,
     step_info_factory,
+    role_headers,
 ):
     project_id = project_context["project_id"]
     step_id = f"s3-step-{uuid.uuid4().hex[:6]}"
@@ -77,6 +80,7 @@ def test_s3_upload_validation_and_partial_success(
         upload = s3_client.post(
             endpoint,
             params={"step_path": _STEP_PATH},
+            headers=role_headers["admin"],
             files=[
                 ("files", ("ok.md", io.BytesIO(b"# ok"), "text/markdown")),
                 ("files", ("bad.txt", io.BytesIO(b"bad"), "text/plain")),
