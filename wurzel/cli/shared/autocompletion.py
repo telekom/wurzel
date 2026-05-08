@@ -270,17 +270,12 @@ def complete_step_import(incomplete: str) -> list[str]:  # pylint: disable=too-m
         for t in scan_threads:
             t.start()
         for t in scan_threads:
-            t.join(timeout=1.0)  # Add timeout to prevent hanging
+            t.join()  # Fully join threads to ensure all scanning completes
 
-    # Remove duplicates while preserving order
-    seen: set[str] = set()
-    unique_hints: list[str] = []
-    for hint in hints:
-        if hint not in seen:
-            seen.add(hint)
-            unique_hints.append(hint)
+    # Remove duplicates and sort for stable, deterministic output
+    unique_hints = sorted(set(hints))
 
-    log.debug("found possible steps:", extra={"hints": unique_hints[:10]})  # Log first 10
+    log.debug("found possible steps: %s", unique_hints[:10])  # Log first 10
 
     # Filter by incomplete prefix (no-op if already filtered in prefix_mode)
     # Also exclude wurzel.core.* steps (internal implementation details, not user-facing steps)
