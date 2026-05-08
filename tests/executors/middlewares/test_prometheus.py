@@ -52,7 +52,6 @@ def test_prometheus_middleware_run_id_in_all_metrics(monkeypatch, dummy_report, 
     test_run_id = "comprehensive-test-67890"
     monkeypatch.setenv("WURZEL_RUN_ID", test_run_id)
 
-
     m = PrometheusMiddleware()
     m(make_call_next(dummy_report), DummyStep, set(), None)
 
