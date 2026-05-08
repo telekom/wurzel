@@ -217,7 +217,7 @@ def test_run(tmp_path, env):
     inp.mkdir()
     (inp / "file.md").write_text("#Hello\n world")
     env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
-    run_main(step=ManualMarkdownStep, output_path=out, input_folders=set(), executor_str_value=BaseStepExecutor)
+    run_main(step=ManualMarkdownStep, output_path=out, input_folders=set(), executor_cls=BaseStepExecutor)
     assert list(out.glob("*"))
     assert (out / "ManualMarkdown.json").read_text()
 
@@ -232,7 +232,7 @@ def test_run_with_middleware(tmp_path, env):
         step=ManualMarkdownStep,
         output_path=out,
         input_folders=set(),
-        executor_str_value=BaseStepExecutor,
+        executor_cls=BaseStepExecutor,
         middlewares="prometheus",
     )
     assert list(out.glob("*"))
@@ -249,7 +249,7 @@ def test_run_with_empty_middleware_string(tmp_path, env):
         step=ManualMarkdownStep,
         output_path=out,
         input_folders=set(),
-        executor_str_value=BaseStepExecutor,
+        executor_cls=BaseStepExecutor,
         middlewares="",
     )
     assert list(out.glob("*"))
@@ -263,7 +263,7 @@ def test_run_with_middleware_from_env(tmp_path, env):
     (inp / "file.md").write_text("#Hello\n world")
     env.set("MANUALMARKDOWNSTEP__FOLDER_PATH", str(inp.absolute()))
     env.set("MIDDLEWARES", "prometheus")
-    run_main(step=ManualMarkdownStep, output_path=out, input_folders=set(), executor_str_value=BaseStepExecutor)
+    run_main(step=ManualMarkdownStep, output_path=out, input_folders=set(), executor_cls=BaseStepExecutor)
     assert list(out.glob("*"))
     assert (out / "ManualMarkdown.json").read_text()
 
@@ -278,7 +278,7 @@ def test_run_encapsulate_env(tmp_path, env):
         step=ManualMarkdownStep,
         output_path=out,
         input_folders=set(),
-        executor_str_value=BaseStepExecutor,
+        executor_cls=BaseStepExecutor,
         middlewares="",
         encapsulate_env=True,
     )
@@ -297,7 +297,7 @@ def test_run_middleware_overrides_env(tmp_path, env):
         step=ManualMarkdownStep,
         output_path=out,
         input_folders=set(),
-        executor_str_value=BaseStepExecutor,
+        executor_cls=BaseStepExecutor,
         middlewares="",
         encapsulate_env=True,
     )
@@ -314,7 +314,7 @@ def test_run_with_whitespace_in_middlewares(tmp_path, env):
         step=ManualMarkdownStep,
         output_path=out,
         input_folders=set(),
-        executor_str_value=BaseStepExecutor,
+        executor_cls=BaseStepExecutor,
         middlewares=" prometheus ",
         encapsulate_env=True,
     )
@@ -332,7 +332,7 @@ def test_run_with_invalid_middleware_continues(tmp_path, env):
         step=ManualMarkdownStep,
         output_path=out,
         input_folders=set(),
-        executor_str_value=BaseStepExecutor,
+        executor_cls=BaseStepExecutor,
         middlewares="nonexistent",
         encapsulate_env=True,
     )
