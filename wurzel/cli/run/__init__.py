@@ -21,7 +21,7 @@ def main(  # pylint: disable=too-many-positional-arguments
     step: type[TypedStep[Any, Any, Any]],
     output_path: Path,
     input_folders: set[Path],
-    executor_str_value: Any,  # Executor instance  # noqa: ANN401
+    executor_cls: Any,  # Executor class/factory  # noqa: ANN401
     encapsulate_env: bool = True,
     middlewares: str = "",
 ):
@@ -31,7 +31,7 @@ def main(  # pylint: disable=too-many-positional-arguments
         step: The step or pipeline class to execute
         output_path: Output directory for results
         input_folders: Set of input folder paths
-        executor_str_value: The executor instance to use
+        executor_cls: Executor class or factory (e.g., BaseStepExecutor, DvcBackend, ArgoBackend)
         encapsulate_env: Whether to encapsulate environment variables
         middlewares: Comma-separated middleware names
     """
@@ -40,7 +40,7 @@ def main(  # pylint: disable=too-many-positional-arguments
     if middlewares:
         middleware_list = [m.strip() for m in middlewares.split(",") if m.strip()]
 
-    with executor_str_value(
+    with executor_cls(
         dont_encapsulate=not encapsulate_env,
         middlewares=middleware_list,
         load_middlewares_from_env=not middleware_list,  # Only load from env if not explicitly set
