@@ -44,13 +44,12 @@ def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path:
             mod, kls = import_path.rsplit(".", 1)
         module = importlib.import_module(mod)
         step = getattr(module, kls)
-        assert (inspect.isclass(step) and issubclass(step, TypedStep)) or isinstance(step, TypedStep)
+        if not ((inspect.isclass(step) and issubclass(step, TypedStep)) or isinstance(step, TypedStep)):
+            raise typer.BadParameter(f"Class '{kls}' is not a TypedStep")
     except ValueError as ve:
         raise typer.BadParameter("Path is not in correct format, should be module.submodule.Step") from ve
     except ModuleNotFoundError as me:
         raise typer.BadParameter(f"Module '{mod}' could not be imported") from me
     except AttributeError as ae:
         raise typer.BadParameter(f"Class '{kls}' not in module {module}") from ae
-    except AssertionError as ae:
-        raise typer.BadParameter(f"Class '{kls}' not a TypedStep") from ae
     return step

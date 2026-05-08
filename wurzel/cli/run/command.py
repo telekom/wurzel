@@ -38,9 +38,9 @@ def run(
     ],
     *,
     output_path: Annotated[
-        Path,
+        Path | None,
         typer.Option("-o", "--output", file_okay=False, help="Folder with outputs"),
-    ] = Path(f"<step-name>-{datetime.now().isoformat(timespec='milliseconds')}"),
+    ] = None,
     input_folders: Annotated[
         list[Path] | None,
         typer.Option(
@@ -76,6 +76,11 @@ def run(
 
     # Validate and import the step (moved from callback to allow completion to work)
     step_class = step_callback(None, None, step)
+
+    # Generate default output path with filesystem-safe timestamp if not provided
+    if output_path is None:
+        timestamp = datetime.now().isoformat(timespec="milliseconds").replace(":", "-")
+        output_path = Path(f"<step-name>-{timestamp}")
 
     output_path = Path(str(output_path.absolute()).replace("<step-name>", step_class.__name__))
     # Handle None default for input_folders

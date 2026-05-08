@@ -88,7 +88,7 @@ def _install_zsh_completion() -> None:
 
     # Generate zsh completion script
     completion_script = _generate_zsh_completion()
-    completion_file.write_text(completion_script)
+    completion_file.write_text(completion_script, encoding="utf-8", newline="\n")
 
     typer.echo(f"✓ Zsh completion installed to {completion_file}")
     typer.echo("  Add this to your ~/.zshrc if not already present:")
@@ -104,7 +104,7 @@ def _install_bash_completion() -> None:
 
     completion_file = bash_completion_dir / "wurzel"
     completion_script = _generate_bash_completion()
-    completion_file.write_text(completion_script)
+    completion_file.write_text(completion_script, encoding="utf-8", newline="\n")
 
     typer.echo(f"✓ Bash completion installed to {completion_file}")
     typer.echo("  Add this to your ~/.bashrc if not already present:")
@@ -119,7 +119,7 @@ def _install_fish_completion() -> None:
 
     completion_file = fish_completion_dir / "wurzel.fish"
     completion_script = _generate_fish_completion()
-    completion_file.write_text(completion_script)
+    completion_file.write_text(completion_script, encoding="utf-8", newline="\n")
 
     typer.echo(f"✓ Fish completion installed to {completion_file}")
 
