@@ -140,6 +140,6 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
         args = {"gateway": self.settings.GATEWAY, "job": self.settings.JOB}
         log.info("Pushing metrics", extra=args)
         try:
-            push_to_gateway(**args, registry=self.registry or REGISTRY)
+            push_to_gateway(**args, registry=self.registry or REGISTRY)  # ty: ignore[invalid-argument-type]
         except Exception:  # pylint: disable=broad-exception-caught
             log.warning("Could not push prometheus metrics to gateway", exc_info=True)

@@ -34,7 +34,7 @@ class DoclingSettings(Settings):
     """
 
     FORCE_FULL_PAGE_OCR: bool = True
-    FORMATS: list[InputFormat] = [
+    FORMATS: list[InputFormat] = [  # ty: ignore[invalid-assignment]
         "docx",
         "asciidoc",
         "pptx",

@@ -99,7 +99,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     def output_path(self, folder: Path) -> Path:
         """Used in generate dvc yml. Creates a path."""
         pth = folder / self.__class__.__name__
-        return pth.with_suffix(self.output_model_class.kt_file_extension())
+        return pth.with_suffix(self.output_model_class.kt_file_extension())  # ty: ignore[unresolved-attribute]
 
     @classmethod  #
     def _unpack_list_containers(
@@ -127,7 +127,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
             # list_or_type is now a type/class
             if list_or_type is None:
                 list_or_type = NoneType
-            return containers, list_or_type  # type: ignore[return-value] # list_or_type is now a type.
+            return containers, list_or_type  # type: ignore[return-value] # list_or_type is now a type.  # ty: ignore[invalid-return-type]
         if origin_t in cls._supported_containers:
             containers.insert(0, origin_t)
         else:
@@ -154,7 +154,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         def has_no_annotation(c: list, t: type):
             return c == [] and t == NoneType
 
-        if has_no_annotation(*out_t):
+        if has_no_annotation(*out_t):  # ty: ignore[invalid-argument-type]
             raise StaticTypeError(f"Type-annotation for output of {cls.__name__}[..., None] can't be None")
 
     @classmethod
@@ -191,10 +191,10 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
             run_retur_cons, run_retur_orig = cls._unpack_list_containers(run_retur)
             # construct type using only list instead of List
             return_annotation = run_retur_orig
-            for container in run_retur_cons:
+            for container in run_retur_cons:  # ty: ignore[not-iterable]
                 return_annotation = container[return_annotation]
             input_annotation = run_input_orig
-            for container in run_input_cons:
+            for container in run_input_cons:  # ty: ignore[not-iterable]
                 input_annotation = container[input_annotation]
             # Check if inputs was in list
             if input_annotation != expected_run_input:
@@ -206,7 +206,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
             if return_annotation != cls.output_model_type:
                 raise StaticTypeError(
                     "Incorrect function signature (return) for run method:\n"
-                    + f"\tis       run(...) -> {run_retur.__name__}\n"
+                    + f"\tis       run(...) -> {run_retur.__name__}\n"  # ty: ignore[unresolved-attribute]
                     + f"\texpected {expected_signature_str}"
                 )
         except IndexError as i:
@@ -255,7 +255,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     def __init__(self) -> None:
         self.settings = self.settings_class()
 
-    def add_required_step(self, step: "TypedStep"):
+    def add_required_step(self, step: "TypedStep"):  # ty: ignore[invalid-method-override]
         """Add step to execution graph.
 
         Args:
@@ -272,7 +272,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
     def _traverse(self, set_of: set["TypedStep"]):
         set_of.add(self)
         for step in self.required_steps:
-            TypedStep._traverse(step, set_of)
+            TypedStep._traverse(step, set_of)  # ty: ignore[invalid-argument-type]
         return set_of
 
     def traverse(self) -> set["TypedStep"]:

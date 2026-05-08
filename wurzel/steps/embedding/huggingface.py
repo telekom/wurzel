@@ -4,6 +4,7 @@
 
 """contains Embedding Manager."""
 
+from collections.abc import Callable
 from json.decoder import JSONDecodeError
 from logging import getLogger
 from re import Pattern as RegexPattern
@@ -29,7 +30,7 @@ def _url_with_path(base: Url, path: str) -> Url:
         scheme=base.scheme,
         username=base.username,
         password=base.password,
-        host=base.host,
+        host=base.host,  # ty: ignore[invalid-argument-type]
         port=base.port,
         path=path,
         query=base.query,
@@ -47,7 +48,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
     embedding_url: Url
     info_url: Url
     _last_model: str
-    _on_model_change: callable = None
+    _on_model_change: Callable | None = None
     _normalize: bool = False
 
     @validate_call
@@ -55,7 +56,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
         self._normalize = normalize
         self.embedding_url = _url_with_path(url, "embed")
         self.info_url = _url_with_path(url, "info")
-        self._last_model = None
+        self._last_model = None  # ty: ignore[invalid-assignment]
         self._update_model_history(self.get_info()["model_id"])
 
     def _update_model_history(self, model: str) -> bool:
@@ -80,7 +81,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
         """Get the embeddings for a list of texts."""
         return [self.embed_query(text) for text in texts]
 
-    def __make_request(self, url: Url, json_body: dict, method: Literal["post"] | Literal["get"]) -> dict:
+    def __make_request(self, url: Url, json_body: dict | None, method: Literal["post"] | Literal["get"]) -> dict:
         """Creates a request, tries to parse json.
 
         Args:

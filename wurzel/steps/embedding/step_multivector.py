@@ -8,7 +8,6 @@
 from logging import getLogger
 from typing import TypedDict
 
-import numpy as np
 from joblib import Parallel, delayed
 from pandera.typing import DataFrame
 
@@ -29,11 +28,12 @@ class _EmbeddedMultiVector(TypedDict):
 
     text: str
     url: str
-    vectors: np.ndarray
+    vectors: list[list[float]]
+    keywords: str
     splits: list[str]
 
 
-class EmbeddingMultiVectorStep(
+class EmbeddingMultiVectorStep(  # ty: ignore[invalid-generic-class]
     EmbeddingStep,
     TypedStep[
         EmbeddingSettings,
@@ -45,7 +45,7 @@ class EmbeddingMultiVectorStep(
     and returning DataFrame[EmbeddingMultiVectorResult].
     """
 
-    def run(self, inpt: list[MarkdownDataContract]) -> DataFrame[EmbeddingMultiVectorResult]:
+    def run(self, inpt: list[MarkdownDataContract]) -> DataFrame[EmbeddingMultiVectorResult]:  # ty: ignore[invalid-method-override]
         """Executes the embedding step by processing a list of MarkdownDataContract objects,
         generating embeddings for each document, and returning the results as a DataFrame.
 
@@ -86,7 +86,7 @@ class EmbeddingMultiVectorStep(
 
         return DataFrame[EmbeddingMultiVectorResult](DataFrame[EmbeddingMultiVectorResult](rows))
 
-    def _get_embedding(self, doc: MarkdownDataContract) -> _EmbeddedMultiVector:
+    def _get_embedding(self, doc: MarkdownDataContract) -> _EmbeddedMultiVector:  # ty: ignore[invalid-method-override]
         """Generates an embedding for a given text and context.
 
         Parameters

@@ -38,8 +38,8 @@ class DvcDict(TypedDict):
     """
 
     cmd: str
-    deps: list[str]
-    outs: list[str]
+    deps: list[str | Path]
+    outs: list[str | Path]
     always_changed: bool
 
 
@@ -208,9 +208,9 @@ class DvcBackend(Backend, backend_name="dvc"):
         outputs_of_deps: list[Path] = []
 
         for o_step in step.required_steps:
-            dep_result = self._generate_dict(o_step, env_file)
+            dep_result = self._generate_dict(o_step, env_file)  # ty: ignore[invalid-argument-type]
             result |= dep_result
-            outputs_of_deps += dep_result[o_step.__class__.__name__]["outs"]
+            outputs_of_deps += dep_result[o_step.__class__.__name__]["outs"]  # ty: ignore[unsupported-operator]
 
         output_path = self.config.dataDir / step.__class__.__name__
 
@@ -277,6 +277,6 @@ class DvcBackend(Backend, backend_name="dvc"):
         for k in data:
             for key in ["outs", "deps"]:
                 if key in data[k]:
-                    data[k][key] = [str(p) for p in data[k][key]]
+                    data[k][key] = [str(p) for p in data[k][key]]  # ty: ignore[invalid-assignment, invalid-key, not-iterable]
 
         return yaml.dump({"stages": data})

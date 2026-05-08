@@ -41,8 +41,9 @@ class Embedded(TypedDict):
     text: str
     url: str
     vector: list[float]
+    keywords: str
     embedding_input_text: str
-    metadata: dict
+    metadata: dict[str, object]
 
 
 class BaseEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract], DataFrame[EmbeddingResult]]):
@@ -221,7 +222,7 @@ class BaseEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract],
         # Use precompiled pattern for better performance
         links = sorted(_URL_PATTERN.findall(text), key=len, reverse=True)
         for link in links:
-            text = text.replace(link, "LINK")
+            text = text.replace(link, "LINK")  # ty: ignore[no-matching-overload]
         return text
 
     def preprocess_inputs(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
@@ -270,7 +271,7 @@ class BaseEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract],
         return DataFrame[EmbeddingResult](output_rows)
 
 
-class EmbeddingStep(BaseEmbeddingStep, SimpleSplitterStep):
+class EmbeddingStep(BaseEmbeddingStep, SimpleSplitterStep):  # ty: ignore[invalid-generic-class]
     """Step for consuming list[MarkdownDataContract] and returning DataFrame[EmbeddingResult].
 
     This step inherits both from BaseEmbeddingStep and SimpleSplitterStep, meaning that

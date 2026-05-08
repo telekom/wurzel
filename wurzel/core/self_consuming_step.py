@@ -13,7 +13,7 @@ class SelfConsumingLeafStep(TypedStep[SETTS, OUTCONTRACT, OUTCONTRACT], Generic[
     """Some use cases require self awareness about their last results to reduce double work."""
 
     def run(self, inpt: OUTCONTRACT | None) -> OUTCONTRACT:
-        return super().run(inpt)
+        return super().run(inpt)  # ty: ignore[invalid-argument-type]
 
     @classmethod
     def _prepare_datamodels(cls, type_annotations):

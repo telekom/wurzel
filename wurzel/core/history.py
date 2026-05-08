@@ -21,11 +21,11 @@ class History:
     __SEP_STR = "-"
     _history: list[str]
 
-    def __init__(self, *args: TypedStep | str | list[str], initial: list[str] = None) -> NoneType:
+    def __init__(self, *args: TypedStep | str | list[str], initial: list[str] | None = None) -> NoneType:
         if initial is None:
             initial = []
         self._history = initial
-        self += args
+        self += args  # ty: ignore[unsupported-operator]
 
     def __add(self, s: str):
         self._history.append(s[:-4] if s.endswith("Step") else s)
@@ -35,7 +35,7 @@ class History:
             self.__add(other)
         elif isinstance(other, Iterable):
             for i in other:
-                self.__iadd__(i)
+                self.__iadd__(i)  # ty: ignore[invalid-argument-type]
         elif inspect.isclass(other):
             self.__add(other.__name__)
         elif isinstance(other, object):

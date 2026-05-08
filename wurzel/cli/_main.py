@@ -122,7 +122,7 @@ def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path:
 def _ensure_pipeline_obj(pipeline: TypedStep | str):
     """Resolve pipeline argument to a WZ pipeline instance."""
     if isinstance(pipeline, str):
-        return pipeline_callback(None, None, pipeline)
+        return pipeline_callback(None, None, pipeline)  # ty: ignore[invalid-argument-type]
     return pipeline
 
 
@@ -450,7 +450,7 @@ def run(
     """Run."""
     from wurzel.cli.cmd_run import main as cmd_run  # pylint: disable=import-outside-toplevel
 
-    output_path = Path(str(output_path.absolute()).replace("<step-name>", step.__name__))
+    output_path = Path(str(output_path.absolute()).replace("<step-name>", step.__name__))  # ty: ignore[unresolved-attribute]
     log.debug(
         "executing run",
         extra={
@@ -464,7 +464,7 @@ def run(
             }
         },
     )
-    return cmd_run(step, output_path, input_folders, executor, encapsulate_env, middlewares)
+    return cmd_run(step, output_path, input_folders, executor, encapsulate_env, middlewares)  # ty: ignore[invalid-argument-type]
 
 
 @app.command("inspect", no_args_is_help=True, help="Display information about a step")
@@ -483,7 +483,7 @@ def inspekt(
     """Inspect."""
     from wurzel.cli.cmd_inspect import main as cmd_inspect  # pylint: disable=import-outside-toplevel
 
-    return cmd_inspect(step, gen_env)
+    return cmd_inspect(step, gen_env)  # ty: ignore[invalid-argument-type]
 
 
 # Env helpers -----------------------------------------------------------------
@@ -680,8 +680,8 @@ def generate(  # pylint: disable=too-many-positional-arguments
         raise typer.BadParameter("pipeline argument is required when not using --list-backends")
 
     # Process pipeline and backend
-    pipeline_obj = pipeline_callback(None, None, pipeline)
-    backend_obj = backend_callback(None, None, backend)
+    pipeline_obj = pipeline_callback(None, None, pipeline)  # ty: ignore[invalid-argument-type]
+    backend_obj = backend_callback(None, None, backend)  # ty: ignore[invalid-argument-type]
 
     from wurzel.cli.cmd_generate import main as cmd_generate  # pylint: disable=import-outside-toplevel
     from wurzel.executors.backend import Backend  # pylint: disable=import-outside-toplevel
@@ -701,18 +701,16 @@ def generate(  # pylint: disable=too-many-positional-arguments
         },
     )
     try:
-        rendered = cmd_generate(
+        cmd_generate(
             pipeline_obj,
             backend=cast(type[Backend], backend_obj),
             values=values or [],
             pipeline_name=pipeline_name,
             output=output,
-            executor=executor,
+            executor=executor,  # ty: ignore[invalid-argument-type]
         )
     except ValuesFileError as exc:
         raise typer.BadParameter(str(exc)) from exc
-    if output is None:
-        print(rendered)  # noqa: T201
     return None
 
 

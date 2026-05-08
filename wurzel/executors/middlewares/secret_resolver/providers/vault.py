@@ -53,7 +53,7 @@ class SupabaseVaultClient:
         response = self._client.rpc("get_vault_secret", {"secret_name": ref}).execute()
         if not response.data:
             raise KeyError(f"Supabase Vault secret '{ref}' not found")
-        return response.data
+        return response.data  # ty: ignore[invalid-return-type]
 
 
 class VaultSecretProvider(SecretProvider, provider_name="vault"):

@@ -123,7 +123,7 @@ class SettingsLeaf(SettingsBase):
         """Returns a new class with env_prefix set."""
         cpy = create_model(prefix + "." + cls.__class__.__name__, __base__=cls)
         cpy.model_config["env_prefix"] = prefix
-        return cpy
+        return cpy  # ty: ignore[invalid-return-type]
 
 
 class Settings(SettingsLeaf):

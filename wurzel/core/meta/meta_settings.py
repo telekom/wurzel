@@ -48,7 +48,7 @@ def create_model(
     ) -> list[TypedStep]:
         if isinstance(flds, TypedStep):
             return list(flds.traverse())
-        cleaned: list[TypedStep] = [WZ(f) if isinstance(f, type) else f for f in flds]
+        cleaned: list[TypedStep] = [WZ(f) if isinstance(f, type) else f for f in flds]  # ty: ignore[invalid-argument-type]
         return cleaned
 
     clean_fields = clean(fields)
@@ -60,7 +60,7 @@ def create_model(
             "MetaSettings_" + step.__class__.__name__,
             **{name: (v.annotation, v) for name, v in step.settings_class.model_fields.items()},
             __base__=base_class,
-        )
+        )  # ty: ignore[no-matching-overload]
         for step in clean_fields
         if step.settings_class != NoneType
     }
@@ -69,5 +69,5 @@ def create_model(
         "MetaSettings_Parent",
         **{name: (typ, ...) for name, typ in inner_models.items()},
         __base__=SettingsBase,
-    )
-    return new_model_class
+    )  # ty: ignore[no-matching-overload]
+    return new_model_class  # ty: ignore[invalid-return-type]

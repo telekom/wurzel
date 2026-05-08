@@ -70,7 +70,7 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
     """
 
     @classmethod
-    def save_to_path(cls, path: Path, obj: Self | list[Self]) -> Path:
+    def save_to_path(cls, path: Path, obj: Self | list[Self]) -> Path:  # ty: ignore[invalid-method-override]
         import pandas as pd  # pylint: disable=import-outside-toplevel
 
         path = path.with_suffix(".csv")
@@ -107,7 +107,7 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
             if atr.dtype.type in {list, dict}:
                 read_data[key] = read_data[key].apply(_literal_eval_or_passthrough)
 
-        return patyp.DataFrame[cls](read_data)
+        return patyp.DataFrame[cls](read_data)  # ty: ignore[invalid-return-type, invalid-type-form]
 
     @classmethod
     def get_metrics(cls, obj: Any) -> MetricMap:
@@ -124,7 +124,7 @@ class PydanticModel(pydantic.BaseModel, DataModel):
     """DataModel contract specified with pydantic."""
 
     @classmethod
-    def save_to_path(cls, path: Path, obj: Self | list[Self]):
+    def save_to_path(cls, path: Path, obj: Self | list[Self]):  # ty: ignore[invalid-method-override]
         """Wurzel save model.
 
         Args:
@@ -148,7 +148,7 @@ class PydanticModel(pydantic.BaseModel, DataModel):
 
     # pylint: disable=arguments-differ
     @classmethod
-    def load_from_path(cls, path: Path, model_type: type[Self | list[Self]]) -> Self | list[Self]:
+    def load_from_path(cls, path: Path, model_type: type[Self | list[Self]]) -> Self | list[Self]:  # ty: ignore[invalid-method-override]
         """Wurzel load model.
 
         Args:

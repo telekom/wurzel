@@ -22,9 +22,13 @@ def _resolve_backend_instance(
 ) -> Backend:
     # Check if backend has from_values method (like ArgoBackend and DvcBackend)
     if hasattr(backend, "from_values") and values:
-        return backend.from_values(values, workflow_name=pipeline_name, executor=executor)  # type: ignore[call-arg]
+        return backend.from_values(  # type: ignore[call-arg]  # ty: ignore[call-non-callable]
+            values,
+            workflow_name=pipeline_name,
+            executor=executor,
+        )
     if executor is not None:
-        return backend(executor=executor)  # type: ignore[call-arg]
+        return backend(executor=executor)  # type: ignore[call-arg]  # ty: ignore[unknown-argument]
     return backend()
 
 

@@ -74,9 +74,8 @@ class SimpleSplitterStep(TypedStep[SplitterSettings, list[MarkdownDataContract],
 
         # Use joblib for parallel processing if available, otherwise sequential
         if HAS_JOBLIB:
-            results = Parallel(n_jobs=self.settings.NUM_THREADS, prefer="threads")(  # type: ignore
-                delayed(self._split_markdown)(batch)
-                for batch in batches  # type: ignore
+            results = Parallel(n_jobs=self.settings.NUM_THREADS, prefer="threads")(
+                delayed(self._split_markdown)(batch) for batch in batches
             )
         else:
             # Fall back to sequential processing

@@ -32,7 +32,7 @@ class DropDuplicationStep(TypedStep[DropStettings, list[MarkdownDataContract], l
         by preserving the headline.
         """
         if self.settings.DROP_BY_FIELDS == ["*"]:
-            self.settings.DROP_BY_FIELDS = None
+            self.settings.DROP_BY_FIELDS = None  # ty: ignore[invalid-assignment]
         df = pd.DataFrame(i.model_dump() for i in inpt)
         if not df.duplicated(self.settings.DROP_BY_FIELDS).any():
             return inpt

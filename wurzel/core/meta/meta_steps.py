@@ -12,14 +12,14 @@ from wurzel.core.typed_step import TypedStep
 T = TypeVar("T", bound=object)
 
 
-def find_sub_classes(parent: T, package: str = __package__) -> dict[str, T]:
+def find_sub_classes(parent: T, package: str = __package__ or "") -> dict[str, T]:
     """Searches for all DVC step definitions and returns them based on their name."""
 
     def is_non_abs_child(member: object) -> bool:
         return (
             True
             and inspect.isclass(member)
-            and issubclass(member, parent)
+            and issubclass(member, parent)  # ty: ignore[invalid-argument-type]
             and not inspect.isabstract(member)
             and not bool(getattr(member, "__abstractmethods__", False))
         )

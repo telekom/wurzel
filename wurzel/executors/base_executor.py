@@ -13,7 +13,7 @@ from contextvars import copy_context
 from logging import getLogger
 from pathlib import Path
 from types import NoneType
-from typing import TYPE_CHECKING, Any, Optional, Self, TypeAlias
+from typing import TYPE_CHECKING, Any, Optional, Self, TypeAlias, cast
 
 import pandas
 import pandera.typing as patyp
@@ -176,7 +176,7 @@ class BaseStepExecutor:
     __middleware_chain: Optional["MiddlewareChain"]
 
     @classmethod
-    def is_allow_extra_settings(cls: "BaseStepExecutor") -> bool:
+    def is_allow_extra_settings(cls) -> bool:
         """Checks os for ALLOW_EXTRA_SETTINGS.
 
         Args:
@@ -216,10 +216,10 @@ class BaseStepExecutor:
             # Check if we got instances or names
             if all(isinstance(m, BaseMiddleware) for m in middlewares):
                 # Got middleware instances
-                self.__middleware_chain = MiddlewareChain(middlewares)
+                self.__middleware_chain = MiddlewareChain(cast(list[BaseMiddleware], middlewares))
             elif all(isinstance(m, str) for m in middlewares):
                 # Got middleware names
-                self.__middleware_chain = create_middleware_chain(names=middlewares, from_env=load_middlewares_from_env)
+                self.__middleware_chain = create_middleware_chain(names=cast(list[str], middlewares), from_env=load_middlewares_from_env)
             else:
                 raise TypeError("middlewares must be all strings or all BaseMiddleware instances")
         elif load_middlewares_from_env:
@@ -245,9 +245,9 @@ class BaseStepExecutor:
         """
         if not path.is_dir():
             path.mkdir(parents=True, exist_ok=True)
-        obj = _try_sort(obj)
+        obj = _try_sort(obj)  # ty: ignore[invalid-assignment, invalid-argument-type]
         output_model_class: type[datacontract.DataModel] = step.output_model_class
-        return output_model_class.save_to_path(path / f"{hist}", obj)
+        return output_model_class.save_to_path(path / f"{hist}", obj)  # ty: ignore[invalid-argument-type]
 
     def load(self, step: TypedStep, path: PathToFolderWithBaseModels):
         """Load step input.
@@ -264,7 +264,7 @@ class BaseStepExecutor:
         input_model_class: type[datacontract.DataModel] = step.input_model_class
         for p in path.glob("*"):
             start = time.time()
-            data = input_model_class.load_from_path(p, step.input_model_type)
+            data = input_model_class.load_from_path(p, step.input_model_type)  # ty: ignore[invalid-argument-type]
             yield (
                 (data, History(".".join(p.name.split(".")[:-1]), step)),
                 time.time() - start,
@@ -299,7 +299,7 @@ class BaseStepExecutor:
         no_inputs_supplied = inputs in [[], set()]
         if no_inputs_supplied and isinstance(step, SelfConsumingLeafStep):
             is_run_already = False
-            for (inpt, hist), took in self.load(step, output_path):
+            for (inpt, hist), took in self.load(step, output_path):  # ty: ignore[invalid-argument-type]
                 is_run_already = True
                 yield (inpt, hist), took
             if is_run_already:
@@ -328,10 +328,10 @@ class BaseStepExecutor:
         # pylint: disable=protected-access
         if output_path:
             output_path = step._internal_output_class(output_path)
-        run: Callable[[list], Any] = pydantic.validate_call(step.run, validate_return=True)
+        run: Callable[[list], Any] = pydantic.validate_call(step.run, validate_return=True)  # ty: ignore[no-matching-overload]
         was_called_once = False
         try:
-            for (inpt, history), load_time in self._load_data(step, inputs, output_path):
+            for (inpt, history), load_time in self._load_data(step, inputs, output_path):  # ty: ignore[invalid-argument-type]
                 was_called_once = True
                 log.info(
                     f"Start: {step_cls.__name__}.run({history[:-1]}) -> {output_path}",
@@ -342,7 +342,7 @@ class BaseStepExecutor:
                 token = step_history.set(history)
                 ctx.run(step_history.set, history)
                 try:
-                    res = ctx.run(run, inpt)
+                    res = ctx.run(run, inpt)  # ty: ignore[invalid-argument-type]
                 finally:
                     step_history.reset(token)
                 run_time = time.time() - run_start
@@ -430,9 +430,9 @@ class BaseStepExecutor:
             correlation_id.set(step_cls.__name__)
             log.info(f"{self.__class__.__name__} - start: {step_cls.__name__}")
             if self.__dont_encapsulate:
-                return list(self._execute_step(step_cls, inputs, output_dir))
+                return list(self._execute_step(step_cls, inputs, output_dir))  # ty: ignore[invalid-argument-type]
             with step_env_encapsulation(step_cls):
-                return list(self._execute_step(step_cls, inputs, output_dir))
+                return list(self._execute_step(step_cls, inputs, output_dir))  # ty: ignore[invalid-argument-type]
         except LoggedCustomException:
             raise
         except Exception as e:
