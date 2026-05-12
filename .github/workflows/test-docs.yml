@@ -38,7 +38,7 @@ jobs:
           uv run mkdocs build --strict
 
       - name: Upload documentation artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: documentation
           path: site/
