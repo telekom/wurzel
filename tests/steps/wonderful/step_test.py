@@ -330,3 +330,43 @@ class TestPerWorkerSession:
 
         # 1× main thread (existing-files fetch) + 2× workers (one per doc).
         assert spy.call_count == 3
+
+
+# ── Neverejny filter ──────────────────────────────────────────────────────────
+
+
+class TestNeverejnyFilter:
+    def test_doc_with_neverejny_in_url_is_excluded(self, step, requests_mock):
+        doc = MarkdownDataContract(md="# Secret", url="https://example.com/docs/nabidka_neverejny.md", keywords="")
+        result = step.run([doc])
+        assert result == []
+        assert requests_mock.request_history == []
+
+    def test_doc_with_neverejna_in_url_is_excluded(self, step, requests_mock):
+        doc = MarkdownDataContract(md="# Secret", url="https://example.com/docs/nabidka_neverejna.md", keywords="")
+        result = step.run([doc])
+        assert result == []
+        assert requests_mock.request_history == []
+
+    def test_only_clean_doc_is_uploaded_and_returned(self, step, requests_mock):
+        clean = MarkdownDataContract(md="# Public", url="https://example.com/docs/nabidka_verejny.md", keywords="")
+        secret = MarkdownDataContract(md="# Secret", url="https://example.com/docs/nabidka_neverejny.md", keywords="")
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(KB_FILES, json=kb_create_payload("file-1"))
+        requests_mock.put(PRESIGNED)
+        requests_mock.post(KB_SYNC, json={})
+
+        result = step.run([clean, secret])
+
+        assert result == [clean]
+        assert requests_mock.request_history[0].method == "GET"
+        assert sum(1 for r in requests_mock.request_history if r.method == "POST") == 2  # create + sync
+
+    def test_all_neverejny_returns_empty_without_api_calls(self, step, requests_mock):
+        docs = [
+            MarkdownDataContract(md="# A", url="https://example.com/docs/nabidka_neverejny.md", keywords=""),
+            MarkdownDataContract(md="# B", url="https://example.com/docs/prehled_neverejny.md", keywords=""),
+        ]
+        result = step.run(docs)
+        assert result == []
+        assert requests_mock.request_history == []

@@ -180,6 +180,12 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
         if self.settings.SKIP:
             log.info(f"WonderfulRAGStep skipped — passing through {len(inpt)} documents unchanged")
             return inpt
+        # "neverejn" matches both Czech genders: neverejny (masc.) and neverejna (fem.)
+        filtered = [doc for doc in inpt if "neverejn" not in doc.url]
+        if len(filtered) < len(inpt):
+            log.info(f"Excluded {len(inpt) - len(filtered)} document(s) with 'neverejn' in filename")
+        inpt = filtered
+
         if not inpt:
             log.warning("No documents to process")
             return []
