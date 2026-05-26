@@ -168,7 +168,7 @@ class WorkflowConfig(BaseModel):
 
     name: str = "wurzel"
     namespace: str = "argo-workflows"
-    schedules: list[str] = Field(default_factory=lambda: ["0 4 * * *"])
+    schedules: list[str]
     entrypoint: str = "wurzel-pipeline"
     serviceAccountName: str = "wurzel-service-account"
     dataDir: Path = Path("/usr/app")
