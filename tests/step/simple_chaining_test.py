@@ -70,7 +70,7 @@ def safeget(dct, *keys):
 def _get_yaml_test_params():
     params = [pytest.param(DvcBackend, ["stages"], id="DVC Backend")]
     if HAS_HERA:
-        params.append(pytest.param(ArgoBackend, ["spec", "workflowSpec", "templates", 0, "dag", "tasks"], id="Argo Backend"))
+        params.append(pytest.param(ArgoBackend, ["spec", "templates", 0, "dag", "tasks"], id="Argo Backend"))
     return params
 
 
@@ -99,7 +99,7 @@ def test_yaml(backend: type[Backend], keys):
 def _get_minimal_pipeline_test_params():
     params = [pytest.param(DvcBackend, ["stages"], {}, id="DVC Backend")]
     if HAS_HERA:
-        params.append(pytest.param(ArgoBackend, ["spec", "workflowSpec", "templates", 0, "dag", "tasks"], {}, id="Argo Backend"))
+        params.append(pytest.param(ArgoBackend, ["spec", "templates", 0, "dag", "tasks"], {}, id="Argo Backend"))
     return params
 
 
