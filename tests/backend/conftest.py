@@ -95,7 +95,7 @@ def workflow_config_no_schedule() -> "WorkflowConfig":
     return WorkflowConfig(
         name="test-workflow-no-cron",
         namespace="test-namespace",
-        schedule=None,  # Explicitly no schedule - creates normal Workflow
+        schedules=None,  # Explicitly no schedules - creates normal Workflow
         entrypoint="test-pipeline",
         serviceAccountName="test-sa",
     )
@@ -116,7 +116,7 @@ def sample_values_yaml(tmp_path: Path) -> Path:
             "test-workflow": {
                 "name": "test-wf",
                 "namespace": "test-ns",
-                "schedule": "0 0 * * *",
+                "schedules": ["0 0 * * *"],
                 "container": {
                     "image": "test-image:latest",
                     "env": {"KEY1": "value1"},
@@ -125,7 +125,7 @@ def sample_values_yaml(tmp_path: Path) -> Path:
             "no-schedule-workflow": {
                 "name": "no-schedule-wf",
                 "namespace": "test-ns",
-                "schedule": None,  # Normal Workflow, not CronWorkflow
+                "schedules": None,  # Normal Workflow, not CronWorkflow
                 "container": {
                     "image": "test-image:latest",
                 },
