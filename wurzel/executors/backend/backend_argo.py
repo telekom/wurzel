@@ -169,7 +169,7 @@ class WorkflowConfig(BaseModel):
 
     name: str = "wurzel"
     namespace: str = "argo-workflows"
-    schedule: str | None = "0 4 * * *"
+    schedules: list[str] | None = None
     entrypoint: str = "wurzel-pipeline"
     serviceAccountName: str = "wurzel-service-account"
     dataDir: Path = Path("/usr/app")
@@ -378,9 +378,9 @@ class ArgoBackend(Backend, backend_name="argo"):
         """Creates an Argo Workflow or CronWorkflow based on the schedule configuration.
 
         This method generates the appropriate Argo workflow type:
-        - If `config.schedule` is set (e.g., "0 4 * * *"), creates a CronWorkflow
-          that runs on the specified schedule.
-        - If `config.schedule` is None, creates a normal Workflow that can be
+        - If `config.schedules` is non-empty (e.g., ["0 4 * * *"]), creates a CronWorkflow
+          that runs on the specified schedules.
+        - If `config.schedules` is empty, creates a normal Workflow that can be
           triggered manually or by other workflows.
 
         The workflow includes:
@@ -402,7 +402,7 @@ class ArgoBackend(Backend, backend_name="argo"):
             Create a CronWorkflow that runs daily at 4 AM:
 
             >>> from wurzel.executors.backend.backend_argo import ArgoBackend, WorkflowConfig
-            >>> config = WorkflowConfig(schedule="0 4 * * *")
+            >>> config = WorkflowConfig(schedules=["0 4 * * *"])
             >>> backend = ArgoBackend(config=config)
             >>> # Assuming 'step' is a TypedStep instance
             >>> workflow = backend._generate_workflow(step)
@@ -410,24 +410,25 @@ class ArgoBackend(Backend, backend_name="argo"):
 
             Create a normal Workflow for manual execution:
 
-            >>> config = WorkflowConfig(schedule=None)
+            >>> config = WorkflowConfig(schedules=[])
             >>> backend = ArgoBackend(config=config)
             >>> workflow = backend._generate_workflow(step)
             >>> assert workflow.kind == "Workflow"
 
         """
-        if self.config.schedule:
-            context = CronWorkflow(
-                schedule=self.config.schedule,
-                name=self.config.name,
-                namespace=self.config.namespace,
-                entrypoint=self.config.entrypoint,
-                annotations=self.config.annotations,
-                service_account_name=self.config.serviceAccountName,
-                volumes=self._volumes or None,
-                security_context=self._build_pod_security_context(),
-                pod_spec_patch=self._build_pod_spec_patch(),
-            )
+        workflow_kwargs = {
+            "name": self.config.name,
+            "namespace": self.config.namespace,
+            "entrypoint": self.config.entrypoint,
+            "annotations": self.config.annotations,
+            "service_account_name": self.config.serviceAccountName,
+            "volumes": self._volumes or None,
+            "security_context": self._build_pod_security_context(),
+            "pod_spec_patch": self._build_pod_spec_patch(),
+        }
+
+        if self.config.schedules:
+            context = CronWorkflow(schedules=self.config.schedules, **workflow_kwargs)
         else:
             context = Workflow(
                 name=self.config.name,
