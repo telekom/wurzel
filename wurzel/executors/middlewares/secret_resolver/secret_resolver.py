@@ -27,8 +27,6 @@ print(middleware._providers[0].provider_name)
 from __future__ import annotations
 
 import os
-from collections.abc import Iterator
-from contextlib import contextmanager
 from typing import Any
 
 from wurzel.core.typed_step import TypedStep
@@ -36,6 +34,7 @@ from wurzel.executors.middlewares.base import BaseMiddleware, ExecuteStepCallabl
 from wurzel.manifest.secrets.base import SecretProvider
 from wurzel.manifest.secrets.placeholder import find_placeholder_vars
 from wurzel.path import PathToFolderWithBaseModels
+from wurzel.utils.env import env_override
 
 
 def _build_default_providers() -> list[SecretProvider]:
@@ -76,21 +75,6 @@ class SecretResolverMiddleware(BaseMiddleware):
         """Resolve all SecretRefs to plaintext values using the matching provider."""
         return {env_var: self._find_provider(ref.provider).resolve(ref.ref) for env_var, ref in refs.items()}
 
-    @staticmethod
-    @contextmanager
-    def _env_override(overrides: dict[str, str]) -> Iterator[None]:
-        """Temporarily replace env vars with resolved values, restoring originals on exit."""
-        original = {k: os.environ.get(k) for k in overrides}
-        os.environ.update(overrides)
-        try:
-            yield
-        finally:
-            for key, old_value in original.items():
-                if old_value is None:
-                    os.environ.pop(key, None)
-                else:
-                    os.environ[key] = old_value
-
     def __call__(
         self,
         call_next: ExecuteStepCallable,
@@ -100,5 +84,5 @@ class SecretResolverMiddleware(BaseMiddleware):
     ) -> list[tuple[Any, Any]]:
         placeholder_vars = find_placeholder_vars(dict(os.environ))
         resolved = self._resolve_secrets(placeholder_vars)
-        with self._env_override(resolved):
+        with env_override(resolved):
             return call_next(step_cls, inputs, output_dir)

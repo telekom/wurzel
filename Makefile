@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: CC0-1.0
 # Requires uv (https://docs.astral.sh/uv/). First-time: run 'make lock' then 'make install'.
-.PHONY: install test clean build lock lint documentation reuse-lint
+.PHONY: install test clean build lock lint documentation reuse-lint api migrate
 SRC_DIR = ./wurzel
 TEST_DIR = ./tests
 VENV = .venv
@@ -45,7 +45,11 @@ documentation: install
 	@echo "📚 Serving documentation..."
 	uv run mkdocs serve
 
-api: install
+migrate:
+	@echo "🗄️  Running DB migrations..."
+	supabase db push --local
+
+api: install migrate
 	@echo "🚀 Starting FastAPI server..."
 	@set -a && [ -f .env ] && . ./.env; set +a; \
 	PACKAGE_MANAGER__PACKAGES_DIR=$${PACKAGE_MANAGER__PACKAGES_DIR:-./packages} \

@@ -16,6 +16,9 @@ Routes (all under /v1/projects/{project_id}/branches)
 ``GET    /{branch_name}/manifest``                — get manifest (any member)
 ``PUT    /{branch_name}/manifest``                — set/update manifest (branch-write guard)
 ``POST   /{branch_name}/manifest/submit``         — submit for execution (admin or member)
+``GET    /{branch_name}/runs``                    — list pipeline runs for branch (any member)
+``GET    /{branch_name}/runs/{run_id}``           — get one pipeline run (any member)
+``POST   /{branch_name}/runs/{run_id}/rerun``     — rerun from stored snapshot (admin or member)
 
 ``GET    /{branch_name}/diff/{target_branch}``    — field-level diff (any member)
 ``POST   /{branch_name}/merge/{target_branch}``   — merge with resolved payload (branch-write guard on target)
@@ -26,7 +29,6 @@ Routes (all under /v1/projects/{project_id}/branches)
 from __future__ import annotations
 
 import uuid
-from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks
@@ -43,24 +45,33 @@ from wurzel.api.backends.supabase.client import (
     db_create_branch,
     db_delete_branch,
     db_get_branch,
-    db_get_branch_by_id,
     db_get_branch_manifest,
+    db_get_branch_pipeline_run_for_branch,
+    db_list_branch_pipeline_runs,
     db_list_branches,
-    db_patch_manifest_status,
     db_update_branch,
     db_upsert_branch_manifest,
+)
+from wurzel.api.backends.supabase.client import (
+    db_patch_manifest_status as _db_patch_manifest_status,
 )
 from wurzel.api.errors import RESPONSE_401, RESPONSE_403, RESPONSE_404, RESPONSE_409, APIError
 from wurzel.api.routes.branch.data import (
     Branch,
     BranchDiff,
     BranchManifest,
+    BranchPipelineRun,
     CreateBranchRequest,
     FieldDiff,
     MergeRequest,
     PromoteResponse,
     ProtectBranchRequest,
     UpdateBranchRequest,
+)
+from wurzel.api.services.pipeline_runs import (
+    create_pipeline_run_from_manifest_row,
+    create_pipeline_run_from_snapshot_row,
+    execute_pipeline_run_bg,
 )
 from wurzel.manifest.models import PipelineManifest
 
@@ -77,11 +88,35 @@ def _row_to_branch(row: dict) -> Branch:
         name=row["name"],
         is_protected=row.get("is_protected", False),
         is_default=row.get("is_default", False),
-        promotes_to_id=uuid.UUID(row["promotes_to_id"]) if row.get("promotes_to_id") else None,
         promotes_to_name=row.get("promotes_to_name"),
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
+
+
+def _row_to_pipeline_run(row: dict, branch_name: str) -> BranchPipelineRun:
+    return BranchPipelineRun(
+        id=uuid.UUID(row["id"]),
+        branch_id=uuid.UUID(row["branch_id"]),
+        branch_name=branch_name,
+        manifest_id=uuid.UUID(row["manifest_id"]) if row.get("manifest_id") else None,
+        backend_name=row["backend_name"],
+        backend_run_id=row.get("backend_run_id"),
+        status=row["status"],
+        logs_url=row.get("logs_url"),
+        artifacts_url=row.get("artifacts_url"),
+        error_message=row.get("error_message"),
+        created_by=row["created_by"],
+        rerun_of_id=uuid.UUID(row["rerun_of_id"]) if row.get("rerun_of_id") else None,
+        created_at=row["created_at"],
+        started_at=row.get("started_at"),
+        finished_at=row.get("finished_at"),
+    )
+
+
+async def db_patch_manifest_status(branch_id: uuid.UUID, status: str) -> None:
+    """Compatibility wrapper for integration tests patching this symbol."""
+    await _db_patch_manifest_status(branch_id, status)
 
 
 async def _get_branch_or_404(project_id: uuid.UUID, branch_name: str) -> dict:
@@ -95,15 +130,16 @@ async def _get_branch_or_404(project_id: uuid.UUID, branch_name: str) -> dict:
     return row
 
 
-async def _validate_promotes_to_branch_or_404(project_id: uuid.UUID, promotes_to_id: uuid.UUID) -> None:
-    """Ensure *promotes_to_id* exists and belongs to *project_id*."""
-    target = await db_get_branch_by_id(promotes_to_id)
-    if target is None or target.get("project_id") != str(project_id):
+async def _get_promotes_to_branch_or_404(project_id: uuid.UUID, promotes_to_name: str) -> dict:
+    """Ensure *promotes_to_name* exists and belongs to *project_id*. Returns the branch row."""
+    target = await db_get_branch(project_id, promotes_to_name)
+    if target is None:
         raise APIError(
             status_code=http_status.HTTP_404_NOT_FOUND,
             title="Promotion target branch not found",
-            detail=f"No branch with id={promotes_to_id} exists in project {project_id}.",
+            detail=f"No branch '{promotes_to_name}' exists in project {project_id}.",
         )
+    return target
 
 
 def _flatten_dict(obj: Any, prefix: str = "") -> dict[str, Any]:
@@ -200,40 +236,6 @@ async def _ensure_branch_write_allowed(
         )
 
 
-async def _execute_manifest_bg(
-    branch_id: uuid.UUID,
-    definition: PipelineManifest,
-    backend_name: str,
-) -> None:
-    """Background task: execute the manifest and persist the final status."""
-    await db_patch_manifest_status(branch_id, "running")
-    try:
-        if backend_name == "inline":
-            from wurzel.executors.base_executor import BaseStepExecutor  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
-            from wurzel.manifest.builder import ManifestBuilder  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
-
-            builder = ManifestBuilder(definition)
-            step_graph = builder.build_step_graph()
-            executor = BaseStepExecutor()
-            for step in builder.find_terminal_steps(step_graph):
-                executor.execute_step(type(step), None, None)
-        else:
-            import tempfile  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
-
-            from wurzel.manifest.generator import ManifestGenerator  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
-
-            with tempfile.TemporaryDirectory() as tmp:
-                generator = ManifestGenerator(definition)
-                generator.generate(Path(tmp) / str(branch_id))
-
-        await db_patch_manifest_status(branch_id, "succeeded")
-    except Exception:  # pylint: disable=broad-exception-caught
-        import logging  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
-
-        logging.getLogger(__name__).exception("Manifest run failed for branch_id=%s", branch_id)
-        await db_patch_manifest_status(branch_id, "failed")
-
-
 # ── Branch CRUD ───────────────────────────────────────────────────────────────
 
 
@@ -263,13 +265,13 @@ async def create_branch(
             detail=f"A branch named '{body.name}' already exists in this project.",
         )
 
-    if body.promotes_to_id is not None:
-        await _validate_promotes_to_branch_or_404(project_id, body.promotes_to_id)
+    if body.promotes_to_name is not None:
+        await _get_promotes_to_branch_or_404(project_id, body.promotes_to_name)
 
     row = await db_create_branch(
         project_id,
         body.name,
-        promotes_to_id=body.promotes_to_id,
+        promotes_to_name=body.promotes_to_name,
     )
     return _row_to_branch(row)
 
@@ -440,6 +442,7 @@ def _apply_secret_fields_only(existing: PipelineManifest, patch: PipelineManifes
 
 @router.post(
     "/{branch_name:path}/manifest/submit",
+    response_model=BranchPipelineRun,
     status_code=http_status.HTTP_202_ACCEPTED,
     responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404, **RESPONSE_409},
 )
@@ -447,10 +450,13 @@ async def submit_branch_manifest(
     project_id: uuid.UUID,
     branch_name: str,
     background_tasks: BackgroundTasks,
+    user: CurrentUser,
     _access: RequireMember,
-    backend: str = "inline",
-) -> dict:
-    """Submit the branch manifest for execution (admin or member)."""
+) -> BranchPipelineRun:
+    """Submit the branch manifest for execution (admin or member).
+
+    Backend selection always comes from ``manifest.spec.backend``.
+    """
     branch_row = await _get_branch_or_404(project_id, branch_name)
     branch_id = uuid.UUID(branch_row["id"])
     manifest_row = await db_get_branch_manifest(branch_id)
@@ -460,9 +466,88 @@ async def submit_branch_manifest(
             title="No manifest",
             detail=f"Branch '{branch_name}' has no manifest to submit.",
         )
-    definition = PipelineManifest.model_validate(manifest_row["definition"])
-    background_tasks.add_task(_execute_manifest_bg, branch_id, definition, backend)
-    return {"branch_name": branch_name, "run_status": "pending", "message": "Manifest submitted"}
+    run_row = await create_pipeline_run_from_manifest_row(
+        branch_id=branch_id,
+        manifest_row=manifest_row,
+        created_by=user.sub,
+    )
+    background_tasks.add_task(execute_pipeline_run_bg, uuid.UUID(run_row["id"]))
+    return _row_to_pipeline_run(run_row, branch_name)
+
+
+@router.get(
+    "/{branch_name:path}/runs",
+    response_model=list[BranchPipelineRun],
+    responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404},
+)
+async def list_branch_runs(
+    project_id: uuid.UUID,
+    branch_name: str,
+    _access: RequireAnyRole,
+) -> list[BranchPipelineRun]:
+    """List pipeline runs for this branch (newest first)."""
+    branch_row = await _get_branch_or_404(project_id, branch_name)
+    branch_id = uuid.UUID(branch_row["id"])
+    rows = await db_list_branch_pipeline_runs(branch_id)
+    return [_row_to_pipeline_run(row, branch_name) for row in rows]
+
+
+@router.get(
+    "/{branch_name:path}/runs/{run_id}",
+    response_model=BranchPipelineRun,
+    responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404},
+)
+async def get_branch_run(
+    project_id: uuid.UUID,
+    branch_name: str,
+    run_id: uuid.UUID,
+    _access: RequireAnyRole,
+) -> BranchPipelineRun:
+    """Get one pipeline run by ID for this branch."""
+    branch_row = await _get_branch_or_404(project_id, branch_name)
+    branch_id = uuid.UUID(branch_row["id"])
+    row = await db_get_branch_pipeline_run_for_branch(branch_id, run_id)
+    if row is None:
+        raise APIError(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            title="Run not found",
+            detail=f"No run '{run_id}' exists for branch '{branch_name}'.",
+        )
+    return _row_to_pipeline_run(row, branch_name)
+
+
+@router.post(
+    "/{branch_name:path}/runs/{run_id}/rerun",
+    response_model=BranchPipelineRun,
+    status_code=http_status.HTTP_202_ACCEPTED,
+    responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404},
+)
+async def rerun_branch_run(
+    project_id: uuid.UUID,
+    branch_name: str,
+    run_id: uuid.UUID,
+    background_tasks: BackgroundTasks,
+    user: CurrentUser,
+    _access: RequireMember,
+) -> BranchPipelineRun:
+    """Create a rerun from the original stored snapshot."""
+    branch_row = await _get_branch_or_404(project_id, branch_name)
+    branch_id = uuid.UUID(branch_row["id"])
+    source_run = await db_get_branch_pipeline_run_for_branch(branch_id, run_id)
+    if source_run is None:
+        raise APIError(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            title="Run not found",
+            detail=f"No run '{run_id}' exists for branch '{branch_name}'.",
+        )
+
+    rerun_row = await create_pipeline_run_from_snapshot_row(
+        branch_id=branch_id,
+        source_run_row=source_run,
+        created_by=user.sub,
+    )
+    background_tasks.add_task(execute_pipeline_run_bg, uuid.UUID(rerun_row["id"]))
+    return _row_to_pipeline_run(rerun_row, branch_name)
 
 
 # ── Diff / Merge / Promote ────────────────────────────────────────────────────
@@ -580,11 +665,11 @@ async def update_branch(
     """Update a branch's promotes_to pointer (admin only)."""
     await _get_branch_or_404(project_id, branch_name)
     fields: dict = {}
-    if body.promotes_to_id is not None:
-        await _validate_promotes_to_branch_or_404(project_id, body.promotes_to_id)
-        fields["promotes_to_id"] = str(body.promotes_to_id)
-    elif "promotes_to_id" in body.model_fields_set:
-        fields["promotes_to_id"] = None
+    if body.promotes_to_name is not None:
+        target = await _get_promotes_to_branch_or_404(project_id, body.promotes_to_name)
+        fields["promotes_to_name"] = target["name"]
+    elif "promotes_to_name" in body.model_fields_set:
+        fields["promotes_to_name"] = None
     row = await db_update_branch(project_id, branch_name, fields) if fields else await db_get_branch(project_id, branch_name)
     return _row_to_branch(row)  # type: ignore[arg-type]
 

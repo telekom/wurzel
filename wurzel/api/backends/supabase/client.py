@@ -257,7 +257,7 @@ async def db_create_branch(
     *,
     is_protected: bool = False,
     is_default: bool = False,
-    promotes_to_id: uuid.UUID | None = None,
+    promotes_to_name: str | None = None,
 ) -> dict:
     """Insert a new branch row and return it."""
     db = await _get_async_client()
@@ -267,8 +267,8 @@ async def db_create_branch(
         "is_protected": is_protected,
         "is_default": is_default,
     }
-    if promotes_to_id is not None:
-        row["promotes_to_id"] = str(promotes_to_id)
+    if promotes_to_name is not None:
+        row["promotes_to_name"] = promotes_to_name
     result = await db.table("branches").insert(row).execute()
     return result.data[0]
 
@@ -277,13 +277,6 @@ async def db_get_branch(project_id: uuid.UUID, branch_name: str) -> dict | None:
     """Return the branch row for *branch_name* in *project_id*, or ``None``."""
     db = await _get_async_client()
     result = await db.table("branches").select("*").eq("project_id", str(project_id)).eq("name", branch_name).maybe_single().execute()
-    return result.data if result is not None else None
-
-
-async def db_get_branch_by_id(branch_id: uuid.UUID) -> dict | None:
-    """Return the branch row for *branch_id*, or ``None``."""
-    db = await _get_async_client()
-    result = await db.table("branches").select("*").eq("id", str(branch_id)).maybe_single().execute()
     return result.data if result is not None else None
 
 
@@ -335,3 +328,70 @@ async def db_patch_manifest_status(branch_id: uuid.UUID, status: str) -> None:
     """Update the ``run_status`` field of the manifest for *branch_id*."""
     db = await _get_async_client()
     await db.table("branch_manifests").update({"run_status": status}).eq("branch_id", str(branch_id)).execute()
+
+
+# ── Branch pipeline runs ───────────────────────────────────────────────────────
+
+
+async def db_create_branch_pipeline_run(
+    *,
+    branch_id: uuid.UUID,
+    manifest_id: uuid.UUID | None,
+    manifest_snapshot: dict,
+    backend_name: str,
+    created_by: str,
+    rerun_of_id: uuid.UUID | None = None,
+) -> dict:
+    """Insert a new run row for a branch manifest and return it."""
+    db = await _get_async_client()
+    row: dict[str, Any] = {
+        "branch_id": str(branch_id),
+        "manifest_snapshot": manifest_snapshot,
+        "backend_name": backend_name,
+        "status": "queued",
+        "created_by": created_by,
+    }
+    if manifest_id is not None:
+        row["manifest_id"] = str(manifest_id)
+    if rerun_of_id is not None:
+        row["rerun_of_id"] = str(rerun_of_id)
+
+    result = await db.table("branch_pipeline_runs").insert(row).execute()
+    return result.data[0]
+
+
+async def db_get_branch_pipeline_run(run_id: uuid.UUID) -> dict | None:
+    """Return a run row by run ID, or ``None`` if not found."""
+    db = await _get_async_client()
+    result = await db.table("branch_pipeline_runs").select("*").eq("id", str(run_id)).maybe_single().execute()
+    return result.data if result is not None else None
+
+
+async def db_get_branch_pipeline_run_for_branch(branch_id: uuid.UUID, run_id: uuid.UUID) -> dict | None:
+    """Return a run row by ``(branch_id, run_id)``, or ``None`` if not found."""
+    db = await _get_async_client()
+    result = (
+        await db.table("branch_pipeline_runs").select("*").eq("branch_id", str(branch_id)).eq("id", str(run_id)).maybe_single().execute()
+    )
+    return result.data if result is not None else None
+
+
+async def db_list_branch_pipeline_runs(branch_id: uuid.UUID, offset: int = 0, limit: int = 100) -> list[dict]:
+    """List run rows for a branch ordered by newest first."""
+    db = await _get_async_client()
+    result = (
+        await db.table("branch_pipeline_runs")
+        .select("*")
+        .eq("branch_id", str(branch_id))
+        .order("created_at", desc=True)
+        .range(offset, offset + limit - 1)
+        .execute()
+    )
+    return result.data or []
+
+
+async def db_update_branch_pipeline_run(run_id: uuid.UUID, fields: dict[str, Any]) -> dict | None:
+    """Update selected fields on a branch pipeline run row."""
+    db = await _get_async_client()
+    result = await db.table("branch_pipeline_runs").update(fields).eq("id", str(run_id)).execute()
+    return result.data[0] if result.data else None
