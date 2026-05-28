@@ -234,7 +234,7 @@ def test_manifest_submit_happy_and_error_paths(client, role_headers, project_con
         headers=role_headers["member"],
     )
     assert submit_as_member.status_code == 202
-    assert submit_as_member.json()["run_status"] == "pending"
+    assert submit_as_member.json()["status"] == "pending"
 
 
 def test_merge_and_promote_error_paths(client, role_headers, project_context):
