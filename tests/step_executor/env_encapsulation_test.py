@@ -2,6 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
+from typing import Optional
+
 import pytest
 from pydantic import SecretStr, ValidationError
 
@@ -39,8 +41,22 @@ class MySecretSettings(Settings):
     PUBLIC_KEY: str = "default-public"
 
 
+class MyOptionalSecretSettings(Settings):
+    """Settings class with Optional[SecretStr] field for testing."""
+
+    API_KEY: Optional[SecretStr] = None
+    PUBLIC_KEY: str = "default-public"
+
+
 class MySecretStep(TypedStep[MySecretSettings, PydanticModel, PydanticModel]):
     """Step class with SecretStr settings for testing."""
+
+    def run(self, inpt: PydanticModel) -> PydanticModel:
+        return PydanticModel()
+
+
+class MyOptionalSecretStep(TypedStep[MyOptionalSecretSettings, PydanticModel, PydanticModel]):
+    """Step class with Optional[SecretStr] settings for testing."""
 
     def run(self, inpt: PydanticModel) -> PydanticModel:
         return PydanticModel()
@@ -192,3 +208,35 @@ class TestSecretStrEncapsulation:
 
             # SecretStr should show masked value or SecretStr indication
             assert "**********" in settings_str or "SecretStr" in settings_str
+
+
+class TestOptionalSecretStrEncapsulation:
+    """Regression tests for Optional[SecretStr] (SecretStr | None) encapsulation.
+
+    Previously, field_info.annotation == SecretStr failed for Optional[SecretStr],
+    causing the masked placeholder '**********' to be written to the env instead
+    of the real secret value.
+    """
+
+    def test_optional_secret_str_with_value(self, env):
+        """Optional[SecretStr] with a real value must not be written as '**********'."""
+        test_secret = "real-api-key-value"  # pragma: allowlist secret
+
+        env.set("MYOPTIONALSECRETSTEP__API_KEY", test_secret)
+        env.set("MYOPTIONALSECRETSTEP__PUBLIC_KEY", "pub")
+
+        with step_env_encapsulation(MyOptionalSecretStep):
+            step = MyOptionalSecretStep()
+            settings = step.settings
+
+            assert isinstance(settings.API_KEY, SecretStr)
+            assert settings.API_KEY.get_secret_value() == test_secret
+
+    def test_optional_secret_str_none_excluded(self, env):
+        """Optional[SecretStr] with None (default) must not appear in env at all."""
+        env.set("MYOPTIONALSECRETSTEP__PUBLIC_KEY", "pub")
+
+        with step_env_encapsulation(MyOptionalSecretStep):
+            import os
+
+            assert "API_KEY" not in os.environ
