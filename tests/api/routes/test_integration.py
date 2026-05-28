@@ -193,7 +193,7 @@ class FakeDB:
         *,
         is_protected: bool = False,
         is_default: bool = False,
-        promotes_to_id: uuid.UUID | None = None,
+        promotes_to_name: str | None = None,
     ) -> dict:
         bid = str(uuid.uuid4())
         row: dict = {
@@ -202,8 +202,7 @@ class FakeDB:
             "name": name,
             "is_protected": is_protected,
             "is_default": is_default,
-            "promotes_to_id": str(promotes_to_id) if promotes_to_id else None,
-            "promotes_to_name": None,
+            "promotes_to_name": promotes_to_name,
             "created_at": _NOW,
             "updated_at": _NOW,
         }

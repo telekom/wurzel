@@ -23,7 +23,6 @@ class Branch(BaseModel):
     name: str
     is_protected: bool = False
     is_default: bool = False
-    promotes_to_id: uuid.UUID | None = Field(None, description="Branch this one promotes into")
     promotes_to_name: str | None = Field(None, description="Name of the promotion target branch")
     created_at: datetime
     updated_at: datetime
@@ -33,13 +32,13 @@ class CreateBranchRequest(BaseModel):
     """Request body for ``POST /v1/projects/{id}/branches``."""
 
     name: str = Field(min_length=1, max_length=100, pattern=r"^[a-z0-9][a-z0-9\-/]*$")
-    promotes_to_id: uuid.UUID | None = Field(None, description="Branch this one promotes into")
+    promotes_to_name: str | None = Field(None, description="Name of the branch this one promotes into")
 
 
 class UpdateBranchRequest(BaseModel):
     """Request body for ``PUT /v1/projects/{id}/branches/{name}``."""
 
-    promotes_to_id: uuid.UUID | None = None
+    promotes_to_name: str | None = None
 
 
 class ProtectBranchRequest(BaseModel):
@@ -93,3 +92,23 @@ class PromoteResponse(BaseModel):
     target_branch: str
     manifest_id: uuid.UUID
     message: str = "Manifest promoted successfully"
+
+
+class BranchPipelineRun(BaseModel):
+    """A single pipeline run record for a branch manifest."""
+
+    id: uuid.UUID
+    branch_id: uuid.UUID
+    branch_name: str
+    manifest_id: uuid.UUID | None = None
+    backend_name: str
+    backend_run_id: str | None = None
+    status: str
+    logs_url: str | None = None
+    artifacts_url: str | None = None
+    error_message: str | None = None
+    created_by: str
+    rerun_of_id: uuid.UUID | None = None
+    created_at: datetime
+    started_at: datetime | None = None
+    finished_at: datetime | None = None

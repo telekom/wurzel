@@ -165,6 +165,8 @@ def recover_and_reinstall_on_startup(settings) -> None:  # type: ignore[type-arg
 
 
 async def _recover_and_reinstall_async(settings) -> None:  # type: ignore[type-arg]
+    from postgrest.exceptions import APIError  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
+
     from wurzel.api.package_manager.db import (  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
         db_get_installed_packages_with_locks,
         db_get_pending_packages,
@@ -172,7 +174,13 @@ async def _recover_and_reinstall_async(settings) -> None:  # type: ignore[type-a
     )
 
     # 1. Reset stale 'installing' rows from other (crashed) replicas
-    reset_count = await db_reset_stale_installing(settings.INSTALLER_ID, settings.INSTALLING_TIMEOUT_SECONDS)
+    try:
+        reset_count = await db_reset_stale_installing(settings.INSTALLER_ID, settings.INSTALLING_TIMEOUT_SECONDS)
+    except APIError as exc:
+        if exc.code == "PGRST205":
+            logger.warning("Startup recovery skipped: table not found in schema cache (PGRST205). Migrations may not have run yet.")
+            return
+        raise
     if reset_count:
         logger.info("Startup recovery: reset %d stale 'installing' rows to 'pending'", reset_count)
 

@@ -186,7 +186,7 @@ def test_branch_admin_happy_and_error_paths(client, role_headers, project_contex
         f"/v1/projects/{project_id}/branches",
         json={
             "name": f"invalid-target-{uuid.uuid4().hex[:4]}",
-            "promotes_to_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+            "promotes_to_name": "nonexistent-branch",
         },
         headers=role_headers["admin"],
     )

@@ -31,6 +31,7 @@ _FAKE_AUTH = _AuthSettings(JWKS_URL="http://localhost:9999/.well-known/jwks.json
 _PROJECT_ID = uuid.uuid4()
 _BRANCH_ID = uuid.uuid4()
 _BRANCH_ID_2 = uuid.uuid4()
+_RUN_ID = uuid.uuid4()
 _NOW = datetime(2025, 1, 1, 12, 0, 0)
 
 _MINIMAL_MANIFEST = {
@@ -75,6 +76,26 @@ def _make_manifest_row(definition: dict | None = None) -> dict:
         "definition": definition or _MINIMAL_MANIFEST,
         "run_status": "pending",
         "updated_at": _NOW.isoformat(),
+    }
+
+
+def _make_run_row(run_id: uuid.UUID | None = None, *, branch_id: uuid.UUID | None = None) -> dict:
+    return {
+        "id": str(run_id or _RUN_ID),
+        "branch_id": str(branch_id or _BRANCH_ID),
+        "manifest_id": str(uuid.uuid4()),
+        "manifest_snapshot": _MINIMAL_MANIFEST,
+        "backend_name": "dvc",
+        "backend_run_id": None,
+        "status": "queued",
+        "logs_url": None,
+        "artifacts_url": None,
+        "error_message": None,
+        "created_by": ADMIN_USER.sub,
+        "rerun_of_id": None,
+        "created_at": _NOW.isoformat(),
+        "started_at": None,
+        "finished_at": None,
     }
 
 
@@ -173,20 +194,19 @@ class TestCreateBranch:
             r = client.post(_branch_url(), json={"name": "feature-x"})
         assert r.status_code == 409
 
-    def test_create_with_unknown_promotes_to_id_returns_404(self, client):
+    def test_create_with_unknown_promotes_to_name_returns_404(self, client):
         with (
             patch(
                 "wurzel.api.backends.supabase.client.get_project_role_from_db",
                 new_callable=AsyncMock,
                 return_value=ProjectRole.ADMIN,
             ),
-            patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, return_value=None),
-            patch("wurzel.api.routes.branch.router.db_get_branch_by_id", new_callable=AsyncMock, return_value=None),
+            patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, side_effect=[None, None]),
             patch("wurzel.api.routes.branch.router.db_create_branch", new_callable=AsyncMock) as mock_create,
         ):
             r = client.post(
                 _branch_url(),
-                json={"name": "feature-x", "promotes_to_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"},
+                json={"name": "feature-x", "promotes_to_name": "ghost-branch"},
             )
 
         assert r.status_code == 404
@@ -337,7 +357,7 @@ class TestUpdateBranch:
             r = client.put(_branch_url("/ghost"), json={})
         assert r.status_code == 404
 
-    def test_update_with_unknown_promotes_to_id_returns_404(self, client):
+    def test_update_with_unknown_promotes_to_name_returns_404(self, client):
         row = _make_branch_row("feature-x")
         with (
             patch(
@@ -345,13 +365,12 @@ class TestUpdateBranch:
                 new_callable=AsyncMock,
                 return_value=ProjectRole.ADMIN,
             ),
-            patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, return_value=row),
-            patch("wurzel.api.routes.branch.router.db_get_branch_by_id", new_callable=AsyncMock, return_value=None),
+            patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, side_effect=[row, None]),
             patch("wurzel.api.routes.branch.router.db_update_branch", new_callable=AsyncMock) as mock_update,
         ):
             r = client.put(
                 _branch_url("/feature-x"),
-                json={"promotes_to_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"},
+                json={"promotes_to_name": "ghost-branch"},
             )
 
         assert r.status_code == 404
@@ -657,6 +676,7 @@ class TestSubmitBranchManifest:
     def test_submit_as_member_returns_202(self, client):
         branch_row = _make_branch_row("feature-x")
         manifest_row = _make_manifest_row()
+        run_row = _make_run_row()
         with (
             patch(
                 "wurzel.api.backends.supabase.client.get_project_role_from_db",
@@ -665,6 +685,8 @@ class TestSubmitBranchManifest:
             ),
             patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, return_value=branch_row),
             patch("wurzel.api.routes.branch.router.db_get_branch_manifest", new_callable=AsyncMock, return_value=manifest_row),
+            patch("wurzel.api.routes.branch.router.create_pipeline_run_from_manifest_row", new_callable=AsyncMock, return_value=run_row),
+            patch("wurzel.api.routes.branch.router.execute_pipeline_run_bg", new_callable=AsyncMock),
         ):
             r = client.post(_branch_url("/feature-x/manifest/submit"))
         assert r.status_code == 202
@@ -672,6 +694,7 @@ class TestSubmitBranchManifest:
     def test_submit_returns_pending_status(self, client):
         branch_row = _make_branch_row("feature-x")
         manifest_row = _make_manifest_row()
+        run_row = _make_run_row()
         with (
             patch(
                 "wurzel.api.backends.supabase.client.get_project_role_from_db",
@@ -680,9 +703,11 @@ class TestSubmitBranchManifest:
             ),
             patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, return_value=branch_row),
             patch("wurzel.api.routes.branch.router.db_get_branch_manifest", new_callable=AsyncMock, return_value=manifest_row),
+            patch("wurzel.api.routes.branch.router.create_pipeline_run_from_manifest_row", new_callable=AsyncMock, return_value=run_row),
+            patch("wurzel.api.routes.branch.router.execute_pipeline_run_bg", new_callable=AsyncMock),
         ):
             r = client.post(_branch_url("/feature-x/manifest/submit"))
-        assert r.json()["run_status"] == "pending"
+        assert r.json()["status"] == "queued"
 
     def test_submit_no_manifest_returns_409(self, client):
         branch_row = _make_branch_row("feature-x")
@@ -706,6 +731,87 @@ class TestSubmitBranchManifest:
         ):
             r = client.post(_branch_url("/feature-x/manifest/submit"))
         assert r.status_code == 403
+
+
+class TestBranchRuns:
+    def test_list_runs_returns_200(self, client):
+        branch_row = _make_branch_row("feature-x")
+        run_row = _make_run_row()
+        with (
+            patch(
+                "wurzel.api.backends.supabase.client.get_project_role_from_db",
+                new_callable=AsyncMock,
+                return_value=ProjectRole.VIEWER,
+            ),
+            patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, return_value=branch_row),
+            patch("wurzel.api.routes.branch.router.db_list_branch_pipeline_runs", new_callable=AsyncMock, return_value=[run_row]),
+        ):
+            r = client.get(_branch_url("/feature-x/runs"))
+        assert r.status_code == 200
+        assert len(r.json()) == 1
+
+    def test_get_run_returns_200(self, client):
+        branch_row = _make_branch_row("feature-x")
+        run_row = _make_run_row()
+        with (
+            patch(
+                "wurzel.api.backends.supabase.client.get_project_role_from_db",
+                new_callable=AsyncMock,
+                return_value=ProjectRole.VIEWER,
+            ),
+            patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, return_value=branch_row),
+            patch("wurzel.api.routes.branch.router.db_get_branch_pipeline_run_for_branch", new_callable=AsyncMock, return_value=run_row),
+        ):
+            r = client.get(_branch_url(f"/feature-x/runs/{_RUN_ID}"))
+        assert r.status_code == 200
+        assert r.json()["id"] == str(_RUN_ID)
+
+    def test_get_run_returns_404_when_missing(self, client):
+        branch_row = _make_branch_row("feature-x")
+        with (
+            patch(
+                "wurzel.api.backends.supabase.client.get_project_role_from_db",
+                new_callable=AsyncMock,
+                return_value=ProjectRole.VIEWER,
+            ),
+            patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, return_value=branch_row),
+            patch("wurzel.api.routes.branch.router.db_get_branch_pipeline_run_for_branch", new_callable=AsyncMock, return_value=None),
+        ):
+            r = client.get(_branch_url(f"/feature-x/runs/{_RUN_ID}"))
+        assert r.status_code == 404
+
+    def test_rerun_returns_202(self, client):
+        branch_row = _make_branch_row("feature-x")
+        source_run = _make_run_row()
+        rerun = _make_run_row(run_id=uuid.uuid4())
+        with (
+            patch(
+                "wurzel.api.backends.supabase.client.get_project_role_from_db",
+                new_callable=AsyncMock,
+                return_value=ProjectRole.MEMBER,
+            ),
+            patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, return_value=branch_row),
+            patch("wurzel.api.routes.branch.router.db_get_branch_pipeline_run_for_branch", new_callable=AsyncMock, return_value=source_run),
+            patch("wurzel.api.routes.branch.router.create_pipeline_run_from_snapshot_row", new_callable=AsyncMock, return_value=rerun),
+            patch("wurzel.api.routes.branch.router.execute_pipeline_run_bg", new_callable=AsyncMock),
+        ):
+            r = client.post(_branch_url(f"/feature-x/runs/{_RUN_ID}/rerun"))
+        assert r.status_code == 202
+        assert r.json()["status"] == "queued"
+
+    def test_rerun_returns_404_when_source_run_missing(self, client):
+        branch_row = _make_branch_row("feature-x")
+        with (
+            patch(
+                "wurzel.api.backends.supabase.client.get_project_role_from_db",
+                new_callable=AsyncMock,
+                return_value=ProjectRole.MEMBER,
+            ),
+            patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, return_value=branch_row),
+            patch("wurzel.api.routes.branch.router.db_get_branch_pipeline_run_for_branch", new_callable=AsyncMock, return_value=None),
+        ):
+            r = client.post(_branch_url(f"/feature-x/runs/{_RUN_ID}/rerun"))
+        assert r.status_code == 404
 
 
 # ── GET /branches/{branch_name}/diff/{target_branch} ─────────────────────────
@@ -1029,6 +1135,7 @@ class TestBranchNamesWithSlashes:
         """POST /{branch_name:path}/manifest/submit should match branch names with slashes."""
         branch_row = _make_branch_row(name=branch_name)
         manifest_row = _make_manifest_row()
+        run_row = _make_run_row()
         with (
             patch(
                 "wurzel.api.backends.supabase.client.get_project_role_from_db",
@@ -1037,6 +1144,8 @@ class TestBranchNamesWithSlashes:
             ),
             patch("wurzel.api.routes.branch.router.db_get_branch", new_callable=AsyncMock, return_value=branch_row),
             patch("wurzel.api.routes.branch.router.db_get_branch_manifest", new_callable=AsyncMock, return_value=manifest_row),
+            patch("wurzel.api.routes.branch.router.create_pipeline_run_from_manifest_row", new_callable=AsyncMock, return_value=run_row),
+            patch("wurzel.api.routes.branch.router.execute_pipeline_run_bg", new_callable=AsyncMock),
         ):
             r = client.post(_branch_url(f"/{branch_name}/manifest/submit"))
         assert r.status_code == 202

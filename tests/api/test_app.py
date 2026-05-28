@@ -93,3 +93,29 @@ class TestCreateApp:
         assert len(parts[1]) == 32  # trace-id
         assert len(parts[2]) == 16  # parent-id (span-id)
         assert len(parts[3]) == 2  # flags
+
+    def test_traceparent_is_not_all_zeros_without_incoming_header(self, mocker):
+        """When no traceparent is sent and OTEL is absent, fresh random IDs must be generated."""
+        mocker.patch.dict("sys.modules", {"opentelemetry": None, "opentelemetry.propagate": None})
+        app = create_app(settings=_SETTINGS)
+        with TestClient(app, raise_server_exceptions=False) as c:
+            r = c.get("/v1/health/live")
+        assert "traceparent" in r.headers
+        tp = r.headers["traceparent"]
+        parts = tp.split("-")
+        assert len(parts) == 4
+        assert parts[1] != "0" * 32, "trace-id must not be all-zeros"
+        assert parts[2] != "0" * 16, "span-id must not be all-zeros"
+
+    def test_traceparent_propagated_from_incoming_header(self, mocker):
+        """When a valid traceparent is sent and OTEL is absent, the trace-id must be echoed back."""
+        mocker.patch.dict("sys.modules", {"opentelemetry": None, "opentelemetry.propagate": None})
+        incoming_trace_id = "4bf92f3577b34da6a3ce929d0e0e4736"
+        incoming_span_id = "00f067aa0ba902b7"
+        incoming_tp = f"00-{incoming_trace_id}-{incoming_span_id}-01"
+        app = create_app(settings=_SETTINGS)
+        with TestClient(app, raise_server_exceptions=False) as c:
+            r = c.get("/v1/health/live", headers={"traceparent": incoming_tp})
+        tp = r.headers["traceparent"]
+        parts = tp.split("-")
+        assert parts[1] == incoming_trace_id, "trace-id must be propagated from incoming header"
