@@ -127,7 +127,11 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
                 converted_contract = self.converter.convert(url)
                 md = converted_contract.document.export_to_markdown(image_placeholder="")
                 keyword = self.extract_keywords(md)
-                contract_instance = {"md": md, "keywords": " ".join([self.settings.DEFAULT_KEYWORD, keyword]), "url": url}
+                contract_instance = MarkdownDataContract(
+                    md=md,
+                    keywords=" ".join([self.settings.DEFAULT_KEYWORD, keyword]),
+                    url=url,
+                )
                 contracts.append(contract_instance)
 
             except (FileNotFoundError, OSError) as e:
