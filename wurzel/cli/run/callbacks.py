@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     pass
 
 
-def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: str | None):
+def executer_callback(_ctx: typer.Context | None, _param: typer.CallbackParam | None, value: str | None):
     """Convert a cli-str to a Type[BaseStepExecutor] or Backend.
 
     Args:
