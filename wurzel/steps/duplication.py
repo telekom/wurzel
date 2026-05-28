@@ -21,7 +21,7 @@ log = getLogger(__name__)
 class DropStettings(Settings):
     """specify DROP_BY_FIELDS to field."""
 
-    DROP_BY_FIELDS: list[str] = ["md"]
+    DROP_BY_FIELDS: list[str] | None = ["md"]
 
 
 class DropDuplicationStep(TypedStep[DropStettings, list[MarkdownDataContract], list[MarkdownDataContract]]):

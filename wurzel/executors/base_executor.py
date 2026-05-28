@@ -7,13 +7,13 @@
 import json
 import os
 import time
-from collections.abc import Callable, Generator
+from collections.abc import Callable, Generator, Set
 from contextlib import contextmanager
 from contextvars import copy_context
 from logging import getLogger
 from pathlib import Path
 from types import NoneType
-from typing import TYPE_CHECKING, Any, Optional, Self, TypeAlias
+from typing import TYPE_CHECKING, Any, Optional, Self, TypeAlias, cast
 
 import pandas
 import pandera.typing as patyp
@@ -47,7 +47,7 @@ if TYPE_CHECKING:
 log = getLogger(__name__)
 
 
-StepReturnType: TypeAlias = pandas.DataFrame | PydanticModel | list[PydanticModel]
+StepReturnType: TypeAlias = Any
 
 
 class StepReport(pydantic.BaseModel):
@@ -176,7 +176,7 @@ class BaseStepExecutor:
     __middleware_chain: Optional["MiddlewareChain"]
 
     @classmethod
-    def is_allow_extra_settings(cls: "BaseStepExecutor") -> bool:
+    def is_allow_extra_settings(cls) -> bool:
         """Checks os for ALLOW_EXTRA_SETTINGS.
 
         Args:
@@ -216,10 +216,10 @@ class BaseStepExecutor:
             # Check if we got instances or names
             if all(isinstance(m, BaseMiddleware) for m in middlewares):
                 # Got middleware instances
-                self.__middleware_chain = MiddlewareChain(middlewares)
+                self.__middleware_chain = MiddlewareChain(cast(list[BaseMiddleware], middlewares))
             elif all(isinstance(m, str) for m in middlewares):
                 # Got middleware names
-                self.__middleware_chain = create_middleware_chain(names=middlewares, from_env=load_middlewares_from_env)
+                self.__middleware_chain = create_middleware_chain(names=cast(list[str], middlewares), from_env=load_middlewares_from_env)
             else:
                 raise TypeError("middlewares must be all strings or all BaseMiddleware instances")
         elif load_middlewares_from_env:
@@ -249,7 +249,7 @@ class BaseStepExecutor:
         output_model_class: type[datacontract.DataModel] = step.output_model_class
         return output_model_class.save_to_path(path / f"{hist}", obj)
 
-    def load(self, step: TypedStep, path: PathToFolderWithBaseModels):
+    def load(self, step: TypedStep, path: Path | PathToFolderWithBaseModels):
         """Load step input.
 
         Args:
@@ -262,7 +262,7 @@ class BaseStepExecutor:
 
         """
         input_model_class: type[datacontract.DataModel] = step.input_model_class
-        for p in path.glob("*"):
+        for p in Path(path).glob("*"):
             start = time.time()
             data = input_model_class.load_from_path(p, step.input_model_type)
             yield (
@@ -273,16 +273,10 @@ class BaseStepExecutor:
     def _load_data(
         self,
         step: TypedStep,
-        inputs: set[PydanticModel | patyp.DataFrame[PanderaDataFrameModel] | PathToFolderWithBaseModels],
-        output_path: Path,
+        inputs: Set[object],
+        output_path: Path | PathToFolderWithBaseModels | None,
     ) -> Generator[
-        tuple[
-            tuple[
-                PydanticModel | patyp.DataFrame[PanderaDataFrameModel] | list[PydanticModel] | None,
-                History,
-            ],
-            float,
-        ],
+        tuple[tuple[Any, History], float],
         Any,
         NoneType,
     ]:
@@ -297,7 +291,7 @@ class BaseStepExecutor:
 
         """
         no_inputs_supplied = inputs in [[], set()]
-        if no_inputs_supplied and isinstance(step, SelfConsumingLeafStep):
+        if output_path is not None and no_inputs_supplied and isinstance(step, SelfConsumingLeafStep):
             is_run_already = False
             for (inpt, hist), took in self.load(step, output_path):
                 is_run_already = True
@@ -328,7 +322,10 @@ class BaseStepExecutor:
         # pylint: disable=protected-access
         if output_path:
             output_path = step._internal_output_class(output_path)
-        run: Callable[[list], Any] = pydantic.validate_call(step.run, validate_return=True)
+        run: Callable[[Any], Any] = cast(
+            Callable[[Any], Any],
+            pydantic.validate_call(validate_return=True)(cast(Callable[..., Any], step.run)),
+        )
         was_called_once = False
         try:
             for (inpt, history), load_time in self._load_data(step, inputs, output_path):
@@ -429,10 +426,11 @@ class BaseStepExecutor:
         try:
             correlation_id.set(step_cls.__name__)
             log.info(f"{self.__class__.__name__} - start: {step_cls.__name__}")
+            typed_inputs = cast(set[PathToFolderWithBaseModels], inputs or set())
             if self.__dont_encapsulate:
-                return list(self._execute_step(step_cls, inputs, output_dir))
+                return list(self._execute_step(step_cls, typed_inputs, output_dir))
             with step_env_encapsulation(step_cls):
-                return list(self._execute_step(step_cls, inputs, output_dir))
+                return list(self._execute_step(step_cls, typed_inputs, output_dir))
         except LoggedCustomException:
             raise
         except Exception as e:

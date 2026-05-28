@@ -140,7 +140,7 @@ class MarkdownDataContract(PydanticModel):
                 category=DeprecationWarning,
             )
 
-        return MarkdownDataContract(
+        return cls(
             md=md_body,
             # Extract metadata fields or use default value
             url=metadata.get("url", url_prefix + str(path.absolute())),

@@ -15,7 +15,7 @@ from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
 if TYPE_CHECKING:  # pragma: no cover - typing imports only
-    from wurzel.step import TypedStep
+    from wurzel.core.typed_step import TypedStep
 
 
 class EnvVarRequirement(BaseModel):

@@ -2,11 +2,9 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import inspect
 import json
 from collections.abc import Iterable
 from contextvars import ContextVar
-from types import NoneType
 from typing import Optional
 
 from .typed_step import TypedStep
@@ -21,27 +19,33 @@ class History:
     __SEP_STR = "-"
     _history: list[str]
 
-    def __init__(self, *args: TypedStep | str | list[str], initial: list[str] = None) -> NoneType:
+    def __init__(self, *args: TypedStep | str | list[str], initial: list[str] | None = None) -> None:
         if initial is None:
             initial = []
         self._history = initial
-        self += args
+        for item in args:
+            self += item
 
     def __add(self, s: str):
         self._history.append(s[:-4] if s.endswith("Step") else s)
 
-    def __iadd__(self, other: TypedStep | str | list[str]):
+    @staticmethod
+    def __name_of(value: object) -> str:
+        if isinstance(value, type):
+            return value.__name__
+        return value.__class__.__name__
+
+    def __iadd__(self, other: TypedStep | str | list[str]) -> "History":
         if isinstance(other, str):
             self.__add(other)
-        elif isinstance(other, Iterable):
+        elif isinstance(other, Iterable) and not isinstance(other, type):
             for i in other:
-                self.__iadd__(i)
-        elif inspect.isclass(other):
-            self.__add(other.__name__)
-        elif isinstance(other, object):
-            self.__add(other.__class__.__name__)
+                if isinstance(i, str):
+                    self.__add(i)
+                else:
+                    self.__add(self.__name_of(i))
         else:
-            self.__add(str(other))
+            self.__add(self.__name_of(other))
         return self
 
     def copy(self) -> "History":
