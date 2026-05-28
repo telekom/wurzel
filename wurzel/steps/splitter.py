@@ -83,7 +83,7 @@ def split_markdown_batch(splitter: SemanticSplitter, markdowns: list[MarkdownDat
         try:
             rows.extend(splitter.split_markdown_document(md_data_contract))
         except MarkdownException as err:
-            log.warning(
+            logger.warning(
                 "skipped dokument ",
                 extra={"reason": err.__class__.__name__, "doc": md_data_contract},
             )
@@ -91,7 +91,7 @@ def split_markdown_batch(splitter: SemanticSplitter, markdowns: list[MarkdownDat
     if skipped == len(markdowns):
         raise SplittException("all Documents got skipped during splitting")
     if skipped:
-        log.warning(f"{(skipped / len(markdowns)) * 100}% got skipped")
+        logger.warning(f"{(skipped / len(markdowns)) * 100}% got skipped")
     return rows
 
 
