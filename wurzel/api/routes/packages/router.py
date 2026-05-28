@@ -150,7 +150,7 @@ async def list_packages(
 async def delete_package(
     project_id: uuid.UUID,
     package_id: uuid.UUID = Path(...),
-    _access: RequireAdmin = None,  # type: ignore[assignment]
+    _access: RequireAdmin = None,  # type: ignore
 ) -> None:
     """Soft-delete a package (sets ``status='deleted'``).
 
@@ -173,9 +173,9 @@ async def delete_package(
 async def upsert_secret(
     project_id: uuid.UUID,
     secret_name: str = Path(...),
-    body: SecretRequest = None,  # type: ignore[assignment]
-    user: CurrentUser = None,  # type: ignore[assignment]
-    _access: RequireSecretEditor = None,  # type: ignore[assignment]
+    body: SecretRequest = None,  # type: ignore
+    user: CurrentUser = None,  # type: ignore
+    _access: RequireSecretEditor = None,  # type: ignore
 ) -> SecretMetaResponse:
     """Create or update a project secret.
 
@@ -192,7 +192,7 @@ async def upsert_secret(
 async def delete_secret(
     project_id: uuid.UUID,
     secret_name: str = Path(...),
-    _access: RequireSecretEditor = None,  # type: ignore[assignment]
+    _access: RequireSecretEditor = None,  # type: ignore
 ) -> None:
     """Delete a project secret by name."""
     await db_delete_project_secret(project_id, secret_name)
@@ -201,7 +201,7 @@ async def delete_secret(
 @router.get("/secrets", response_model=list[SecretMetaResponse], responses={**RESPONSE_401, **RESPONSE_403, **RESPONSE_404})
 async def list_secrets(
     project_id: uuid.UUID,
-    _access: RequireSecretEditor = None,  # type: ignore[assignment]
+    _access: RequireSecretEditor = None,  # type: ignore
 ) -> list[SecretMetaResponse]:
     """List secret metadata (name, timestamps) — values are never included."""
     rows = await db_list_project_secrets(project_id)

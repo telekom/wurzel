@@ -237,7 +237,7 @@ async def db_count_admins(project_id: uuid.UUID) -> int:
 async def db_user_exists(user_id: str) -> bool:
     """Return True if *user_id* exists in Supabase Auth, False otherwise."""
     try:
-        from gotrue.errors import AuthApiError  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
+        from gotrue.errors import AuthApiError  # noqa: PLC0415  # pylint: disable=import-outside-toplevel  # type: ignore
     except ImportError:
         AuthApiError = Exception  # type: ignore[misc,assignment]
     db = await _get_async_client()

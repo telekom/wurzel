@@ -312,7 +312,8 @@ async def protect_branch(
         )
     await _get_branch_or_404(project_id, branch_name)
     row = await db_update_branch(project_id, branch_name, {"is_protected": body.is_protected})
-    return _row_to_branch(row)  # type: ignore[arg-type]
+    assert row is not None
+    return _row_to_branch(row)
 
 
 # ── Manifest ──────────────────────────────────────────────────────────────────
@@ -671,7 +672,8 @@ async def update_branch(
     elif "promotes_to_name" in body.model_fields_set:
         fields["promotes_to_name"] = None
     row = await db_update_branch(project_id, branch_name, fields) if fields else await db_get_branch(project_id, branch_name)
-    return _row_to_branch(row)  # type: ignore[arg-type]
+    assert row is not None
+    return _row_to_branch(row)
 
 
 @router.delete(

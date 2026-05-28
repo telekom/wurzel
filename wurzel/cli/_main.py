@@ -40,9 +40,10 @@ console = Console()
 if TYPE_CHECKING:  # pragma: no cover - only for typing
     from wurzel.cli.cmd_env import EnvValidationIssue
     from wurzel.core import TypedStep
+    from wurzel.executors.base_executor import BaseStepExecutor
 
 
-def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: str | None):
+def executer_callback(_ctx: typer.Context | None, _param: typer.CallbackParam | None, value: str | None):
     """Convert a cli-str to a Type[BaseStepExecutor] or Backend.
 
     Args:
@@ -81,7 +82,7 @@ def executer_callback(_ctx: typer.Context, _param: typer.CallbackParam, value: s
     raise typer.BadParameter(f"{value} is not a recognized executor or backend")
 
 
-def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str):
+def step_callback(_ctx: typer.Context | None, _param: typer.CallbackParam | None, import_path: str):
     """Converts a cli-str to a TypedStep.
 
     Args:
@@ -419,7 +420,9 @@ def run(
     """Run."""
     from wurzel.cli.cmd_run import main as cmd_run  # pylint: disable=import-outside-toplevel
 
-    output_path = Path(str(output_path.absolute()).replace("<step-name>", step.__name__))
+    step_cls = cast("type[TypedStep]", step)
+    input_set = set(input_folders)
+    output_path = Path(str(output_path.absolute()).replace("<step-name>", step_cls.__name__))
     log.debug(
         "executing run",
         extra={
@@ -433,7 +436,7 @@ def run(
             }
         },
     )
-    return cmd_run(step, output_path, input_folders, executor, encapsulate_env, middlewares)
+    return cmd_run(step_cls, output_path, input_set, executor, encapsulate_env, middlewares)
 
 
 @app.command("inspect", no_args_is_help=True, help="Display information about a step")
@@ -452,7 +455,7 @@ def inspekt(
     """Inspect."""
     from wurzel.cli.cmd_inspect import main as cmd_inspect  # pylint: disable=import-outside-toplevel
 
-    return cmd_inspect(step, gen_env)
+    return cmd_inspect(cast("type[TypedStep]", step), gen_env)
 
 
 # Env helpers -----------------------------------------------------------------
@@ -547,7 +550,7 @@ def get_available_backends() -> list[str]:
     return [cls.__name__ for cls in _get_backends().values()]
 
 
-def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str):
+def backend_callback(_ctx: typer.Context | None, _param: typer.CallbackParam | None, backend: str):
     """Validates input and returns fitting backend. Case-insensitive."""
     from wurzel.executors.backend import get_backend_by_name  # pylint: disable=import-outside-toplevel
 
@@ -561,7 +564,7 @@ def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: 
     raise typer.BadParameter(f"Backend {backend} not supported. Choose from {', '.join(available)}")
 
 
-def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str):
+def pipeline_callback(_ctx: typer.Context | None, _param: typer.CallbackParam | None, import_path: str):
     """Based on step_callback transform them to WZ pipeline elements."""
     from wurzel.utils.meta_settings import WZ  # pylint: disable=import-outside-toplevel
 
@@ -676,12 +679,12 @@ def generate(  # pylint: disable=too-many-positional-arguments
             values=values or [],
             pipeline_name=pipeline_name,
             output=output,
-            executor=executor,
+            executor=cast("type[BaseStepExecutor] | None", executor),
         )
+        if output is None:
+            typer.echo(rendered)
     except ValuesFileError as exc:
         raise typer.BadParameter(str(exc)) from exc
-    if output is None:
-        print(rendered)  # noqa: T201
     return None
 
 
@@ -717,7 +720,7 @@ def main_args(
 
     if not os.isatty(1):
         # typer.core.rich = None  # This may not be available in all typer versions
-        logging.config.dictConfig(get_logging_dict_config(log_level, "wurzel.utils.logging.JsonStringFormatter"))
+        logging.config.dictConfig(get_logging_dict_config(log_level, "wurzel.core.logging.JsonStringFormatter"))
         app.pretty_exceptions_enable = False
         app.pretty_exceptions_show_locals = False
     else:

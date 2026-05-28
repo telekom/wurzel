@@ -34,7 +34,7 @@ class S3FileStorageService(FileStorageService):
             ImportError: If boto3 is not installed.
         """
         try:
-            import boto3  # pylint: disable=import-outside-toplevel
+            import boto3  # pylint: disable=import-outside-toplevel  # type: ignore
         except ImportError as exc:
             raise ImportError("boto3 is required for S3FileStorageService. Install with: pip install boto3") from exc
 

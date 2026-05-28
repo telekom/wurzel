@@ -15,10 +15,10 @@ import pytest
 
 from wurzel.api.services.pipeline_backends import (
     RegisteredBackendRunAdapter,
-    _env_override,
     get_pipeline_run_adapter,
 )
 from wurzel.manifest.models import PipelineManifest
+from wurzel.utils.env import env_override as _env_override
 
 _RUN_ID = uuid.uuid4()
 _MANIFEST = PipelineManifest.model_validate(
