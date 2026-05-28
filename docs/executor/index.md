@@ -24,38 +24,53 @@ logging and error reporting when contracts fail.
 Basic usage as a context manager:
 
 ```python
-from pathlib import Path
-
+from wurzel.core import NoSettings, TypedStep
+from wurzel.datacontract import MarkdownDataContract
 from wurzel.executors import BaseStepExecutor
-from wurzel.steps.manual_markdown import ManualMarkdownStep
+
+
+class DemoStep(TypedStep[NoSettings, None, MarkdownDataContract]):
+    def run(self, inpt: None) -> MarkdownDataContract:
+        return MarkdownDataContract(md="demo", keywords="demo", url="demo")
+
 
 with BaseStepExecutor() as exc:
-    results = exc(ManualMarkdownStep, set(), Path("output"))
+    results = exc(DemoStep, None, None)
 ```
 
 Running the executor with middlewares by name:
 
 ```python
-from pathlib import Path
-
+from wurzel.core import NoSettings, TypedStep
+from wurzel.datacontract import MarkdownDataContract
 from wurzel.executors import BaseStepExecutor
-from wurzel.steps.manual_markdown import ManualMarkdownStep
 
-with BaseStepExecutor(middlewares=["prometheus", "timing"]) as exc:
-    results = exc(ManualMarkdownStep, set(), Path("output"))
+
+class DemoStep(TypedStep[NoSettings, None, MarkdownDataContract]):
+    def run(self, inpt: None) -> MarkdownDataContract:
+        return MarkdownDataContract(md="demo", keywords="demo", url="demo")
+
+
+with BaseStepExecutor(middlewares=["prometheus"]) as exc:
+    results = exc(DemoStep, None, None)
 ```
 
 Or provide middleware instances directly:
 
 ```python
-from pathlib import Path
-
+from wurzel.core import NoSettings, TypedStep
+from wurzel.datacontract import MarkdownDataContract
 from wurzel.executors import BaseStepExecutor
 from wurzel.executors.middlewares.prometheus import PrometheusMiddleware
-from wurzel.steps.manual_markdown import ManualMarkdownStep
+
+
+class DemoStep(TypedStep[NoSettings, None, MarkdownDataContract]):
+    def run(self, inpt: None) -> MarkdownDataContract:
+        return MarkdownDataContract(md="demo", keywords="demo", url="demo")
+
 
 with BaseStepExecutor(middlewares=[PrometheusMiddleware()]) as exc:
-    results = exc(ManualMarkdownStep, set(), Path("output"))
+    results = exc(DemoStep, None, None)
 ```
 
 ## Environment encapsulation

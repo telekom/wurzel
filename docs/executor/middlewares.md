@@ -9,6 +9,28 @@ pattern and execute in the configured order around the core executor.
 Pass middleware names (looked up in the built-in registry) or instances directly
 to `BaseStepExecutor`:
 
+```python
+from wurzel.core import NoSettings, TypedStep
+from wurzel.datacontract import MarkdownDataContract
+from wurzel.executors import BaseStepExecutor
+from wurzel.executors.middlewares.prometheus import PrometheusMiddleware
+
+
+class DemoStep(TypedStep[NoSettings, None, MarkdownDataContract]):
+    def run(self, inpt: None) -> MarkdownDataContract:
+        return MarkdownDataContract(md="demo", keywords="demo", url="demo")
+
+
+with BaseStepExecutor(middlewares=["prometheus"]) as exc:
+    exc(DemoStep, None, None)
+
+
+with BaseStepExecutor(middlewares=[PrometheusMiddleware()]) as exc:
+    exc(DemoStep, None, None)
+```
+
+Or via the CLI / environment variable:
+
 ```bash
 # Via CLI flag
 wurzel run --middlewares prometheus my.module.MyStep
