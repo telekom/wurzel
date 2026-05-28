@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     pass
 
 
-def step_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str):
+def step_callback(_ctx: typer.Context | None, _param: typer.CallbackParam | None, import_path: str):
     """Converts a cli-str to a TypedStep.
 
     Args:

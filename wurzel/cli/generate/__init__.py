@@ -34,7 +34,7 @@ def _resolve_backend_instance(
     from_values = getattr(backend, "from_values", None)
     if callable(from_values) and values:
         factory = cast(Callable[..., "Backend"], from_values)
-        return cast("Backend", factory(values, workflow_name=pipeline_name, executor=executor))
+        return factory(values, workflow_name=pipeline_name, executor=executor)
     if executor is not None:
         return backend(executer=executor)
     return backend()
