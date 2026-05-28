@@ -8,8 +8,6 @@ from __future__ import annotations
 
 import importlib
 import inspect
-import logging
-import logging.config
 import os
 import sys
 from datetime import datetime
@@ -17,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, cast
 
 import typer
+from loguru import logger
 from rich.console import Console
 from rich.table import Table
 
@@ -35,7 +34,7 @@ from wurzel.cli import (  # pylint: disable=wrong-import-position
 app.add_typer(cmd_middlewares.app, name="middlewares")
 app.add_typer(cmd_manifest.app, name="manifest")
 
-log = logging.getLogger(__name__)
+log = logger
 console = Console()
 
 
@@ -395,7 +394,7 @@ def complete_step_import(incomplete: str) -> list[str]:  # pylint: disable=too-m
             seen.add(hint)
             unique_hints.append(hint)
 
-    logging.debug("found possible steps:", extra={"hints": unique_hints[:10]})  # Log first 10
+    logger.bind(hints=unique_hints[:10]).debug("found possible steps")  # Log first 10
 
     # Filter by incomplete prefix
     return [hint for hint in unique_hints if hint.startswith(incomplete)]
@@ -720,19 +719,10 @@ def generate(  # pylint: disable=too-many-positional-arguments
 
 
 def update_log_level(log_level: str):
-    """Fix for typer logs."""
-    from wurzel.core.logging import get_logging_dict_config  # pylint: disable=import-outside-toplevel
+    """Configure loguru for interactive terminal sessions."""
+    from wurzel.cli.logger import setup_cli_logging  # pylint: disable=import-outside-toplevel
 
-    log_config = get_logging_dict_config(log_level)
-    log_config["formatters"]["default"] = {
-        "()": "wurzel.cli.logger.WithExtraFormatter",
-        "reduced": ["INFO"],
-    }
-    log_config["handlers"]["default"] = {
-        "()": "rich.logging.RichHandler",
-        "formatter": "default",
-    }
-    logging.config.dictConfig(log_config)
+    setup_cli_logging(log_level)
 
 
 @app.callback()
@@ -747,11 +737,11 @@ def main_args(
     ] = "INFO",
 ):
     """Global settings, main."""
-    from wurzel.core.logging import get_logging_dict_config  # pylint: disable=import-outside-toplevel
+    from wurzel.core.logging import setup_logging  # pylint: disable=import-outside-toplevel
 
     if not os.isatty(1):
         # typer.core.rich = None  # This may not be available in all typer versions
-        logging.config.dictConfig(get_logging_dict_config(log_level, "wurzel.core.logging.JsonStringFormatter"))
+        setup_logging(log_level, json_string=True)
         app.pretty_exceptions_enable = False
         app.pretty_exceptions_show_locals = False
     else:

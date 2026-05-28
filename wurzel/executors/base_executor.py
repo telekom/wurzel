@@ -10,7 +10,6 @@ import time
 from collections.abc import Callable, Generator, Set
 from contextlib import contextmanager
 from contextvars import copy_context
-from logging import getLogger
 from pathlib import Path
 from types import NoneType
 from typing import TYPE_CHECKING, Any, Optional, Self, TypeAlias, cast
@@ -19,6 +18,7 @@ import pandas
 import pandera.typing as patyp
 import pydantic
 from asgi_correlation_id import correlation_id
+from loguru import logger
 from pydantic import SecretStr
 from pydantic_core import ValidationError
 
@@ -43,8 +43,6 @@ from wurzel.utils import WZ, create_model, try_get_length
 
 if TYPE_CHECKING:
     from wurzel.executors.middlewares.base import BaseMiddleware, MiddlewareChain
-
-log = getLogger(__name__)
 
 
 StepReturnType: TypeAlias = Any
@@ -81,9 +79,9 @@ def _try_sort(x: StepReturnType) -> StepReturnType:
             return x
     # pylint: disable-next=bare-except
     except:  # noqa: E722
-        log.warning("Could not sort output", extra={"extra": {"type": type(x).__name__}})
+        logger.bind(extra={"type": type(x).__name__}).warning("Could not sort output")
         return x
-    log.warning("Can't sort objects of this type", extra={"extra": {"type": type(x).__name__}})
+    logger.bind(extra={"type": type(x).__name__}).warning("Can't sort objects of this type")
     return x
 
 
@@ -95,10 +93,8 @@ def _collect_output_metrics(step: TypedStep, result: Any) -> dict[str, float]:
     try:
         metrics = get_metrics(result)
     except Exception:  # pylint: disable=broad-exception-caught
-        log.warning(
-            "Could not collect data contract metrics",
-            extra={"step": step.__class__.__name__, "contract": output_model_class.__name__},
-            exc_info=True,
+        logger.opt(exception=True).bind(step=step.__class__.__name__, contract=output_model_class.__name__).warning(
+            "Could not collect data contract metrics"
         )
         return {}
     return metrics or {}
@@ -111,7 +107,7 @@ def step_env_encapsulation(step_cls: type[TypedStep]):
     name = step_cls.__name__.upper()
     step = WZ(step_cls)
     if BaseStepExecutor.is_allow_extra_settings():
-        log.info("Allowing extra settings fields")
+        logger.info("Allowing extra settings fields")
     if step.settings_class != NoneType:
         settings = create_model([step], allow_extra_fields=BaseStepExecutor.is_allow_extra_settings())
         try:
@@ -136,10 +132,7 @@ def step_env_encapsulation(step_cls: type[TypedStep]):
             else:
                 value = str(value)
             os.environ[field_name] = value
-        log.info(
-            "Running with encapsulated settings",
-            extra={"settings": inner_settings.model_dump(mode="json")},
-        )
+        logger.bind(settings=inner_settings.model_dump(mode="json")).info("Running with encapsulated settings")
     try:
         yield
     finally:
@@ -330,7 +323,7 @@ class BaseStepExecutor:
         try:
             for (inpt, history), load_time in self._load_data(step, inputs, output_path):
                 was_called_once = True
-                log.info(
+                logger.info(
                     f"Start: {step_cls.__name__}.run({history[:-1]}) -> {output_path}",
                 )
                 history: History
@@ -358,20 +351,11 @@ class BaseStepExecutor:
                     history=history.get(),
                     metrics=_collect_output_metrics(step, res),
                 )
-                log.info(
-                    f"Finished: {step_cls.__name__}.run({history[:-1]}) -> {output_path}",
-                    extra=report.model_dump(),
-                )
+                logger.bind(**report.model_dump()).info(f"Finished: {step_cls.__name__}.run({history[:-1]}) -> {output_path}")
                 yield res, report
-            log.info(f"{step_cls.__name__}.finalize()")
+            logger.info(f"{step_cls.__name__}.finalize()")
             if not was_called_once:
-                log.error(
-                    "Run was never executed",
-                    extra={
-                        "step": step.__class__.__name__,
-                        "inpts": inputs,
-                    },
-                )
+                logger.bind(step=step.__class__.__name__, inpts=inputs).error("Run was never executed")
             step.finalize()
         except ValidationError as err:
             raise ContractFailedException(f"{inputs} does not conform the data contract of {step.input_model_class.__name__}") from err
@@ -425,7 +409,7 @@ class BaseStepExecutor:
         """
         try:
             correlation_id.set(step_cls.__name__)
-            log.info(f"{self.__class__.__name__} - start: {step_cls.__name__}")
+            logger.info(f"{self.__class__.__name__} - start: {step_cls.__name__}")
             typed_inputs = cast(set[PathToFolderWithBaseModels], inputs or set())
             if self.__dont_encapsulate:
                 return list(self._execute_step(step_cls, typed_inputs, output_dir))
@@ -436,7 +420,7 @@ class BaseStepExecutor:
         except Exception as e:
             raise StepFailed(f"{self.__class__.__name__} error during {step_cls.__name__}: {str(e)}") from e
         finally:
-            log.info(f"{self.__class__.__name__} - done: {step_cls.__name__}")
+            logger.info(f"{self.__class__.__name__} - done: {step_cls.__name__}")
             correlation_id.set(None)
 
     def __call__(

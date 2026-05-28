@@ -2,12 +2,10 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import logging
-
 from typer.testing import CliRunner
 
 from wurzel.cli import cmd_middlewares
-from wurzel.cli.logger import WithExtraFormatter
+from wurzel.cli.logger import setup_cli_logging
 
 runner = CliRunner()
 
@@ -40,10 +38,6 @@ def test_inspect_middleware_not_found(monkeypatch):
     assert "Error: Middleware 'missing' not found." in result.output
 
 
-def test_with_extra_formatter():
-    fmt = WithExtraFormatter(reduced=["INFO"])
-    rec = logging.LogRecord(
-        name="testx", level=logging.INFO, pathname="/x.py", lineno=1, msg="hello", args=(), exc_info=None, func="test_func"
-    )
-    out = fmt.format(rec)
-    assert "'hello'" in out
+def test_setup_cli_logging():
+    """setup_cli_logging should configure loguru without raising errors."""
+    setup_cli_logging("INFO")

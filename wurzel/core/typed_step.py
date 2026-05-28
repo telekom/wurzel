@@ -4,7 +4,6 @@
 
 import abc
 from collections.abc import Iterable
-from logging import getLogger
 from pathlib import Path
 from types import NoneType
 from typing import (
@@ -17,6 +16,7 @@ from typing import (
 )
 
 import pandera.typing as patyp
+from loguru import logger
 from typing_inspect import get_origin
 
 from wurzel.core.settings import Settings
@@ -28,7 +28,6 @@ from wurzel.path import PathToFolderWithBaseModels
 # pylint: disable-next=invalid-name
 MODEL_TYPE: TypeAlias = type[DataModel]
 #  ^Should be a Intersection between DataModel & {BaseModel, DataFrameModel}
-log = getLogger(__name__)
 INCONTRACT = TypeVar("INCONTRACT")
 OUTCONTRACT = TypeVar("OUTCONTRACT")
 
@@ -174,8 +173,8 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         expected_signature_str = f"run(inputs: {expected_run_input}) -> {cls.output_model_type}:"
         try:
             if not cls.run.__annotations__:
-                log.warning(f"The step {cls.__name__} has no types. This is not recommended!")
-                log.info(f"Method signature should be {cls.__name__}.{expected_signature_str}:")
+                logger.warning(f"The step {cls.__name__} has no types. This is not recommended!")
+                logger.info(f"Method signature should be {cls.__name__}.{expected_signature_str}:")
                 # raise StaticTypeError(
                 #    "incorrect function signature for run method:  no typing"
                 # )

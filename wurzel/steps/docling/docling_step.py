@@ -20,8 +20,6 @@ Despite these limitations, we have decided to proceed with EasyOCR.
 
 """
 
-from logging import getLogger
-
 from bs4 import BeautifulSoup, Comment
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import EasyOcrOptions, PdfPipelineOptions
@@ -29,6 +27,7 @@ from docling.document_converter import (
     DocumentConverter,
     PdfFormatOption,
 )
+from loguru import logger
 from mistletoe import Document as MTDocument
 from mistletoe import HTMLRenderer
 
@@ -37,8 +36,6 @@ from wurzel.datacontract.common import MarkdownDataContract
 from wurzel.utils.to_markdown.html2md import MD_RENDER_LOCK
 
 from .settings import DoclingSettings
-
-log = getLogger(__name__)
 
 
 class CleanMarkdownRenderer(HTMLRenderer):
@@ -127,11 +124,11 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
                 converted_contract = self.converter.convert(url)
                 md = converted_contract.document.export_to_markdown(image_placeholder="")
                 keyword = self.extract_keywords(md)
-                contract_instance = {"md": md, "keywords": " ".join([self.settings.DEFAULT_KEYWORD, keyword]), "url": url}
+                contract_instance = MarkdownDataContract(md=md, keywords=" ".join([self.settings.DEFAULT_KEYWORD, keyword]), url=url)
                 contracts.append(contract_instance)
 
             except (FileNotFoundError, OSError) as e:
-                log.warning(f"Failed to verify URL: {url}. Error: {e}")
+                logger.warning(f"Failed to verify URL: {url}. Error: {e}")
                 continue
 
         return contracts

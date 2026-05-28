@@ -4,59 +4,13 @@
 
 import json
 import logging
-import logging.config
 import os
 import sys
-from collections.abc import Mapping
-from types import TracebackType
-from typing import Any, Literal
+import traceback
+from typing import Any
 
 from asgi_correlation_id import correlation_id
-
-log = logging.getLogger(__name__)
-
-
-def log_uncaught_exception(exc_type: type[BaseException], exc_value: BaseException, exc_traceback: TracebackType | None) -> None:
-    """Log uncaught exceptions."""
-    log.exception("Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
-
-
-def setup_uncaught_exception_logging() -> None:
-    """Set up logging for uncaught exceptions."""
-    sys.excepthook = log_uncaught_exception
-
-
-# pylint: disable-next=too-many-positional-arguments
-def warnings_to_logger(message: str, category: str, filename: str, lineno: str, file=None, line=None):
-    """Replaces the default `warnings.showwarning` function to log warnings using the Python logging framework.
-
-    This function captures warning messages and logs them to a logger associated with the module where the warning originated.
-    If the module cannot be determined, it uses the filename as the logger name.
-
-        message (str): The warning message to be logged.
-        category (str): The category of the warning (e.g., `UserWarning`, `DeprecationWarning`).
-        filename (str): The name of the file where the warning was triggered.
-        lineno (str): The line number in the file where the warning was triggered.
-        file (Optional[IO], optional): Not used. Included for compatibility with `warnings.showwarning`. Defaults to None.
-        line (Optional[str], optional): Not used. Included for compatibility with `warnings.showwarning`. Defaults to None.
-
-    """
-    # pylint: disable=unused-argument
-    # Optimize by computing absolute path once
-    abs_filename = os.path.abspath(filename)
-    for module_name, module in sys.modules.items():
-        module_path = getattr(module, "__file__", None)
-        if module_path and os.path.abspath(module_path) == abs_filename:
-            break
-    else:
-        module_name = os.path.splitext(os.path.split(filename)[1])[0]
-    logger = logging.getLogger(module_name)
-    extra = {
-        "warnings.category": category,
-        "warnings.filename": filename,
-        "warnings.lineno": lineno,
-    }
-    logger.warning(message, extra=extra)
+from loguru import logger
 
 
 def _make_dict_serializable(item: Any):
@@ -82,136 +36,128 @@ def _make_dict_serializable(item: Any):
             return repr(item)
 
 
-class JsonFormatter(logging.Formatter):
-    """Custom formatter for structured logging."""
+def _build_json_record(record: dict, *, serialize_extra_as_string: bool = False) -> dict[str, Any]:
+    """Build a JSON-serializable dict from a loguru record dict."""
+    module = record["name"]
+    function = record["function"]
+    logger_name = f"{module}.{function}" if function and function != "<module>" else module
 
-    key_blacklist = [
-        "msg",
-        "message",
-        "args",
-        "created",
-        "msecs",
-        "relativeCreated",
-        "levelno",
-        "filename",
-        "color_message",
-    ]
+    t = record["time"]
+    timestamp = f"{t.strftime('%B')} {t.day}, {t.year} @ {t.strftime('%H:%M:%S')}.{t.microsecond:06d}"
 
-    def __init__(
-        self,
-        datefmt: str | None = "%Y-%m-%dT%H:%M:%S%z",
-        reduced: list[str] | None = None,
-        indent: str | None = None,
-        *,
-        defaults: Mapping[str, Any] | None = None,
-    ) -> None:
-        """Create a new Formatter.
+    output: dict[str, Any] = {
+        "level": record["level"].name,
+        "message": record["message"],
+        "logger_name": logger_name,
+        "file": f"{record['file'].path}:{record['line']}",
+        "@timestamp": timestamp,
+        "process": f"{record['process'].name}({record['process'].id})",
+        "thread": f"{record['thread'].name}({record['thread'].id})",
+    }
 
-        Args:
-            datefmt (str, optional): Used in @timestamp. Defaults to "%Y-%m-%dT%H:%M:%S%z".
-            reduced (Optional[List[str]], optional): List of loglevels to reduce output by. Defaults to None.
-                Reduced output removes filename, thread and process information
-            indent (Optional[str], optional): indent for json dumps. Defaults to None.
+    exc = record.get("exception")
+    if exc is not None and exc.type is not None:
+        output["exception"] = "".join(traceback.format_exception(exc.type, exc.value, exc.traceback))
 
-        """
-        super().__init__(None, datefmt, defaults=defaults)
-        self.indent = indent
-        self.reduced_levels = [logging.getLevelNamesMapping().get(level) for level in reduced or []]
+    cor_id = correlation_id.get()
+    if cor_id is not None:
+        output["correlationId"] = cor_id
 
-    def serialize_item(self, item: Any):
-        """Serialize any data into something that can be json.dumped."""
-        return _make_dict_serializable(item)
+    extra = dict(record.get("extra", {}))
+    if extra:
+        serialized = _make_dict_serializable(extra)
+        output["extra"] = json.dumps(serialized) if serialize_extra_as_string else serialized
 
-    def _get_output_dict(self, record: logging.LogRecord) -> dict[str, Any]:
-        data = {k: v for k, v in record.__dict__.items() if k not in self.key_blacklist and v is not None}
-        logger_name = f"{data.pop('module')}.{data.pop('name')}"
-        func_name = data.pop("funcName")
-        if func_name != "<module>":
-            logger_name = logger_name + "." + func_name
-        output = {
-            "level": data.pop("levelname"),
-            "message": record.getMessage(),
-            "logger_name": logger_name,
-            "file": f"{data.pop('pathname')}:{data.pop('lineno')}",
-            "extra": {},
-            "@timestamp": self.formatTime(record, self.datefmt),
-            "process": f"{data.pop('processName')}({data.pop('process')})",
-            "thread": f"{data.pop('threadName')}({data.pop('thread')})",
-        }
-        if all(key in data for key in ["warnings.category", "warnings.filename", "warnings.lineno"]):
-            output["file"] = f"{data.pop('warnings.filename')}:{data.pop('warnings.lineno')}"
-        if data:
-            output["extra"] = self.serialize_item(data)
-        cor_id = correlation_id.get()
-        if cor_id is not None:
-            output["correlationId"] = cor_id
-        if self.reduced_levels and record.levelno in self.reduced_levels:
-            del output["process"]
-            del output["logger_name"]
-            del output["thread"]
-        if not output["extra"]:
-            del output["extra"]
-        return output
-
-    def format(self, record: logging.LogRecord) -> str:
-        super().format(record)
-        output = self._get_output_dict(record)
-        return json.dumps(output, default=repr, indent=self.indent)
+    return output
 
 
-class JsonStringFormatter(JsonFormatter):
-    """Instead of Formatting all extra objects into nested objects
-    this will serialize everything under the extra key into a string containing json.
+def _json_sink(message) -> None:
+    """Custom loguru sink: writes a JSON line to stderr."""
+    output = _build_json_record(message.record)
+    sys.stderr.write(json.dumps(output, default=repr) + "\n")
+
+
+def _json_string_sink(message) -> None:
+    """Like _json_sink but serializes the extra dict as a JSON string."""
+    output = _build_json_record(message.record, serialize_extra_as_string=True)
+    sys.stderr.write(json.dumps(output, default=repr) + "\n")
+
+
+class InterceptHandler(logging.Handler):
+    """Bridge stdlib logging records to loguru.
+
+    Install on the stdlib root logger so that third-party libraries
+    (uvicorn, gunicorn, urllib3, …) are routed through loguru.
     """
 
-    def serialize_item(self, item: Any):
-        return json.dumps(super().serialize_item(item))
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            level = logger.level(record.levelname).name
+        except ValueError:
+            level = str(record.levelno)
+
+        frame, depth = logging.currentframe(), 2
+        while frame and frame.f_code.co_filename == logging.__file__:
+            frame = frame.f_back
+            depth += 1
+
+        logger.opt(depth=depth, exception=record.exc_info).log(level, record.getMessage())
 
 
-def get_logging_dict_config(
-    level: int | str,
-    formatter: Literal[
-        "wurzel.core.logging.JsonFormatter", "wurzel.core.logging.JsonStringFormatter"
-    ] = "wurzel.core.logging.JsonFormatter",
-) -> dict[str, Any]:
-    """Generate a logging.config.dictConfig compatible dict.
+def setup_logging(level: int | str = "INFO", *, json_string: bool = False) -> None:
+    """Configure loguru as the application logging backend.
 
-    Returns:
-        dict: logging.config.dictConfig
+    Removes all existing loguru handlers and adds a JSON sink to stderr.
+    Installs :class:`InterceptHandler` on the stdlib root logger so that
+    third-party libraries are automatically routed through loguru.
+
+    Args:
+        level: Minimum log level (name or numeric value).
+        json_string: When True, the ``extra`` dict is serialised as a JSON
+            string instead of a nested object (useful for log shippers that
+            expect a flat structure).
 
     """
-    default_formatter = {
-        "json_formatter": {
-            "()": formatter,
-            "reduced": ["INFO"],
-        }
-    }
-    default_handler = {
-        "default": {
-            "level": level,
-            "class": "logging.StreamHandler",
-            "stream": "ext://sys.stderr",
-            "formatter": "json_formatter",
-        },
-    }
-    logger_template = {"level": level, "handlers": ["default"], "propagate": False}
-    return {
-        "version": 1,
-        "root": {},
-        "disable_existing_loggers": False,
-        "formatters": {**default_formatter},
-        "handlers": {**default_handler},
-        "loggers": {
-            "root": {**logger_template},
-            "": {**logger_template},
-            "uvicorn.error": {**logger_template},
-            "uvicorn.access": {
-                "level": "WARNING",
-                "handlers": ["default"],
-                "propagate": False,
-            },
-            "gunicorn.access": {"propagate": True},
-            "gunicorn.error": {"propagate": True},
-            "transaction": {**logger_template},
-        },
-    }
+    logger.remove()
+    sink = _json_string_sink if json_string else _json_sink
+    logger.add(sink, level=level, format="{message}", colorize=False)
+
+    # Route all stdlib logging to loguru (uvicorn, gunicorn, third-party libs)
+    logging.root.handlers = [InterceptHandler()]
+    logging.root.setLevel(0)
+    for name in list(logging.root.manager.loggerDict):  # pylint: disable=no-member
+        existing = logging.getLogger(name)
+        existing.handlers = []
+        existing.propagate = True
+
+
+def log_uncaught_exception(exc_type: type[BaseException], exc_value: BaseException, exc_traceback) -> None:
+    """Log uncaught exceptions via loguru."""
+    logger.opt(exception=(exc_type, exc_value, exc_traceback)).error("Uncaught exception")
+
+
+def setup_uncaught_exception_logging() -> None:
+    """Set up logging for uncaught exceptions."""
+    sys.excepthook = log_uncaught_exception
+
+
+def warnings_to_logger(message: str, category: str, filename: str, lineno: str, *, file=None, line=None):
+    """Route :mod:`warnings` output to loguru.
+
+    Replaces the default ``warnings.showwarning`` function.
+
+        message (str): The warning message.
+        category (str): The warning category (e.g. ``UserWarning``).
+        filename (str): File where the warning was triggered.
+        lineno (str): Line number where the warning was triggered.
+        file: Not used. Included for compatibility with ``warnings.showwarning``.
+        line: Not used. Included for compatibility with ``warnings.showwarning``.
+
+    """
+    # pylint: disable=unused-argument
+    abs_filename = os.path.abspath(filename)
+    for _, mod in sys.modules.items():
+        module_path = getattr(mod, "__file__", None)
+        if module_path and os.path.abspath(module_path) == abs_filename:
+            break
+    logger.bind(**{"warnings.category": category, "warnings.filename": filename, "warnings.lineno": lineno}).warning("{}", message)

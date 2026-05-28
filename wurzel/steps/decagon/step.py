@@ -4,11 +4,11 @@
 
 """Decagon Knowledge Base connector step for pushing markdown documents."""
 
-from logging import getLogger
 from typing import Any
 
 import pandas as pd
 import requests
+from loguru import logger
 from pandera.typing import DataFrame
 
 from wurzel.core import TypedStep
@@ -17,8 +17,6 @@ from wurzel.exceptions import StepFailed
 
 from .data import ChunkResultInfo, DecagonArticleResult
 from .settings import DecagonSettings
-
-log = getLogger(__name__)
 
 
 class DecagonKnowledgeBaseStep(TypedStep[DecagonSettings, list[MarkdownDataContract], DataFrame[DecagonArticleResult]]):
@@ -129,7 +127,7 @@ class DecagonKnowledgeBaseStep(TypedStep[DecagonSettings, list[MarkdownDataContr
     def run(self, inpt: list[MarkdownDataContract]) -> DataFrame[DecagonArticleResult]:
         """Create articles in Decagon Knowledge Base from markdown documents."""
         if not inpt:
-            log.warning("No documents to process")
+            logger.warning("No documents to process")
             return DataFrame[DecagonArticleResult](
                 {
                     "article_id": pd.array([], dtype="Int64"),
@@ -143,7 +141,7 @@ class DecagonKnowledgeBaseStep(TypedStep[DecagonSettings, list[MarkdownDataContr
                 }
             )
 
-        log.info(f"Processing {len(inpt)} documents for Decagon (source: {self.settings.SOURCE})")
+        logger.info(f"Processing {len(inpt)} documents for Decagon (source: {self.settings.SOURCE})")
         results = []
 
         for doc in inpt:
@@ -151,7 +149,7 @@ class DecagonKnowledgeBaseStep(TypedStep[DecagonSettings, list[MarkdownDataContr
             try:
                 chunks = self._chunk_content(doc.md, self._extract_title(doc))
             except requests.exceptions.RequestException as e:
-                log.error(f"Failed to chunk {doc.url}: {self._format_error(e)}")
+                logger.error(f"Failed to chunk {doc.url}: {self._format_error(e)}")
                 results.append(
                     self._build_result(
                         doc,
@@ -185,7 +183,7 @@ class DecagonKnowledgeBaseStep(TypedStep[DecagonSettings, list[MarkdownDataContr
                         )
                     )
                 except requests.exceptions.RequestException as e:
-                    log.error(f"Failed to create article for {doc.url} chunk {idx + 1}/{len(chunks)}: {self._format_error(e)}")
+                    logger.error(f"Failed to create article for {doc.url} chunk {idx + 1}/{len(chunks)}: {self._format_error(e)}")
                     results.append(
                         self._build_result(
                             doc,
@@ -196,7 +194,7 @@ class DecagonKnowledgeBaseStep(TypedStep[DecagonSettings, list[MarkdownDataContr
 
         success = sum(1 for r in results if r["status"] == "success")
         failed = len(results) - success
-        log.info(f"Completed: {success} succeeded, {failed} failed")
+        logger.info(f"Completed: {success} succeeded, {failed} failed")
 
         if results and failed == len(results):
             raise StepFailed(f"All {failed} chunks failed to create in Decagon")

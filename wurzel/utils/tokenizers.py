@@ -2,15 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 # pylint: disable=duplicate-code
-import logging
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
+
+from loguru import logger
 
 if TYPE_CHECKING:
     import tiktoken
     import transformers
-
-logger = logging.getLogger(__name__)
 
 
 class Tokenizer(ABC):

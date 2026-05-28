@@ -9,10 +9,10 @@ import os
 import re
 from collections import defaultdict
 from io import StringIO
-from logging import getLogger
 from typing import TypedDict
 
 import numpy as np
+from loguru import logger
 from markdown import Markdown
 from pandera.typing import DataFrame
 from tqdm.auto import tqdm
@@ -28,8 +28,6 @@ from wurzel.utils.tokenizers import Tokenizer
 
 # Local application/library specific imports
 from .settings import EmbeddingSettings
-
-log = getLogger(__name__)
 
 # Precompile regex patterns for performance
 _WHITESPACE_PATTERN = re.compile(r"([.,!?]+)?\s+")
@@ -118,7 +116,7 @@ class BaseEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract],
                 }
             )
 
-        log.info(f"Distribution of {name}: count={stats['count']}; mean={stats['mean']}; std={stats['std']}", extra=stats)
+        logger.bind(**stats).info(f"Distribution of {name}: count={stats['count']}; mean={stats['mean']}; std={stats['std']}")
 
     def get_embedding_input_from_document(self, doc: MarkdownDataContract) -> str:
         """Clean the document such that it can be used as input to the embedding model.
@@ -241,7 +239,7 @@ class BaseEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract],
         and saving them to a CSV file.
         """
         if len(inpt) == 0:
-            log.info("Got empty result in Embedding - Skipping")
+            logger.info("Got empty result in Embedding - Skipping")
             return DataFrame[EmbeddingResult]([])
 
         preprocessed_inputs = self.preprocess_inputs(inpt)
@@ -261,13 +259,13 @@ class BaseEmbeddingStep(TypedStep[EmbeddingSettings, list[MarkdownDataContract],
                     stats["chunks count"].append(input_row.metadata.get("chunks_count", 0))
 
             except EmbeddingAPIException as err:
-                log.warning(
+                logger.warning(
                     f"Skipped because EmbeddingAPIException: {err.message}",
                     extra={"markdown": str(input_row)},
                 )
                 failed += 1
         if failed:
-            log.warning(f"{failed}/{len(preprocessed_inputs)} got skipped")
+            logger.warning(f"{failed}/{len(preprocessed_inputs)} got skipped")
         if failed == len(preprocessed_inputs):
             raise StepFailed(f"all {len(preprocessed_inputs)} embeddings got skipped")
 
@@ -329,7 +327,7 @@ class TruncatedEmbeddingStep(BaseEmbeddingStep):
         token_ids = self.tokenizer.encode(plain_text)
 
         if len(token_ids) > self.settings.TOKEN_COUNT_MAX:
-            log.warning(
+            logger.warning(
                 "Truncating tokens from embedding input text: %i truncated tokens; %i input tokens > %i max tokens",
                 len(token_ids) - self.settings.TOKEN_COUNT_MAX,
                 len(token_ids),

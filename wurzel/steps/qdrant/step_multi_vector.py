@@ -6,9 +6,9 @@
 
 # pylint: disable=duplicate-code
 import itertools
-from logging import getLogger
 from typing import cast
 
+from loguru import logger
 from pandera.typing import DataFrame
 from qdrant_client import models
 
@@ -18,8 +18,6 @@ from wurzel.steps.qdrant.step import QdrantConnectorStep
 
 from .data import QdrantMultiVectorResult
 from .settings import QdrantSettings
-
-log = getLogger(__name__)
 
 
 def _batch(iterable, size):
@@ -53,7 +51,7 @@ class QdrantConnectorMultiVectorStep(  # ty: ignore[invalid-generic-class]
         )
 
     def run(self, inpt: DataFrame[EmbeddingMultiVectorResult]) -> DataFrame[QdrantMultiVectorResult]:  # ty: ignore[invalid-method-override]
-        log.debug(f"Creating Qdrant collection {self.collection_name}")
+        logger.debug(f"Creating Qdrant collection {self.collection_name}")
         if not self.client.collection_exists(self.collection_name):
             self._create_collection(len(inpt["vectors"].loc[0][0]))
         df_result = self._insert_embeddings(cast(DataFrame[EmbeddingResult], inpt))

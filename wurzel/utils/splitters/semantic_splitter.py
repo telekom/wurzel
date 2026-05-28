@@ -7,10 +7,10 @@
 import re
 from collections.abc import Iterable
 from hashlib import sha256
-from logging import getLogger
 from typing import TypedDict
 
 import mdformat
+from loguru import logger
 from mistletoe import Document as MisDocument
 from mistletoe import block_token, markdown_renderer, span_token
 from mistletoe.token import Token
@@ -37,8 +37,6 @@ LEVEL_MAPPING = {
     block_token.ThematicBreak: 14,
 }
 LEVEL_UNDEFINED = 15
-
-log = getLogger(__name__)
 
 
 class MetaDataDict(TypedDict):
@@ -385,7 +383,7 @@ class SemanticSplitter:
 
         # Reached max recursion depth
         if max_depth == 0:
-            log.warning("maximal markdown recursion reached")
+            logger.warning("maximal markdown recursion reached")
             return DocumentNode(
                 highest_level=highest_level,
                 token_len=token_len,
@@ -586,7 +584,7 @@ class SemanticSplitter:
 
         if len(discarded_text) > 0:
             # Log document and discarded text
-            log.warning("Splitter cut off text from source document", extra={"discarded_text": discarded_text, **doc})
+            logger.bind(discarded_text=discarded_text, **doc).warning("Splitter cut off text from source document")
 
         return MarkdownDataContract(
             md=text,
@@ -615,12 +613,12 @@ class SemanticSplitter:
         """
         if self._get_token_len(doc["text"]) <= self.token_limit_min:
             # Skipping document since it is below token minium
-            log.warning("document to short", extra={"token_limit_min": self.token_limit_min, **doc})
+            logger.bind(token_limit_min=self.token_limit_min, **doc).warning("document to short")
             return []
         if self._is_within_targetlen_w_buffer(doc["text"]):
             return [self._md_data_from_dict_cut(doc)]
         if "children" not in doc.keys():
-            log.warning(
+            logger.warning(
                 "no remaining children. still to big -> sentence split by dot",
                 extra=doc,
             )
@@ -646,7 +644,7 @@ class SemanticSplitter:
                 for chunk_md, chunk_token_len in zip(chunks_md, chunks_token_len)
             ]
         if len(doc["children"]) == 0:
-            log.warning(
+            logger.warning(
                 "no remaining children. still to big -> Cut by tokenlen",
                 extra=doc,
             )
@@ -742,7 +740,7 @@ class SemanticSplitter:
 
             # Respect token limit
             if skip_if_above_token_limit and self._get_token_len(new_md) > self.token_limit:
-                log.debug(
+                logger.debug(
                     "Skip reattaching parent heading due to token limit",
                     extra={"token_limit": self.token_limit, "new_md": new_md, "old_md": doc.md},
                 )

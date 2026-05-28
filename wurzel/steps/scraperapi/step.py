@@ -11,6 +11,7 @@ from typing import Any
 import lxml.html
 import requests
 from joblib import Parallel, delayed
+from loguru import logger
 from requests.adapters import HTTPAdapter, Retry
 from tqdm import tqdm
 
@@ -23,7 +24,7 @@ from wurzel.utils.to_markdown.html2md import html2str, to_markdown
 
 # Local application/library specific imports
 
-log = logging.getLogger(__name__)
+log = logger
 
 
 class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownDataContract]]):

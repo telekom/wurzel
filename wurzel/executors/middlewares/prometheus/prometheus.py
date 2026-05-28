@@ -5,9 +5,9 @@
 """Prometheus metrics middleware for step execution."""
 
 import os
-from logging import getLogger
 from typing import Any
 
+from loguru import logger
 from prometheus_client import REGISTRY, CollectorRegistry, Counter, Gauge, Histogram, push_to_gateway
 
 from wurzel.core.typed_step import TypedStep
@@ -15,8 +15,6 @@ from wurzel.path import PathToFolderWithBaseModels
 
 from ..base import BaseMiddleware, ExecuteStepCallable
 from .settings import PrometheusMiddlewareSettings
-
-log = getLogger(__name__)
 
 
 class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance-attributes
@@ -137,8 +135,8 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
 
     def __exit__(self, *exc_details):
         """Context manager exit - push metrics to gateway."""
-        log.info("Pushing metrics", extra={"gateway": self.settings.GATEWAY, "job": self.settings.JOB})
+        logger.bind(gateway=self.settings.GATEWAY, job=self.settings.JOB).info("Pushing metrics")
         try:
             push_to_gateway(self.settings.GATEWAY, job=self.settings.JOB, registry=self.registry or REGISTRY)
         except Exception:  # pylint: disable=broad-exception-caught
-            log.warning("Could not push prometheus metrics to gateway", exc_info=True)
+            logger.warning("Could not push prometheus metrics to gateway")

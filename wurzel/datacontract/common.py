@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import logging
 import re
 import warnings
 from collections.abc import Callable
@@ -11,12 +10,11 @@ from typing import Any, Self
 
 import pydantic
 import yaml
+from loguru import logger
 
 from .datacontract import PydanticModel
 
 _RE_METADATA = re.compile(r"^---\s*\n(.*?)\n---\s*\n?(.*)$", re.DOTALL | re.MULTILINE)
-
-logger = logging.getLogger(__name__)
 
 
 class MarkdownDataContract(PydanticModel):
@@ -122,17 +120,15 @@ class MarkdownDataContract(PydanticModel):
             try:
                 metadata = yaml.safe_load(yaml_str)
             except yaml.YAMLError as e:
-                logger.error(f"Cannot parse YAML metadata in MarkdownDataContract from {path}: {e}", extra={"path": path, "md": md})
+                logger.bind(path=path, md=md).error(f"Cannot parse YAML metadata in MarkdownDataContract from {path}: {e}")
 
             if not isinstance(metadata, dict):
-                logger.error(
-                    f"YAML metadata must be a dictionary in MarkdownDataContract from {path}", extra={"path": path, "metadata": metadata}
-                )
+                logger.bind(path=path, metadata=metadata).error(f"YAML metadata must be a dictionary in MarkdownDataContract from {path}")
                 metadata = {}  # Overwrite invalid metadata
         else:
             # No YAML metadata, whole markdown string as body
             md_body = md
-            logger.info(f"MarkdownDataContract has no YAML metadata: {path}", extra={"path": path, "md": md})
+            logger.bind(path=path, md=md).info(f"MarkdownDataContract has no YAML metadata: {path}")
 
         if "topics" in metadata:
             warnings.warn(

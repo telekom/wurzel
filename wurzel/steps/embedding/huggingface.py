@@ -6,12 +6,12 @@
 
 from collections.abc import Callable
 from json.decoder import JSONDecodeError
-from logging import getLogger
 from re import Pattern as RegexPattern
 from typing import Literal
 
 import requests
 from langchain_core.embeddings import Embeddings
+from loguru import logger
 from pydantic import validate_call
 from pydantic_core import Url
 
@@ -20,8 +20,6 @@ from wurzel.exceptions import (
     EmbeddingException,
     UnrecoverableFatalException,
 )
-
-log = getLogger(__name__)
 
 
 @validate_call
@@ -72,7 +70,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
 
         """
         model_name = model.strip("/").split("/")[-1]
-        log.info(f"Model history: name={model_name}")
+        logger.info(f"Model history: name={model_name}")
         if self._last_model is None or model_name != self._last_model:
             self._last_model = model_name
             return True
@@ -100,7 +98,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
 
         """
         try:
-            response = requests.request(method, url, json=json_body, timeout=self._timeout)
+            response = requests.request(method, str(url), json=json_body, timeout=self._timeout)
         except (requests.exceptions.ConnectTimeout, requests.exceptions.Timeout) as err:
             raise EmbeddingAPIException(f"timed out after {self._timeout}") from err
         except requests.ConnectionError as err:
@@ -184,7 +182,7 @@ class PrefixedAPIEmbeddings(HuggingFaceInferenceAPIEmbeddings):
         for regex, prefix in self.prefix_mapping.items():
             if regex.search(self._last_model):
                 self.prefix = prefix
-                log.info(f"Using prefix={prefix}")
+                logger.info(f"Using prefix={prefix}")
                 return
         raise UnrecoverableFatalException(
             f"Tried to get prefix for {self._last_model}:" + f"No match found in {self.prefix_mapping.keys()}"

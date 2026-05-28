@@ -5,17 +5,13 @@
 """consists of DVCSteps to embedd files and save them as for example as csv."""
 
 # Standard library imports
-from logging import getLogger
-
 import pandas as pd
+from loguru import logger
 
 from wurzel.core import Settings, TypedStep
 from wurzel.datacontract import MarkdownDataContract
 
 # Local application/library specific imports
-
-
-log = getLogger(__name__)
 
 
 class DropStettings(Settings):
@@ -38,7 +34,7 @@ class DropDuplicationStep(TypedStep[DropStettings, list[MarkdownDataContract], l
             return inpt
 
         filtered = df.drop_duplicates(self.settings.DROP_BY_FIELDS)
-        log.warning(
+        logger.warning(
             "Removed duplicates",
             extra={
                 "percentage": len(filtered) / len(df),

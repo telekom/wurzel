@@ -5,10 +5,10 @@
 """consists of DVCSteps to embedd files and save them as for example as csv."""
 
 # Standard library imports
-from logging import getLogger
 from typing import TypedDict
 
 from joblib import Parallel, delayed
+from loguru import logger
 from pandera.typing import DataFrame
 
 from wurzel.core import TypedStep
@@ -17,8 +17,6 @@ from wurzel.exceptions import EmbeddingAPIException, SplittException, StepFailed
 from wurzel.steps.data import EmbeddingMultiVectorResult
 from wurzel.steps.embedding import EmbeddingStep
 from wurzel.steps.embedding.settings import EmbeddingSettings
-
-log = getLogger(__name__)
 
 
 class _EmbeddedMultiVector(TypedDict):
@@ -66,7 +64,7 @@ class EmbeddingMultiVectorStep(  # ty: ignore[invalid-generic-class]
             try:
                 return self._get_multivector_embedding(doc)
             except EmbeddingAPIException as err:
-                log.warning(
+                logger.warning(
                     f"Skipped because EmbeddingAPIException: {err.message}",
                     extra={"markdown": str(doc)},
                 )
@@ -78,7 +76,7 @@ class EmbeddingMultiVectorStep(  # ty: ignore[invalid-generic-class]
         failed = len(results) - len(rows)
 
         if failed:
-            log.warning(f"{failed}/{len(inpt)} got skipped")
+            logger.warning(f"{failed}/{len(inpt)} got skipped")
         if failed == len(inpt):
             raise StepFailed(f"All {len(inpt)} embeddings got skipped")
 

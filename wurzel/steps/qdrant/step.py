@@ -7,8 +7,8 @@
 # pylint: disable=duplicate-code
 import itertools
 from hashlib import sha256
-from logging import getLogger
 
+from loguru import logger
 from pandera.typing import DataFrame
 from qdrant_client import QdrantClient, models
 
@@ -19,8 +19,6 @@ from wurzel.utils import HAS_TLSH
 
 from .data import QdrantResult
 from .settings import QdrantSettings
-
-log = getLogger(__name__)
 
 
 def _batch(iterable, size):
@@ -45,9 +43,9 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         # because we need to enject them into the DVC step during runtime,
         # not during DVC pipeline definition time
         # uri = ":memory:"
-        log.info(f"connecting to {self.settings.URI}")
+        logger.info(f"connecting to {self.settings.URI}")
         if not self.settings.APIKEY:
-            log.warning("QDRANT__APIKEY for Qdrant not provided. Thus running in non-credential Mode")
+            logger.warning("QDRANT__APIKEY for Qdrant not provided. Thus running in non-credential Mode")
         self.client = QdrantClient(
             location=self.settings.URI,
             api_key=self.settings.APIKEY.get_secret_value(),
@@ -79,7 +77,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         return df_result
 
     def _create_collection(self, size: int):
-        log.debug(f"Creating Qdrant collection {self.collection_name}")
+        logger.debug(f"Creating Qdrant collection {self.collection_name}")
         self.client.create_collection(
             collection_name=self.collection_name,
             vectors_config=models.VectorParams(size=size, distance=self.settings.DISTANCE),
@@ -146,7 +144,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             )
             if operation_info.status != "completed":
                 raise StepFailed(f"Failed to insert df chunk into collection '{self.collection_name}' {operation_info}")
-            log.info(
+            logger.info(
                 "Successfully inserted vector_chunk",
                 extra={"collection": self.collection_name, "count": len(point_chunk)},
             )
@@ -173,7 +171,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         return DataFrame[self.result_class](result_data)
 
     def _insert_embeddings(self, data: DataFrame[EmbeddingResult]):
-        log.info("Inserting embeddings", extra={"count": len(data), "collection": self.collection_name})
+        logger.bind(count=len(data), collection=self.collection_name).info("Inserting embeddings")
 
         rows = data.to_dict(orient="records")
         points = [self._create_point(row) for row in rows]
@@ -222,7 +220,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
 
         for col_v in to_delete:
             col = collections_versioned[col_v]
-            log.info(f"deleting {col} collection caused by retirement")
+            logger.info(f"deleting {col} collection caused by retirement")
             self.client.delete_collection(col)
 
     def _update_alias(self):
@@ -244,7 +242,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         if not previous_collections:
             return f"{self.settings.COLLECTION}_v1"
         previous_version = max(previous_collections.keys())
-        log.info(f"Found version v{previous_version}")
+        logger.info(f"Found version v{previous_version}")
         return f"{self.settings.COLLECTION}_v{previous_version + 1}"
 
     def _get_collection_versions(self) -> dict[int, str]:
