@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     pass
 
 
-def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str):
+def pipeline_callback(_ctx: typer.Context | None, _param: typer.CallbackParam | None, import_path: str):
     """Based on step_callback transform them to WZ pipeline elements."""
     from wurzel.cli.shared.callbacks import step_callback  # pylint: disable=import-outside-toplevel
     from wurzel.core.meta import WZ  # pylint: disable=import-outside-toplevel
@@ -25,7 +25,7 @@ def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_p
     return step
 
 
-def backend_callback(_ctx: typer.Context, _param: typer.CallbackParam, backend: str):
+def backend_callback(_ctx: typer.Context | None, _param: typer.CallbackParam | None, backend: str):
     """Validates input and returns fitting backend. Case-insensitive."""
     from wurzel.cli.generate.backend_listing import get_available_backends  # pylint: disable=import-outside-toplevel
     from wurzel.executors.backend import get_backend_by_name  # pylint: disable=import-outside-toplevel

@@ -11,7 +11,7 @@ import typer
 from wurzel.cli.shared.callbacks import step_callback
 
 
-def pipeline_callback(_ctx: typer.Context, _param: typer.CallbackParam, import_path: str):
+def pipeline_callback(_ctx: typer.Context | None, _param: typer.CallbackParam | None, import_path: str):
     """Based on step_callback transform them to WZ pipeline elements."""
     from wurzel.core.meta import WZ  # pylint: disable=import-outside-toplevel
 
