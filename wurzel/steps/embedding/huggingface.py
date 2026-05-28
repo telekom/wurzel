@@ -100,7 +100,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
 
         """
         try:
-            response = requests.request(method, url, json=json_body, timeout=self._timeout)
+            response = requests.request(method, str(url), json=json_body, timeout=self._timeout)
         except (requests.exceptions.ConnectTimeout, requests.exceptions.Timeout) as err:
             raise EmbeddingAPIException(f"timed out after {self._timeout}") from err
         except requests.ConnectionError as err:
