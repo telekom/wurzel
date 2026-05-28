@@ -1,50 +1,34 @@
-import logging
-
-import pytest
-
-from wurzel.cli.logger import WithExtraFormatter
-
 # SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
 #
 # SPDX-License-Identifier: Apache-2.0
 
+import json
 
-class DummyRecord(logging.LogRecord):
-    def __init__(self, **kwargs):
-        super().__init__(
-            name=kwargs.get("name", "wurzel"),
-            level=kwargs.get("level", logging.INFO),
-            pathname=kwargs.get("pathname", "test.py"),
-            lineno=kwargs.get("lineno", 1),
-            msg=kwargs.get("msg", "test message"),
-            args=kwargs.get("args", ()),
-            exc_info=kwargs.get("exc_info", None),
-            func=kwargs.get("func", "test_func"),
-            sinfo=kwargs.get("sinfo", None),
-        )
-        for k, v in kwargs.items():
-            setattr(self, k, v)
+import pytest
+from loguru import logger
+
+from wurzel.cli.logger import setup_cli_logging
+from wurzel.core.logging import setup_logging
 
 
-@pytest.fixture
-def formatter():
-    return WithExtraFormatter()
+@pytest.fixture(autouse=True)
+def reset_loguru():
+    logger.remove()
+    yield
+    logger.remove()
 
 
-def test_with_extra_formatter_basic(formatter):
-    record = DummyRecord(msg="hello", level=logging.INFO)
-    # Patch _get_output_dict to simulate JsonFormatter output
-    formatter._get_output_dict = lambda rec: {
-        "message": rec.getMessage(),
-        "foo": "bar",
-        "level": "INFO",
-        "@timestamp": "2024-01-01T00:00:00Z",
-        "file": "test.py",
-        "exc_text": "",
-    }
-    result = formatter.format(record)
-    assert result.startswith("'hello'")
-    assert "foo" in result
-    assert "level" not in result
-    assert "@timestamp" not in result
-    assert "file" not in result
+def test_setup_cli_logging_does_not_raise():
+    """setup_cli_logging should configure loguru without errors."""
+    setup_cli_logging("INFO")
+    setup_cli_logging("DEBUG")
+
+
+def test_setup_logging_output_is_json(capsys):
+    setup_logging("INFO")
+    logger.info("cli logging test")
+    err = capsys.readouterr().err.strip()
+    assert err
+    data = json.loads(err.splitlines()[-1])
+    assert data["message"] == "cli logging test"
+    assert data["level"] == "INFO"

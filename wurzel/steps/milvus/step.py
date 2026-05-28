@@ -4,9 +4,8 @@
 
 """containing the DVCStep sending embedding data into milvus."""
 
-from logging import getLogger
-
 import pandas as pd
+from loguru import logger
 from pandera.typing import DataFrame
 from pymilvus import CollectionSchema, DataType, FieldSchema
 from pymilvus.exceptions import MilvusException
@@ -19,8 +18,6 @@ from wurzel.steps.data import EmbeddingResult
 
 from .data import Result as MilvusResult
 from .settings import MilvusSettings
-
-log = getLogger(__name__)
 
 
 class MilvusConnectorStep(TypedStep[MilvusSettings, DataFrame[EmbeddingResult], MilvusResult]):  # pragma: no cover
@@ -35,7 +32,7 @@ class MilvusConnectorStep(TypedStep[MilvusSettings, DataFrame[EmbeddingResult], 
         # not during DVC pipeline definition time
         uri = f"http://{self.settings.HOST}:{self.settings.PORT}"
         if not self.settings.PASSWORD or not self.settings.USER:
-            log.warning("MILVUS_HOST, MILVUS_USER or MILVUS_PASSWORD for Milvus not provided. Thus running in non-credential Mode")
+            logger.warning("MILVUS_HOST, MILVUS_USER or MILVUS_PASSWORD for Milvus not provided. Thus running in non-credential Mode")
         self.client: MilvusClient = MilvusClient(
             uri=uri,
             user=self.settings.USER,
@@ -62,7 +59,7 @@ class MilvusConnectorStep(TypedStep[MilvusSettings, DataFrame[EmbeddingResult], 
 
     def _insert_embeddings(self, data: pd.DataFrame):
         collection_name = self.__construct_next_collection_name()
-        log.info(f"Creating milvus collection {collection_name}")
+        logger.info(f"Creating milvus collection {collection_name}")
         collection_schema = CollectionSchema(
             fields=[
                 FieldSchema(name="pk", dtype=DataType.INT64, is_primary=True, auto_id=True),
@@ -77,20 +74,20 @@ class MilvusConnectorStep(TypedStep[MilvusSettings, DataFrame[EmbeddingResult], 
             description="Collection for storing Milvus embeddings",
         )
 
-        log.info("schema created")
+        logger.info("schema created")
         self.client.create_collection(collection_name=collection_name, schema=collection_schema)
-        log.info("collection created")
-        log.info(f"Inserting embedding {len(data)} into collection {collection_name}")
+        logger.info("collection created")
+        logger.info(f"Inserting embedding {len(data)} into collection {collection_name}")
         result: dict = self.client.insert(collection_name=collection_name, data=data.to_dict("records"))
         if result["insert_count"] != len(data):
             raise StepFailed(
                 f"Failed to insert df into collection '{collection_name}'.{result['insert_count']}/{len(data)} where successful"
             )
-        log.info(f"Successfully inserted {len(data)} vectors into collection '{collection_name}'")
+        logger.info(f"Successfully inserted {len(data)} vectors into collection '{collection_name}'")
         self.client.create_index(collection_name=collection_name, index_params=self.collection_index)
-        log.info(f"Successfully craeted index {self.collection_index} into collection '{collection_name}")
+        logger.info(f"Successfully craeted index {self.collection_index} into collection '{collection_name}")
         self.client.load_collection(collection_name)
-        log.info(f"Successfully loaded the collection {collection_name}' into collection '{collection_name}'")
+        logger.info(f"Successfully loaded the collection {collection_name}' into collection '{collection_name}'")
         try:
             self.client.release_collection(self.__construct_last_collection_name())
         except NoPreviousCollection:
@@ -105,7 +102,7 @@ class MilvusConnectorStep(TypedStep[MilvusSettings, DataFrame[EmbeddingResult], 
 
         for col_v in to_delete:
             col = collections_versioned[col_v]
-            log.info(f"deleting {col} collection caused by retirement")
+            logger.info(f"deleting {col} collection caused by retirement")
             self.client.drop_collection(col, timeout=self.milvus_timeout)
 
     def _update_alias(self, collection_name):
@@ -127,7 +124,7 @@ class MilvusConnectorStep(TypedStep[MilvusSettings, DataFrame[EmbeddingResult], 
         if not previous_collections:
             return f"{self.collection_prefix}_v1"
         previous_version = max(previous_collections.keys())
-        log.info(f"Found version v{previous_version}")
+        logger.info(f"Found version v{previous_version}")
         return f"{self.collection_prefix}_v{previous_version + 1}"
 
     def __construct_last_collection_name(self) -> str:
@@ -135,7 +132,7 @@ class MilvusConnectorStep(TypedStep[MilvusSettings, DataFrame[EmbeddingResult], 
         if not previous_collections or len(previous_collections) <= 1:
             raise NoPreviousCollection(f"Milvus does not contain a previous collection for {self.collection_prefix}")
         previous_version = sorted(previous_collections.keys())[-2]
-        log.info(f"Found previous version v{previous_version}")
+        logger.info(f"Found previous version v{previous_version}")
         return f"{self.collection_prefix}_v{previous_version}"
 
     def __construct_current_collection_name(self) -> str:
@@ -143,7 +140,7 @@ class MilvusConnectorStep(TypedStep[MilvusSettings, DataFrame[EmbeddingResult], 
         if not previous_collections or len(previous_collections) < 1:
             raise NoPreviousCollection(f"Milvus does not contain a previous collection for {self.collection_prefix}")
         previous_version = sorted(previous_collections.keys())[-1]
-        log.info(f"Found previous version v{previous_version}")
+        logger.info(f"Found previous version v{previous_version}")
         return f"{self.collection_prefix}_v{previous_version}"
 
     def _get_collection_versions(self) -> dict[int, str]:

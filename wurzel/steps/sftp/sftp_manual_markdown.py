@@ -4,19 +4,17 @@
 
 """SFTP Manual Markdown Step for loading Markdown files from SFTP servers."""
 
-import logging
 import stat
 import tempfile
 from pathlib import Path, PurePosixPath
 
 import paramiko
+from loguru import logger
 from pydantic import Field, SecretStr
 
 from wurzel.core import Settings, TypedStep
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import StepFailed
-
-logger = logging.getLogger(__name__)
 
 
 class SFTPManualMarkdownSettings(Settings):
@@ -91,7 +89,7 @@ class SFTPManualMarkdownStep(TypedStep[SFTPManualMarkdownSettings, None, list[Ma
             # Find all .md files
             md_files = self._find_markdown_files(sftp, self.settings.REMOTE_PATH)
 
-            logger.info(f"Found {len(md_files)} Markdown files on SFTP server", extra={"file_count": len(md_files)})
+            logger.bind(file_count=len(md_files)).info(f"Found {len(md_files)} Markdown files on SFTP server")
 
             # Load each file into MarkdownDataContract
             results: list[MarkdownDataContract] = []
@@ -101,11 +99,10 @@ class SFTPManualMarkdownStep(TypedStep[SFTPManualMarkdownSettings, None, list[Ma
                     if contract:
                         results.append(contract)
                 except (OSError, paramiko.SSHException) as e:
-                    logger.error(f"Failed to load file {remote_file}: {e}", extra={"remote_file": remote_file, "error": str(e)})
+                    logger.bind(remote_file=remote_file, error=str(e)).error(f"Failed to load file {remote_file}: {e}")
 
-            logger.info(
-                f"Successfully loaded {len(results)} Markdown files from SFTP",
-                extra={"loaded_count": len(results), "total_found": len(md_files)},
+            logger.bind(loaded_count=len(results), total_found=len(md_files)).info(
+                f"Successfully loaded {len(results)} Markdown files from SFTP"
             )
             if len(results) == 0:
                 raise StepFailed("No Markdown files found or failed to load any")
@@ -171,7 +168,7 @@ class SFTPManualMarkdownStep(TypedStep[SFTPManualMarkdownSettings, None, list[Ma
                     md_files.append(full_path)
 
         except OSError as e:
-            logger.warning(f"Could not access directory {remote_path}: {e}", extra={"remote_path": remote_path, "error": str(e)})
+            logger.bind(remote_path=remote_path, error=str(e)).warning(f"Could not access directory {remote_path}: {e}")
 
         return md_files
 

@@ -3,14 +3,14 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
-from logging import getLogger
 from pathlib import Path
 
 import pytest
+from loguru import logger
 from prometheus_client import REGISTRY
 from pydantic import BaseModel
 
-log = getLogger(__name__)
+log = logger
 
 
 class SetEnv:

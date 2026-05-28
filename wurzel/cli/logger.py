@@ -2,27 +2,30 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import json
-import logging
-import logging.config
+import sys
 
-from wurzel.core.logging import JsonFormatter
+from loguru import logger
 
 
-class WithExtraFormatter(JsonFormatter):
-    """Custom formatter with some structured logging support."""
+def setup_cli_logging(level: str = "INFO") -> None:
+    """Configure loguru for interactive terminal sessions.
 
-    def format(self, record: logging.LogRecord) -> str:
-        super().format(record)
-        json_part = self._get_output_dict(record)
-        msg = json_part.pop("message")
-        if self.reduced_levels and record.levelno in self.reduced_levels:
-            json_part.pop("thread", None)
-            json_part.pop("threadName", None)
-            json_part.pop("processName", None)
-            json_part.pop("process", None)
-        json_part.pop("level", None)
-        json_part.pop("@timestamp", None)
-        json_part.pop("file", None)
-        exc_text = json_part.pop("exc_text", "")
-        return " ".join([f"'{msg}'" + (f" : {json.dumps(json_part)}" if json_part else "") + exc_text])
+    Uses a human-readable, colourised format instead of JSON so that
+    log output is easy to scan in a developer's terminal.
+
+    Args:
+        level: Minimum log level (e.g. ``"DEBUG"``, ``"INFO"``).
+
+    """
+    logger.remove()
+    logger.add(
+        sys.stderr,
+        level=level,
+        colorize=True,
+        format=(
+            "<green>{time:YYYY-MM-DD HH:mm:ss.SSSSSS}</green> | "
+            "<level>{level: <8}</level> | "
+            "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
+            "<level>{message}</level>"
+        ),
+    )

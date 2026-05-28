@@ -2,24 +2,25 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import logging
-import logging.config
-
 import pytest
+from loguru import logger
 
-from wurzel.core.logging import get_logging_dict_config
-
-
-def test_logging_dict_config():
-    confg = get_logging_dict_config("INFO")
-    logging.config.dictConfig(confg)
+from wurzel.core.logging import setup_logging
 
 
-def test_logging_dict_config_invalid():
-    config = get_logging_dict_config("INFO")
-    config["version"] = "BN"
-    with pytest.raises(ValueError):
-        logging.config.dictConfig(config)
+@pytest.fixture(autouse=True)
+def reset_loguru():
+    logger.remove()
+    yield
+    logger.remove()
+
+
+def test_setup_logging():
+    setup_logging("INFO")
+
+
+def test_setup_logging_json_string():
+    setup_logging("INFO", json_string=True)
 
 
 def test_warning_override():

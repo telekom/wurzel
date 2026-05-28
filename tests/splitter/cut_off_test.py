@@ -2,9 +2,8 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import logging
-
 import pytest
+from loguru import logger
 
 from wurzel.utils import HAS_TRANSFORMERS
 from wurzel.utils.splitters.semantic_splitter import DocumentNode, MetaDataDict, SemanticSplitter
@@ -41,21 +40,30 @@ def test_cut_off_with_returned_discarded_text():
     assert cut_off_text_100[1] == ""
 
 
-def test_cut_off_logging(caplog):
-    # capture logging
-    caplog.set_level(logging.WARNING, logger="wurzel.utils.semantic_splitter")
+def test_cut_off_logging():
+    captured = []
 
-    splitter = SemanticSplitter(token_limit=10)
-    input_text = "This is a very long long text with many many words that produce a lengthy sentence that is the input for the splitter."
-    input_doc = DocumentNode(text=input_text, metadata=MetaDataDict(keywords="test", url="http://example.com/"))
+    def sink(message):
+        captured.append(message.record)
 
-    cut_off_doc_10 = splitter._md_data_from_dict_cut(doc=input_doc)
+    handler_id = logger.add(sink, level="WARNING")
+    try:
+        splitter = SemanticSplitter(token_limit=10)
+        input_text = (
+            "This is a very long long text with many many words that produce a lengthy sentence that is the input for the splitter."
+        )
+        input_doc = DocumentNode(text=input_text, metadata=MetaDataDict(keywords="test", url="http://example.com/"))
 
-    assert cut_off_doc_10.md == input_text[:44]
+        cut_off_doc_10 = splitter._md_data_from_dict_cut(doc=input_doc)
 
-    # check if logs are correct
-    assert caplog.records[0].discarded_text == input_text[44:]
-    assert caplog.records[0].text == input_text
+        assert cut_off_doc_10.md == input_text[:44]
+
+        # check if logs are correct
+        assert len(captured) >= 1
+        assert captured[0]["extra"]["discarded_text"] == input_text[44:]
+        assert captured[0]["extra"]["text"] == input_text
+    finally:
+        logger.remove(handler_id)
 
 
 @pytest.mark.skipif(not HAS_TRANSFORMERS, reason="transformers not installed")

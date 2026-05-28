@@ -2,15 +2,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 import importlib.util
-import logging
 import re
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+from loguru import logger
+
 if TYPE_CHECKING:
     import spacy
-
-logger = logging.getLogger(__name__)
 
 
 def download_sentence_splitter_model(model_name: str):

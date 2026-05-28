@@ -3,21 +3,19 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from .formatters import (
-    JsonFormatter,
-    JsonStringFormatter,
+    InterceptHandler,
     _make_dict_serializable,
-    get_logging_dict_config,
     log_uncaught_exception,
+    setup_logging,
     setup_uncaught_exception_logging,
     warnings_to_logger,
 )
 
 __all__ = [
-    "JsonFormatter",
-    "JsonStringFormatter",
+    "InterceptHandler",
     "_make_dict_serializable",
-    "get_logging_dict_config",
     "log_uncaught_exception",
+    "setup_logging",
     "setup_uncaught_exception_logging",
     "warnings_to_logger",
 ]

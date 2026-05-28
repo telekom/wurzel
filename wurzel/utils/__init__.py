@@ -3,8 +3,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 from importlib.util import find_spec as _find_spec
-from logging import getLogger
 from typing import TYPE_CHECKING, Any
+
+from loguru import logger
 
 if TYPE_CHECKING:
     from wurzel.core.meta import (  # noqa: F401
@@ -16,7 +17,6 @@ if TYPE_CHECKING:
     from .splitters import semantic_splitter  # noqa: F401
     from .to_markdown.html2md import MarkdownConverterSettings, to_markdown  # noqa: F401
 
-log = getLogger(__name__)
 
 _opt_deps = {
     k: bool(_find_spec(k))
@@ -89,7 +89,7 @@ def __getattr__(name: str) -> Any:
     raise AttributeError(f"module 'wurzel.utils' has no attribute '{name}'")
 
 
-log.info("Optional deps in env", extra={**_opt_deps})
+logger.bind(**_opt_deps).info("Optional deps in env")
 __all__ = [
     "semantic_splitter",
     "WZ",

@@ -2,28 +2,17 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-import logging
-
 import asgi_correlation_id
 import pytest
 from fastapi import FastAPI
 
-from wurzel.core.logging import JsonFormatter
-
-log = logging.getLogger(__name__)
+from wurzel.core.logging import setup_logging
 
 
 @pytest.fixture(scope="function")
 def FastApiLog():
     def configure_logging():
-        info_handler = logging.StreamHandler()
-        info_handler.setLevel("INFO")
-        info_handler.addFilter(asgi_correlation_id.CorrelationIdFilter())
-        info_handler.setFormatter(JsonFormatter())
-        logging.root.setLevel("DEBUG")
-        logging.root.addHandler(info_handler)
-        logging.root.propagate = True
-        logging.basicConfig(handlers=[info_handler], level="DEBUG")
+        setup_logging("DEBUG")
 
     configure_logging()
     app = FastAPI(on_startup=[configure_logging])

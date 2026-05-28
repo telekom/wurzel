@@ -6,18 +6,16 @@
 
 Example:
     ```python
-    import logging
+    from loguru import logger
 
     from wurzel.executors.middlewares.base import BaseMiddleware, MiddlewareChain
-
-    log = logging.getLogger(__name__)
 
     class LoggingMiddleware(BaseMiddleware):
         # Logs step start and end
         def __call__(self, call_next, step_cls, inputs, output_dir):
-            log.info("Starting %s", step_cls.__name__)
+            logger.info("Starting {}", step_cls.__name__)
             result = call_next(step_cls, inputs, output_dir)
-            log.info("Finished %s", step_cls.__name__)
+            logger.info("Finished {}", step_cls.__name__)
             return result
 
     chain = MiddlewareChain([LoggingMiddleware()])
@@ -27,14 +25,10 @@ Example:
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable
-from logging import getLogger
 from typing import Any
 
 from wurzel.core.typed_step import TypedStep
 from wurzel.path import PathToFolderWithBaseModels
-
-log = getLogger(__name__)
-
 
 ExecuteStepCallable = Callable[
     [type[TypedStep], set[PathToFolderWithBaseModels] | None, PathToFolderWithBaseModels | None],

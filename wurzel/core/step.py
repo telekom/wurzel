@@ -3,10 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import abc
-from logging import getLogger
 from pathlib import Path
-
-log = getLogger(__name__)
 
 
 class Step(abc.ABC):

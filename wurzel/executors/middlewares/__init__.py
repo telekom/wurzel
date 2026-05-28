@@ -19,12 +19,11 @@ Example:
     ```
 """
 
-import logging
 import os
 
-from .base import BaseMiddleware, MiddlewareChain  # noqa: F401
+from loguru import logger
 
-log = logging.getLogger(__name__)
+from .base import BaseMiddleware, MiddlewareChain  # noqa: F401
 
 
 class MiddlewareRegistry:
@@ -46,18 +45,18 @@ class MiddlewareRegistry:
             from .prometheus import PrometheusMiddleware
 
             self.register("prometheus", PrometheusMiddleware)
-            log.debug("Registered prometheus middleware")
+            logger.debug("Registered prometheus middleware")
         except ImportError as e:
-            log.debug(f"Could not load prometheus middleware: {e}")
+            logger.debug(f"Could not load prometheus middleware: {e}")
 
         try:
             # pylint: disable=import-outside-toplevel
             from .secret_resolver import SecretResolverMiddleware
 
             self.register("secret_resolver", SecretResolverMiddleware)
-            log.debug("Registered secret_resolver middleware")
+            logger.debug("Registered secret_resolver middleware")
         except ImportError as e:  # pragma: no cover
-            log.debug(f"Could not load secret_resolver middleware: {e}")
+            logger.debug(f"Could not load secret_resolver middleware: {e}")
 
     def register(self, name: str, middleware_class: type[BaseMiddleware]):
         """Register a middleware with a name.
@@ -67,7 +66,7 @@ class MiddlewareRegistry:
             middleware_class: The middleware class to register
         """
         self._middlewares[name.lower()] = middleware_class
-        log.debug(f"Registered middleware: {name}")
+        logger.debug(f"Registered middleware: {name}")
 
     def get(self, name: str) -> type[BaseMiddleware] | None:
         """Get a middleware class by name.
@@ -119,11 +118,11 @@ class MiddlewareRegistry:
                 try:
                     middleware = middleware_class()
                     loaded_middlewares.append(middleware)
-                    log.info(f"Loaded middleware: {name}")
+                    logger.info(f"Loaded middleware: {name}")
                 except Exception as e:  # pylint: disable=broad-exception-caught
-                    log.error(f"Failed to instantiate middleware '{name}': {e}", exc_info=True)
+                    logger.error(f"Failed to instantiate middleware '{name}': {e}", exc_info=True)
             else:
-                log.warning(f"Middleware '{name}' not found in registry. Available: {self.list_available()}")
+                logger.warning(f"Middleware '{name}' not found in registry. Available: {self.list_available()}")
 
         return loaded_middlewares
 

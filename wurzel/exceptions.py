@@ -4,9 +4,7 @@
 
 """contains custom logged exceptions."""
 
-import logging
-
-log = logging.getLogger(__name__)
+from loguru import logger
 
 
 class LoggedCustomException(Exception):
@@ -16,7 +14,7 @@ class LoggedCustomException(Exception):
         """Constructor."""
         self.message = message
         super().__init__(message)
-        log.exception(self)
+        logger.exception(self)
 
     def __repr__(self) -> str:
         return f"{str(self.__class__.__name__)}: {self.message}"

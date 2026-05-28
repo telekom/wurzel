@@ -12,14 +12,13 @@ from __future__ import annotations
 
 import re
 from dataclasses import asdict, dataclass, field
-from logging import getLogger
+
+from loguru import logger
 
 from wurzel.utils.tokenizers import Tokenizer
 
 # Regex that matches a Markdown table alignment row, e.g.  |---|:---:|---|
 TABLE_SEP_RE = re.compile(r"^\s*\|?(?:\s*:?-+:?\s*\|)+\s*$")
-
-log = getLogger(__name__)
 
 
 @dataclass
@@ -386,7 +385,7 @@ class MarkdownTableSplitterUtil:
         self._flush_buffer()
 
         metrics = self._get_metrics()
-        log.info(
+        logger.info(
             "Markdown table splitting completed",
             extra={
                 "input_markdown": md,
