@@ -35,18 +35,18 @@ class DoclingSettings(Settings):
 
     FORCE_FULL_PAGE_OCR: bool = True
     FORMATS: list[InputFormat] = [
-        "docx",
-        "asciidoc",
-        "pptx",
-        "html",
-        "image",
-        "pdf",
-        "md",
-        "csv",
-        "xlsx",
-        "xml_uspto",
-        "xml_jats",
-        "json_docling",
+        InputFormat.DOCX,
+        InputFormat.ASCIIDOC,
+        InputFormat.PPTX,
+        InputFormat.HTML,
+        InputFormat.IMAGE,
+        InputFormat.PDF,
+        InputFormat.MD,
+        InputFormat.CSV,
+        InputFormat.XLSX,
+        InputFormat.XML_USPTO,
+        InputFormat.XML_JATS,
+        InputFormat.JSON_DOCLING,
     ]
     URLS: list[str] = []
     DEFAULT_KEYWORD: str = ""

@@ -173,7 +173,7 @@ def get_logging_dict_config(
     formatter: Literal[
         "wurzel.core.logging.JsonFormatter", "wurzel.core.logging.JsonStringFormatter"
     ] = "wurzel.core.logging.JsonFormatter",
-) -> dict[str, str]:
+) -> dict[str, Any]:
     """Generate a logging.config.dictConfig compatible dict.
 
     Returns:

@@ -10,7 +10,7 @@ import logging
 from collections.abc import Iterable
 from functools import cache
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import yaml
 from hera.workflows import (
@@ -286,7 +286,7 @@ class ArgoBackend(Backend, backend_name="argo"):
                         size=tokenizer_cache.storageSize,
                         mount_path=tokenizer_cache.mountPath,
                         storage_class_name=tokenizer_cache.storageClassName,
-                        access_modes=tokenizer_cache.accessModes,
+                        access_modes=cast(Any, tokenizer_cache.accessModes),
                     )
                 )
             else:
@@ -419,21 +419,29 @@ class ArgoBackend(Backend, backend_name="argo"):
             >>> assert workflow.kind == "Workflow"
 
         """
-        workflow_kwargs = {
-            "name": self.config.name,
-            "namespace": self.config.namespace,
-            "entrypoint": self.config.entrypoint,
-            "annotations": self.config.annotations,
-            "service_account_name": self.config.serviceAccountName,
-            "volumes": self._volumes or None,
-            "security_context": self._build_pod_security_context(),
-            "pod_spec_patch": self._build_pod_spec_patch(),
-        }
-
         if self.config.schedule:
-            context = CronWorkflow(schedule=self.config.schedule, **workflow_kwargs)
+            context = CronWorkflow(
+                schedule=self.config.schedule,
+                name=self.config.name,
+                namespace=self.config.namespace,
+                entrypoint=self.config.entrypoint,
+                annotations=self.config.annotations,
+                service_account_name=self.config.serviceAccountName,
+                volumes=self._volumes or None,
+                security_context=self._build_pod_security_context(),
+                pod_spec_patch=self._build_pod_spec_patch(),
+            )
         else:
-            context = Workflow(**workflow_kwargs)
+            context = Workflow(
+                name=self.config.name,
+                namespace=self.config.namespace,
+                entrypoint=self.config.entrypoint,
+                annotations=self.config.annotations,
+                service_account_name=self.config.serviceAccountName,
+                volumes=self._volumes or None,
+                security_context=self._build_pod_security_context(),
+                pod_spec_patch=self._build_pod_spec_patch(),
+            )
 
         with context as workflow:
             self.__generate_dag(step, env_vars=env_vars)
@@ -501,15 +509,15 @@ class ArgoBackend(Backend, backend_name="argo"):
         dag.__exit__()
         manifest_env_vars = env_vars or {}
         merged_env = {**manifest_env_vars, **self.config.container.env}  # container.env wins
-        env_vars = [EnvVar(name=name, value=str(value)) for name, value in merged_env.items()]
+        env_var_list = [EnvVar(name=name, value=str(value)) for name, value in merged_env.items()]
 
         # Add WURZEL_RUN_ID for tracking pipeline runs
-        env_vars.append(EnvVar(name="WURZEL_RUN_ID", value="{{workflow.uid}}"))
+        env_var_list.append(EnvVar(name="WURZEL_RUN_ID", value="{{workflow.uid}}"))
 
         # Add HF_HOME env var if tokenizer cache is enabled
         tokenizer_cache = self.config.container.tokenizerCache
         if tokenizer_cache.enabled:
-            env_vars.append(EnvVar(name="HF_HOME", value=tokenizer_cache.mountPath))
+            env_var_list.append(EnvVar(name="HF_HOME", value=tokenizer_cache.mountPath))
         wurzel_call = Container(
             name=f"wurzel-run-template-{step.__class__.__name__.lower()}",
             image=self.config.container.image,
@@ -518,7 +526,7 @@ class ArgoBackend(Backend, backend_name="argo"):
             command=commands,
             annotations=self.config.container.annotations,
             inputs=inputs,
-            env=env_vars,
+            env=env_var_list,
             env_from=self._build_env_from(),
             volume_mounts=self._volume_mounts or None,
             outputs=self._create_artifact_from_step(step),
@@ -554,10 +562,11 @@ class ArgoBackend(Backend, backend_name="argo"):
             argo_reqs: list[Task] = []
 
             for req in step.required_steps:
+                typed_req = cast(TypedStep[Any, Any, Any], req)
                 if req.required_steps:
-                    req_argo = resolve_requirements(req)  # type: ignore[arg-type]
+                    req_argo = resolve_requirements(typed_req)
                 else:
-                    req_argo = self._create_task(dag, req, env_vars=env_vars)  # type: ignore[arg-type]
+                    req_argo = self._create_task(dag, typed_req, env_vars=env_vars)
                 artifacts.append(req_argo.result)
                 argo_reqs.append(req_argo)
 

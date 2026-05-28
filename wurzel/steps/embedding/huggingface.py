@@ -4,6 +4,7 @@
 
 """contains Embedding Manager."""
 
+from collections.abc import Callable
 from json.decoder import JSONDecodeError
 from logging import getLogger
 from re import Pattern as RegexPattern
@@ -25,6 +26,8 @@ log = getLogger(__name__)
 
 @validate_call
 def _url_with_path(base: Url, path: str) -> Url:
+    if base.host is None:
+        raise EmbeddingException(f"Invalid URL without host: {base}")
     return Url.build(
         scheme=base.scheme,
         username=base.username,
@@ -46,8 +49,8 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
     _timeout: int = 10
     embedding_url: Url
     info_url: Url
-    _last_model: str
-    _on_model_change: callable = None
+    _last_model: str | None
+    _on_model_change: Callable | None = None
     _normalize: bool = False
 
     @validate_call
@@ -80,7 +83,7 @@ class HuggingFaceInferenceAPIEmbeddings(Embeddings):
         """Get the embeddings for a list of texts."""
         return [self.embed_query(text) for text in texts]
 
-    def __make_request(self, url: Url, json_body: dict, method: Literal["post"] | Literal["get"]) -> dict:
+    def __make_request(self, url: Url, json_body: dict | None, method: Literal["post"] | Literal["get"]) -> dict:
         """Creates a request, tries to parse json.
 
         Args:

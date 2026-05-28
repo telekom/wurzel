@@ -37,18 +37,43 @@ class SplitterSettings(Settings):
 log = getLogger(__name__)
 
 
+def build_semantic_splitter(settings: SplitterSettings) -> SemanticSplitter:
+    """Create a semantic splitter from step settings."""
+    return SemanticSplitter(
+        token_limit=settings.TOKEN_COUNT_MAX,
+        token_limit_buffer=settings.TOKEN_COUNT_BUFFER,
+        token_limit_min=settings.TOKEN_COUNT_MIN,
+        tokenizer_model=settings.TOKENIZER_MODEL,
+        sentence_splitter_model=settings.SENTENCE_SPLITTER_MODEL,
+    )
+
+
+def split_markdown_batch(splitter: SemanticSplitter, markdowns: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
+    """Split one markdown batch using a semantic splitter."""
+    rows: list[MarkdownDataContract] = []
+    skipped = 0
+    for md_data_contract in markdowns:
+        try:
+            rows.extend(splitter.split_markdown_document(md_data_contract))
+        except MarkdownException as err:
+            log.warning(
+                "skipped dokument ",
+                extra={"reason": err.__class__.__name__, "doc": md_data_contract},
+            )
+            skipped += 1
+    if skipped == len(markdowns):
+        raise SplittException("all Documents got skipped during splitting")
+    if skipped:
+        log.warning(f"{(skipped / len(markdowns)) * 100}% got skipped")
+    return rows
+
+
 class SimpleSplitterStep(TypedStep[SplitterSettings, list[MarkdownDataContract], list[MarkdownDataContract]]):
     """SimpleSplitterStep to split Markdown Documents rundimentory in medium size chunks."""
 
     def __init__(self) -> None:
         super().__init__()
-        self.splitter = SemanticSplitter(
-            token_limit=self.settings.TOKEN_COUNT_MAX,
-            token_limit_buffer=self.settings.TOKEN_COUNT_BUFFER,
-            token_limit_min=self.settings.TOKEN_COUNT_MIN,
-            tokenizer_model=self.settings.TOKENIZER_MODEL,
-            sentence_splitter_model=self.settings.SENTENCE_SPLITTER_MODEL,
-        )
+        self.splitter = build_semantic_splitter(self.settings)
 
     def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
         """Executes the split step by processing input markdown files and generating smaller split markdown files and preservs the headline.
@@ -74,9 +99,8 @@ class SimpleSplitterStep(TypedStep[SplitterSettings, list[MarkdownDataContract],
 
         # Use joblib for parallel processing if available, otherwise sequential
         if HAS_JOBLIB:
-            results = Parallel(n_jobs=self.settings.NUM_THREADS, prefer="threads")(  # type: ignore
-                delayed(self._split_markdown)(batch)
-                for batch in batches  # type: ignore
+            results = Parallel(n_jobs=self.settings.NUM_THREADS, prefer="threads")(
+                delayed(self._split_markdown)(batch) for batch in batches
             )
         else:
             # Fall back to sequential processing
@@ -92,19 +116,4 @@ class SimpleSplitterStep(TypedStep[SplitterSettings, list[MarkdownDataContract],
 
     def _split_markdown(self, markdowns: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
         """Creates data rows from a batch of markdown texts by splitting them and counting tokens."""
-        rows = []
-        skipped = 0
-        for md_data_contract in markdowns:
-            try:
-                rows.extend(self.splitter.split_markdown_document(md_data_contract))
-            except MarkdownException as err:
-                log.warning(
-                    "skipped dokument ",
-                    extra={"reason": err.__class__.__name__, "doc": md_data_contract},
-                )
-                skipped += 1
-        if skipped == len(markdowns):
-            raise SplittException("all Documents got skipped during splitting")
-        if skipped:
-            log.warning(f"{(skipped / len(markdowns)) * 100}% got skipped")
-        return rows
+        return split_markdown_batch(self.splitter, markdowns)

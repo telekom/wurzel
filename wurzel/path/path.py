@@ -20,7 +20,7 @@ B = TypeVar(
 )
 
 
-class PathToFolderWithBaseModels(type(Path()), Generic[B]):  # type: ignore[misc]
+class PathToFolderWithBaseModels(type(Path()), Generic[B]):  # type: ignore[misc]  # ty: ignore[unsupported-base]
     """Used to Store both path information
     as well as pydantic.BaseModel info.
 

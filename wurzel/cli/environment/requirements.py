@@ -15,8 +15,8 @@ from pydantic import BaseModel, SecretStr, ValidationError
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
-if TYPE_CHECKING:
-    from wurzel.step import TypedStep
+if TYPE_CHECKING:  # pragma: no cover - typing imports only
+    from wurzel.core import TypedStep
 
 
 class EnvVarRequirement(BaseModel):

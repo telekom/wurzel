@@ -6,9 +6,9 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 from .backend_listing import get_available_backends
 from .callbacks import backend_callback, pipeline_callback
@@ -31,10 +31,12 @@ def _resolve_backend_instance(
     Otherwise, instantiates the backend directly.
     """
     # Check if backend has from_values method (like ArgoBackend and DvcBackend)
-    if hasattr(backend, "from_values") and values:
-        return backend.from_values(values, workflow_name=pipeline_name, executor=executor)  # type: ignore[call-arg]
+    from_values = getattr(backend, "from_values", None)
+    if callable(from_values) and values:
+        factory = cast(Callable[..., "Backend"], from_values)
+        return cast("Backend", factory(values, workflow_name=pipeline_name, executor=executor))
     if executor is not None:
-        return backend(executor=executor)  # type: ignore[call-arg]
+        return backend(executer=executor)
     return backend()
 
 
