@@ -6,8 +6,9 @@
 
 # Standard library imports
 import logging
+from typing import Any
 
-import lxml
+import lxml.html
 import requests
 from joblib import Parallel, delayed
 from requests.adapters import HTTPAdapter, Retry
@@ -100,6 +101,6 @@ class ScraperAPIStep(TypedStep[ScraperAPISettings, list[UrlItem], list[MarkdownD
         return super().finalize()
 
     def _filter_body(self, html: str) -> str:
-        tree: lxml.html = lxml.html.fromstring(html)
+        tree: Any = lxml.html.fromstring(html)
         tree = tree.xpath(self.settings.XPATH)[0]
         return html2str(tree)

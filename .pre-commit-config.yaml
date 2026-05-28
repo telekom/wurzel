@@ -57,6 +57,18 @@ repos:
         args: ["--enable","spelling"]
 
 
+  - repo: local
+    hooks:
+      - id: ty
+        name: ty (type checker)
+        entry: .venv/bin/ty
+        args: [check, wurzel]
+        language: system
+        files: ^wurzel/
+        types: [python]
+        pass_filenames: false
+
+
 ci:
   autofix_commit_msg: |
       [pre-commit.ci] auto fixes from pre-commit hooks

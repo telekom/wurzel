@@ -20,7 +20,7 @@ class ScraperAPISettings(Settings):
     API: str = "https://api.scraperapi.com/"
     RETRY: int = Field(ge=0, default=5)
     TOKEN: SecretStr
-    TIMEOUT: int = 61.0
+    TIMEOUT: int = 61
     XPATH: str = "//main"
     CONCURRENCY_NUM: int = Field(gt=0, default=1)
     DEVICE_TYPE: str = "desktop"

@@ -93,7 +93,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         payload = {
             "url": row["url"],
             "text": row["text"],
-            **self.get_available_hashes(row["text"]),
+            **self.get_available_hashes(str(row["text"])),
             "keywords": row["keywords"],
             "history": str(step_history.get()),
             "metadata": row.get("metadata", None),
@@ -165,7 +165,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         """
         result_data = [
             {
-                **entry.payload,
+                **dict(entry.payload or {}),
                 self.vector_key: entry.vector,
                 "collection": self.collection_name,
                 "id": entry.id,
@@ -177,7 +177,8 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
     def _insert_embeddings(self, data: DataFrame[EmbeddingResult]):
         log.info("Inserting embeddings", extra={"count": len(data), "collection": self.collection_name})
 
-        points = [self._create_point(row) for _, row in data.iterrows()]
+        rows = data.to_dict(orient="records")
+        points = [self._create_point(row) for row in rows]
 
         self._upsert_points(points)
 
