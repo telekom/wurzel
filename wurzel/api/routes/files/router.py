@@ -70,7 +70,7 @@ async def upload_files(
     step_path: str,
     files: list[UploadFile] = File(...),
     file_service: FileUploadService = Depends(get_file_upload_service),
-    _access: RequireAnyRole = None,  # type: ignore[assignment]
+    _access: RequireAnyRole = None,  # type: ignore
 ) -> FileUploadResponse:
     """Upload files for a step.
 
@@ -122,7 +122,7 @@ async def list_files(
     project_id: uuid.UUID,
     step_id: str,
     file_service: FileUploadService = Depends(get_file_upload_service),
-    _access: RequireAnyRole = None,  # type: ignore[assignment]
+    _access: RequireAnyRole = None,  # type: ignore
 ) -> list[FileInfo]:
     """List all uploaded files for a step."""
     return [_to_file_info(m) for m in file_service.list_files(str(project_id), step_id)]
@@ -141,7 +141,7 @@ async def delete_file(
     step_id: str,
     file_id: str,
     file_service: FileUploadService = Depends(get_file_upload_service),
-    _access: RequireAnyRole = None,  # type: ignore[assignment]
+    _access: RequireAnyRole = None,  # type: ignore
 ) -> DeleteFileResponse:
     """Delete an uploaded file."""
     deleted = file_service.delete_file(str(project_id), step_id, file_id)

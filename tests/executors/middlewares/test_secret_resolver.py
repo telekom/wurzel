@@ -8,6 +8,7 @@ import pytest
 
 from wurzel.executors.middlewares.secret_resolver import SecretResolverMiddleware
 from wurzel.manifest.secrets.base import SecretProvider
+from wurzel.utils.env import env_override as _env_override
 
 
 class _MockProvider(SecretProvider):
@@ -151,7 +152,7 @@ class TestSecretResolverMiddleware:
         """_env_override must pop a key that was not present before the override."""
         key = "_WURZEL_TEST_EPHEMERAL_KEY_"
         os.environ.pop(key, None)  # ensure absent
-        with SecretResolverMiddleware._env_override({key: "temp"}):
+        with _env_override({key: "temp"}):
             assert os.environ[key] == "temp"
         assert key not in os.environ
 

@@ -41,7 +41,7 @@ from typing import Annotated, Any, get_args, get_type_hints
 
 from fastapi import Depends
 from fastapi import status as http_status
-from pydantic import SecretStr
+from pydantic import BaseModel, SecretStr
 from pydantic_core import PydanticUndefined
 
 from wurzel.api.errors import APIError
@@ -269,7 +269,7 @@ def _io_type_str(step_cls: type[TypedStep]) -> tuple[str | None, str | None]:
     return None, _type_str(run) if run else None
 
 
-def _build_field_schema(settings_cls: type, env_prefix: str) -> list[FieldSchema]:
+def _build_field_schema(settings_cls: type[BaseModel], env_prefix: str) -> list[FieldSchema]:
     """Build the list of :class:`FieldSchema` for a settings class."""
     fields = []
     for field_name, field_info in settings_cls.model_fields.items():
@@ -495,7 +495,7 @@ def discover_steps(cache: StepListCache, package: str | None, refresh: bool = Fa
             input_type=_safe_io_types(cp)[0],
             output_type=_safe_io_types(cp)[1],
         )
-        for cp in class_paths
+        for cp in (class_paths or [])
         if cp not in _EXCLUDED_CLASS_PATHS
     ]
     return StepListResponse(steps=summaries, total=len(summaries), package=pkg_label)

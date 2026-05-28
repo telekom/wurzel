@@ -17,7 +17,8 @@ from __future__ import annotations
 import contextlib
 import logging
 import secrets
-from typing import TYPE_CHECKING
+from collections.abc import MutableMapping
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import Field
 from pydantic_settings import SettingsConfigDict
@@ -149,7 +150,7 @@ class OTELCorrelationMiddleware:
             logging.setLogRecordFactory(record_factory)
             tp_header = f"00-{trace_id}-{span_id}-{trace_flags}".encode()
 
-            async def send_with_traceparent(message: dict) -> None:
+            async def send_with_traceparent(message: MutableMapping[str, Any]) -> None:
                 if message["type"] == "http.response.start":
                     resp_headers = list(message.get("headers", []))
                     resp_headers.append((b"traceparent", tp_header))
@@ -179,6 +180,7 @@ def setup_otel(app: ASGIApp, settings: OTELSettings) -> None:
         return
 
     try:
+        import fastapi as _fastapi  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
         from opentelemetry import trace  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
         from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (  # noqa: PLC0415  # pylint: disable=import-outside-toplevel
             OTLPSpanExporter,
@@ -208,7 +210,7 @@ def setup_otel(app: ASGIApp, settings: OTELSettings) -> None:
 
     # Exclude health-check and metrics endpoints from span creation to keep
     # traces free of probe noise (configurable via OTEL__EXCLUDED_URLS).
-    FastAPIInstrumentor.instrument_app(app, excluded_urls=settings.EXCLUDED_URLS)  # type: ignore[arg-type]
+    FastAPIInstrumentor.instrument_app(cast(_fastapi.FastAPI, app), excluded_urls=settings.EXCLUDED_URLS)
     logger.info(
         "OTEL configured: service=%s endpoint=%s excluded_urls=%s",
         settings.SERVICE_NAME,
