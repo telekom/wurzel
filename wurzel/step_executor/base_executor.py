@@ -101,15 +101,12 @@ def step_env_encapsulation(step_cls: type[TypedStep]):
             raise e from err
         settings_dict = pydantic.BaseModel.model_dump(inner_settings, mode="json", exclude_none=True, exclude_unset=True)
         for field_name, value in settings_dict.items():
-            # Handle SecretStr fields by getting the actual secret value
-            field_info = inner_settings.__class__.model_fields.get(field_name)
-            if field_info and hasattr(field_info, "annotation") and field_info.annotation == SecretStr:
-                # Get the actual SecretStr instance and extract its value
-                secret_value = getattr(inner_settings, field_name)
-                if secret_value is not None:
-                    value = secret_value.get_secret_value()
-                else:
-                    value = ""
+            # Handle SecretStr fields by getting the actual secret value.
+            # Check the live field value rather than the annotation so that
+            # Optional[SecretStr] (SecretStr | None) is handled correctly too.
+            secret_value = getattr(inner_settings, field_name, None)
+            if isinstance(secret_value, SecretStr):
+                value = secret_value.get_secret_value()
             elif isinstance(value, (list, dict, set, tuple)):
                 value = json.dumps(value)
             else:

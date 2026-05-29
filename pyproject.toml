@@ -1,11 +1,6 @@
-# SPDX-FileCopyrightText: 2024 Deutsche Telekom AG
-#
-# SPDX-License-Identifier: CC0-1.0
 [project]
 name = "wurzel"
-
-version = "2.9.0"
-
+version = "2.9.2"
 description = "Pick, choose and chain your RAG tools in a pythonic way"
 authors = [
     {name ="Thomas Weigel", email="thomas.weigel@telekom.de"},
@@ -14,7 +9,6 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.13"
-
 license = {file = "LICENSES/Apache-2.0.txt"}
 classifiers = [
     'Programming Language :: Python :: 3.11',
@@ -29,7 +23,7 @@ classifiers = [
     'Topic :: Software Development :: Pre-processors',
     'Topic :: Software Development :: Version Control',
 ]
-dependencies= [
+dependencies = [
     "tqdm==4.67.1",
     "pandas==2.3.3",
     "numpy < 2.0.0",
@@ -131,6 +125,15 @@ docs = [
 all = ["wurzel[qdrant,milvus,tlsh,docling,argo,openai,splitter,embedding,scraperapi,sftp]"]
 dev = ["wurzel[lint,test,all]"]
 
+[project.scripts]
+wurzel = "wurzel.cli._main:main"
+
+[project.urls]
+"Release notes" = "https://github.com/telekom/wurzel/releases/"
+Source = "https://github.com/telekom/wurzel"
+
+
+
 [build-system]
 requires = ["setuptools>=78.1.0", "wheel"]
 build-backend = "setuptools.build_meta"
@@ -139,14 +142,19 @@ build-backend = "setuptools.build_meta"
 include = ["wurzel*"]
 namespaces = false
 
+
 [tool.setuptools.package-data]
 wurzel = ["data/*", "utils/to_markdown/*"]
 
 
 
+[tool.setuptools.dynamic]
+version = {file = "VERSION"}
+
 [tool.mypy]
 python_version = "3.11 | 3.12"
 disable_error_code = ["import-untyped"]
+
 [tool.pylint.'MESSAGES CONTROL']
 max-line-length = 140
 max-locals = 18
@@ -161,14 +169,6 @@ ignore-paths = [
   '^tests/data/.*\\.md$',   #  ^  repo‑relative path   .* any sub‑dirs   \.md file‑extension
 ]
 
-[tool.setuptools.dynamic]
-version = {file = "VERSION"}
-[project.scripts]
-wurzel = "wurzel.cli._main:main"
-
-[project.urls]
-"Release notes" = "https://github.com/telekom/wurzel/releases/"
-Source = "https://github.com/telekom/wurzel"
 
 [tool.semantic_release]
 version_toml = ["pyproject.toml:project.version"]
@@ -190,6 +190,7 @@ prerelease = false
 match = "^(?!main$).+"
 prerelease = true
 prerelease_token = "dev"
+
 
 
 [tool.ruff]
