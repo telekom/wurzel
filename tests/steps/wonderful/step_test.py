@@ -336,19 +336,25 @@ class TestPerWorkerSession:
 
 
 class TestNeverejnyFilter:
-    def test_doc_with_neverejny_in_url_is_excluded(self, step, requests_mock):
+    def test_neverejny_doc_is_not_uploaded(self, step, requests_mock):
         doc = MarkdownDataContract(md="# Secret", url="https://example.com/docs/nabidka_neverejny.md", keywords="")
         result = step.run([doc])
-        assert result == []
+        assert result == [doc]  # passthrough unchanged
         assert requests_mock.request_history == []
 
-    def test_doc_with_neverejna_in_url_is_excluded(self, step, requests_mock):
+    def test_neverejna_doc_is_not_uploaded(self, step, requests_mock):
         doc = MarkdownDataContract(md="# Secret", url="https://example.com/docs/nabidka_neverejna.md", keywords="")
         result = step.run([doc])
-        assert result == []
+        assert result == [doc]  # passthrough unchanged
         assert requests_mock.request_history == []
 
-    def test_only_clean_doc_is_uploaded_and_returned(self, step, requests_mock):
+    def test_neverejny_is_case_insensitive(self, step, requests_mock):
+        doc = MarkdownDataContract(md="# Secret", url="https://example.com/docs/nabidka_NEVEREJNY.md", keywords="")
+        result = step.run([doc])
+        assert result == [doc]  # passthrough unchanged
+        assert requests_mock.request_history == []
+
+    def test_only_clean_doc_is_uploaded_full_input_returned(self, step, requests_mock):
         clean = MarkdownDataContract(md="# Public", url="https://example.com/docs/nabidka_verejny.md", keywords="")
         secret = MarkdownDataContract(md="# Secret", url="https://example.com/docs/nabidka_neverejny.md", keywords="")
         requests_mock.get(KB_FILES, json=kb_list_payload())
@@ -358,15 +364,15 @@ class TestNeverejnyFilter:
 
         result = step.run([clean, secret])
 
-        assert result == [clean]
+        assert result == [clean, secret]  # full input returned as passthrough
         assert requests_mock.request_history[0].method == "GET"
         assert sum(1 for r in requests_mock.request_history if r.method == "POST") == 2  # create + sync
 
-    def test_all_neverejny_returns_empty_without_api_calls(self, step, requests_mock):
+    def test_all_neverejny_skips_upload_passes_through(self, step, requests_mock):
         docs = [
             MarkdownDataContract(md="# A", url="https://example.com/docs/nabidka_neverejny.md", keywords=""),
             MarkdownDataContract(md="# B", url="https://example.com/docs/prehled_neverejny.md", keywords=""),
         ]
         result = step.run(docs)
-        assert result == []
+        assert result == docs  # passthrough unchanged
         assert requests_mock.request_history == []
