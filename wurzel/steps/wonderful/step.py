@@ -184,15 +184,24 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
             log.warning("No documents to process")
             return []
 
+        # "neverejn" matches both Czech genders: neverejny (masc.) and neverejna (fem.)
+        # .casefold() ensures case-insensitive matching (e.g. Neverejny, NEVEREJNY).
+        to_upload = [doc for doc in inpt if "neverejn" not in doc.url.casefold()]
+        excluded = len(inpt) - len(to_upload)
+        if excluded:
+            log.info(f"Excluded {excluded} document(s) with 'neverejn' in URL")
+        if not to_upload:
+            return inpt
+
         # Pre-dedup by generated filename so two input docs with the same KB
         # filename don't race in the worker pool and create duplicate KB records.
         # When two docs map to the same filename, the later occurrence wins.
         unique: dict[str, tuple[int, MarkdownDataContract]] = {}
-        for idx, doc in enumerate(inpt):
+        for idx, doc in enumerate(to_upload):
             unique[self._generate_filename(doc, idx)] = (idx, doc)
         deduped = list(unique.values())
-        if len(deduped) < len(inpt):
-            log.info(f"Deduped input: {len(inpt)} → {len(deduped)} unique filenames")
+        if len(deduped) < len(to_upload):
+            log.info(f"Deduped input: {len(to_upload)} → {len(deduped)} unique filenames")
 
         log.info(f"Uploading {len(deduped)} documents to Wonderful KB {self._kb_id}")
         with self._build_session() as session:
