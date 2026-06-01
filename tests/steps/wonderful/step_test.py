@@ -209,6 +209,7 @@ class TestFailureScenarios:
     def test_missing_presigned_url_raises_step_failed(self, step, sample_doc, requests_mock):
         requests_mock.get(KB_FILES, json=kb_list_payload())
         requests_mock.post(KB_FILES, json={"data": {"id": "file-abc"}})  # no "url"
+        requests_mock.delete(f"{KB_FILES}/file-abc", json={})  # orphan rollback
 
         with pytest.raises(StepFailed, match="All 1 documents failed"):
             step.run([sample_doc])
@@ -266,6 +267,9 @@ class TestFailureScenarios:
             ],
         )
         requests_mock.post(KB_SYNC, json={})
+        # Either file could get the failing PUT (concurrent), so allow rollback of both.
+        requests_mock.delete(f"{KB_FILES}/file-1", json={})
+        requests_mock.delete(f"{KB_FILES}/file-2", json={})
 
         assert step.run(two_docs) == two_docs
 
@@ -451,3 +455,54 @@ class TestRetry:
             retry_step.run([sample_doc])
 
         assert sum(1 for r in requests_mock.request_history if r.method == "POST") == 3  # 3 attempts
+
+    def test_create_not_retried_on_read_timeout(self, retry_step, sample_doc, requests_mock):
+        """Create is non-idempotent: a read timeout must not be retried (avoids duplicates)."""
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(KB_FILES, exc=requests.exceptions.ReadTimeout("timeout"))
+
+        with pytest.raises(StepFailed):
+            retry_step.run([sample_doc])
+
+        assert sum(1 for r in requests_mock.request_history if r.method == "POST" and r.url == KB_FILES) == 1
+
+    def test_client_error_not_retried(self, retry_step, sample_doc, requests_mock):
+        """A 4xx is a permanent client error — no retry."""
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(KB_FILES, status_code=403)
+
+        with pytest.raises(StepFailed):
+            retry_step.run([sample_doc])
+
+        assert sum(1 for r in requests_mock.request_history if r.method == "POST" and r.url == KB_FILES) == 1
+
+    def test_server_error_is_retried(self, retry_step, sample_doc, requests_mock):
+        """A 5xx is transient — retried, then succeeds."""
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(
+            KB_FILES,
+            [
+                {"status_code": 503},
+                {"json": kb_create_payload("file-ok")},
+            ],
+        )
+        requests_mock.put(PRESIGNED)
+        requests_mock.post(KB_SYNC, json={})
+
+        result = retry_step.run([sample_doc])
+
+        assert result == [sample_doc]
+        assert sum(1 for r in requests_mock.request_history if r.method == "POST" and r.url == KB_FILES) == 2
+
+    def test_orphan_record_rolled_back_on_upload_failure(self, retry_step, sample_doc, requests_mock):
+        """If the S3 upload fails after the record is created, the record is deleted."""
+        file_id = "file-orphan"
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(KB_FILES, json=kb_create_payload(file_id))
+        requests_mock.put(PRESIGNED, exc=requests.exceptions.ConnectionError("s3 down"))
+        delete_mock = requests_mock.delete(f"{KB_FILES}/{file_id}", json={})
+
+        with pytest.raises(StepFailed):
+            retry_step.run([sample_doc])
+
+        assert delete_mock.called  # orphan record rolled back

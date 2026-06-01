@@ -26,9 +26,19 @@ log = getLogger(__name__)
 class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract], list[MarkdownDataContract]]):
     """Wonderful RAG connector step.
 
-    Each document runs fully concurrently (upload + sync in the same worker thread):
-      New file:      POST /knowledgebases/{kb_id}/files  → PUT <presigned-url>  → POST /kb/files/sync
-      Existing file: POST /storage/upload (multipart, file_id=<id>)             → POST /kb/files/sync
+    Documents are processed in two phases:
+      Phase 1 (concurrent): upload or update each file's content
+        New file:      POST /knowledgebases/{kb_id}/files  → PUT <presigned-url>
+        Existing file: POST /storage/upload (multipart, file_id=<id>)
+      Phase 2 (sequential): POST /kb/files/sync per file to trigger re-indexing —
+        one at a time, because concurrent syncs overload the indexing endpoint and
+        cause read timeouts.
+
+    Every HTTP call is retried with full-jitter exponential back-off on transient
+    errors (connection errors, timeouts, HTTP 429/5xx). File creation is not retried
+    on read timeouts because it is not idempotent — a re-sent create after the server
+    already processed it would produce a duplicate record. If a record is created but
+    its content upload then fails, the orphan record is rolled back via DELETE.
 
     Returns the input documents unchanged (passthrough sink) so the step can chain.
     Per-doc failures are logged but do not affect the output. If every document fails,
@@ -46,7 +56,9 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
         WONDERFULRAGSTEP__API_KEY:          API key (required when not SKIP)
         WONDERFULRAGSTEP__KNOWLEDGEBASE_ID: Knowledge base ID (required when not SKIP)
         WONDERFULRAGSTEP__TIMEOUT:          Request timeout in seconds (default: 120)
-        WONDERFULRAGSTEP__MAX_WORKERS:      Concurrent workers — each handles upload + sync (default: 10)
+        WONDERFULRAGSTEP__MAX_WORKERS:      Concurrent upload workers in phase 1 (default: 10)
+        WONDERFULRAGSTEP__MAX_RETRIES:      Max attempts per HTTP call (default: 3)
+        WONDERFULRAGSTEP__RETRY_BACKOFF:    Base back-off seconds — 0.5s, 1s, 2s, ... (default: 0.5)
     """
 
     def __init__(self) -> None:
@@ -134,6 +146,24 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
         """POST /kb/files/sync — trigger provider re-indexing for a single file."""
         self._api_request(session, "POST", f"/knowledgebases/{self._kb_id}/files/sync", {"file_id": file_id})
 
+    def _delete_kb_file(self, session: requests.Session, file_id: str) -> None:
+        """DELETE /kb/files/{id} — remove a file record (used to roll back orphans)."""
+        # Not routed through _api_request: a 204 No Content body would break response.json().
+        response = session.request(
+            "DELETE",
+            f"{self.settings.BASE_URL}/api/v1/knowledgebases/{self._kb_id}/files/{file_id}",
+            timeout=self.settings.TIMEOUT,
+        )
+        response.raise_for_status()
+
+    def _delete_kb_file_safe(self, session: requests.Session, file_id: str, filename: str) -> None:
+        """Best-effort rollback of a created-but-not-uploaded record. Never raises."""
+        try:
+            self._delete_kb_file(session, file_id)
+            log.info(f"Rolled back orphaned record for {filename}")
+        except requests.exceptions.RequestException as e:
+            log.warning(f"Could not roll back orphaned record {file_id} for {filename}: {e}")
+
     # ── Filename generation ───────────────────────────────────────────────────
 
     def _generate_filename(self, doc: MarkdownDataContract, idx: int) -> str:
@@ -149,23 +179,45 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
 
     # ── Retry helper ──────────────────────────────────────────────────────────
 
-    def _with_retry(self, fn: Callable, *args, **kwargs) -> Any:
-        """Call fn(*args, **kwargs) with exponential back-off retry on request errors.
+    @staticmethod
+    def _should_retry(exc: requests.exceptions.RequestException, idempotent: bool) -> bool:
+        """Whether ``exc`` is a transient error worth retrying.
 
-        Only ``requests.exceptions.RequestException`` is retried; all other
-        exceptions propagate immediately.
+        - Read timeout: the server may already have processed the request, so only
+          retry idempotent calls — re-sending a create would duplicate the record.
+        - Connect timeout / connection error: the request never completed at the
+          server, so it is always safe to retry.
+        - HTTP 429 / 5xx: transient server-side, safe to retry.
+        - Other 4xx: permanent client error, never retry.
         """
-        last_exc: Exception = RuntimeError("unreachable")
+        if isinstance(exc, requests.exceptions.ReadTimeout):
+            return idempotent
+        if isinstance(exc, (requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError)):
+            return True
+        if isinstance(exc, requests.exceptions.Timeout):
+            return idempotent
+        if isinstance(exc, requests.exceptions.HTTPError) and exc.response is not None:
+            return exc.response.status_code == 429 or exc.response.status_code >= 500
+        return False
+
+    def _with_retry(self, fn: Callable, *args, idempotent: bool = True, **kwargs) -> Any:
+        """Call fn(*args, **kwargs) with full-jitter exponential back-off retry.
+
+        Only transient request errors are retried (see ``_should_retry``); permanent
+        errors propagate immediately. Pass ``idempotent=False`` for calls that must
+        not be re-sent after a read timeout (e.g. record creation).
+        """
         for attempt in range(self.settings.MAX_RETRIES):
             try:
                 return fn(*args, **kwargs)
             except requests.exceptions.RequestException as exc:
-                last_exc = exc
-                if attempt < self.settings.MAX_RETRIES - 1:
-                    delay = random.uniform(0, self.settings.RETRY_BACKOFF * (2**attempt))
-                    log.warning(f"Attempt {attempt + 1}/{self.settings.MAX_RETRIES} failed: {exc}; retrying in {delay:.2f}s")
-                    time.sleep(delay)
-        raise last_exc
+                is_last = attempt == self.settings.MAX_RETRIES - 1
+                if is_last or not self._should_retry(exc, idempotent):
+                    raise
+                delay = random.uniform(0, self.settings.RETRY_BACKOFF * (2**attempt))
+                log.warning(f"Attempt {attempt + 1}/{self.settings.MAX_RETRIES} failed: {exc}; retrying in {delay:.2f}s")
+                time.sleep(delay)
+        raise RuntimeError("unreachable: retry loop exited without returning or raising")
 
     # ── Per-document upload (phase 1) ─────────────────────────────────────────
 
@@ -184,10 +236,17 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
                     self._with_retry(self._update_existing_file, session, existing_id, filename, doc.md.encode("utf-8"))
                     log.info(f"Updated: {filename}")
                     return existing_id
-                kb_file = self._with_retry(self._create_kb_file, session, filename)
-                self._with_retry(self._upload_to_presigned_url, kb_file["url"], doc.md.encode("utf-8"))
+                # Create is not idempotent — don't re-send it on a read timeout.
+                kb_file = self._with_retry(self._create_kb_file, session, filename, idempotent=False)
+                file_id = kb_file["id"]
+                try:
+                    self._with_retry(self._upload_to_presigned_url, kb_file["url"], doc.md.encode("utf-8"))
+                except (requests.exceptions.RequestException, KeyError):
+                    # Record exists but has no content — roll it back to avoid an orphan.
+                    self._delete_kb_file_safe(session, file_id, filename)
+                    raise
                 log.info(f"Uploaded: {filename}")
-                return kb_file["id"]
+                return file_id
             except (requests.exceptions.RequestException, KeyError) as e:
                 log.error(f"Failed to upload {filename}: {e}")
                 return None
@@ -210,19 +269,21 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
 
     def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
         """Upload and sync markdown documents to the Wonderful RAG knowledge base."""
-        if self.settings.SKIP:
-            log.info(f"WonderfulRAGStep skipped — passing through {len(inpt)} documents unchanged")
-            return inpt
         if not inpt:
             log.warning("No documents to process")
             return []
 
+        # Filter before the SKIP check so a dry run reflects the real upload set.
         # "neverejn" matches both Czech genders: neverejny (masc.) and neverejna (fem.)
         # .casefold() ensures case-insensitive matching (e.g. Neverejny, NEVEREJNY).
         to_upload = [doc for doc in inpt if "neverejn" not in doc.url.casefold()]
         excluded = len(inpt) - len(to_upload)
         if excluded:
             log.info(f"Excluded {excluded} document(s) with 'neverejn' in URL")
+
+        if self.settings.SKIP:
+            log.info(f"WonderfulRAGStep skipped — would upload {len(to_upload)} of {len(inpt)} document(s), no API calls")
+            return inpt
         if not to_upload:
             return inpt
 
