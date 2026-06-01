@@ -510,3 +510,68 @@ class TestRetry:
 
         assert delete_mock.called  # orphan record rolled back
         assert delete_mock.last_request.json() == {"file_ids": [file_id]}  # by id, in the body
+
+
+# ── Prune (mirror KB to input) ──────────────────────────────────────────────────
+
+
+class TestPrune:
+    """PRUNE_STALE deletes files in the KB that are absent from the input, before sync.
+    Gated (off by default) and skipped on any upload failure.
+    """
+
+    @pytest.fixture
+    def prune_step(self, wonderful_env):
+        wonderful_env.set("PRUNE_STALE", "true")
+        s = WonderfulRAGStep()
+        yield s
+        s.finalize()
+
+    KEEP = MarkdownDataContract(md="# Keep", url="https://example.com/docs/keep", keywords="")
+    # KEEP maps to filename "docs/keep.md"
+
+    def test_prune_disabled_by_default(self, step, requests_mock):
+        requests_mock.get(KB_FILES, json=kb_list_payload(("docs/keep.md", "id-keep"), ("docs/stale.md", "id-stale")))
+        requests_mock.post(STORAGE_UPLOAD, json={})  # keep already exists → update path
+        requests_mock.post(KB_SYNC, json={})
+        delete_mock = requests_mock.delete(KB_FILES, json={})
+
+        assert step.run([self.KEEP]) == [self.KEEP]
+        assert not delete_mock.called  # no prune unless PRUNE_STALE=true
+
+    def test_prune_deletes_stale_before_sync(self, prune_step, requests_mock):
+        requests_mock.get(KB_FILES, json=kb_list_payload(("docs/keep.md", "id-keep"), ("docs/stale.md", "id-stale")))
+        requests_mock.post(STORAGE_UPLOAD, json={})
+        requests_mock.post(KB_SYNC, json={})
+        delete_mock = requests_mock.delete(KB_FILES, json={})
+
+        assert prune_step.run([self.KEEP]) == [self.KEEP]
+
+        assert delete_mock.called
+        assert delete_mock.last_request.json() == {"file_ids": ["id-stale"]}  # only the stale one
+        # Prune must happen before the sync re-index.
+        order = [(r.method, r.url) for r in requests_mock.request_history]
+        delete_idx = next(i for i, (m, _) in enumerate(order) if m == "DELETE")
+        sync_idx = next(i for i, (m, u) in enumerate(order) if m == "POST" and u.startswith(KB_SYNC))
+        assert delete_idx < sync_idx
+
+    def test_prune_noop_when_kb_matches_input(self, prune_step, requests_mock):
+        requests_mock.get(KB_FILES, json=kb_list_payload(("docs/keep.md", "id-keep")))  # KB == input
+        requests_mock.post(STORAGE_UPLOAD, json={})
+        requests_mock.post(KB_SYNC, json={})
+        delete_mock = requests_mock.delete(KB_FILES, json={})
+
+        assert prune_step.run([self.KEEP]) == [self.KEEP]
+        assert not delete_mock.called  # nothing stale to delete
+
+    def test_prune_skipped_on_upload_failure(self, prune_step, requests_mock):
+        new_doc = MarkdownDataContract(md="# New", url="https://example.com/docs/new", keywords="")
+        requests_mock.get(KB_FILES, json=kb_list_payload(("docs/keep.md", "id-keep"), ("docs/stale.md", "id-stale")))
+        requests_mock.post(STORAGE_UPLOAD, json={})  # keep updates OK
+        requests_mock.post(KB_FILES, exc=requests.exceptions.ConnectionError("create failed"))  # new fails
+        requests_mock.post(KB_SYNC, json={})
+        delete_mock = requests_mock.delete(KB_FILES, json={})
+
+        # One upload succeeds, one fails → not all failed (no raise), but prune is skipped.
+        assert prune_step.run([self.KEEP, new_doc]) == [self.KEEP, new_doc]
+        assert not delete_mock.called  # never delete to match an incomplete input

@@ -30,6 +30,8 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
       Phase 1 (concurrent): upload or update each file's content
         New file:      POST /knowledgebases/{kb_id}/files  → PUT <presigned-url>
         Existing file: POST /storage/upload (multipart, file_id=<id>)
+      Prune (optional, gated by PRUNE_STALE): before sync, delete files that are in the
+        KB but not in the input so the KB mirrors the input. Skipped on any upload failure.
       Phase 2 (fire-and-forget): POST /kb/sync once to re-index the whole KB. This
         server op is slow and routinely exceeds the gateway timeout (~100s → HTTP 524);
         the server keeps indexing after the connection drops, so the trigger is
@@ -60,6 +62,7 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
         WONDERFULRAGSTEP__TIMEOUT:          Request timeout in seconds (default: 120)
         WONDERFULRAGSTEP__SYNC_TIMEOUT:     Fire-and-forget sync trigger timeout in seconds (default: 30)
         WONDERFULRAGSTEP__MAX_WORKERS:      Concurrent upload workers in phase 1 (default: 10)
+        WONDERFULRAGSTEP__PRUNE_STALE:      Delete KB files absent from input, mirroring it (default: false)
         WONDERFULRAGSTEP__MAX_RETRIES:      Max attempts per HTTP call (default: 3)
         WONDERFULRAGSTEP__RETRY_BACKOFF:    Base back-off seconds — 0.5s, 1s, 2s, ... (default: 0.5)
     """
@@ -182,6 +185,28 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
             log.info(f"Rolled back orphaned record for {filename}")
         except requests.exceptions.RequestException as e:
             log.warning(f"Could not roll back orphaned record {file_id} for {filename}: {e}")
+
+    def _prune_stale(self, existing: dict[str, str], keep_filenames: set[str]) -> int:
+        """Delete files in the KB that are not in the input, so the KB mirrors the input.
+
+        ``existing`` is the pre-upload {filename: file_id} snapshot, so this only removes
+        files that were already in the KB and are absent from the input (KB − input) —
+        never anything created this run. Reading the snapshot before uploading also avoids
+        read-after-write lag. Best-effort: a delete failure is logged, not raised.
+        Returns the number of files pruned.
+        """
+        stale = {fid: name for name, fid in existing.items() if name not in keep_filenames}
+        if not stale:
+            return 0
+        sample = sorted(stale.values())
+        log.info(f"Pruning {len(stale)} stale file(s) not in input: {sample[:10]}{' ...' if len(sample) > 10 else ''}")
+        try:
+            with self._build_session() as session:
+                self._with_retry(self._delete_kb_files, session, list(stale.keys()))
+            return len(stale)
+        except requests.exceptions.RequestException as e:
+            log.warning(f"Failed to prune {len(stale)} stale file(s): {e}")
+            return 0
 
     # ── Filename generation ───────────────────────────────────────────────────
 
@@ -318,13 +343,23 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
         if not uploaded:
             raise StepFailed(f"All {len(deduped)} documents failed to upload")
 
+        # Optional prune (before sync): make the KB mirror the input by deleting stale
+        # files (KB − input). Gated behind PRUNE_STALE and skipped on any upload failure,
+        # so we never delete real content to match an incomplete input.
+        pruned = 0
+        if self.settings.PRUNE_STALE:
+            if upload_failed:
+                log.warning(f"Skipping prune: {upload_failed} upload(s) failed this run")
+            else:
+                pruned = self._prune_stale(existing, set(unique.keys()))
+
         # Phase 2: trigger a single whole-KB re-index (fire-and-forget). The sync is a
         # slow server-side op that exceeds the gateway timeout; we trigger it and let the
         # server finish indexing in the background rather than blocking/failing on it.
         with self._build_session() as session:
             self._trigger_sync(session)
 
-        log.info(f"Completed: {len(uploaded)} file(s) uploaded, KB sync triggered, {upload_failed} upload failure(s)")
+        log.info(f"Completed: {len(uploaded)} file(s) uploaded, {pruned} pruned, KB sync triggered, {upload_failed} upload failure(s)")
 
         # Passthrough preserves the original input length and order.
         return inpt

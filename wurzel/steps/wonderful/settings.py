@@ -59,6 +59,11 @@ class WonderfulRAGSettings(Settings):
         gt=0,
         description="Max concurrent upload workers",
     )
+    PRUNE_STALE: bool = Field(
+        default=False,
+        description="When true, delete files present in the KB but absent from the input "
+        "(KB mirrors the input). Destructive; only runs when every upload succeeded.",
+    )
     MAX_RETRIES: int = Field(
         default=3,
         gt=0,
