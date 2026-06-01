@@ -555,6 +555,23 @@ class TestPrune:
         sync_idx = next(i for i, (m, u) in enumerate(order) if m == "POST" and u.startswith(KB_SYNC))
         assert delete_idx < sync_idx
 
+    def test_prune_deletes_each_stale_file_concurrently(self, prune_step, requests_mock):
+        # Multiple stale files → one DELETE per file (per-worker), not a single giant batch.
+        requests_mock.get(
+            KB_FILES,
+            json=kb_list_payload(("docs/keep.md", "id-keep"), ("docs/stale1.md", "id-1"), ("docs/stale2.md", "id-2")),
+        )
+        requests_mock.post(STORAGE_UPLOAD, json={})
+        requests_mock.post(KB_SYNC, json={})
+        requests_mock.delete(KB_FILES, json={})
+
+        assert prune_step.run([self.KEEP]) == [self.KEEP]
+
+        deletes = [r for r in requests_mock.request_history if r.method == "DELETE"]
+        assert len(deletes) == 2  # one call per stale file
+        assert all(len(r.json()["file_ids"]) == 1 for r in deletes)  # single id each
+        assert sorted(r.json()["file_ids"][0] for r in deletes) == ["id-1", "id-2"]
+
     def test_prune_noop_when_kb_matches_input(self, prune_step, requests_mock):
         requests_mock.get(KB_FILES, json=kb_list_payload(("docs/keep.md", "id-keep")))  # KB == input
         requests_mock.post(STORAGE_UPLOAD, json={})
@@ -563,6 +580,29 @@ class TestPrune:
 
         assert prune_step.run([self.KEEP]) == [self.KEEP]
         assert not delete_mock.called  # nothing stale to delete
+
+    def test_prune_delete_not_retried_on_timeout(self, env, requests_mock, mocker):
+        # Even with MAX_RETRIES=3, a prune delete is attempted once; a read timeout is
+        # assumed completed server-side (not retried) so it doesn't pile load on the endpoint.
+        mocker.patch("wurzel.steps.wonderful.step.time.sleep")
+        env.set("BASE_URL", BASE_URL)
+        env.set("API_KEY", "test-api-key")
+        env.set("KNOWLEDGEBASE_ID", KB_ID)
+        env.set("MAX_RETRIES", "3")
+        env.set("RETRY_BACKOFF", "0")
+        env.set("PRUNE_STALE", "true")
+        step = WonderfulRAGStep()
+        try:
+            requests_mock.get(KB_FILES, json=kb_list_payload(("docs/keep.md", "id-keep"), ("docs/stale.md", "id-stale")))
+            requests_mock.post(STORAGE_UPLOAD, json={})
+            requests_mock.post(KB_SYNC, json={})
+            requests_mock.delete(KB_FILES, exc=requests.exceptions.ReadTimeout("slow delete"))
+
+            assert step.run([self.KEEP]) == [self.KEEP]
+            deletes = [r for r in requests_mock.request_history if r.method == "DELETE"]
+            assert len(deletes) == 1  # single attempt, no retry despite MAX_RETRIES=3
+        finally:
+            step.finalize()
 
     def test_prune_skipped_on_upload_failure(self, prune_step, requests_mock):
         new_doc = MarkdownDataContract(md="# New", url="https://example.com/docs/new", keywords="")

@@ -186,27 +186,48 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
         except requests.exceptions.RequestException as e:
             log.warning(f"Could not roll back orphaned record {file_id} for {filename}: {e}")
 
+    def _prune_one(self, file_id: str, filename: str) -> bool:
+        """Delete a single stale file (own session per worker). Returns True on success.
+
+        Not retried: the DELETE is slow, and a read timeout almost always means the server
+        is still completing the delete — retrying only piles more load on the endpoint. So a
+        read timeout is treated as "assume deleted"; other errors count as failures.
+        """
+        with self._build_session() as session:
+            try:
+                self._delete_kb_files(session, [file_id])
+                return True
+            except requests.exceptions.ReadTimeout:
+                log.info(f"Prune of {filename} timed out (read); assuming the server completes it")
+                return True
+            except requests.exceptions.RequestException as e:
+                log.warning(f"Failed to prune {filename} ({file_id}): {e}")
+                return False
+
     def _prune_stale(self, existing: dict[str, str], keep_filenames: set[str]) -> int:
         """Delete files in the KB that are not in the input, so the KB mirrors the input.
 
         ``existing`` is the pre-upload {filename: file_id} snapshot, so this only removes
         files that were already in the KB and are absent from the input (KB − input) —
         never anything created this run. Reading the snapshot before uploading also avoids
-        read-after-write lag. Best-effort: a delete failure is logged, not raised.
-        Returns the number of files pruned.
+        read-after-write lag.
+
+        Deletes run concurrently, one file per worker — same pool model as the upload
+        phase. A single batch DELETE with the whole id list does not scale (the endpoint
+        404s on large lists); per-file calls do. Best-effort: per-file failures are logged,
+        not raised. Returns the number of files actually pruned.
         """
         stale = {fid: name for name, fid in existing.items() if name not in keep_filenames}
         if not stale:
             return 0
         sample = sorted(stale.values())
         log.info(f"Pruning {len(stale)} stale file(s) not in input: {sample[:10]}{' ...' if len(sample) > 10 else ''}")
-        try:
-            with self._build_session() as session:
-                self._with_retry(self._delete_kb_files, session, list(stale.keys()))
-            return len(stale)
-        except requests.exceptions.RequestException as e:
-            log.warning(f"Failed to prune {len(stale)} stale file(s): {e}")
-            return 0
+        with ThreadPoolExecutor(max_workers=self.settings.MAX_WORKERS) as executor:
+            futures = [executor.submit(self._prune_one, fid, name) for fid, name in stale.items()]
+            pruned = sum(1 for f in as_completed(futures) if f.result())
+        if pruned < len(stale):
+            log.warning(f"Pruned {pruned}/{len(stale)} stale file(s); {len(stale) - pruned} could not be deleted")
+        return pruned
 
     # ── Filename generation ───────────────────────────────────────────────────
 
