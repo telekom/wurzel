@@ -30,15 +30,17 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
       Phase 1 (concurrent): upload or update each file's content
         New file:      POST /knowledgebases/{kb_id}/files  → PUT <presigned-url>
         Existing file: POST /storage/upload (multipart, file_id=<id>)
-      Phase 2 (sequential): POST /kb/files/sync per file to trigger re-indexing —
-        one at a time, because concurrent syncs overload the indexing endpoint and
-        cause read timeouts.
+      Phase 2 (fire-and-forget): POST /kb/sync once to re-index the whole KB. This
+        server op is slow and routinely exceeds the gateway timeout (~100s → HTTP 524);
+        the server keeps indexing after the connection drops, so the trigger is
+        fire-and-forget — a timeout/524 is logged, never raised.
 
-    Every HTTP call is retried with full-jitter exponential back-off on transient
+    Upload HTTP calls are retried with full-jitter exponential back-off on transient
     errors (connection errors, timeouts, HTTP 429/5xx). File creation is not retried
     on read timeouts because it is not idempotent — a re-sent create after the server
     already processed it would produce a duplicate record. If a record is created but
-    its content upload then fails, the orphan record is rolled back via DELETE.
+    its content upload then fails, the orphan record is rolled back via DELETE. The
+    sync trigger is not retried (fire-and-forget).
 
     Returns the input documents unchanged (passthrough sink) so the step can chain.
     Per-doc failures are logged but do not affect the output. If every document fails,
@@ -52,10 +54,11 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
 
     Environment Variables:
         WONDERFULRAGSTEP__SKIP:             When true, skip processing (default: false)
-        WONDERFULRAGSTEP__BASE_URL:         Wonderful API base URL (required when not SKIP)
+        WONDERFULRAGSTEP__BASE_URL:         Wonderful API base URL, e.g. https://<tenant>.api.sb.wonderful.ai (required when not SKIP)
         WONDERFULRAGSTEP__API_KEY:          API key (required when not SKIP)
         WONDERFULRAGSTEP__KNOWLEDGEBASE_ID: Knowledge base ID (required when not SKIP)
         WONDERFULRAGSTEP__TIMEOUT:          Request timeout in seconds (default: 120)
+        WONDERFULRAGSTEP__SYNC_TIMEOUT:     Fire-and-forget sync trigger timeout in seconds (default: 30)
         WONDERFULRAGSTEP__MAX_WORKERS:      Concurrent upload workers in phase 1 (default: 10)
         WONDERFULRAGSTEP__MAX_RETRIES:      Max attempts per HTTP call (default: 3)
         WONDERFULRAGSTEP__RETRY_BACKOFF:    Base back-off seconds — 0.5s, 1s, 2s, ... (default: 0.5)
@@ -142,24 +145,40 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
             log.debug(f"Response body ({response.status_code}): {response.text}")
         response.raise_for_status()
 
-    def _sync_kb_file(self, session: requests.Session, file_id: str) -> None:
-        """POST /kb/files/sync — trigger provider re-indexing for a single file."""
-        self._api_request(session, "POST", f"/knowledgebases/{self._kb_id}/files/sync", {"file_id": file_id})
+    def _trigger_sync(self, session: requests.Session) -> None:
+        """POST /kb/sync — fire-and-forget trigger of whole-KB re-indexing.
 
-    def _delete_kb_file(self, session: requests.Session, file_id: str) -> None:
-        """DELETE /kb/files/{id} — remove a file record (used to roll back orphans)."""
-        # Not routed through _api_request: a 204 No Content body would break response.json().
-        response = session.request(
-            "DELETE",
-            f"{self.settings.BASE_URL}/api/v1/knowledgebases/{self._kb_id}/files/{file_id}",
-            timeout=self.settings.TIMEOUT,
-        )
-        response.raise_for_status()
+        A single whole-KB sync is used rather than the per-file sync endpoint: each
+        sync (per-file or whole-KB) does heavy work and is slow regardless, so one call
+        is cheaper than one per file. The work is synchronous server-side and routinely
+        exceeds the gateway timeout (~100s → HTTP 524) and the client read timeout. The
+        server keeps indexing after the connection drops, so we only need to *trigger*
+        it: a timeout or 524 is logged as "started", never raised. Other errors are
+        logged but also do not fail the step (uploads are already persisted; re-running
+        re-triggers sync).
+        """
+        url = f"{self.settings.BASE_URL}/api/v1/knowledgebases/{self._kb_id}/sync"
+        try:
+            response = session.post(url, timeout=self.settings.SYNC_TIMEOUT)
+            if response.status_code in (502, 503, 504, 524):
+                log.info(f"KB sync triggered (gateway {response.status_code}); indexing continues server-side")
+            elif response.ok:
+                log.info(f"KB sync triggered ({response.status_code})")
+            else:
+                log.warning(f"KB sync trigger returned {response.status_code}: {response.text[:200]}")
+        except requests.exceptions.Timeout:
+            log.info("KB sync triggered (client timeout); indexing continues server-side")
+        except requests.exceptions.RequestException as e:
+            log.warning(f"KB sync trigger could not be sent: {e}")
+
+    def _delete_kb_files(self, session: requests.Session, file_ids: list[str]) -> None:
+        """DELETE /kb/files — remove file records by id (batch endpoint, ids in the body)."""
+        self._api_request(session, "DELETE", f"/knowledgebases/{self._kb_id}/files", {"file_ids": file_ids})
 
     def _delete_kb_file_safe(self, session: requests.Session, file_id: str, filename: str) -> None:
         """Best-effort rollback of a created-but-not-uploaded record. Never raises."""
         try:
-            self._delete_kb_file(session, file_id)
+            self._delete_kb_files(session, [file_id])
             log.info(f"Rolled back orphaned record for {filename}")
         except requests.exceptions.RequestException as e:
             log.warning(f"Could not roll back orphaned record {file_id} for {filename}: {e}")
@@ -225,8 +244,8 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
         """Upload (or update) a single document. Returns file_id on success, None on failure.
 
         Each worker uses its own ``requests.Session`` because Session is not
-        thread-safe for concurrent use. Sync is intentionally excluded here and
-        handled sequentially in phase 2 to avoid overloading the re-indexing endpoint.
+        thread-safe for concurrent use. Sync is intentionally excluded here — a single
+        whole-KB sync is triggered once in phase 2 after all uploads.
         """
         filename = self._generate_filename(doc, idx)
         existing_id = existing.get(filename)
@@ -250,20 +269,6 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
             except (requests.exceptions.RequestException, KeyError) as e:
                 log.error(f"Failed to upload {filename}: {e}")
                 return None
-
-    # ── Phase 2: sequential sync ──────────────────────────────────────────────
-
-    def _sync_all(self, file_ids: list[str]) -> int:
-        """Sync each file sequentially. Returns the number of failures."""
-        failed = 0
-        with self._build_session() as session:
-            for file_id in file_ids:
-                try:
-                    self._with_retry(self._sync_kb_file, session, file_id)
-                except requests.exceptions.RequestException as e:
-                    log.error(f"Failed to sync file {file_id}: {e}")
-                    failed += 1
-        return failed
 
     # ── Main run ──────────────────────────────────────────────────────────────
 
@@ -309,17 +314,17 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
         uploaded = [fid for fid in file_ids if fid is not None]
         upload_failed = len(deduped) - len(uploaded)
         if upload_failed:
-            log.warning(f"Upload phase: {upload_failed} document(s) failed")
+            log.warning(f"Upload phase: {upload_failed} of {len(deduped)} document(s) failed")
+        if not uploaded:
+            raise StepFailed(f"All {len(deduped)} documents failed to upload")
 
-        # Phase 2: sync uploaded files sequentially — avoids hammering the
-        # re-indexing endpoint with concurrent requests that cause timeouts.
-        sync_failed = self._sync_all(uploaded)
+        # Phase 2: trigger a single whole-KB re-index (fire-and-forget). The sync is a
+        # slow server-side op that exceeds the gateway timeout; we trigger it and let the
+        # server finish indexing in the background rather than blocking/failing on it.
+        with self._build_session() as session:
+            self._trigger_sync(session)
 
-        failed = upload_failed + sync_failed
-        log.info(f"Completed: {len(deduped) - failed} succeeded, {failed} failed")
-
-        if failed == len(deduped):
-            raise StepFailed(f"All {failed} documents failed to process")
+        log.info(f"Completed: {len(uploaded)} file(s) uploaded, KB sync triggered, {upload_failed} upload failure(s)")
 
         # Passthrough preserves the original input length and order.
         return inpt

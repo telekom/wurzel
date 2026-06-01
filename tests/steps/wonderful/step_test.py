@@ -14,10 +14,10 @@ from wurzel.steps.wonderful import WonderfulRAGStep
 # ── Constants ─────────────────────────────────────────────────────────────────
 
 KB_ID = "kb-123"
-BASE_URL = "https://tenant.api.wonderful.ai"
+BASE_URL = "https://tenant.api.wonderful.ai"  # host only; the step hardcodes /api/v1
 API = f"{BASE_URL}/api/v1"
 KB_FILES = f"{API}/knowledgebases/{KB_ID}/files"
-KB_SYNC = f"{KB_FILES}/sync"
+KB_SYNC = f"{API}/knowledgebases/{KB_ID}/sync"  # whole-KB sync (no per-file endpoint)
 STORAGE_UPLOAD = f"{API}/storage/upload"
 PRESIGNED = "https://s3.example.com/presigned"
 
@@ -152,7 +152,7 @@ class TestUpload:
 
         methods = [r.method for r in requests_mock.request_history]
         assert methods.count("GET") == 1
-        assert methods.count("POST") == 4  # 2× create + 2× sync
+        assert methods.count("POST") == 3  # 2× create + 1× whole-KB sync
         assert methods.count("PUT") == 2
 
     def test_input_deduped_by_filename(self, step, requests_mock):
@@ -209,12 +209,13 @@ class TestFailureScenarios:
     def test_missing_presigned_url_raises_step_failed(self, step, sample_doc, requests_mock):
         requests_mock.get(KB_FILES, json=kb_list_payload())
         requests_mock.post(KB_FILES, json={"data": {"id": "file-abc"}})  # no "url"
-        requests_mock.delete(f"{KB_FILES}/file-abc", json={})  # orphan rollback
+        requests_mock.delete(KB_FILES, json={})  # orphan rollback (batch delete)
 
         with pytest.raises(StepFailed, match="All 1 documents failed"):
             step.run([sample_doc])
 
-    def test_sync_failure_does_not_raise_when_others_succeed(self, step, two_docs, requests_mock):
+    def test_sync_failure_does_not_fail_step(self, step, two_docs, requests_mock):
+        # Sync is fire-and-forget: a sync error must NOT fail the step (uploads persisted).
         requests_mock.get(KB_FILES, json=kb_list_payload())
         requests_mock.post(
             KB_FILES,
@@ -224,16 +225,27 @@ class TestFailureScenarios:
             ],
         )
         requests_mock.put(PRESIGNED)
-        # First sync raises, second succeeds — both docs still pass through.
-        requests_mock.post(
-            KB_SYNC,
-            [
-                {"exc": requests.exceptions.ConnectionError("sync failed")},
-                {"json": {}},
-            ],
-        )
+        requests_mock.post(KB_SYNC, exc=requests.exceptions.ConnectionError("sync failed"))
 
         assert step.run(two_docs) == two_docs
+
+    def test_sync_524_does_not_fail_step(self, step, sample_doc, requests_mock):
+        # A Cloudflare 524 (gateway timeout) means indexing started server-side → don't fail.
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(KB_FILES, json=kb_create_payload("file-1"))
+        requests_mock.put(PRESIGNED)
+        requests_mock.post(KB_SYNC, status_code=524, text="<html>gateway timeout</html>")
+
+        assert step.run([sample_doc]) == [sample_doc]
+
+    def test_sync_timeout_does_not_fail_step(self, step, sample_doc, requests_mock):
+        # A client read timeout on the sync trigger is fire-and-forget → don't fail.
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(KB_FILES, json=kb_create_payload("file-1"))
+        requests_mock.put(PRESIGNED)
+        requests_mock.post(KB_SYNC, exc=requests.exceptions.ReadTimeout("slow"))
+
+        assert step.run([sample_doc]) == [sample_doc]
 
     def test_partial_kb_create_failure_does_not_raise(self, step, two_docs, requests_mock):
         requests_mock.get(KB_FILES, json=kb_list_payload())
@@ -267,9 +279,7 @@ class TestFailureScenarios:
             ],
         )
         requests_mock.post(KB_SYNC, json={})
-        # Either file could get the failing PUT (concurrent), so allow rollback of both.
-        requests_mock.delete(f"{KB_FILES}/file-1", json={})
-        requests_mock.delete(f"{KB_FILES}/file-2", json={})
+        requests_mock.delete(KB_FILES, json={})  # orphan rollback (batch delete)
 
         assert step.run(two_docs) == two_docs
 
@@ -427,24 +437,17 @@ class TestRetry:
         assert result == [sample_doc]
         assert sum(1 for r in requests_mock.request_history if r.method == "POST" and r.url == KB_FILES) == 3
 
-    def test_sync_retries_on_transient_error(self, retry_step, sample_doc, requests_mock):
-        """A transient sync failure is retried; success on the third attempt."""
+    def test_sync_triggered_once_not_retried(self, retry_step, sample_doc, requests_mock):
+        """Sync is fire-and-forget: triggered exactly once, never retried even on failure."""
         requests_mock.get(KB_FILES, json=kb_list_payload())
         requests_mock.post(KB_FILES, json=kb_create_payload("file-ok"))
         requests_mock.put(PRESIGNED)
-        requests_mock.post(
-            KB_SYNC,
-            [
-                {"exc": requests.exceptions.ConnectionError("transient")},
-                {"exc": requests.exceptions.ConnectionError("transient")},
-                {"json": {}},
-            ],
-        )
+        requests_mock.post(KB_SYNC, exc=requests.exceptions.ConnectionError("transient"))
 
         result = retry_step.run([sample_doc])
 
-        assert result == [sample_doc]
-        assert sum(1 for r in requests_mock.request_history if r.url.startswith(KB_SYNC)) == 3
+        assert result == [sample_doc]  # sync failure doesn't fail the step
+        assert sum(1 for r in requests_mock.request_history if r.url.startswith(KB_SYNC)) == 1
 
     def test_exhausted_retries_raises_step_failed(self, retry_step, sample_doc, requests_mock):
         """When all retries are exhausted and every document fails, StepFailed is raised."""
@@ -500,9 +503,10 @@ class TestRetry:
         requests_mock.get(KB_FILES, json=kb_list_payload())
         requests_mock.post(KB_FILES, json=kb_create_payload(file_id))
         requests_mock.put(PRESIGNED, exc=requests.exceptions.ConnectionError("s3 down"))
-        delete_mock = requests_mock.delete(f"{KB_FILES}/{file_id}", json={})
+        delete_mock = requests_mock.delete(KB_FILES, json={})
 
         with pytest.raises(StepFailed):
             retry_step.run([sample_doc])
 
         assert delete_mock.called  # orphan record rolled back
+        assert delete_mock.last_request.json() == {"file_ids": [file_id]}  # by id, in the body

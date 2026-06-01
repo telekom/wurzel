@@ -33,7 +33,7 @@ class WonderfulRAGSettings(Settings):
     )
     BASE_URL: str = Field(
         default="",
-        description="Wonderful API base URL (required when SKIP=false)",
+        description="Wonderful API base URL, e.g. https://<tenant>.api.sb.wonderful.ai (required when SKIP=false)",
     )
     API_KEY: SecretStr = Field(
         default=SecretStr(""),
@@ -47,6 +47,12 @@ class WonderfulRAGSettings(Settings):
         default=120,
         gt=0,
         description="Request timeout in seconds",
+    )
+    SYNC_TIMEOUT: int = Field(
+        default=30,
+        gt=0,
+        description="Timeout in seconds for the fire-and-forget KB sync trigger; the server keeps "
+        "indexing after the connection drops, so a timeout/524 here is not treated as a failure",
     )
     MAX_WORKERS: int = Field(
         default=10,
