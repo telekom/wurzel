@@ -53,6 +53,16 @@ class WonderfulRAGSettings(Settings):
         gt=0,
         description="Max concurrent upload workers",
     )
+    MAX_RETRIES: int = Field(
+        default=3,
+        gt=0,
+        description="Max attempts per HTTP call before giving up",
+    )
+    RETRY_BACKOFF: float = Field(
+        default=0.5,
+        ge=0,
+        description="Base delay in seconds for exponential back-off between retries (0 disables sleep): 0.5s, 1s, 2s, ...",
+    )
 
     @model_validator(mode="after")
     def _require_credentials_unless_skipped(self) -> "WonderfulRAGSettings":

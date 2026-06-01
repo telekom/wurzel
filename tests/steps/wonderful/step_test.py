@@ -43,6 +43,8 @@ def wonderful_env(env):
     env.set("BASE_URL", BASE_URL)
     env.set("API_KEY", "test-api-key")
     env.set("KNOWLEDGEBASE_ID", KB_ID)
+    env.set("MAX_RETRIES", "1")  # no retries in unit tests — keeps mocks simple
+    env.set("RETRY_BACKOFF", "0")  # no sleep in unit tests
     return env
 
 
@@ -328,8 +330,8 @@ class TestPerWorkerSession:
         spy = mocker.spy(step, "_build_session")
         step.run(two_docs)
 
-        # 1× main thread (existing-files fetch) + 2× workers (one per doc).
-        assert spy.call_count == 3
+        # 1× fetch + 2× upload workers + 1× sync loop.
+        assert spy.call_count == 4
 
 
 # ── Neverejny filter ──────────────────────────────────────────────────────────
@@ -376,3 +378,76 @@ class TestNeverejnyFilter:
         result = step.run(docs)
         assert result == docs  # passthrough unchanged
         assert requests_mock.request_history == []
+
+
+# ── Retry / back-off ──────────────────────────────────────────────────────────
+
+
+class TestRetry:
+    """Back-off retry is applied per HTTP call. Tests use MAX_RETRIES=3, RETRY_BACKOFF=0
+    (no actual sleep) so we can verify retry counts without slowing down the suite.
+    """
+
+    @pytest.fixture
+    def retry_env(self, env):
+        env.set("BASE_URL", BASE_URL)
+        env.set("API_KEY", "test-api-key")
+        env.set("KNOWLEDGEBASE_ID", KB_ID)
+        env.set("MAX_RETRIES", "3")
+        env.set("RETRY_BACKOFF", "0")
+        return env
+
+    @pytest.fixture
+    def retry_step(self, retry_env, mocker):
+        mocker.patch("wurzel.steps.wonderful.step.time.sleep")
+        s = WonderfulRAGStep()
+        yield s
+        s.finalize()
+
+    def test_upload_retries_on_transient_error(self, retry_step, sample_doc, requests_mock):
+        """A transient upload failure is retried; success on the third attempt."""
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(
+            KB_FILES,
+            [
+                {"exc": requests.exceptions.ConnectionError("transient")},
+                {"exc": requests.exceptions.ConnectionError("transient")},
+                {"json": kb_create_payload("file-ok")},
+            ],
+        )
+        requests_mock.put(PRESIGNED)
+        requests_mock.post(KB_SYNC, json={})
+
+        result = retry_step.run([sample_doc])
+
+        assert result == [sample_doc]
+        assert sum(1 for r in requests_mock.request_history if r.method == "POST" and r.url == KB_FILES) == 3
+
+    def test_sync_retries_on_transient_error(self, retry_step, sample_doc, requests_mock):
+        """A transient sync failure is retried; success on the third attempt."""
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(KB_FILES, json=kb_create_payload("file-ok"))
+        requests_mock.put(PRESIGNED)
+        requests_mock.post(
+            KB_SYNC,
+            [
+                {"exc": requests.exceptions.ConnectionError("transient")},
+                {"exc": requests.exceptions.ConnectionError("transient")},
+                {"json": {}},
+            ],
+        )
+
+        result = retry_step.run([sample_doc])
+
+        assert result == [sample_doc]
+        assert sum(1 for r in requests_mock.request_history if r.url.startswith(KB_SYNC)) == 3
+
+    def test_exhausted_retries_raises_step_failed(self, retry_step, sample_doc, requests_mock):
+        """When all retries are exhausted and every document fails, StepFailed is raised."""
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(KB_FILES, exc=requests.exceptions.ConnectionError("permanent"))
+
+        with pytest.raises(StepFailed):
+            retry_step.run([sample_doc])
+
+        assert sum(1 for r in requests_mock.request_history if r.method == "POST") == 3  # 3 attempts

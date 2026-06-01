@@ -4,6 +4,9 @@
 
 """Wonderful RAG connector step for pushing markdown documents to a knowledge base."""
 
+import random
+import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from logging import getLogger
 from typing import Any
@@ -144,34 +147,64 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
                 return path if path.endswith(".md") else path + ".md"
         return f"document_{idx:04d}.md"
 
-    # ── Per-document: upload + sync in one worker ─────────────────────────────
+    # ── Retry helper ──────────────────────────────────────────────────────────
 
-    def _process_doc(self, idx: int, doc: MarkdownDataContract, existing: dict[str, str]) -> bool:
-        """Upload (or update) a single document and sync it. Returns True on success.
+    def _with_retry(self, fn: Callable, *args, **kwargs) -> Any:
+        """Call fn(*args, **kwargs) with exponential back-off retry on request errors.
 
-        Each worker uses its own `requests.Session` because `Session` is not
-        thread-safe for concurrent use.
+        Only ``requests.exceptions.RequestException`` is retried; all other
+        exceptions propagate immediately.
+        """
+        last_exc: Exception = RuntimeError("unreachable")
+        for attempt in range(self.settings.MAX_RETRIES):
+            try:
+                return fn(*args, **kwargs)
+            except requests.exceptions.RequestException as exc:
+                last_exc = exc
+                if attempt < self.settings.MAX_RETRIES - 1:
+                    delay = random.uniform(0, self.settings.RETRY_BACKOFF * (2**attempt))
+                    log.warning(f"Attempt {attempt + 1}/{self.settings.MAX_RETRIES} failed: {exc}; retrying in {delay:.2f}s")
+                    time.sleep(delay)
+        raise last_exc
+
+    # ── Per-document upload (phase 1) ─────────────────────────────────────────
+
+    def _upload_doc(self, idx: int, doc: MarkdownDataContract, existing: dict[str, str]) -> str | None:
+        """Upload (or update) a single document. Returns file_id on success, None on failure.
+
+        Each worker uses its own ``requests.Session`` because Session is not
+        thread-safe for concurrent use. Sync is intentionally excluded here and
+        handled sequentially in phase 2 to avoid overloading the re-indexing endpoint.
         """
         filename = self._generate_filename(doc, idx)
         existing_id = existing.get(filename)
         with self._build_session() as session:
             try:
                 if existing_id:
-                    self._update_existing_file(session, existing_id, filename, doc.md.encode("utf-8"))
-                    file_id = existing_id
-                    log.info(f"Updating: {filename}")
-                else:
-                    kb_file = self._create_kb_file(session, filename)
-                    self._upload_to_presigned_url(kb_file["url"], doc.md.encode("utf-8"))
-                    file_id = kb_file["id"]
-                    log.info(f"Uploading: {filename}")
-
-                self._sync_kb_file(session, file_id)
-                return True
-
+                    self._with_retry(self._update_existing_file, session, existing_id, filename, doc.md.encode("utf-8"))
+                    log.info(f"Updated: {filename}")
+                    return existing_id
+                kb_file = self._with_retry(self._create_kb_file, session, filename)
+                self._with_retry(self._upload_to_presigned_url, kb_file["url"], doc.md.encode("utf-8"))
+                log.info(f"Uploaded: {filename}")
+                return kb_file["id"]
             except (requests.exceptions.RequestException, KeyError) as e:
-                log.error(f"Failed to process {filename}: {e}")
-                return False
+                log.error(f"Failed to upload {filename}: {e}")
+                return None
+
+    # ── Phase 2: sequential sync ──────────────────────────────────────────────
+
+    def _sync_all(self, file_ids: list[str]) -> int:
+        """Sync each file sequentially. Returns the number of failures."""
+        failed = 0
+        with self._build_session() as session:
+            for file_id in file_ids:
+                try:
+                    self._with_retry(self._sync_kb_file, session, file_id)
+                except requests.exceptions.RequestException as e:
+                    log.error(f"Failed to sync file {file_id}: {e}")
+                    failed += 1
+        return failed
 
     # ── Main run ──────────────────────────────────────────────────────────────
 
@@ -203,16 +236,26 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
         if len(deduped) < len(to_upload):
             log.info(f"Deduped input: {len(to_upload)} → {len(deduped)} unique filenames")
 
-        log.info(f"Uploading {len(deduped)} documents to Wonderful KB {self._kb_id}")
+        log.info(f"Processing {len(deduped)} documents for Wonderful KB {self._kb_id}")
         with self._build_session() as session:
             existing = self._fetch_existing_filenames(session)
 
+        # Phase 1: upload files concurrently — pure I/O, benefits from parallelism.
         with ThreadPoolExecutor(max_workers=self.settings.MAX_WORKERS) as executor:
-            futures = [executor.submit(self._process_doc, idx, doc, existing) for idx, doc in deduped]
-            success_count = sum(1 for f in as_completed(futures) if f.result())
+            futures = [executor.submit(self._upload_doc, idx, doc, existing) for idx, doc in deduped]
+            file_ids = [f.result() for f in as_completed(futures)]
 
-        failed = len(deduped) - success_count
-        log.info(f"Completed: {success_count} succeeded, {failed} failed")
+        uploaded = [fid for fid in file_ids if fid is not None]
+        upload_failed = len(deduped) - len(uploaded)
+        if upload_failed:
+            log.warning(f"Upload phase: {upload_failed} document(s) failed")
+
+        # Phase 2: sync uploaded files sequentially — avoids hammering the
+        # re-indexing endpoint with concurrent requests that cause timeouts.
+        sync_failed = self._sync_all(uploaded)
+
+        failed = upload_failed + sync_failed
+        log.info(f"Completed: {len(deduped) - failed} succeeded, {failed} failed")
 
         if failed == len(deduped):
             raise StepFailed(f"All {failed} documents failed to process")
