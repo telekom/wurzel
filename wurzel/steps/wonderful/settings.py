@@ -33,7 +33,7 @@ class WonderfulRAGSettings(Settings):
     )
     BASE_URL: str = Field(
         default="",
-        description="Wonderful API base URL (required when SKIP=false)",
+        description="Wonderful API base URL, e.g. https://<tenant>.api.sb.wonderful.ai (required when SKIP=false)",
     )
     API_KEY: SecretStr = Field(
         default=SecretStr(""),
@@ -48,10 +48,31 @@ class WonderfulRAGSettings(Settings):
         gt=0,
         description="Request timeout in seconds",
     )
+    SYNC_TIMEOUT: int = Field(
+        default=30,
+        gt=0,
+        description="Timeout in seconds for the fire-and-forget KB sync trigger; the server keeps "
+        "indexing after the connection drops, so a timeout/524 here is not treated as a failure",
+    )
     MAX_WORKERS: int = Field(
         default=10,
         gt=0,
         description="Max concurrent upload workers",
+    )
+    PRUNE_STALE: bool = Field(
+        default=False,
+        description="When true, delete files present in the KB but absent from the input "
+        "(KB mirrors the input). Destructive; only runs when every upload succeeded.",
+    )
+    MAX_RETRIES: int = Field(
+        default=3,
+        gt=0,
+        description="Max attempts per HTTP call before giving up",
+    )
+    RETRY_BACKOFF: float = Field(
+        default=0.5,
+        ge=0,
+        description="Base delay in seconds for exponential back-off between retries (0 disables sleep): 0.5s, 1s, 2s, ...",
     )
 
     @model_validator(mode="after")
