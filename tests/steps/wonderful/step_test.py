@@ -14,10 +14,10 @@ from wurzel.steps.wonderful import WonderfulRAGStep
 # ── Constants ─────────────────────────────────────────────────────────────────
 
 KB_ID = "kb-123"
-BASE_URL = "https://tenant.api.wonderful.ai"
+BASE_URL = "https://tenant.api.wonderful.ai"  # host only; the step hardcodes /api/v1
 API = f"{BASE_URL}/api/v1"
 KB_FILES = f"{API}/knowledgebases/{KB_ID}/files"
-KB_SYNC = f"{KB_FILES}/sync"
+KB_SYNC = f"{API}/knowledgebases/{KB_ID}/sync"  # whole-KB sync (no per-file endpoint)
 STORAGE_UPLOAD = f"{API}/storage/upload"
 PRESIGNED = "https://s3.example.com/presigned"
 
@@ -43,6 +43,8 @@ def wonderful_env(env):
     env.set("BASE_URL", BASE_URL)
     env.set("API_KEY", "test-api-key")
     env.set("KNOWLEDGEBASE_ID", KB_ID)
+    env.set("MAX_RETRIES", "1")  # no retries in unit tests — keeps mocks simple
+    env.set("RETRY_BACKOFF", "0")  # no sleep in unit tests
     return env
 
 
@@ -150,7 +152,7 @@ class TestUpload:
 
         methods = [r.method for r in requests_mock.request_history]
         assert methods.count("GET") == 1
-        assert methods.count("POST") == 4  # 2× create + 2× sync
+        assert methods.count("POST") == 3  # 2× create + 1× whole-KB sync
         assert methods.count("PUT") == 2
 
     def test_input_deduped_by_filename(self, step, requests_mock):
@@ -207,11 +209,13 @@ class TestFailureScenarios:
     def test_missing_presigned_url_raises_step_failed(self, step, sample_doc, requests_mock):
         requests_mock.get(KB_FILES, json=kb_list_payload())
         requests_mock.post(KB_FILES, json={"data": {"id": "file-abc"}})  # no "url"
+        requests_mock.delete(KB_FILES, json={})  # orphan rollback (batch delete)
 
         with pytest.raises(StepFailed, match="All 1 documents failed"):
             step.run([sample_doc])
 
-    def test_sync_failure_does_not_raise_when_others_succeed(self, step, two_docs, requests_mock):
+    def test_sync_failure_does_not_fail_step(self, step, two_docs, requests_mock):
+        # Sync is fire-and-forget: a sync error must NOT fail the step (uploads persisted).
         requests_mock.get(KB_FILES, json=kb_list_payload())
         requests_mock.post(
             KB_FILES,
@@ -221,16 +225,27 @@ class TestFailureScenarios:
             ],
         )
         requests_mock.put(PRESIGNED)
-        # First sync raises, second succeeds — both docs still pass through.
-        requests_mock.post(
-            KB_SYNC,
-            [
-                {"exc": requests.exceptions.ConnectionError("sync failed")},
-                {"json": {}},
-            ],
-        )
+        requests_mock.post(KB_SYNC, exc=requests.exceptions.ConnectionError("sync failed"))
 
         assert step.run(two_docs) == two_docs
+
+    def test_sync_524_does_not_fail_step(self, step, sample_doc, requests_mock):
+        # A Cloudflare 524 (gateway timeout) means indexing started server-side → don't fail.
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(KB_FILES, json=kb_create_payload("file-1"))
+        requests_mock.put(PRESIGNED)
+        requests_mock.post(KB_SYNC, status_code=524, text="<html>gateway timeout</html>")
+
+        assert step.run([sample_doc]) == [sample_doc]
+
+    def test_sync_timeout_does_not_fail_step(self, step, sample_doc, requests_mock):
+        # A client read timeout on the sync trigger is fire-and-forget → don't fail.
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(KB_FILES, json=kb_create_payload("file-1"))
+        requests_mock.put(PRESIGNED)
+        requests_mock.post(KB_SYNC, exc=requests.exceptions.ReadTimeout("slow"))
+
+        assert step.run([sample_doc]) == [sample_doc]
 
     def test_partial_kb_create_failure_does_not_raise(self, step, two_docs, requests_mock):
         requests_mock.get(KB_FILES, json=kb_list_payload())
@@ -264,6 +279,7 @@ class TestFailureScenarios:
             ],
         )
         requests_mock.post(KB_SYNC, json={})
+        requests_mock.delete(KB_FILES, json={})  # orphan rollback (batch delete)
 
         assert step.run(two_docs) == two_docs
 
@@ -328,8 +344,8 @@ class TestPerWorkerSession:
         spy = mocker.spy(step, "_build_session")
         step.run(two_docs)
 
-        # 1× main thread (existing-files fetch) + 2× workers (one per doc).
-        assert spy.call_count == 3
+        # 1× fetch + 2× upload workers + 1× sync loop.
+        assert spy.call_count == 4
 
 
 # ── Neverejny filter ──────────────────────────────────────────────────────────
@@ -376,3 +392,226 @@ class TestNeverejnyFilter:
         result = step.run(docs)
         assert result == docs  # passthrough unchanged
         assert requests_mock.request_history == []
+
+
+# ── Retry / back-off ──────────────────────────────────────────────────────────
+
+
+class TestRetry:
+    """Back-off retry is applied per HTTP call. Tests use MAX_RETRIES=3, RETRY_BACKOFF=0
+    (no actual sleep) so we can verify retry counts without slowing down the suite.
+    """
+
+    @pytest.fixture
+    def retry_env(self, env):
+        env.set("BASE_URL", BASE_URL)
+        env.set("API_KEY", "test-api-key")
+        env.set("KNOWLEDGEBASE_ID", KB_ID)
+        env.set("MAX_RETRIES", "3")
+        env.set("RETRY_BACKOFF", "0")
+        return env
+
+    @pytest.fixture
+    def retry_step(self, retry_env, mocker):
+        mocker.patch("wurzel.steps.wonderful.step.time.sleep")
+        s = WonderfulRAGStep()
+        yield s
+        s.finalize()
+
+    def test_upload_retries_on_transient_error(self, retry_step, sample_doc, requests_mock):
+        """A transient upload failure is retried; success on the third attempt."""
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(
+            KB_FILES,
+            [
+                {"exc": requests.exceptions.ConnectionError("transient")},
+                {"exc": requests.exceptions.ConnectionError("transient")},
+                {"json": kb_create_payload("file-ok")},
+            ],
+        )
+        requests_mock.put(PRESIGNED)
+        requests_mock.post(KB_SYNC, json={})
+
+        result = retry_step.run([sample_doc])
+
+        assert result == [sample_doc]
+        assert sum(1 for r in requests_mock.request_history if r.method == "POST" and r.url == KB_FILES) == 3
+
+    def test_sync_triggered_once_not_retried(self, retry_step, sample_doc, requests_mock):
+        """Sync is fire-and-forget: triggered exactly once, never retried even on failure."""
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(KB_FILES, json=kb_create_payload("file-ok"))
+        requests_mock.put(PRESIGNED)
+        requests_mock.post(KB_SYNC, exc=requests.exceptions.ConnectionError("transient"))
+
+        result = retry_step.run([sample_doc])
+
+        assert result == [sample_doc]  # sync failure doesn't fail the step
+        assert sum(1 for r in requests_mock.request_history if r.url.startswith(KB_SYNC)) == 1
+
+    def test_exhausted_retries_raises_step_failed(self, retry_step, sample_doc, requests_mock):
+        """When all retries are exhausted and every document fails, StepFailed is raised."""
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(KB_FILES, exc=requests.exceptions.ConnectionError("permanent"))
+
+        with pytest.raises(StepFailed):
+            retry_step.run([sample_doc])
+
+        assert sum(1 for r in requests_mock.request_history if r.method == "POST") == 3  # 3 attempts
+
+    def test_create_not_retried_on_read_timeout(self, retry_step, sample_doc, requests_mock):
+        """Create is non-idempotent: a read timeout must not be retried (avoids duplicates)."""
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(KB_FILES, exc=requests.exceptions.ReadTimeout("timeout"))
+
+        with pytest.raises(StepFailed):
+            retry_step.run([sample_doc])
+
+        assert sum(1 for r in requests_mock.request_history if r.method == "POST" and r.url == KB_FILES) == 1
+
+    def test_client_error_not_retried(self, retry_step, sample_doc, requests_mock):
+        """A 4xx is a permanent client error — no retry."""
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(KB_FILES, status_code=403)
+
+        with pytest.raises(StepFailed):
+            retry_step.run([sample_doc])
+
+        assert sum(1 for r in requests_mock.request_history if r.method == "POST" and r.url == KB_FILES) == 1
+
+    def test_server_error_is_retried(self, retry_step, sample_doc, requests_mock):
+        """A 5xx is transient — retried, then succeeds."""
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(
+            KB_FILES,
+            [
+                {"status_code": 503},
+                {"json": kb_create_payload("file-ok")},
+            ],
+        )
+        requests_mock.put(PRESIGNED)
+        requests_mock.post(KB_SYNC, json={})
+
+        result = retry_step.run([sample_doc])
+
+        assert result == [sample_doc]
+        assert sum(1 for r in requests_mock.request_history if r.method == "POST" and r.url == KB_FILES) == 2
+
+    def test_orphan_record_rolled_back_on_upload_failure(self, retry_step, sample_doc, requests_mock):
+        """If the S3 upload fails after the record is created, the record is deleted."""
+        file_id = "file-orphan"
+        requests_mock.get(KB_FILES, json=kb_list_payload())
+        requests_mock.post(KB_FILES, json=kb_create_payload(file_id))
+        requests_mock.put(PRESIGNED, exc=requests.exceptions.ConnectionError("s3 down"))
+        delete_mock = requests_mock.delete(KB_FILES, json={})
+
+        with pytest.raises(StepFailed):
+            retry_step.run([sample_doc])
+
+        assert delete_mock.called  # orphan record rolled back
+        assert delete_mock.last_request.json() == {"file_ids": [file_id]}  # by id, in the body
+
+
+# ── Prune (mirror KB to input) ──────────────────────────────────────────────────
+
+
+class TestPrune:
+    """PRUNE_STALE deletes files in the KB that are absent from the input, before sync.
+    Gated (off by default) and skipped on any upload failure.
+    """
+
+    @pytest.fixture
+    def prune_step(self, wonderful_env):
+        wonderful_env.set("PRUNE_STALE", "true")
+        s = WonderfulRAGStep()
+        yield s
+        s.finalize()
+
+    KEEP = MarkdownDataContract(md="# Keep", url="https://example.com/docs/keep", keywords="")
+    # KEEP maps to filename "docs/keep.md"
+
+    def test_prune_disabled_by_default(self, step, requests_mock):
+        requests_mock.get(KB_FILES, json=kb_list_payload(("docs/keep.md", "id-keep"), ("docs/stale.md", "id-stale")))
+        requests_mock.post(STORAGE_UPLOAD, json={})  # keep already exists → update path
+        requests_mock.post(KB_SYNC, json={})
+        delete_mock = requests_mock.delete(KB_FILES, json={})
+
+        assert step.run([self.KEEP]) == [self.KEEP]
+        assert not delete_mock.called  # no prune unless PRUNE_STALE=true
+
+    def test_prune_deletes_stale_before_sync(self, prune_step, requests_mock):
+        requests_mock.get(KB_FILES, json=kb_list_payload(("docs/keep.md", "id-keep"), ("docs/stale.md", "id-stale")))
+        requests_mock.post(STORAGE_UPLOAD, json={})
+        requests_mock.post(KB_SYNC, json={})
+        delete_mock = requests_mock.delete(KB_FILES, json={})
+
+        assert prune_step.run([self.KEEP]) == [self.KEEP]
+
+        assert delete_mock.called
+        assert delete_mock.last_request.json() == {"file_ids": ["id-stale"]}  # only the stale one
+        # Prune must happen before the sync re-index.
+        order = [(r.method, r.url) for r in requests_mock.request_history]
+        delete_idx = next(i for i, (m, _) in enumerate(order) if m == "DELETE")
+        sync_idx = next(i for i, (m, u) in enumerate(order) if m == "POST" and u.startswith(KB_SYNC))
+        assert delete_idx < sync_idx
+
+    def test_prune_deletes_each_stale_file_concurrently(self, prune_step, requests_mock):
+        # Multiple stale files → one DELETE per file (per-worker), not a single giant batch.
+        requests_mock.get(
+            KB_FILES,
+            json=kb_list_payload(("docs/keep.md", "id-keep"), ("docs/stale1.md", "id-1"), ("docs/stale2.md", "id-2")),
+        )
+        requests_mock.post(STORAGE_UPLOAD, json={})
+        requests_mock.post(KB_SYNC, json={})
+        requests_mock.delete(KB_FILES, json={})
+
+        assert prune_step.run([self.KEEP]) == [self.KEEP]
+
+        deletes = [r for r in requests_mock.request_history if r.method == "DELETE"]
+        assert len(deletes) == 2  # one call per stale file
+        assert all(len(r.json()["file_ids"]) == 1 for r in deletes)  # single id each
+        assert sorted(r.json()["file_ids"][0] for r in deletes) == ["id-1", "id-2"]
+
+    def test_prune_noop_when_kb_matches_input(self, prune_step, requests_mock):
+        requests_mock.get(KB_FILES, json=kb_list_payload(("docs/keep.md", "id-keep")))  # KB == input
+        requests_mock.post(STORAGE_UPLOAD, json={})
+        requests_mock.post(KB_SYNC, json={})
+        delete_mock = requests_mock.delete(KB_FILES, json={})
+
+        assert prune_step.run([self.KEEP]) == [self.KEEP]
+        assert not delete_mock.called  # nothing stale to delete
+
+    def test_prune_delete_not_retried_on_timeout(self, env, requests_mock, mocker):
+        # Even with MAX_RETRIES=3, a prune delete is attempted once; a read timeout is
+        # assumed completed server-side (not retried) so it doesn't pile load on the endpoint.
+        mocker.patch("wurzel.steps.wonderful.step.time.sleep")
+        env.set("BASE_URL", BASE_URL)
+        env.set("API_KEY", "test-api-key")
+        env.set("KNOWLEDGEBASE_ID", KB_ID)
+        env.set("MAX_RETRIES", "3")
+        env.set("RETRY_BACKOFF", "0")
+        env.set("PRUNE_STALE", "true")
+        step = WonderfulRAGStep()
+        try:
+            requests_mock.get(KB_FILES, json=kb_list_payload(("docs/keep.md", "id-keep"), ("docs/stale.md", "id-stale")))
+            requests_mock.post(STORAGE_UPLOAD, json={})
+            requests_mock.post(KB_SYNC, json={})
+            requests_mock.delete(KB_FILES, exc=requests.exceptions.ReadTimeout("slow delete"))
+
+            assert step.run([self.KEEP]) == [self.KEEP]
+            deletes = [r for r in requests_mock.request_history if r.method == "DELETE"]
+            assert len(deletes) == 1  # single attempt, no retry despite MAX_RETRIES=3
+        finally:
+            step.finalize()
+
+    def test_prune_skipped_on_upload_failure(self, prune_step, requests_mock):
+        new_doc = MarkdownDataContract(md="# New", url="https://example.com/docs/new", keywords="")
+        requests_mock.get(KB_FILES, json=kb_list_payload(("docs/keep.md", "id-keep"), ("docs/stale.md", "id-stale")))
+        requests_mock.post(STORAGE_UPLOAD, json={})  # keep updates OK
+        requests_mock.post(KB_FILES, exc=requests.exceptions.ConnectionError("create failed"))  # new fails
+        requests_mock.post(KB_SYNC, json={})
+        delete_mock = requests_mock.delete(KB_FILES, json={})
+
+        # One upload succeeds, one fails → not all failed (no raise), but prune is skipped.
+        assert prune_step.run([self.KEEP, new_doc]) == [self.KEEP, new_doc]
+        assert not delete_mock.called  # never delete to match an incomplete input
