@@ -29,6 +29,7 @@ _opt_deps = {
         "tiktoken",
         "transformers",
         "paramiko",
+        "boto3",
     ]
 }
 HAS_TLSH = _opt_deps["tlsh"]
@@ -53,6 +54,7 @@ HAS_SPACY_DE_CORE_NEWS_SM = has_spacy_model("de_core_news_sm")
 HAS_TIKTOKEN = _opt_deps["tiktoken"]
 HAS_TRANSFORMERS = _opt_deps["transformers"]
 HAS_PARAMIKO = _opt_deps["paramiko"]
+HAS_BOTO3 = _opt_deps["boto3"]
 
 
 def __getattr__(name: str) -> Any:
@@ -101,6 +103,7 @@ __all__ = [
     "HAS_JOBLIB",
     "HAS_HERA",
     "HAS_PARAMIKO",
+    "HAS_BOTO3",
     "MarkdownConverterSettings",
 ]
 
