@@ -264,7 +264,7 @@ class TestEndToEndIntegration:
                 "ArgoBackend",
                 {
                     "spec_key": "spec",
-                    "workflow_key": "workflowSpec",
+                    "template_key": "templates",
                     "backend_pattern": "ArgoBackend",
                 },
                 marks=pytest.mark.skipif(not HAS_HERA, reason="Hera is not available"),
@@ -299,7 +299,10 @@ class TestEndToEndIntegration:
         elif "spec_key" in yaml_checks:
             # Argo-style checks
             assert yaml_checks["spec_key"] in parsed
-            assert yaml_checks["workflow_key"] in parsed[yaml_checks["spec_key"]]
+            workflow_spec = parsed[yaml_checks["spec_key"]]
+            if "workflowSpec" in workflow_spec:
+                workflow_spec = workflow_spec["workflowSpec"]
+            assert yaml_checks["template_key"] in workflow_spec
             assert "Workflow" in parsed.get("kind", "")
 
     @pytest.mark.parametrize(
