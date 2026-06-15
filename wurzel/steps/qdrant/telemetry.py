@@ -15,7 +15,6 @@ Relevant path:
 """
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -29,31 +28,31 @@ class _IgnoreExtra(BaseModel):
 class OperationStats(_IgnoreExtra):
     """Timing statistics for a single Qdrant operation type."""
 
-    last_responded: Optional[datetime] = None
+    last_responded: datetime | None = None
 
 
 class OptimizerTelemetry(_IgnoreExtra):
     """Telemetry for the optimizer process running on a local shard."""
 
-    optimizations: Optional[OperationStats] = None
+    optimizations: OperationStats | None = None
 
 
 class LocalShardTelemetry(_IgnoreExtra):
     """Telemetry data for a locally held shard replica."""
 
-    optimizations: Optional[OptimizerTelemetry] = None
+    optimizations: OptimizerTelemetry | None = None
 
 
 class RemoteShardTelemetry(_IgnoreExtra):
     """Telemetry data for a remotely held shard replica."""
 
-    searches: Optional[OperationStats] = None
+    searches: OperationStats | None = None
 
 
 class ReplicaSetTelemetry(_IgnoreExtra):
     """Telemetry for one shard's full replica set (local + remote peers)."""
 
-    local: Optional[LocalShardTelemetry] = None
+    local: LocalShardTelemetry | None = None
     remote: list[RemoteShardTelemetry] = []
 
 
@@ -61,13 +60,13 @@ class CollectionTelemetry(_IgnoreExtra):
     """Telemetry entry for a single Qdrant collection."""
 
     id: str
-    shards: Optional[list[ReplicaSetTelemetry]] = None
+    shards: list[ReplicaSetTelemetry] | None = None
 
 
 class CollectionsTelemetry(_IgnoreExtra):
     """Container for the list of per-collection telemetry entries."""
 
-    collections: Optional[list[CollectionTelemetry]] = None
+    collections: list[CollectionTelemetry] | None = None
 
 
 class TelemetryResult(_IgnoreExtra):
