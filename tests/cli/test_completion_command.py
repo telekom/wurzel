@@ -224,6 +224,20 @@ class TestCompletionIntegration:
         assert result.exit_code == 0
         assert "Install shell completion" in result.stdout
 
+    def test_powershell_script_command_in_main_app(self):
+        """PowerShell instructions should reference an existing CLI command."""
+        from typer.testing import CliRunner as TRunner
+
+        from wurzel.cli._main import app
+
+        runner = TRunner()
+        with patch("wurzel.cli.shared.complete_step_import", return_value=["pkg.CustomStep"]):
+            result = runner.invoke(app, ["completion", "powershell-script"])
+
+        assert result.exit_code == 0
+        assert "run" in result.stdout
+        assert "pkg.CustomStep" in result.stdout
+
 
 class TestCompletionAdditional:
     """Additional tests to improve coverage of completion_command.py."""

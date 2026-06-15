@@ -147,8 +147,8 @@ class TestCommandAutocompletion:
         from wurzel.cli._main import app
 
         assert app is not None
-        # The app should be callable/instantiable
-        assert hasattr(app, "command") or hasattr(app, "registered_commands")
+        groups = {group.name for group in app.registered_groups}
+        assert {"run", "inspect", "generate", "env", "completion", "middlewares", "manifest"}.issubset(groups)
 
 
 class TestAutocompletionEdgeCases:

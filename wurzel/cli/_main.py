@@ -35,7 +35,15 @@ from wurzel.cli import (  # pylint: disable=wrong-import-position
     cmd_middlewares,
     completion_command,
 )
+from wurzel.cli.environment import command as environment_command  # pylint: disable=wrong-import-position
+from wurzel.cli.generate import command as generate_command  # pylint: disable=wrong-import-position
+from wurzel.cli.inspect import command as inspect_command  # pylint: disable=wrong-import-position
+from wurzel.cli.run import command as run_command  # pylint: disable=wrong-import-position
 
+app.add_typer(run_command.app, name="run")
+app.add_typer(inspect_command.app, name="inspect")
+app.add_typer(generate_command.app, name="generate")
+app.add_typer(environment_command.app, name="env")
 app.add_typer(completion_command.app, name="completion")
 app.add_typer(cmd_middlewares.app, name="middlewares")
 app.add_typer(cmd_manifest.app, name="manifest")
@@ -406,7 +414,6 @@ def complete_step_import(incomplete: str) -> list[str]:  # pylint: disable=too-m
     return [hint for hint in unique_hints if hint.startswith(incomplete)]
 
 
-@app.command(no_args_is_help=True, help="Run a step")
 # pylint: disable-next=dangerous-default-value,too-many-positional-arguments
 def run(
     step: Annotated[
@@ -475,7 +482,6 @@ def run(
     return run_main(step_cls, output_path, input_set, executor, encapsulate_env, middlewares)
 
 
-@app.command("inspect", no_args_is_help=True, help="Display information about a step")
 def inspekt(
     step: Annotated[
         str,
@@ -513,7 +519,6 @@ def _run_with_progress(description: str, func):
         return func()
 
 
-@app.command("env", help="Inspect or validate environment variables for a pipeline")
 def env_cmd(
     pipeline: Annotated[
         str,
@@ -610,7 +615,6 @@ def pipeline_callback(_ctx: typer.Context | None, _param: typer.CallbackParam | 
     return step
 
 
-@app.command(help="generate a pipeline")
 # pylint: disable-next=dangerous-default-value
 def generate(  # pylint: disable=too-many-positional-arguments
     pipeline: Annotated[

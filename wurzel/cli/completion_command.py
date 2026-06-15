@@ -16,6 +16,16 @@ app = typer.Typer(
     help="Manage shell completion for wurzel CLI.",
 )
 
+_COMMAND_COMPLETIONS = [
+    "run",
+    "inspect",
+    "generate",
+    "env",
+    "completion",
+    "middlewares",
+    "manifest",
+]
+
 
 @app.command()
 def install(
@@ -76,6 +86,22 @@ def uninstall(
     else:
         typer.echo(f"Unsupported shell: {shell}", err=True)
         raise typer.Exit(1)
+
+
+@app.command("powershell-script")
+def powershell_script(
+    incomplete: Annotated[
+        str,
+        typer.Argument(help="Optional prefix to filter completion candidates."),
+    ] = "",
+) -> None:
+    """Emit completion candidates for PowerShell native completion."""
+    from wurzel.cli.shared import complete_step_import  # pylint: disable=import-outside-toplevel
+
+    candidates = [*_COMMAND_COMPLETIONS, *complete_step_import(incomplete)]
+    for candidate in sorted(set(candidates)):
+        if candidate.startswith(incomplete):
+            typer.echo(candidate)
 
 
 def _install_zsh_completion() -> None:
