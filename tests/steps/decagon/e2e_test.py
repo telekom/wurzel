@@ -12,7 +12,6 @@ import requests
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import StepFailed
 from wurzel.steps.decagon import DecagonKnowledgeBaseStep
-from wurzel.steps.decagon.data import ChunkResultInfo
 
 
 @pytest.fixture
@@ -62,39 +61,36 @@ class TestDecagonKnowledgeBaseStepInit:
             assert "Bearer test-api-key" in call_args["Authorization"]
             step.finalize()
 
+    def test_init_skips_session_when_push_disabled(self, env):
+        """Test that no session is created when PUSH_ENABLED is False."""
+        env.set("PUSH_ENABLED", "false")
+        with patch("wurzel.steps.decagon.step.requests.Session") as mock_session_cls:
+            step = DecagonKnowledgeBaseStep()
+            mock_session_cls.assert_not_called()
+            step.finalize()
+
 
 class TestEmptyInput:
     """Tests for empty input handling."""
 
-    def test_empty_input_returns_empty_dataframe(self, mock_session):
-        """Test that empty input returns an empty DataFrame with correct schema."""
+    def test_empty_input_returns_empty_list(self, mock_session):
+        """Test that empty input returns an empty list."""
         step, _ = mock_session
         result = step.run([])
-
-        assert len(result) == 0
-        assert "article_id" in result.columns
-        assert "url" in result.columns
-        assert "content" in result.columns
-        assert "source" in result.columns
-        assert "tags" in result.columns
-        assert "status" in result.columns
-        assert "error" in result.columns
-        assert "metadata" in result.columns
+        assert result == []
 
 
 class TestSuccessfulProcessing:
     """Tests for successful document processing."""
 
-    def test_single_document_success(self, mock_session, sample_doc):
-        """Test successful processing of a single document."""
+    def test_single_document_success_returns_input(self, mock_session, sample_doc):
+        """Test that a successfully processed document is returned unchanged."""
         step, mock_sess = mock_session
 
-        # Mock chunk response
         chunk_response = MagicMock()
         chunk_response.json.return_value = {"chunks": ["chunk1", "chunk2"]}
         chunk_response.raise_for_status = MagicMock()
 
-        # Mock article creation response
         article_response = MagicMock()
         article_response.json.return_value = {"article_id": 123}
         article_response.raise_for_status = MagicMock()
@@ -107,15 +103,12 @@ class TestSuccessfulProcessing:
 
         result = step.run([sample_doc])
 
-        assert len(result) == 2
-        assert all(result["status"] == "success")
-        assert list(result["article_id"]) == [123, 123]
+        assert result == [sample_doc]
 
-    def test_no_chunks_returns_original_content(self, mock_session, sample_doc):
-        """Test that when API returns no chunks, original content is used."""
+    def test_no_chunks_returns_input(self, mock_session, sample_doc):
+        """Test that when API returns no chunks, input is still returned unchanged."""
         step, mock_sess = mock_session
 
-        # Mock chunk response with empty chunks
         chunk_response = MagicMock()
         chunk_response.json.return_value = {"chunks": None}
         chunk_response.raise_for_status = MagicMock()
@@ -128,8 +121,18 @@ class TestSuccessfulProcessing:
 
         result = step.run([sample_doc])
 
-        assert len(result) == 1
-        assert result.iloc[0]["status"] == "success"
+        assert result == [sample_doc]
+
+    def test_push_disabled_returns_input_without_api_calls(self, env, sample_doc):
+        """Test that PUSH_ENABLED=False returns input without any API calls."""
+        env.set("PUSH_ENABLED", "false")
+        with patch("wurzel.steps.decagon.step.requests.Session") as mock_session_cls:
+            step = DecagonKnowledgeBaseStep()
+            result = step.run([sample_doc])
+
+            mock_session_cls.assert_not_called()
+            assert result == [sample_doc]
+            step.finalize()
 
 
 class TestChunkingFailure:
@@ -139,7 +142,6 @@ class TestChunkingFailure:
         """Test that chunking failure raises StepFailed when all fail."""
         step, mock_sess = mock_session
 
-        # Mock chunking to fail
         mock_sess.post.side_effect = requests.exceptions.ConnectionError("Connection failed")
 
         with pytest.raises(StepFailed, match="All 1 chunks failed"):
@@ -169,16 +171,8 @@ class TestChunkingFailure:
             requests.exceptions.ConnectionError("Failed"),
         ]
 
-        # Should not raise StepFailed since at least one succeeded
-        # (DataFrame schema validation is separate from step logic)
-        try:
-            result = step.run(docs)
-            # If pandera passes, verify the result
-            assert len(result) == 2
-        except Exception as e:
-            # If pandera validation fails due to mixed types, that's a known issue
-            # but the step logic is correct - it didn't raise StepFailed
-            assert "StepFailed" not in str(type(e))
+        result = step.run(docs)
+        assert result == docs
 
 
 class TestArticleCreationFailure:
@@ -192,7 +186,6 @@ class TestArticleCreationFailure:
         chunk_response.json.return_value = {"chunks": ["chunk1"]}
         chunk_response.raise_for_status = MagicMock()
 
-        # Article creation fails
         error_response = MagicMock()
         error_response.status_code = 500
         error_response.json.return_value = {"detail": "Server error"}
@@ -219,8 +212,8 @@ class TestArticleCreationFailure:
         with pytest.raises(StepFailed, match="All 2 chunks failed"):
             step.run([sample_doc])
 
-    def test_partial_failure_does_not_raise(self, mock_session, sample_doc):
-        """Test that partial failure doesn't raise StepFailed."""
+    def test_partial_failure_returns_input(self, mock_session, sample_doc):
+        """Test that partial failure returns input unchanged and doesn't raise StepFailed."""
         step, mock_sess = mock_session
 
         chunk_response = MagicMock()
@@ -235,17 +228,8 @@ class TestArticleCreationFailure:
 
         mock_sess.post.side_effect = [chunk_response, success_response, exc]
 
-        # Should not raise StepFailed since at least one succeeded
-        try:
-            result = step.run([sample_doc])
-            # If pandera passes, verify the result
-            assert len(result) == 2
-            assert (result["status"] == "success").sum() == 1
-            assert (result["status"] == "failed").sum() == 1
-        except Exception as e:
-            # If pandera validation fails due to mixed int/None types, that's known
-            # The key assertion is that StepFailed was not raised
-            assert "StepFailed" not in str(type(e))
+        result = step.run([sample_doc])
+        assert result == [sample_doc]
 
 
 class TestExtractTitle:
@@ -367,75 +351,6 @@ class TestFormatError:
         assert "503" in result
 
 
-class TestBuildResult:
-    """Tests for the _build_result method."""
-
-    def test_build_result_truncates_long_content(self, mock_session):
-        """Test that long content is truncated to 500 chars."""
-        step, _ = mock_session
-
-        doc = MarkdownDataContract(
-            md="x" * 600,
-            url="https://example.com",
-            keywords="tag1, tag2",
-        )
-        info = ChunkResultInfo(0, 1, 123, "success", None)
-
-        result = step._build_result(doc, "y" * 600, info)
-
-        assert len(result["content"]) == 503  # 500 + "..."
-        assert result["content"].endswith("...")
-
-    def test_build_result_preserves_short_content(self, mock_session):
-        """Test that short content is not truncated."""
-        step, _ = mock_session
-
-        doc = MarkdownDataContract(
-            md="short",
-            url="https://example.com",
-            keywords="",
-        )
-        info = ChunkResultInfo(0, 1, 123, "success", None)
-
-        result = step._build_result(doc, "short content", info)
-
-        assert result["content"] == "short content"
-        assert not result["content"].endswith("...")
-
-    def test_build_result_parses_tags(self, mock_session):
-        """Test that keywords are properly parsed into tags."""
-        step, _ = mock_session
-
-        doc = MarkdownDataContract(
-            md="content",
-            url="",
-            keywords="  tag1 ,tag2,  tag3  ,",
-        )
-        info = ChunkResultInfo(0, 1, None, "success", None)
-
-        result = step._build_result(doc, "content", info)
-
-        assert result["tags"] == ["tag1", "tag2", "tag3"]
-
-    def test_build_result_includes_chunk_metadata(self, mock_session):
-        """Test that chunk metadata is included."""
-        step, _ = mock_session
-
-        doc = MarkdownDataContract(
-            md="content",
-            url="",
-            keywords="",
-            metadata={"original": "value"},
-        )
-        info = ChunkResultInfo(2, 5, 100, "success", None)
-
-        result = step._build_result(doc, "content", info)
-
-        assert result["metadata"]["chunk_index"] == 2
-        assert result["metadata"]["total_chunks"] == 5
-        assert result["metadata"]["original"] == "value"
-
-
 class TestFinalize:
     """Tests for the finalize method."""
 
@@ -450,28 +365,10 @@ class TestFinalize:
 
             mock_session.close.assert_called_once()
 
-
-class TestChunkResultInfo:
-    """Tests for the ChunkResultInfo dataclass."""
-
-    def test_chunk_result_info_creation(self):
-        """Test ChunkResultInfo dataclass creation."""
-        info = ChunkResultInfo(
-            chunk_idx=1,
-            total=3,
-            article_id=42,
-            status="success",
-            error=None,
-        )
-        assert info.chunk_idx == 1
-        assert info.total == 3
-        assert info.article_id == 42
-        assert info.status == "success"
-        assert info.error is None
-
-    def test_chunk_result_info_with_error(self):
-        """Test ChunkResultInfo with error."""
-        info = ChunkResultInfo(0, 1, None, "failed", "Some error message")
-        assert info.article_id is None
-        assert info.status == "failed"
-        assert info.error == "Some error message"
+    def test_finalize_no_session_when_push_disabled(self, env):
+        """Test that finalize is safe when no session was created."""
+        env.set("PUSH_ENABLED", "false")
+        with patch("wurzel.steps.decagon.step.requests.Session") as mock_session_cls:
+            step = DecagonKnowledgeBaseStep()
+            step.finalize()  # should not raise
+            mock_session_cls.assert_not_called()

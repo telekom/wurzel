@@ -39,7 +39,7 @@ from hera.workflows.models import (
     SecurityContext,
     VolumeMount,
 )
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from wurzel.cli import generate_cli_call
 from wurzel.core import TypedStep
@@ -172,7 +172,7 @@ class WorkflowConfig(BaseModel):
 
     name: str = "wurzel"
     namespace: str = "argo-workflows"
-    schedule: str | None = "0 4 * * *"
+    schedules: list[str] | None = None
     entrypoint: str = "wurzel-pipeline"
     serviceAccountName: str = "wurzel-service-account"
     dataDir: Path = Path("/usr/app")
@@ -181,6 +181,23 @@ class WorkflowConfig(BaseModel):
     artifacts: S3ArtifactConfig = Field(default_factory=S3ArtifactConfig)
     podSecurityContext: SecurityContextConfig = Field(default_factory=SecurityContextConfig)
     podSpecPatch: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_legacy_schedule(cls, data: Any) -> Any:
+        if not isinstance(data, dict) or "schedules" in data or "schedule" not in data:
+            return data
+        normalized = dict(data)
+        legacy_schedule = normalized.pop("schedule")
+        normalized["schedules"] = legacy_schedule if legacy_schedule is None or isinstance(legacy_schedule, list) else [legacy_schedule]
+        return normalized
+
+    @property
+    def schedule(self) -> str | None:
+        """Backward-compatible view of the first configured schedule."""
+        if not self.schedules:
+            return None
+        return next(iter(self.schedules))
 
 
 class TemplateValues(BaseModel):
@@ -216,13 +233,13 @@ class ArgoBackend(Backend, backend_name="argo"):
     def from_manifest_config(cls, raw_config: dict) -> ArgoBackend:
         """Instantiate from a raw manifest config dict.
 
-        ``schedule`` is always applied (including ``None`` / ``null``) so that
-        ``schedule: null`` in the manifest produces a plain Workflow instead of
-        a CronWorkflow.
+        The legacy ``schedule`` key is accepted and normalized to ``schedules``.
         """
-        schedule = raw_config.pop("schedule", None) if raw_config else None
-        cfg = WorkflowConfig(schedule=schedule, **raw_config) if raw_config else WorkflowConfig(schedule=schedule)
-        return cls(config=cfg)
+        raw_config = dict(raw_config or {})
+        legacy_schedule = raw_config.pop("schedule", None)
+        if "schedules" not in raw_config and legacy_schedule is not None:
+            raw_config["schedules"] = legacy_schedule if isinstance(legacy_schedule, list) else [legacy_schedule]
+        return cls(config=WorkflowConfig(**raw_config))
 
     def __init__(
         self,
@@ -381,9 +398,9 @@ class ArgoBackend(Backend, backend_name="argo"):
         """Creates an Argo Workflow or CronWorkflow based on the schedule configuration.
 
         This method generates the appropriate Argo workflow type:
-        - If `config.schedule` is set (e.g., "0 4 * * *"), creates a CronWorkflow
-          that runs on the specified schedule.
-        - If `config.schedule` is None, creates a normal Workflow that can be
+        - If `config.schedules` is non-empty (e.g., ["0 4 * * *"]), creates a CronWorkflow
+          that runs on the specified schedules.
+        - If `config.schedules` is empty, creates a normal Workflow that can be
           triggered manually or by other workflows.
 
         The workflow includes:
@@ -405,7 +422,7 @@ class ArgoBackend(Backend, backend_name="argo"):
             Create a CronWorkflow that runs daily at 4 AM:
 
             >>> from wurzel.executors.backend.backend_argo import ArgoBackend, WorkflowConfig
-            >>> config = WorkflowConfig(schedule="0 4 * * *")
+            >>> config = WorkflowConfig(schedules=["0 4 * * *"])
             >>> backend = ArgoBackend(config=config)
             >>> # Assuming 'step' is a TypedStep instance
             >>> workflow = backend._generate_workflow(step)
@@ -413,15 +430,15 @@ class ArgoBackend(Backend, backend_name="argo"):
 
             Create a normal Workflow for manual execution:
 
-            >>> config = WorkflowConfig(schedule=None)
+            >>> config = WorkflowConfig(schedules=[])
             >>> backend = ArgoBackend(config=config)
             >>> workflow = backend._generate_workflow(step)
             >>> assert workflow.kind == "Workflow"
 
         """
-        if self.config.schedule:
+        if self.config.schedules:
             context = CronWorkflow(
-                schedule=self.config.schedule,
+                schedules=self.config.schedules,
                 name=self.config.name,
                 namespace=self.config.namespace,
                 entrypoint=self.config.entrypoint,
