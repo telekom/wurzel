@@ -4,7 +4,7 @@
 
 import shutil
 import unittest.mock
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -133,8 +133,8 @@ def test_qdrant_collection_retirement_with_missing_versions(
     old_close = client.close
     client.close = print
 
-    old_time = (datetime.now(timezone.utc) - timedelta(days=10)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-    recent_time = (datetime.now(timezone.utc) - timedelta(hours=6)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    old_time = (datetime.now(UTC) - timedelta(days=10)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    recent_time = (datetime.now(UTC) - timedelta(hours=6)).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
     collection_data = [(col_id, recent_time if col_id in recently_used else old_time) for col_id in remaining_collections]
 
