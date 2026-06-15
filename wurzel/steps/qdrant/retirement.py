@@ -4,9 +4,8 @@
 
 """Handles retirement (deletion) of old versioned Qdrant collections."""
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from logging import getLogger
-from typing import Optional
 
 import requests
 from qdrant_client import QdrantClient
@@ -100,13 +99,13 @@ class CollectionRetirer:
 
     def _was_recently_used_via_shards(self, collection_info: CollectionTelemetry) -> bool:
         """Return True if the collection was accessed within the retention window."""
-        threshold = datetime.now(timezone.utc) - timedelta(days=self._settings.COLLECTION_USAGE_RETENTION_DAYS)
+        threshold = datetime.now(UTC) - timedelta(days=self._settings.COLLECTION_USAGE_RETENTION_DAYS)
         latest_usage = self._get_latest_usage_timestamp(collection_info)
         return latest_usage is not None and latest_usage > threshold
 
-    def _get_latest_usage_timestamp(self, collection_info: CollectionTelemetry) -> Optional[datetime]:
+    def _get_latest_usage_timestamp(self, collection_info: CollectionTelemetry) -> datetime | None:
         """Return the most recent usage timestamp across all local and remote shards."""
-        timestamps: list[Optional[datetime]] = []
+        timestamps: list[datetime | None] = []
 
         for shard in collection_info.shards or []:
             if shard.local and shard.local.optimizations and shard.local.optimizations.optimizations:
