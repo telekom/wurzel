@@ -1,9 +1,10 @@
 # SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
 #
 # SPDX-License-Identifier: Apache-2.0
+# pylint: disable=duplicate-code
 import logging
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     import tiktoken
@@ -119,7 +120,7 @@ class Tokenizer(ABC):
             from transformers import AutoTokenizer  # pylint: disable=import-outside-toplevel
 
             hf_tok = AutoTokenizer.from_pretrained(name)
-            return HFTokenizer(hf_tok)
+            return HFTokenizer(cast("transformers.PreTrainedTokenizerBase", hf_tok))
 
         except ImportError as e:
             raise RuntimeError(f"Could not load tokenizer '{name}': tiktoken or transformers is not installed.") from e

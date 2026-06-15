@@ -8,7 +8,7 @@ from typing import Self
 
 from pydantic import Field, SecretStr, model_validator
 
-from wurzel.step.settings import Settings
+from wurzel.core.settings import Settings
 
 
 class DecagonSettings(Settings):

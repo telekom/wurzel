@@ -4,14 +4,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
-    from wurzel.backend.backend import Backend
-    from wurzel.step.typed_step import TypedStep
-    from wurzel.step_executor import BaseStepExecutor
+    from wurzel.core.typed_step import TypedStep
+    from wurzel.executors.backend.backend import Backend
+    from wurzel.executors.base_executor import BaseStepExecutor
 
 
 def _resolve_backend_instance(
@@ -21,10 +21,12 @@ def _resolve_backend_instance(
     executor: type[BaseStepExecutor] | None = None,
 ) -> Backend:
     # Check if backend has from_values method (like ArgoBackend and DvcBackend)
-    if hasattr(backend, "from_values") and values:
-        return backend.from_values(values, workflow_name=pipeline_name, executor=executor)  # type: ignore[call-arg]
+    from_values = getattr(backend, "from_values", None)
+    if callable(from_values) and values:
+        factory = cast(Callable[..., "Backend"], from_values)
+        return factory(values, workflow_name=pipeline_name, executor=executor)
     if executor is not None:
-        return backend(executor=executor)  # type: ignore[call-arg]
+        return backend(executer=executor)
     return backend()
 
 

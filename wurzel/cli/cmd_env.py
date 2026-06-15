@@ -15,7 +15,7 @@ from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
 if TYPE_CHECKING:  # pragma: no cover - typing imports only
-    from wurzel.step import TypedStep
+    from wurzel.core.typed_step import TypedStep
 
 
 class EnvVarRequirement(BaseModel):
@@ -44,7 +44,7 @@ def _format_default_value(field: FieldInfo) -> str:
         return ""
     if isinstance(default, SecretStr):
         return "***"
-    if isinstance(default, (list, dict, set, tuple)):
+    if isinstance(default, list | dict | set | tuple):
         return dumps(default)
     return str(default)
 
@@ -98,7 +98,7 @@ def format_env_snippet(
 
 def validate_env_vars(pipeline: TypedStep, allow_extra_fields: bool) -> list[EnvValidationIssue]:
     """Validate that all required env vars are present for the pipeline."""
-    from wurzel.step_executor.base_executor import BaseStepExecutor  # pylint: disable=import-outside-toplevel
+    from wurzel.executors.base_executor import BaseStepExecutor  # pylint: disable=import-outside-toplevel
     from wurzel.utils import create_model  # pylint: disable=import-outside-toplevel
 
     # BaseStepExecutor.is_allow_extra_settings already checks env var, so reuse when None supplied

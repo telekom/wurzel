@@ -7,12 +7,13 @@
 # pylint: disable=duplicate-code
 import itertools
 from logging import getLogger
+from typing import cast
 
 from pandera.typing import DataFrame
 from qdrant_client import models
 
-from wurzel.step import TypedStep
-from wurzel.steps.data import EmbeddingMultiVectorResult
+from wurzel.core import TypedStep
+from wurzel.steps.data import EmbeddingMultiVectorResult, EmbeddingResult
 from wurzel.steps.qdrant.step import QdrantConnectorStep
 
 from .data import QdrantMultiVectorResult
@@ -27,7 +28,7 @@ def _batch(iterable, size):
         yield item
 
 
-class QdrantConnectorMultiVectorStep(
+class QdrantConnectorMultiVectorStep(  # ty: ignore[invalid-generic-class]
     QdrantConnectorStep,
     TypedStep[
         QdrantSettings,
@@ -51,11 +52,11 @@ class QdrantConnectorMultiVectorStep(
             replication_factor=self.settings.REPLICATION_FACTOR,
         )
 
-    def run(self, inpt: DataFrame[EmbeddingMultiVectorResult]) -> DataFrame[QdrantMultiVectorResult]:
+    def run(self, inpt: DataFrame[EmbeddingMultiVectorResult]) -> DataFrame[QdrantMultiVectorResult]:  # ty: ignore[invalid-method-override]
         log.debug(f"Creating Qdrant collection {self.collection_name}")
         if not self.client.collection_exists(self.collection_name):
             self._create_collection(len(inpt["vectors"].loc[0][0]))
-        df_result = self._insert_embeddings(inpt)
+        df_result = self._insert_embeddings(cast(DataFrame[EmbeddingResult], inpt))
         return df_result
 
     def _get_entry_payload(self, row: dict[str, object]) -> dict[str, object]:

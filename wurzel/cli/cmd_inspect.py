@@ -5,34 +5,35 @@
 import json
 from inspect import getfile
 from types import NoneType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pydantic_core import PydanticUndefined
 
 if TYPE_CHECKING:
-    from wurzel.step import TypedStep
+    from wurzel.core import TypedStep
 
 
 def main(step: "type[TypedStep]", gen_env=False):
     """Execute."""
     # Lazy imports to avoid loading heavy dependencies at import time
-    from wurzel.step import Settings  # pylint: disable=import-outside-toplevel
-    from wurzel.step.settings import NoSettings  # pylint: disable=import-outside-toplevel
+    from wurzel.core import Settings  # pylint: disable=import-outside-toplevel
+    from wurzel.core.settings import NoSettings  # pylint: disable=import-outside-toplevel
     from wurzel.utils import WZ  # pylint: disable=import-outside-toplevel
 
     ins = WZ(step)
     set_cls: Settings = ins.settings_class
     env_prefix = step.__name__.upper()
-    data = {
+    settings_data: dict[str, Any] = {
+        "env_prefix": env_prefix,
+    }
+    data: dict[str, Any] = {
         "Name": step.__name__,
         "Input": "None" if ins.input_model_class == NoneType else ins.input_model_class,
         "Output": ins.output_model_type,
-        "settings": {
-            "env_prefix": env_prefix,
-        },
+        "settings": settings_data,
     }
     if set_cls != NoneType and set_cls is not None and set_cls != NoSettings:
-        data["settings"]["fields"] = {k: str(v) for k, v in set_cls.model_fields.items()}
+        settings_data["fields"] = {k: str(v) for k, v in set_cls.model_fields.items()}
     if gen_env:
         setts = {True: [], False: []}
         for name, info in set_cls.model_fields.items():

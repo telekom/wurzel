@@ -5,15 +5,26 @@
 import abc
 import hashlib
 import json
+import numbers
 import types
 import typing
 from ast import literal_eval
 from pathlib import Path
-from typing import Self, get_origin
+from typing import Any, Self, cast, get_origin
 
 import pandera as pa
 import pandera.typing as patyp
 import pydantic
+
+MetricMap = dict[str, float]
+
+
+def _merge_metrics(target: MetricMap, source: dict[str, Any]) -> None:
+    for name, value in source.items():
+        if isinstance(value, bool):
+            value = int(value)
+        if isinstance(value, numbers.Real):
+            target[name] = target.get(name, 0.0) + float(value)
 
 
 class DataModel:
@@ -23,13 +34,39 @@ class DataModel:
 
     @classmethod
     @abc.abstractmethod
-    def save_to_path(cls, path: Path, obj: Self | list[Self]) -> Path:
+    def save_to_path(cls, path: Path, obj: Any) -> Path:
         """Abstract function to save the obj at the given path."""
 
     @classmethod
     @abc.abstractmethod
-    def load_from_path(cls, path: Path, *args) -> Self:
+    def load_from_path(cls, path: Path, *args: Any) -> Any:
         """Abstract function to load the data from the given Path."""
+
+    @classmethod
+    @abc.abstractmethod
+    def kt_file_extension(cls) -> str:
+        """Return the file extension used when persisting this contract."""
+
+    @classmethod
+    def get_metrics(cls, obj: Any) -> MetricMap:
+        """Return numeric metrics for an object produced by this contract.
+
+        - If obj is a list/tuple/set, metrics are summed by key.
+        - If obj provides a `metrics()` instance method, it is used.
+        """
+        if isinstance(obj, list | tuple | set):
+            metrics: MetricMap = {}
+            for item in obj:
+                _merge_metrics(metrics, cls.get_metrics(item))
+            return metrics
+        metrics_fn = getattr(obj, "metrics", None)
+        if callable(metrics_fn):
+            metrics = metrics_fn()
+            if isinstance(metrics, dict):
+                normalized: MetricMap = {}
+                _merge_metrics(normalized, metrics)
+                return normalized
+        return {}
 
 
 class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
@@ -38,7 +75,7 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
     """
 
     @classmethod
-    def save_to_path(cls, path: Path, obj: Self | list[Self]) -> Path:
+    def save_to_path(cls, path: Path, obj: Any) -> Path:
         import pandas as pd  # pylint: disable=import-outside-toplevel
 
         path = path.with_suffix(".csv")
@@ -48,7 +85,7 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
         return path
 
     @classmethod
-    def load_from_path(cls, path: Path, *args) -> Self:
+    def load_from_path(cls, path: Path, *args: Any) -> Self:
         """Switch case to find the matching file ending."""
         import pandas as pd  # pylint: disable=import-outside-toplevel
 
@@ -75,14 +112,28 @@ class PanderaDataFrameModel(pa.DataFrameModel, DataModel):
             if atr.dtype.type in {list, dict}:
                 read_data[key] = read_data[key].apply(_literal_eval_or_passthrough)
 
-        return patyp.DataFrame[cls](read_data)
+        return cast(Self, patyp.DataFrame(read_data))
+
+    @classmethod
+    def kt_file_extension(cls) -> str:
+        return ".csv"
+
+    @classmethod
+    def get_metrics(cls, obj: Any) -> MetricMap:
+        import pandas as pd  # pylint: disable=import-outside-toplevel
+
+        metrics = super().get_metrics(obj)
+        if isinstance(obj, pd.DataFrame):
+            metrics["rows"] = float(obj.shape[0])
+            metrics["columns"] = float(obj.shape[1])
+        return metrics
 
 
 class PydanticModel(pydantic.BaseModel, DataModel):
     """DataModel contract specified with pydantic."""
 
     @classmethod
-    def save_to_path(cls, path: Path, obj: Self | list[Self]):
+    def save_to_path(cls, path: Path, obj: Any) -> Path:
         """Wurzel save model.
 
         Args:
@@ -106,7 +157,7 @@ class PydanticModel(pydantic.BaseModel, DataModel):
 
     # pylint: disable=arguments-differ
     @classmethod
-    def load_from_path(cls, path: Path, model_type: type[Self | list[Self]]) -> Self | list[Self]:
+    def load_from_path(cls, path: Path, *args: Any) -> Self | list[Self]:
         """Wurzel load model.
 
         Args:
@@ -120,6 +171,10 @@ class PydanticModel(pydantic.BaseModel, DataModel):
             Union[Self, list[Self]]: dependent on expected type
 
         """
+        if not args:
+            model_type: type[Self | list[Self]] = cls
+        else:
+            model_type = cast(type[Self | list[Self]], args[0])
         # isinstace does not work for union pylint: disable=unidiomatic-typecheck
         if type(model_type) is types.UnionType:
             model_type = [ty for ty in typing.get_args(model_type) if ty][0]
@@ -162,3 +217,11 @@ class PydanticModel(pydantic.BaseModel, DataModel):
 
     def __lt__(self, other: object) -> bool:
         return hash(self) < hash(other)
+
+    def metrics(self) -> MetricMap:
+        """Optional per-instance metrics hook used by DataModel.get_metrics."""
+        return {}
+
+    @classmethod
+    def kt_file_extension(cls) -> str:
+        return ".json"
