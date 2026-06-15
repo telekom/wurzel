@@ -2,7 +2,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from wurzel.utils import HAS_DOCLING, HAS_JOBLIB, HAS_LANGCHAIN_CORE, HAS_MILVUS, HAS_QDRANT, HAS_REQUESTS
+from wurzel.utils import HAS_BOTO3, HAS_DOCLING, HAS_JOBLIB, HAS_LANGCHAIN_CORE, HAS_MILVUS, HAS_QDRANT, HAS_REQUESTS
 
 from .manual_markdown import ManualMarkdownStep  # noqa: F401
 
@@ -28,3 +28,6 @@ if HAS_QDRANT:
 
 if HAS_MILVUS:
     from .milvus import *  # noqa: F403 Allow importing Step classes
+
+if HAS_BOTO3:
+    from .s3 import S3MarkdownStep  # noqa: F401
