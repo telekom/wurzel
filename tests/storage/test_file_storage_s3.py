@@ -54,19 +54,22 @@ class TestS3FileStorageServiceInit:
         assert svc.bucket_prefix == "pfx"
         mock.client.assert_called_once_with("s3", region_name="eu-west-1")
 
-    def test_init_raises_when_boto3_missing(self):
-        import sys
+    def test_init_raises_when_boto3_missing(self, monkeypatch):
+        import builtins
 
-        # boto3 is not installed; remove any cached mock so import fails naturally
-        saved = sys.modules.pop("boto3", None)
-        try:
-            from wurzel.storage.file_storage_s3 import S3FileStorageService
+        real_import = builtins.__import__
 
-            with pytest.raises(ImportError, match="boto3"):
-                S3FileStorageService(bucket_name="x")
-        finally:
-            if saved is not None:
-                sys.modules["boto3"] = saved
+        def raise_for_missing_boto3(name, globals_=None, locals_=None, fromlist=(), level=0):
+            if name == "boto3":
+                raise ImportError("No module named boto3")
+            return real_import(name, globals_, locals_, fromlist, level)
+
+        monkeypatch.setattr(builtins, "__import__", raise_for_missing_boto3)
+
+        from wurzel.storage.file_storage_s3 import S3FileStorageService
+
+        with pytest.raises(ImportError, match="boto3"):
+            S3FileStorageService(bucket_name="x")
 
     def test_storage_key_format(self, s3_service):
         key = s3_service._storage_key("proj1", "step1", "file123", "foo.txt")
