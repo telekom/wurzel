@@ -135,8 +135,10 @@ def _load_requirements(pipeline: TypedStep | str, include_optional: bool):
 
 
 def _build_requirements_table(requirements):
+    requirements = list(requirements)
+    env_var_width = max((len(req.env_var) for req in requirements), default=len("ENV VAR"))
     table = Table(title="Environment variables", header_style="bold magenta")
-    table.add_column("ENV VAR", style="cyan", overflow="fold")
+    table.add_column("ENV VAR", style="cyan", min_width=env_var_width, no_wrap=True)
     table.add_column("REQ", justify="center", style="bold")
     table.add_column("STEP", style="green")
     table.add_column("DEFAULT", overflow="fold")
@@ -150,8 +152,9 @@ def _build_requirements_table(requirements):
 
 
 def _build_missing_table(issues: list[EnvValidationIssue]):
+    env_var_width = max((len(issue.env_var) for issue in issues), default=len("ENV VAR"))
     table = Table(title="Missing environment variables", header_style="bold red")
-    table.add_column("ENV VAR", style="cyan", overflow="fold")
+    table.add_column("ENV VAR", style="cyan", min_width=env_var_width, no_wrap=True)
     table.add_column("MESSAGE", overflow="fold")
     for issue in issues:
         table.add_row(issue.env_var, issue.message)
