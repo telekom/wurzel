@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import os
+import sys
 from logging import getLogger
 from pathlib import Path
 
@@ -48,6 +49,15 @@ def env():
     yield setenv
 
     setenv.clear()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def include_active_python_bin_on_path():
+    """Make console scripts from the active Python environment visible to subprocess tests."""
+    bin_dir = str(Path(sys.executable).parent)
+    path_parts = os.environ.get("PATH", "").split(os.pathsep)
+    if bin_dir not in path_parts:
+        os.environ["PATH"] = os.pathsep.join([bin_dir, *path_parts])
 
 
 @pytest.fixture(scope="module")
