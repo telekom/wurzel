@@ -80,6 +80,8 @@ workflows:
     # Workflow-level annotations
     annotations:
       sidecar.istio.io/inject: "false"
+    nodeSelector:
+      kubernetes.io/arch: amd64
 
     # Pod-level security context (applied to all pods)
     podSecurityContext:
@@ -114,10 +116,9 @@ workflows:
           - ALL
         seccompProfileType: RuntimeDefault
 
-      # Resource requests and limits
+      # Resource requests and memory limit
       resources:
         cpu_request: "100m"
-        cpu_limit: "500m"
         memory_request: "128Mi"
         memory_limit: "512Mi"
 
@@ -252,11 +253,12 @@ argo list --label workflows.argoproj.io/cron-workflow=my-scheduled-pipeline
 |-------|------|---------|-------------|
 | `name` | string | `wurzel` | Name of the Workflow/CronWorkflow |
 | `namespace` | string | `argo-workflows` | Kubernetes namespace |
-| `schedule` | string | `0 4 * * *` | Cron schedule for CronWorkflow. Set to `null` to create a normal Workflow instead |
+| `schedules` | list[string]/null | `null` | Cron schedules for CronWorkflow. Set to `null` to create a normal Workflow instead |
 | `entrypoint` | string | `wurzel-pipeline` | DAG entrypoint name |
 | `serviceAccountName` | string | `wurzel-service-account` | Kubernetes service account |
 | `dataDir` | path | `/usr/app` | Data directory inside containers |
 | `annotations` | map | `{}` | Workflow-level annotations |
+| `nodeSelector` | map | `{"kubernetes.io/arch": "amd64"}` | Pod node selector |
 | `podSpecPatch` | string | `null` | Custom pod spec patch (YAML string) |
 
 #### Pod Security Context Options
@@ -288,7 +290,7 @@ argo list --label workflows.argoproj.io/cron-workflow=my-scheduled-pipeline
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `cpu_request` | string | `100m` | CPU request |
-| `cpu_limit` | string | `500m` | CPU limit |
+| `cpu_limit` | string/null | `null` | Optional CPU limit |
 | `memory_request` | string | `128Mi` | Memory request |
 | `memory_limit` | string | `512Mi` | Memory limit |
 

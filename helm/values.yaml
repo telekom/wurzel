@@ -13,11 +13,13 @@ variant: "demo"
 cronschedule: "0 */1 * * *"
 resources:
    limits:
-     cpu: "2"
      memory: "5000Mi"
    requests:
      cpu: "500m"
      memory: "3000Mi"
+
+nodeSelector:
+  kubernetes.io/arch: amd64
 
 
 

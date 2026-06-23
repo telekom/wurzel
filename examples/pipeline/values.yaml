@@ -18,6 +18,8 @@ workflows:
     dataDir: /data
     annotations:
       sidecar.istio.io/inject: "false"
+    nodeSelector:
+      kubernetes.io/arch: amd64
 
     # Pod-level security context (applied to all pods)
     podSecurityContext:
@@ -54,10 +56,9 @@ workflows:
           - ALL
         seccompProfileType: RuntimeDefault
 
-      # Container resource requests and limits
+      # Container resource requests and memory limit
       resources:
         cpu_request: "100m"
-        cpu_limit: "500m"
         memory_request: "128Mi"
         memory_limit: "512Mi"
 

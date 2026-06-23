@@ -146,7 +146,7 @@ class TestResourcesConfig:
     def test_defaults(self):
         config = ResourcesConfig()
         assert config.cpu_request == "100m"
-        assert config.cpu_limit == "500m"
+        assert config.cpu_limit is None
         assert config.memory_request == "128Mi"
         assert config.memory_limit == "512Mi"
 
@@ -217,6 +217,7 @@ class TestWorkflowConfig:
         assert isinstance(config.artifacts, S3ArtifactConfig)
         assert isinstance(config.podSecurityContext, SecurityContextConfig)
         assert config.podSecurityContext.runAsNonRoot is True
+        assert config.nodeSelector == {"kubernetes.io/arch": "amd64"}
 
     def test_no_schedules(self):
         config = WorkflowConfig(schedules=None)
@@ -1215,8 +1216,39 @@ class TestArgoBackendSecurityContext:
             resources = template["container"].get("resources", {})
             assert resources.get("requests", {}).get("cpu")
             assert resources.get("requests", {}).get("memory")
-            assert resources.get("limits", {}).get("cpu")
+            assert "cpu" not in resources.get("limits", {})
             assert resources.get("limits", {}).get("memory")
+
+    def test_default_node_selector_in_workflow(self):
+        """Test that generated workflows select a Kubernetes architecture."""
+        backend = ArgoBackend()
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            node_selector = spec["workflowSpec"].get("nodeSelector", {})
+        else:
+            node_selector = spec.get("nodeSelector", {})
+
+        assert node_selector == {"kubernetes.io/arch": "amd64"}
+
+    def test_custom_node_selector_in_workflow(self):
+        """Test that node selector can be overridden from workflow config."""
+        config = WorkflowConfig(nodeSelector={"kubernetes.io/arch": "arm64"})
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            node_selector = spec["workflowSpec"].get("nodeSelector", {})
+        else:
+            node_selector = spec.get("nodeSelector", {})
+
+        assert node_selector == {"kubernetes.io/arch": "arm64"}
 
     def test_security_context_from_values_file(self, tmp_path: Path):
         """Test that security context can be configured via values file."""

@@ -118,7 +118,7 @@ class ResourcesConfig(BaseModel):
     """Container resource requests/limits using Hera's Resources API."""
 
     cpu_request: str = "100m"
-    cpu_limit: str = "500m"
+    cpu_limit: str | None = None
     memory_request: str = "128Mi"
     memory_limit: str = "512Mi"
 
@@ -176,6 +176,7 @@ class WorkflowConfig(BaseModel):
     container: ContainerConfig = Field(default_factory=ContainerConfig)
     artifacts: S3ArtifactConfig = Field(default_factory=S3ArtifactConfig)
     podSecurityContext: SecurityContextConfig = Field(default_factory=SecurityContextConfig)
+    nodeSelector: dict[str, str] = Field(default_factory=lambda: {"kubernetes.io/arch": "amd64"})
     podSpecPatch: str | None = None
 
 
@@ -411,6 +412,7 @@ class ArgoBackend(Backend):
             "service_account_name": self.config.serviceAccountName,
             "volumes": self._volumes or None,
             "security_context": self._build_pod_security_context(),
+            "node_selector": self.config.nodeSelector or None,
             "pod_spec_patch": self._build_pod_spec_patch(),
         }
 
