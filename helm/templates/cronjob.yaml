@@ -32,10 +32,17 @@ spec:
             namespace: {{ $.Values.namespace }}
             app: {{ $.Chart.Name }}
         spec:
+          {{- with $.Values.nodeSelector }}
+          nodeSelector:
+{{ toYaml . | indent 12 }}
+          {{- end }}
           securityContext:
+            runAsNonRoot: true
             runAsGroup: 999
             runAsUser: 999
             fsGroup: 999
+            seccompProfile:
+              type: RuntimeDefault
           volumes:
           - name: dvc-persistent-volume
             persistentVolumeClaim:
@@ -48,10 +55,6 @@ spec:
               claimName: {{ $.Chart.Name }}-{{ $tenant}}-dvc-pvc{{ $.Values.variant }}
           - name: models-data
           restartPolicy: Never
-          securityContext:
-            runAsUser: 999
-            runAsGroup: 999
-            fsGroup: 999
           containers:
           - image: mtr.devops.telekom.de/oneai/{{ $.Chart.Name }}:{{ $.Chart.AppVersion }}
             name: {{ $.Chart.Name }}-{{ $tenant}}{{ $.Values.variant }}
@@ -68,10 +71,15 @@ spec:
               value: {{ $value | quote }}
             {{ end }}
             securityContext:
+              runAsNonRoot: true
+              runAsUser: 999
+              runAsGroup: 999
               allowPrivilegeEscalation: false
               capabilities:
                 drop:
                 - "ALL"
+              seccompProfile:
+                type: RuntimeDefault
             volumeMounts:
             - name: dvc-persistent-volume
               mountPath: {{$.Values.GLOBAL_ENV.DVC_DATA_PATH}}
@@ -83,7 +91,6 @@ spec:
               mountPath: /usr/app/dt_llm_dpr_models/
             resources:
               limits:
-                cpu: {{ $.Values.resources.limits.cpu }}
                 memory: {{ $.Values.resources.limits.memory }}
               requests:
                 cpu: {{ $.Values.resources.requests.cpu }}
