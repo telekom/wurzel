@@ -147,7 +147,7 @@ class TestResourcesConfig:
     def test_defaults(self):
         config = ResourcesConfig()
         assert config.cpu_request == "100m"
-        assert config.cpu_limit == "500m"
+        assert config.cpu_limit is None
         assert config.memory_request == "128Mi"
         assert config.memory_limit == "512Mi"
 
@@ -218,6 +218,7 @@ class TestWorkflowConfig:
         assert isinstance(config.artifacts, S3ArtifactConfig)
         assert isinstance(config.podSecurityContext, SecurityContextConfig)
         assert config.podSecurityContext.runAsNonRoot is True
+        assert config.nodeSelector == {"kubernetes.io/arch": "amd64"}
 
     def test_no_schedules(self):
         config = WorkflowConfig(schedules=None)
@@ -956,8 +957,299 @@ class TestArgoBackendCreateTask:
         assert "kind: CronWorkflow" in yaml_output
         assert "spec:" in yaml_output
 
-    def test_generate_artifact_chained_steps(self):
-        """Test generating Argo Workflow YAML for chained steps."""
+        container_templates = [t for t in templates if "container" in t]
+        assert len(container_templates) > 0
+
+        for template in container_templates:
+            env_vars = template["container"].get("env", [])
+            hf_home_vars = [e for e in env_vars if e.get("name") == "HF_HOME"]
+            assert len(hf_home_vars) == 1
+            assert hf_home_vars[0]["value"] == "/cache/huggingface"
+
+    def test_hf_home_env_var_not_set_when_disabled(self):
+        """Test that HF_HOME env var is not set when tokenizer cache is disabled."""
+        backend = ArgoBackend()
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            templates = spec["workflowSpec"].get("templates", [])
+        else:
+            templates = spec.get("templates", [])
+
+        container_templates = [t for t in templates if "container" in t]
+        for template in container_templates:
+            env_vars = template["container"].get("env", [])
+            hf_home_vars = [e for e in env_vars if e.get("name") == "HF_HOME"]
+            assert len(hf_home_vars) == 0
+
+    def test_tokenizer_cache_volume_in_workflow(self):
+        """Test that tokenizer cache volume is included in workflow manifest."""
+        config = WorkflowConfig(
+            container=ContainerConfig(
+                tokenizerCache=TokenizerCacheConfig(
+                    enabled=True,
+                    claimName="my-tokenizer-pvc",
+                    mountPath="/cache/hf",
+                )
+            )
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            volumes = spec["workflowSpec"].get("volumes", [])
+        else:
+            volumes = spec.get("volumes", [])
+
+        # Should have tokenizer cache volume
+        tokenizer_volumes = [v for v in volumes if v.get("name") == "tokenizer-cache"]
+        assert len(tokenizer_volumes) == 1
+        assert tokenizer_volumes[0]["persistentVolumeClaim"]["claimName"] == "my-tokenizer-pvc"
+
+    def test_create_pvc_uses_volume_claim_templates(self):
+        """Test that createPvc uses volumeClaimTemplates in workflow spec."""
+        config = WorkflowConfig(
+            container=ContainerConfig(
+                tokenizerCache=TokenizerCacheConfig(
+                    enabled=True,
+                    createPvc=True,
+                    storageSize="20Gi",
+                    storageClassName="fast-storage",
+                    accessModes=["ReadWriteMany"],
+                )
+            ),
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        # Should have volumeClaimTemplates in workflow spec
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            volume_claim_templates = spec["workflowSpec"].get("volumeClaimTemplates", [])
+        else:
+            volume_claim_templates = spec.get("volumeClaimTemplates", [])
+
+        assert len(volume_claim_templates) == 1
+        vct = volume_claim_templates[0]
+        assert vct["metadata"]["name"] == "tokenizer-cache"
+        assert vct["spec"]["accessModes"] == ["ReadWriteMany"]
+        assert vct["spec"]["resources"]["requests"]["storage"] == "20Gi"
+        assert vct["spec"]["storageClassName"] == "fast-storage"
+
+    def test_create_pvc_without_storage_class(self):
+        """Test that createPvc works without storageClassName."""
+        config = WorkflowConfig(
+            container=ContainerConfig(
+                tokenizerCache=TokenizerCacheConfig(
+                    enabled=True,
+                    createPvc=True,
+                )
+            ),
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            volume_claim_templates = spec["workflowSpec"].get("volumeClaimTemplates", [])
+        else:
+            volume_claim_templates = spec.get("volumeClaimTemplates", [])
+
+        assert len(volume_claim_templates) == 1
+        vct = volume_claim_templates[0]
+        assert "storageClassName" not in vct["spec"] or vct["spec"]["storageClassName"] is None
+        assert vct["spec"]["resources"]["requests"]["storage"] == "10Gi"  # default
+
+    def test_no_volume_claim_templates_when_create_pvc_disabled(self):
+        """Test that no volumeClaimTemplates when createPvc is False (uses existing PVC)."""
+        config = WorkflowConfig(
+            container=ContainerConfig(
+                tokenizerCache=TokenizerCacheConfig(
+                    enabled=True,
+                    createPvc=False,
+                    claimName="existing-pvc",
+                )
+            ),
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            volume_claim_templates = spec["workflowSpec"].get("volumeClaimTemplates", [])
+            volumes = spec["workflowSpec"].get("volumes", [])
+        else:
+            volume_claim_templates = spec.get("volumeClaimTemplates", [])
+            volumes = spec.get("volumes", [])
+
+        # Should have no volumeClaimTemplates
+        assert len(volume_claim_templates) == 0
+
+        # Should have existing volume reference
+        tokenizer_volumes = [v for v in volumes if v.get("name") == "tokenizer-cache"]
+        assert len(tokenizer_volumes) == 1
+        assert tokenizer_volumes[0]["persistentVolumeClaim"]["claimName"] == "existing-pvc"
+
+
+class TestArgoBackendSecurityContext:
+    def test_default_security_context_in_workflow(self):
+        """Test that default security context is applied to workflow."""
+        backend = ArgoBackend()
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        # Check pod-level security context
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            security_context = spec["workflowSpec"].get("securityContext", {})
+        else:
+            security_context = spec.get("securityContext", {})
+
+        assert security_context.get("runAsNonRoot") is True
+        assert security_context.get("seccompProfile", {}).get("type") == "RuntimeDefault"
+
+    def test_custom_security_context_in_workflow(self):
+        """Test that custom security context is applied to workflow."""
+        config = WorkflowConfig(
+            podSecurityContext=SecurityContextConfig(
+                runAsNonRoot=True,
+                runAsUser=1000,
+                runAsGroup=1000,
+                fsGroup=2000,
+            ),
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            security_context = spec["workflowSpec"].get("securityContext", {})
+        else:
+            security_context = spec.get("securityContext", {})
+
+        assert security_context.get("runAsNonRoot") is True
+        assert security_context.get("runAsUser") == 1000
+        assert security_context.get("runAsGroup") == 1000
+        assert security_context.get("fsGroup") == 2000
+
+    def test_container_security_context(self):
+        """Test that container-level security context is applied."""
+        config = WorkflowConfig(
+            container=ContainerConfig(
+                securityContext=SecurityContextConfig(
+                    runAsNonRoot=True,
+                    runAsUser=1000,
+                    allowPrivilegeEscalation=False,
+                ),
+            ),
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            templates = spec["workflowSpec"].get("templates", [])
+        else:
+            templates = spec.get("templates", [])
+
+        container_templates = [t for t in templates if "container" in t]
+        assert len(container_templates) > 0
+
+        for template in container_templates:
+            sec_ctx = template["container"].get("securityContext", {})
+            assert sec_ctx.get("runAsNonRoot") is True
+            assert sec_ctx.get("runAsUser") == 1000
+            assert sec_ctx.get("allowPrivilegeEscalation") is False
+            assert sec_ctx.get("capabilities", {}).get("drop") == ["ALL"]
+            assert sec_ctx.get("seccompProfile", {}).get("type") == "RuntimeDefault"
+
+            resources = template["container"].get("resources", {})
+            assert resources.get("requests", {}).get("cpu")
+            assert resources.get("requests", {}).get("memory")
+            assert "cpu" not in resources.get("limits", {})
+            assert resources.get("limits", {}).get("memory")
+
+    def test_default_node_selector_in_workflow(self):
+        """Test that generated workflows select a Kubernetes architecture."""
+        backend = ArgoBackend()
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            node_selector = spec["workflowSpec"].get("nodeSelector", {})
+        else:
+            node_selector = spec.get("nodeSelector", {})
+
+        assert node_selector == {"kubernetes.io/arch": "amd64"}
+
+    def test_custom_node_selector_in_workflow(self):
+        """Test that node selector can be overridden from workflow config."""
+        config = WorkflowConfig(nodeSelector={"kubernetes.io/arch": "arm64"})
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            node_selector = spec["workflowSpec"].get("nodeSelector", {})
+        else:
+            node_selector = spec.get("nodeSelector", {})
+
+        assert node_selector == {"kubernetes.io/arch": "arm64"}
+
+    def test_security_context_from_values_file(self, tmp_path: Path):
+        """Test that security context can be configured via values file."""
+        content = {
+            "workflows": {
+                "secure-workflow": {
+                    "name": "secure-wf",
+                    "podSecurityContext": {
+                        "runAsNonRoot": True,
+                        "runAsUser": 1000,
+                        "fsGroup": 2000,
+                    },
+                    "container": {
+                        "securityContext": {
+                            "runAsNonRoot": True,
+                            "runAsUser": 1000,
+                            "allowPrivilegeEscalation": False,
+                        },
+                    },
+                }
+            },
+        }
+        file_path = tmp_path / "security-values.yaml"
+        file_path.write_text(yaml.safe_dump(content))
+
+        backend = ArgoBackend.from_values([file_path], workflow_name="secure-workflow")
+        assert backend.config.podSecurityContext.runAsUser == 1000
+        assert backend.config.podSecurityContext.fsGroup == 2000
+        assert backend.config.container.securityContext.allowPrivilegeEscalation is False
+
+
+class TestArgoBackendIntegration:
+    def test_full_pipeline_generation(self):
+        """Test generating a complete pipeline with dependencies."""
         backend = ArgoBackend()
         step1 = DummyStep()
         step2 = DummyFollowStep()
