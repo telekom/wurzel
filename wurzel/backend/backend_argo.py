@@ -49,6 +49,9 @@ from wurzel.step_executor import BaseStepExecutor, PrometheusStepExecutor
 
 log = logging.getLogger(__name__)
 
+ARGO_EXECUTOR_CONTAINER_NAME = "wait"
+ARGO_EXECUTOR_INIT_CONTAINER_NAME = "init"
+
 
 def default_argo_step_executor(config: WorkflowConfig | None = None) -> type[BaseStepExecutor]:
     """Pick the step executor for generated Argo task commands.
@@ -348,14 +351,55 @@ class ArgoBackend(Backend):
             memory_limit=res.memory_limit,
         )
 
+    def _build_executor_resources_patch(self) -> dict[str, dict[str, str]]:
+        """Build resources for Argo-injected executor containers."""
+        res = self.config.container.resources
+        return {
+            "requests": {
+                "cpu": res.cpu_request,
+                "memory": res.memory_request,
+            },
+            "limits": {
+                "memory": res.memory_limit,
+            },
+        }
+
+    @staticmethod
+    def _build_executor_security_context_patch() -> dict[str, Any]:
+        """Build security context for Argo-injected executor containers."""
+        return {
+            "allowPrivilegeEscalation": False,
+            "capabilities": {
+                "drop": ["ALL"],
+            },
+            "runAsNonRoot": True,
+            "seccompProfile": {
+                "type": "RuntimeDefault",
+            },
+        }
+
+    def _build_executor_container_patch(self, name: str) -> dict[str, Any]:
+        return {
+            "name": name,
+            "resources": self._build_executor_resources_patch(),
+            "securityContext": self._build_executor_security_context_patch(),
+        }
+
     def _build_pod_spec_patch(self) -> str | None:
         if self.config.podSpecPatch is not None:
             return self.config.podSpecPatch
 
-        # Don't generate podSpecPatch - let Argo Workflows handle init containers
-        # with the pod-level security context. Generating a podSpecPatch with init
-        # container names can conflict with Argo's built-in init containers (init, wait).
-        return None
+        return yaml.safe_dump(
+            {
+                "containers": [
+                    self._build_executor_container_patch(ARGO_EXECUTOR_CONTAINER_NAME),
+                ],
+                "initContainers": [
+                    self._build_executor_container_patch(ARGO_EXECUTOR_INIT_CONTAINER_NAME),
+                ],
+            },
+            sort_keys=False,
+        ).strip()
 
     def generate_artifact(self, step: TypedStep[Any, Any, Any]):
         """Return YAML manifest(s) for workflow + optional dependent resources."""
