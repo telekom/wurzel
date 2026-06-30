@@ -1385,6 +1385,73 @@ initContainers:
 
         assert pod_spec_patch == custom_patch
 
+    def test_policy_pod_spec_patch_and_null_cpu_limit_render(self):
+        """Test Kyverno-compatible podSpecPatch with no generated CPU limits."""
+        custom_patch = """containers:
+  - name: main
+    startupProbe:
+      exec:
+        command: ["python", "-c", "import sys; sys.exit(0)"]
+      failureThreshold: 60
+      periodSeconds: 10
+      timeoutSeconds: 5
+  - name: wait
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+        ephemeral-storage: 1Gi
+      limits:
+        memory: 256Mi
+        ephemeral-storage: 2Gi
+    startupProbe:
+      exec:
+        command: ["argoexec", "version"]
+      failureThreshold: 60
+      periodSeconds: 10
+      timeoutSeconds: 5
+initContainers:
+  - name: init
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+        ephemeral-storage: 1Gi
+      limits:
+        memory: 256Mi
+        ephemeral-storage: 2Gi
+"""
+        config = WorkflowConfig(
+            podSpecPatch=custom_patch,
+            container=ContainerConfig(
+                resources=ResourcesConfig(
+                    cpu_request="1",
+                    cpu_limit=None,
+                    memory_request="4000Mi",
+                    memory_limit="8000Mi",
+                ),
+            ),
+        )
+        backend = ArgoBackend(config=config)
+        workflow = yaml.safe_load(backend.generate_artifact(DummyStep()))
+        spec = workflow.get("spec", {})
+        workflow_spec = spec.get("workflowSpec", spec)
+
+        assert workflow_spec["podSpecPatch"] == custom_patch
+        assert "name: main" in workflow_spec["podSpecPatch"]
+        assert "name: wait" in workflow_spec["podSpecPatch"]
+        assert "name: init" in workflow_spec["podSpecPatch"]
+        assert "startupProbe" in workflow_spec["podSpecPatch"]
+
+        container_templates = [template for template in workflow_spec.get("templates", []) if "container" in template]
+        assert container_templates
+        for template in container_templates:
+            resources = template["container"].get("resources", {})
+            assert resources.get("requests", {}).get("cpu") == "1"
+            assert resources.get("requests", {}).get("memory") == "4000Mi"
+            assert "cpu" not in resources.get("limits", {})
+            assert resources.get("limits", {}).get("memory") == "8000Mi"
+
 
 class TestArgoBackendS3Artifact:
     """Tests for S3Artifact configuration."""

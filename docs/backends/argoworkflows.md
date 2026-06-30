@@ -94,12 +94,17 @@ workflows:
         - 1000
       seccompProfileType: RuntimeDefault
 
-    # Optional: Custom podSpecPatch for advanced use cases
+    # Optional: Custom podSpecPatch for advanced use cases, such as
+    # Kubernetes policies that validate Argo executor containers.
     # podSpecPatch: |
-    #   initContainers:
-    #     - name: custom-init
-    #       securityContext:
-    #         runAsNonRoot: true
+    #   containers:
+    #     - name: wait
+    #       resources:
+    #         requests:
+    #           cpu: 100m
+    #           memory: 128Mi
+    #         limits:
+    #           memory: 256Mi
 
     # Container configuration
     container:
@@ -119,6 +124,7 @@ workflows:
       # Resource requests and memory limit
       resources:
         cpu_request: "100m"
+        cpu_limit: null
         memory_request: "128Mi"
         memory_limit: "512Mi"
 
@@ -293,6 +299,64 @@ argo list --label workflows.argoproj.io/cron-workflow=my-scheduled-pipeline
 | `cpu_limit` | string/null | `null` | Optional CPU limit |
 | `memory_request` | string | `128Mi` | Memory request |
 | `memory_limit` | string | `512Mi` | Memory limit |
+
+#### Policy-Friendly CPU and Probe Configuration
+
+Set `container.resources.cpu_limit` to `null` when a Kubernetes policy forbids
+CPU limits. Wurzel omits `resources.limits.cpu` for generated step containers
+in that case while still rendering CPU requests and memory limits.
+
+Argo adds executor containers such as `wait` and `init` after Wurzel generates
+the workflow. Use `podSpecPatch` when cluster policies need resources or probes
+on those executor containers. See the
+[Argo field reference](https://argo-workflows.readthedocs.io/en/latest/fields/)
+for the upstream `podSpecPatch` field.
+
+```yaml
+workflows:
+  pipelinedemo:
+    container:
+      resources:
+        cpu_request: "1"
+        cpu_limit: null
+        memory_request: "4000Mi"
+        memory_limit: "8000Mi"
+
+    podSpecPatch: |
+      containers:
+        - name: main
+          startupProbe:
+            exec:
+              command: ["python", "-c", "import sys; sys.exit(0)"]
+            failureThreshold: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+        - name: wait
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+              ephemeral-storage: 1Gi
+            limits:
+              memory: 256Mi
+              ephemeral-storage: 2Gi
+          startupProbe:
+            exec:
+              command: ["argoexec", "version"]
+            failureThreshold: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+      initContainers:
+        - name: init
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+              ephemeral-storage: 1Gi
+            limits:
+              memory: 256Mi
+              ephemeral-storage: 2Gi
+```
 
 #### Tokenizer Cache Options
 
