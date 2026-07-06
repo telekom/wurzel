@@ -75,16 +75,20 @@ class Backend(BaseStepExecutor):
         self,
         executor: type[BaseStepExecutor] | None = None,
         *,
+        executer: type[BaseStepExecutor] | None = None,
         dont_encapsulate: bool = False,
         middlewares: list[str] | list["BaseMiddleware"] | None = None,
         load_middlewares_from_env: bool = False,
     ) -> None:
+        if executor is not None and executer is not None:
+            raise TypeError("Use either 'executor' or deprecated 'executer', not both")
+        selected_executor = executor if executor is not None else executer
         super().__init__(
             dont_encapsulate=dont_encapsulate,
             middlewares=middlewares,
             load_middlewares_from_env=load_middlewares_from_env,
         )
-        self.executor: type[BaseStepExecutor] | None = executor
+        self.executor: type[BaseStepExecutor] | None = selected_executor
 
     @classmethod
     def get_registry(cls) -> dict[str, type["Backend"]]:

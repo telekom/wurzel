@@ -10,9 +10,17 @@ from typing import Annotated
 import typer
 
 app = typer.Typer(
-    no_args_is_help=True,
+    no_args_is_help=False,
     help="Manage and inspect middlewares",
 )
+
+
+@app.callback(invoke_without_command=True)
+def middlewares_callback(ctx: typer.Context) -> None:
+    """Show help when no middleware subcommand is provided."""
+    if ctx.invoked_subcommand is None:
+        typer.echo(ctx.get_help())
+        raise typer.Exit()
 
 
 def middleware_name_autocomplete(incomplete: str) -> list[str]:
@@ -79,7 +87,7 @@ def inspect_middleware(
     middleware_class = registry.get(name.lower())
 
     if not middleware_class:
-        typer.secho(f"Error: Middleware '{name}' not found.", fg=typer.colors.RED, err=True)
+        typer.secho(f"Error: Middleware '{name}' not found.", fg=typer.colors.RED)
         typer.echo(f"\nAvailable middlewares: {', '.join(sorted(registry.list_available()))}")
         raise typer.Exit(1)
 

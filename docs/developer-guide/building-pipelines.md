@@ -42,6 +42,7 @@ from wurzel.steps import EmbeddingStep, QdrantConnectorStep
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.utils import WZ
 
+
 def pipeline() -> TypedStep:
     md = WZ(ManualMarkdownStep)
     embed = WZ(EmbeddingStep)

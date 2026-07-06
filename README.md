@@ -50,7 +50,7 @@ Run a step using the snippet below:
 import os
 from pathlib import Path
 
-from wurzel.step_executor import BaseStepExecutor
+from wurzel.executors import BaseStepExecutor
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 
 # Create input dir and set folder (required by ManualMarkdownStep)

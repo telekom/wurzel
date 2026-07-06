@@ -14,13 +14,20 @@ You can enable middlewares in two ways:
 from wurzel.executors.base_executor import BaseStepExecutor
 
 # Using names registered in the middleware registry
-with BaseStepExecutor(middlewares=["timing", "custom"]) as exc:
-    exc(MyStep, set(), Path("output"))
+with BaseStepExecutor(middlewares=["prometheus"]) as exc:
+    pass
 
 # Or provide middleware instances directly
-from wurzel.executors.middlewares import TimingMiddleware
-with BaseStepExecutor(middlewares=[TimingMiddleware()]) as exc:
-    exc(MyStep, set(), Path("output"))
+from wurzel.executors.middlewares.base import BaseMiddleware
+
+
+class NoopMiddleware(BaseMiddleware):
+    def __call__(self, call_next, step_cls, inputs, output_dir):
+        return call_next(step_cls, inputs, output_dir)
+
+
+with BaseStepExecutor(middlewares=[NoopMiddleware()]) as exc:
+    pass
 ```
 
 1. By setting the `MIDDLEWARES` environment variable to a comma-separated

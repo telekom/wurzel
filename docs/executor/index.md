@@ -24,30 +24,45 @@ logging and error reporting when contracts fail.
 Basic usage as a context manager:
 
 ```python
-from wurzel.executors.base_executor import BaseStepExecutor
-from wurzel.core.typed_step import TypedStep
+from pathlib import Path
 
-class MyStep(TypedStep):
-    ...
+from wurzel.core import NoSettings, TypedStep
+from wurzel.datacontract.common import MarkdownDataContract
+from wurzel.executors.base_executor import BaseStepExecutor
+
+
+class MyStep(TypedStep[NoSettings, None, MarkdownDataContract]):
+    def run(self, inpt: None) -> MarkdownDataContract:
+        return MarkdownDataContract(md="# OK", keywords="ok", url="memory://ok")
+
 
 with BaseStepExecutor() as exc:
-    results = exc(MyStep, set(), Path("output"))
+    results = exc(MyStep, None, Path("output"))
 ```
 
 Running the executor with middlewares by name:
 
 ```python
-with BaseStepExecutor(middlewares=["prometheus", "timing"]) as exc:
-    results = exc(MyStep, set(), Path("output"))
+from wurzel.executors.base_executor import BaseStepExecutor
+
+with BaseStepExecutor(middlewares=["prometheus"]) as exc:
+    pass
 ```
 
 Or provide middleware instances directly:
 
 ```python
-from wurzel.executors.middlewares import SomeMiddleware
+from wurzel.executors.base_executor import BaseStepExecutor
+from wurzel.executors.middlewares.base import BaseMiddleware
 
-with BaseStepExecutor(middlewares=[SomeMiddleware()]) as exc:
-    results = exc(MyStep, set(), Path("output"))
+
+class NoopMiddleware(BaseMiddleware):
+    def __call__(self, call_next, step_cls, inputs, output_dir):
+        return call_next(step_cls, inputs, output_dir)
+
+
+with BaseStepExecutor(middlewares=[NoopMiddleware()]) as exc:
+    pass
 ```
 
 ## Environment encapsulation

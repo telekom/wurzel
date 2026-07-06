@@ -17,6 +17,7 @@ tokenizer_missing = not HAS_TIKTOKEN and not HAS_TRANSFORMERS
 spacy_default_model_name = "de_core_news_sm"
 spacy_multilingual_model_name = "xx_ent_wiki_sm"
 wtpsplit_missing = importlib.util.find_spec("wtpsplit") is None
+torch_missing = importlib.util.find_spec("torch") is None
 
 
 @pytest.fixture(scope="function")
@@ -133,7 +134,7 @@ def test_regex_sentence_splitter(regex_splitter, test_cases: list[dict]):
     assert_splitter_test_cases(splitter=regex_splitter, test_cases=test_cases)
 
 
-@pytest.mark.skipif(wtpsplit_missing, reason="wtpsplit not installed")
+@pytest.mark.skipif(wtpsplit_missing or torch_missing, reason="wtpsplit or torch not installed")
 @pytest.mark.parametrize(
     "test_cases",
     [
