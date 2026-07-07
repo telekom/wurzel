@@ -1,6 +1,6 @@
 [project]
 name = "wurzel"
-version = "2.13.0"
+version = "3.0.0"
 description = "Pick, choose and chain your RAG tools in a pythonic way"
 authors = [
     {name ="Thomas Weigel", email="thomas.weigel@telekom.de"},
@@ -140,6 +140,7 @@ wurzel = "wurzel.cli._main:main"
 [project.urls]
 "Release notes" = "https://github.com/telekom/wurzel/releases/"
 Source = "https://github.com/telekom/wurzel"
+
 
 [build-system]
 requires = ["setuptools>=78.1.0", "wheel"]
