@@ -11,6 +11,7 @@ from wurzel.core import NoSettings, TypedStep
 from wurzel.datacontract.common import MarkdownDataContract
 from wurzel.executors.backend import Backend
 from wurzel.executors.backend.backend_dvc import DvcBackend
+from wurzel.executors.runtime_context import WURZEL_RUN_ID_ENV, WURZEL_WORKFLOW_NAME_ENV, WurzelRuntimeContext
 from wurzel.utils import HAS_HERA
 
 if HAS_HERA:
@@ -33,14 +34,14 @@ class TestBackendRunId:
     def test_backend_run_id_reads_from_environment(self, monkeypatch):
         """Test that run_id property reads from WURZEL_RUN_ID environment variable."""
         test_run_id = "test-run-12345"
-        monkeypatch.setenv("WURZEL_RUN_ID", test_run_id)
+        monkeypatch.setenv(WURZEL_RUN_ID_ENV, test_run_id)
 
         backend = Backend()
         assert backend.run_id == test_run_id
 
     def test_backend_run_id_returns_empty_when_not_set(self, monkeypatch):
         """Test that run_id returns empty string when WURZEL_RUN_ID is not set."""
-        monkeypatch.delenv("WURZEL_RUN_ID", raising=False)
+        monkeypatch.delenv(WURZEL_RUN_ID_ENV, raising=False)
 
         backend = Backend()
         assert backend.run_id == ""
@@ -49,11 +50,47 @@ class TestBackendRunId:
         """Test that run_id reflects changes to environment variable."""
         backend = Backend()
 
-        monkeypatch.setenv("WURZEL_RUN_ID", "run-1")
+        monkeypatch.setenv(WURZEL_RUN_ID_ENV, "run-1")
         assert backend.run_id == "run-1"
 
-        monkeypatch.setenv("WURZEL_RUN_ID", "run-2")
+        monkeypatch.setenv(WURZEL_RUN_ID_ENV, "run-2")
         assert backend.run_id == "run-2"
+
+    def test_backend_workflow_name_reads_from_environment(self, monkeypatch):
+        """Test that workflow_name reads from WURZEL_WORKFLOW_NAME."""
+        monkeypatch.setenv(WURZEL_WORKFLOW_NAME_ENV, "test-pipeline")
+
+        backend = Backend()
+        assert backend.workflow_name == "test-pipeline"
+
+    def test_backend_workflow_name_returns_empty_when_not_set(self, monkeypatch):
+        """Test that workflow_name returns empty string when WURZEL_WORKFLOW_NAME is not set."""
+        monkeypatch.delenv(WURZEL_WORKFLOW_NAME_ENV, raising=False)
+
+        backend = Backend()
+        assert backend.workflow_name == ""
+
+
+class TestWurzelRuntimeContext:
+    def test_runtime_context_reads_wurzel_owned_environment(self, monkeypatch):
+        """Test that runtime context reads only Wurzel-owned environment keys."""
+        monkeypatch.setenv(WURZEL_RUN_ID_ENV, "run-123")
+        monkeypatch.setenv(WURZEL_WORKFLOW_NAME_ENV, "pipeline-dev")
+
+        context = WurzelRuntimeContext.from_env()
+
+        assert context.run_id == "run-123"
+        assert context.workflow_name == "pipeline-dev"
+        assert context.metric_labels() == {"run_id": "run-123", "workflow_name": "pipeline-dev"}
+
+    def test_runtime_context_defaults_to_unknown(self, monkeypatch):
+        """Test missing Wurzel runtime context values use unknown."""
+        monkeypatch.delenv(WURZEL_RUN_ID_ENV, raising=False)
+        monkeypatch.delenv(WURZEL_WORKFLOW_NAME_ENV, raising=False)
+
+        context = WurzelRuntimeContext.from_env()
+
+        assert context.metric_labels() == {"run_id": "unknown", "workflow_name": "unknown"}
 
 
 class TestDvcBackendRunId:
@@ -81,6 +118,15 @@ class TestDvcBackendRunId:
         assert "generate_run_id:" in yaml_output
         assert "WURZEL_RUN_ID=" in yaml_output
         assert "dvc-$(date" in yaml_output
+
+    def test_dvc_generated_artifact_includes_wurzel_workflow_name(self):
+        """Test that DVC generated artifacts include backend-neutral workflow name."""
+        backend = DvcBackend(workflow_name="dvc-pipeline")
+        step = DummyStep()
+
+        yaml_output = backend.generate_artifact(step)
+
+        assert "WURZEL_WORKFLOW_NAME=dvc-pipeline" in yaml_output
 
     def test_dvc_run_id_uses_timestamp_fallback(self):
         """Test that DVC uses timestamp-based fallback for run_id."""
@@ -126,6 +172,22 @@ class TestDvcBackendRunId:
             deps = stages[stage_name].get("deps", [])
             assert any(str(dep).endswith(run_id_filename) for dep in deps)
 
+    def test_dvc_from_values_uses_pipeline_name_as_workflow_context(self, tmp_path):
+        """Test that DVC values selection populates the Wurzel workflow context."""
+        values_file = tmp_path / "dvc-values.yaml"
+        values_file.write_text(
+            """
+dvc:
+  selected-pipeline:
+    dataDir: ./selected-data
+""",
+            encoding="utf-8",
+        )
+
+        backend = DvcBackend.from_values([values_file], workflow_name="selected-pipeline")
+
+        assert backend.workflow_context_name == "selected-pipeline"
+
 
 @pytest.mark.skipif(not HAS_HERA, reason="Hera not available")
 class TestArgoBackendRunId:
@@ -153,8 +215,18 @@ class TestArgoBackendRunId:
         assert "WURZEL_RUN_ID" in yaml_output
         assert "{{workflow.uid}}" in yaml_output
 
+    def test_argo_generated_artifact_includes_workflow_name_context(self):
+        """Test that Argo generated artifacts include workflow.name as Wurzel context."""
+        backend = ArgoBackend()
+        step = DummyStep()
+
+        yaml_output = backend.generate_artifact(step)
+
+        assert "WURZEL_WORKFLOW_NAME" in yaml_output
+        assert "{{workflow.name}}" in yaml_output
+
     def test_argo_run_id_in_environment_variables(self):
-        """Test that WURZEL_RUN_ID is set as an environment variable in Argo tasks."""
+        """Test that Wurzel runtime context is set in Argo task environment variables."""
         backend = ArgoBackend()
         step = DummyStep()
 
@@ -163,6 +235,8 @@ class TestArgoBackendRunId:
         # Verify the environment variable is properly set
         assert "name: WURZEL_RUN_ID" in yaml_output or "name: 'WURZEL_RUN_ID'" in yaml_output
         assert "value: '{{workflow.uid}}'" in yaml_output or 'value: "{{workflow.uid}}"' in yaml_output
+        assert "name: WURZEL_WORKFLOW_NAME" in yaml_output or "name: 'WURZEL_WORKFLOW_NAME'" in yaml_output
+        assert "value: '{{workflow.name}}'" in yaml_output or 'value: "{{workflow.name}}"' in yaml_output
 
     def test_argo_run_id_in_all_tasks(self):
         """Test that WURZEL_RUN_ID is set for all tasks in a multi-step pipeline."""
@@ -185,6 +259,8 @@ class TestArgoBackendRunId:
         # Count occurrences of WURZEL_RUN_ID in the output
         run_id_count = yaml_output.count("WURZEL_RUN_ID")
         assert run_id_count >= 2  # Should appear for both tasks
+        workflow_name_count = yaml_output.count("WURZEL_WORKFLOW_NAME")
+        assert workflow_name_count >= 2  # Should appear for both tasks
 
 
 class TestRunIdUseCases:

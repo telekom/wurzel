@@ -377,9 +377,12 @@ container:
   labels should be added by scrape or Pushgateway relabeling.
 
 For Argo workflows, `run_id` is set from `{{workflow.uid}}`. The Prometheus
-middleware derives `workflow_name` from `HOSTNAME`, so no additional values file
-configuration is required for Grafana correlation with pod phase, CPU, memory,
-and resource request metrics.
+middleware reads the backend-neutral Wurzel runtime context. The Argo backend
+maps `{{workflow.uid}}` to `WURZEL_RUN_ID` and `{{workflow.name}}` to
+`WURZEL_WORKFLOW_NAME`, so the middleware does not inspect Kubernetes-specific
+environment variables. Namespace and pod labels can still be added by scrape or
+Pushgateway relabeling for Grafana correlation with pod phase, CPU, memory, and
+resource request metrics.
 
 For more details on middlewares, see the [Middleware Documentation](../executor/middlewares.md).
 

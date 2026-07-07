@@ -18,9 +18,9 @@ class DummyStep:
     __name__ = "DummyStep"
 
 
-def _set_argo_context(monkeypatch) -> None:
-    monkeypatch.setenv("HOSTNAME", "steps-austria-dev-7vthq-wurzel-run-template-simplesplitterstep-1389639537")
+def _set_wurzel_context(monkeypatch) -> None:
     monkeypatch.setenv("WURZEL_RUN_ID", "argo-run-uid")
+    monkeypatch.setenv("WURZEL_WORKFLOW_NAME", "steps-austria-dev")
 
 
 def _call_successfully(middleware: PrometheusMiddleware, reports: list[DummyReport]) -> list[tuple[Any, Any]]:
@@ -60,7 +60,7 @@ def test_prometheus_middleware_exception_path() -> None:
 
 
 def test_prometheus_middleware_emits_observability_labels(monkeypatch) -> None:
-    _set_argo_context(monkeypatch)
+    _set_wurzel_context(monkeypatch)
     report = DummyReport(results=1, inputs=2, time_to_save=0.1, time_to_load=0.2, time_to_execute=0.3)
 
     m = PrometheusMiddleware()
@@ -69,12 +69,12 @@ def test_prometheus_middleware_emits_observability_labels(monkeypatch) -> None:
     sample = _sample_by_labels(m.gauge_step_info, "wurzel_step_info", step_name="DummyStep")
     assert sample.value == 1
     assert sample.labels["run_id"] == "argo-run-uid"
-    assert sample.labels["workflow_name"] == "steps-austria-dev-7vthq"
+    assert sample.labels["workflow_name"] == "steps-austria-dev"
     assert set(sample.labels) == {"step_name", "run_id", "workflow_name"}
 
 
 def test_prometheus_middleware_emits_input_and_result_gauges(monkeypatch) -> None:
-    _set_argo_context(monkeypatch)
+    _set_wurzel_context(monkeypatch)
     reports = [
         DummyReport(results=3, inputs=4, time_to_save=0.1, time_to_load=0.2, time_to_execute=0.3),
         DummyReport(results=2, inputs=5, time_to_save=0.4, time_to_load=0.5, time_to_execute=0.6),
@@ -88,7 +88,7 @@ def test_prometheus_middleware_emits_input_and_result_gauges(monkeypatch) -> Non
 
 
 def test_prometheus_middleware_emits_duration_gauges(monkeypatch) -> None:
-    _set_argo_context(monkeypatch)
+    _set_wurzel_context(monkeypatch)
     reports = [
         DummyReport(results=1, inputs=1, time_to_save=0.1, time_to_load=0.2, time_to_execute=0.3),
         DummyReport(results=1, inputs=1, time_to_save=0.4, time_to_load=0.5, time_to_execute=0.6),
@@ -104,7 +104,7 @@ def test_prometheus_middleware_emits_duration_gauges(monkeypatch) -> None:
 
 
 def test_prometheus_middleware_emits_success_status_and_timestamps(monkeypatch) -> None:
-    _set_argo_context(monkeypatch)
+    _set_wurzel_context(monkeypatch)
     report = DummyReport(results=1, inputs=1, time_to_save=0.1, time_to_load=0.2, time_to_execute=0.3)
 
     m = PrometheusMiddleware()
@@ -120,7 +120,7 @@ def test_prometheus_middleware_emits_success_status_and_timestamps(monkeypatch) 
 
 
 def test_prometheus_middleware_emits_failed_status_and_timestamp(monkeypatch) -> None:
-    _set_argo_context(monkeypatch)
+    _set_wurzel_context(monkeypatch)
 
     def call_next(step_cls: type, inputs: set | None, output_dir: Any | None):
         raise RuntimeError("intentional failure")
@@ -139,7 +139,7 @@ def test_prometheus_middleware_emits_failed_status_and_timestamp(monkeypatch) ->
 
 
 def test_prometheus_middleware_emits_datacontract_metrics(monkeypatch) -> None:
-    _set_argo_context(monkeypatch)
+    _set_wurzel_context(monkeypatch)
     report = DummyReport(
         results=1,
         inputs=1,
@@ -160,13 +160,13 @@ def test_prometheus_middleware_emits_datacontract_metrics(monkeypatch) -> None:
     )
     assert sample.value == 5.0
     assert sample.labels["run_id"] == "argo-run-uid"
-    assert sample.labels["workflow_name"] == "steps-austria-dev-7vthq"
+    assert sample.labels["workflow_name"] == "steps-austria-dev"
     assert set(sample.labels) == {"step_name", "run_id", "workflow_name", "metric_name"}
 
 
 def test_prometheus_middleware_context_defaults_to_unknown(monkeypatch) -> None:
-    monkeypatch.delenv("HOSTNAME", raising=False)
     monkeypatch.delenv("WURZEL_RUN_ID", raising=False)
+    monkeypatch.delenv("WURZEL_WORKFLOW_NAME", raising=False)
     report = DummyReport(results=1, inputs=1, time_to_save=0.1, time_to_load=0.2, time_to_execute=0.3)
 
     m = PrometheusMiddleware()

@@ -13,6 +13,7 @@ from typing import Any
 from prometheus_client import REGISTRY, CollectorRegistry, Gauge, push_to_gateway
 
 from wurzel.core.typed_step import TypedStep
+from wurzel.executors.runtime_context import WurzelRuntimeContext
 from wurzel.path import PathToFolderWithBaseModels
 
 from ..base import BaseMiddleware, ExecuteStepCallable
@@ -21,7 +22,6 @@ from .settings import PrometheusMiddlewareSettings
 log = getLogger(__name__)
 
 CONTEXT_LABELS = ("step_name", "run_id", "workflow_name")
-ARGO_TEMPLATE_SEPARATOR = "-wurzel-run-template-"
 
 
 @dataclass
@@ -44,8 +44,8 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
 
     All metrics include three labels:
     - step_name: The name of the step being executed
-    - run_id: Unique identifier for the pipeline run (from WURZEL_RUN_ID env var)
-    - workflow_name: Argo workflow name derived from the pod name
+    - run_id: Unique identifier for the pipeline run from the Wurzel runtime context
+    - workflow_name: Workflow name from the Wurzel runtime context
 
     The run_id label allows grouping and filtering metrics by pipeline execution,
     making it easy to track all steps from a single run together.
@@ -115,20 +115,8 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
             registry=self.registry,
         )
 
-    @staticmethod
-    def _derive_workflow_name(hostname: str) -> str:
-        if ARGO_TEMPLATE_SEPARATOR not in hostname:
-            return "unknown"
-        workflow_name = hostname.split(ARGO_TEMPLATE_SEPARATOR, maxsplit=1)[0]
-        return workflow_name or "unknown"
-
     def _context_labels(self, step_name: str) -> dict[str, str]:
-        hostname = os.environ.get("HOSTNAME") or "unknown"
-        return {
-            "step_name": step_name,
-            "run_id": os.environ.get("WURZEL_RUN_ID", "unknown"),
-            "workflow_name": self._derive_workflow_name(hostname),
-        }
+        return {"step_name": step_name, **WurzelRuntimeContext.from_env().metric_labels()}
 
     def _set_step_status(self, context_labels: dict[str, str], status: str) -> None:
         for known_status in ("started", "succeeded", "failed"):

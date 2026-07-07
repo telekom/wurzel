@@ -137,12 +137,14 @@ the Prometheus scrape or Pushgateway relabeling configuration.
 - `wurzel_step_duration_seconds` — Step duration by `phase` (`load`, `execute`, `save`, `total`).
 - `wurzel_step_status` — Current step status by `status` (`started`, `succeeded`, `failed`).
 - `wurzel_step_timestamp_seconds` — Step lifecycle timestamps by `event` (`started`, `completed`, `failed`).
-- `wurzel_step_info` — Static value of `1` with the correlation labels.
+- `wurzel_step_info` — Static value of `1` with the Wurzel runtime context labels.
 - `wurzel_step_datacontract_metric` — Data contract metrics by `metric_name`.
 
-For Argo runs, the middleware derives `workflow_name` from the `HOSTNAME` prefix
-before `-wurzel-run-template-`. Local or non-Kubernetes runs use `unknown` for
-unavailable context labels.
+The middleware reads backend-neutral Wurzel runtime context only:
+`WURZEL_RUN_ID` and `WURZEL_WORKFLOW_NAME`. Backends are responsible for mapping
+their own runtime information into these Wurzel-owned variables. The middleware
+does not inspect backend-specific environment variables such as Kubernetes pod
+metadata. Local runs use `unknown` for unavailable context labels.
 
 For DVC, export the env vars before `dvc repro`. For Argo, add them to
 `container.env` in your `values.yaml`. See the
