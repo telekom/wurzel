@@ -51,7 +51,7 @@ repos:
     rev: v3.3.7
     hooks:
       - id: pylint
-        entry: .venv/bin/pylint
+        entry: pylint
         files: ^wurzel/
         language: system
         args: ["--enable","spelling"]

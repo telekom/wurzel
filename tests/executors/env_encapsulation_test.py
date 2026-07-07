@@ -2,7 +2,6 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 
-from typing import Optional
 
 import pytest
 from pydantic import SecretStr, ValidationError
@@ -41,7 +40,7 @@ class MySecretSettings(Settings):
 class MyOptionalSecretSettings(Settings):
     """Settings class with Optional[SecretStr] field for testing."""
 
-    API_KEY: Optional[SecretStr] = None
+    API_KEY: SecretStr | None = None
     PUBLIC_KEY: str = "default-public"
 
 

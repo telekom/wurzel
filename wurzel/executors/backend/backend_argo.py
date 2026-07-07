@@ -38,7 +38,7 @@ from hera.workflows.models import (
     SecurityContext,
     VolumeMount,
 )
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from wurzel.cli import generate_cli_call
 from wurzel.core import TypedStep
@@ -180,6 +180,22 @@ class WorkflowConfig(BaseModel):
     nodeSelector: dict[str, str] = Field(default_factory=lambda: {"kubernetes.io/arch": "amd64"})
     podSpecPatch: str | None = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_schedule(cls, data: Any) -> Any:
+        """Accept legacy singular schedule values and render them as schedules."""
+        if not isinstance(data, dict) or "schedule" not in data or "schedules" in data:
+            return data
+        normalized = dict(data)
+        schedule = normalized.pop("schedule")
+        normalized["schedules"] = schedule if isinstance(schedule, list) or schedule is None else [schedule]
+        return normalized
+
+    @property
+    def schedule(self) -> str | None:
+        """Return the first configured schedule for legacy callers."""
+        return self.schedules[0] if self.schedules else None
+
 
 class TemplateValues(BaseModel):
     """Helm-like values file parsed into strongly typed configuration."""
@@ -229,11 +245,20 @@ class ArgoBackend(Backend, backend_name="argo"):
         values: TemplateValues | None = None,
         workflow_name: str | None = None,
         executor: type[BaseStepExecutor] | None = None,
+        dont_encapsulate: bool = False,
+        middlewares: list[str] | list[BaseMiddleware] | None = None,
+        load_middlewares_from_env: bool = True,
     ) -> None:
-        super().__init__()
         self.values = values or TemplateValues()
         self.config = config or select_workflow(self.values, workflow_name)
-        self.executor: type[BaseStepExecutor] = executor if executor is not None else default_argo_step_executor(self.config)
+        selected_executor = executor if executor is not None else default_argo_step_executor(self.config)
+        super().__init__(
+            executor=selected_executor,
+            dont_encapsulate=dont_encapsulate,
+            middlewares=middlewares,
+            load_middlewares_from_env=load_middlewares_from_env,
+        )
+        self.executor: type[BaseStepExecutor] = selected_executor
         self._volumes, self._volume_mounts = self._build_volumes()
 
     @classmethod
@@ -417,20 +442,19 @@ class ArgoBackend(Backend, backend_name="argo"):
             >>> assert workflow.kind == "Workflow"
 
         """
-        workflow_kwargs = {
-            "name": self.config.name,
-            "namespace": self.config.namespace,
-            "entrypoint": self.config.entrypoint,
-            "annotations": self.config.annotations,
-            "service_account_name": self.config.serviceAccountName,
-            "volumes": self._volumes or None,
-            "security_context": self._build_pod_security_context(),
-            "node_selector": self.config.nodeSelector or None,
-            "pod_spec_patch": self._build_pod_spec_patch(),
-        }
-
         if self.config.schedules:
-            context = CronWorkflow(schedules=self.config.schedules, **workflow_kwargs)
+            context = CronWorkflow(
+                schedules=self.config.schedules,
+                name=self.config.name,
+                namespace=self.config.namespace,
+                entrypoint=self.config.entrypoint,
+                annotations=self.config.annotations,
+                service_account_name=self.config.serviceAccountName,
+                volumes=self._volumes or None,
+                security_context=self._build_pod_security_context(),
+                node_selector=self.config.nodeSelector or None,
+                pod_spec_patch=self._build_pod_spec_patch(),
+            )
         else:
             context = Workflow(
                 name=self.config.name,

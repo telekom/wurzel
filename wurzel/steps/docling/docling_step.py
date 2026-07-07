@@ -117,7 +117,7 @@ class DoclingStep(TypedStep[DoclingSettings, None, list[MarkdownDataContract]]):
 
         """
         urls = self.settings.URLS
-        contracts = []
+        contracts: list[MarkdownDataContract] = []
 
         for url in urls:
             try:

@@ -38,6 +38,8 @@ class DecagonKnowledgeBaseStep(TypedStep[DecagonSettings, list[MarkdownDataContr
         super().__init__()
         self._session: requests.Session | None = None
         if self.settings.PUSH_ENABLED:
+            if self.settings.API_KEY is None:
+                raise ValueError("API_KEY is required when PUSH_ENABLED is True")
             self._session = requests.Session()
             self._session.headers.update(
                 {
@@ -48,6 +50,8 @@ class DecagonKnowledgeBaseStep(TypedStep[DecagonSettings, list[MarkdownDataContr
 
     def _post(self, endpoint: str, payload: dict) -> dict[str, Any]:
         """Make a POST request to the Decagon API."""
+        if self._session is None:
+            raise StepFailed("Decagon session is not initialized")
         response = self._session.post(
             f"{self.settings.API_URL}{endpoint}",
             json=payload,

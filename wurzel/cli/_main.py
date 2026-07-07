@@ -67,6 +67,8 @@ def executer_callback(_ctx: typer.Context | None, _param: typer.CallbackParam | 
 
     if value is None:
         return None
+
+    # Check for executors
     if "BASESTEPEXECUTOR".startswith(value.upper()):
         return BaseStepExecutor
 
@@ -645,9 +647,9 @@ def generate(  # pylint: disable=too-many-positional-arguments
         typer.Option(
             "-e",
             "--executor",
-            help="Step executor class for generated commands (overrides defaults and PROMETHEUS_GATEWAY for Argo)",
+            help="Step executor class for generated commands",
             callback=executer_callback,
-            autocompletion=lambda: ["BaseStepExecutor", "PrometheusStepExecutor"],
+            autocompletion=lambda: ["BaseStepExecutor"],
         ),
     ] = None,
     output: Annotated[

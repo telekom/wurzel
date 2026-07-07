@@ -6,7 +6,7 @@
 
 from pydantic import Field, SecretStr, computed_field, model_validator
 
-from wurzel.step.settings import Settings
+from wurzel.core.settings import Settings
 
 
 class S3MarkdownStepSettings(Settings):

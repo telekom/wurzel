@@ -64,6 +64,37 @@ def split_markdown_batch(splitter: SemanticSplitter, markdowns: list[MarkdownDat
     return rows
 
 
+def build_semantic_splitter(settings: SplitterSettings) -> SemanticSplitter:
+    """Create a semantic splitter from step settings."""
+    return SemanticSplitter(
+        token_limit=settings.TOKEN_COUNT_MAX,
+        token_limit_buffer=settings.TOKEN_COUNT_BUFFER,
+        token_limit_min=settings.TOKEN_COUNT_MIN,
+        tokenizer_model=settings.TOKENIZER_MODEL,
+        sentence_splitter_model=settings.SENTENCE_SPLITTER_MODEL,
+    )
+
+
+def split_markdown_batch(splitter: SemanticSplitter, markdowns: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
+    """Split one markdown batch using a semantic splitter."""
+    rows: list[MarkdownDataContract] = []
+    skipped = 0
+    for md_data_contract in markdowns:
+        try:
+            rows.extend(splitter.split_markdown_document(md_data_contract))
+        except MarkdownException as err:
+            log.warning(
+                "skipped dokument ",
+                extra={"reason": err.__class__.__name__, "doc": md_data_contract},
+            )
+            skipped += 1
+    if skipped == len(markdowns):
+        raise SplittException("all Documents got skipped during splitting")
+    if skipped:
+        log.warning(f"{(skipped / len(markdowns)) * 100}% got skipped")
+    return rows
+
+
 class SimpleSplitterStep(TypedStep[SplitterSettings, list[MarkdownDataContract], list[MarkdownDataContract]]):
     """SimpleSplitterStep to split Markdown Documents rundimentory in medium size chunks."""
 
