@@ -128,6 +128,12 @@ def reset_prometheus_singleton():
                 "step_hist_save",
                 "step_hist_load",
                 "step_hist_execute",
+                "wurzel_step_input_items",
+                "wurzel_step_result_items",
+                "wurzel_step_duration_seconds",
+                "wurzel_step_status",
+                "wurzel_step_timestamp_seconds",
+                "wurzel_step_info",
             ]:
                 collectors_to_remove.append(collector)
 

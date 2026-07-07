@@ -7,6 +7,7 @@ from typing import Any
 
 import pytest
 
+import wurzel.executors.middlewares.prometheus.prometheus as prometheus_module
 from wurzel.executors.middlewares.prometheus import PrometheusMiddleware
 
 
@@ -16,6 +17,32 @@ class DummyReport(SimpleNamespace):
 
 class DummyStep:
     __name__ = "DummyStep"
+
+
+def _set_argo_context(monkeypatch, tmp_path) -> None:
+    namespace_file = tmp_path / "namespace"
+    namespace_file.write_text("steps-at-dev\n", encoding="utf-8")
+    monkeypatch.setattr(prometheus_module, "KUBERNETES_NAMESPACE_PATH", namespace_file)
+    monkeypatch.setenv("HOSTNAME", "steps-austria-dev-7vthq-wurzel-run-template-simplesplitterstep-1389639537")
+    monkeypatch.setenv("WURZEL_RUN_ID", "argo-run-uid")
+
+
+def _call_successfully(middleware: PrometheusMiddleware, reports: list[DummyReport]) -> None:
+    def call_next(step_cls: type, inputs: set | None, output_dir: Any | None):
+        return [(None, report) for report in reports]
+
+    middleware(call_next, DummyStep, set(), None)
+
+
+def _metric_samples(collector, sample_name: str):
+    return [sample for sample in list(collector.collect())[0].samples if sample.name == sample_name]
+
+
+def _sample_by_labels(collector, sample_name: str, **labels: str):
+    for sample in _metric_samples(collector, sample_name):
+        if all(sample.labels.get(name) == value for name, value in labels.items()):
+            return sample
+    raise AssertionError(f"No sample {sample_name} found with labels {labels}")
 
 
 def test_prometheus_middleware_happy_path() -> None:
@@ -196,3 +223,99 @@ def test_prometheus_middleware_datacontract_metrics(monkeypatch) -> None:
     ]
     assert len(matches) == 1
     assert matches[0].value == 5.0
+
+
+def test_prometheus_middleware_emits_observability_labels(monkeypatch, tmp_path) -> None:
+    _set_argo_context(monkeypatch, tmp_path)
+    report = DummyReport(results=1, inputs=2, time_to_save=0.1, time_to_load=0.2, time_to_execute=0.3)
+
+    m = PrometheusMiddleware()
+    _call_successfully(m, [report])
+
+    sample = _sample_by_labels(m.gauge_step_info, "wurzel_step_info", step_name="DummyStep")
+    assert sample.value == 1
+    assert sample.labels["run_id"] == "argo-run-uid"
+    assert sample.labels["workflow_name"] == "steps-austria-dev-7vthq"
+    assert sample.labels["workflow_namespace"] == "steps-at-dev"
+    assert sample.labels["step_pod"] == "steps-austria-dev-7vthq-wurzel-run-template-simplesplitterstep-1389639537"
+
+
+def test_prometheus_middleware_emits_input_and_result_gauges(monkeypatch, tmp_path) -> None:
+    _set_argo_context(monkeypatch, tmp_path)
+    reports = [
+        DummyReport(results=3, inputs=4, time_to_save=0.1, time_to_load=0.2, time_to_execute=0.3),
+        DummyReport(results=2, inputs=5, time_to_save=0.4, time_to_load=0.5, time_to_execute=0.6),
+    ]
+
+    m = PrometheusMiddleware()
+    _call_successfully(m, reports)
+
+    assert _sample_by_labels(m.gauge_step_input_items, "wurzel_step_input_items", step_name="DummyStep").value == 9
+    assert _sample_by_labels(m.gauge_step_result_items, "wurzel_step_result_items", step_name="DummyStep").value == 5
+
+
+def test_prometheus_middleware_emits_duration_gauges(monkeypatch, tmp_path) -> None:
+    _set_argo_context(monkeypatch, tmp_path)
+    reports = [
+        DummyReport(results=1, inputs=1, time_to_save=0.1, time_to_load=0.2, time_to_execute=0.3),
+        DummyReport(results=1, inputs=1, time_to_save=0.4, time_to_load=0.5, time_to_execute=0.6),
+    ]
+
+    m = PrometheusMiddleware()
+    _call_successfully(m, reports)
+
+    assert _sample_by_labels(m.gauge_step_duration_seconds, "wurzel_step_duration_seconds", phase="load").value == pytest.approx(0.7)
+    assert _sample_by_labels(m.gauge_step_duration_seconds, "wurzel_step_duration_seconds", phase="execute").value == pytest.approx(0.9)
+    assert _sample_by_labels(m.gauge_step_duration_seconds, "wurzel_step_duration_seconds", phase="save").value == pytest.approx(0.5)
+    assert _sample_by_labels(m.gauge_step_duration_seconds, "wurzel_step_duration_seconds", phase="total").value == pytest.approx(2.1)
+
+
+def test_prometheus_middleware_emits_success_status_and_timestamps(monkeypatch, tmp_path) -> None:
+    _set_argo_context(monkeypatch, tmp_path)
+    report = DummyReport(results=1, inputs=1, time_to_save=0.1, time_to_load=0.2, time_to_execute=0.3)
+
+    m = PrometheusMiddleware()
+    _call_successfully(m, [report])
+
+    assert _sample_by_labels(m.gauge_step_status, "wurzel_step_status", status="started").value == 0
+    assert _sample_by_labels(m.gauge_step_status, "wurzel_step_status", status="succeeded").value == 1
+    assert _sample_by_labels(m.gauge_step_status, "wurzel_step_status", status="failed").value == 0
+    started = _sample_by_labels(m.gauge_step_timestamp_seconds, "wurzel_step_timestamp_seconds", event="started").value
+    completed = _sample_by_labels(m.gauge_step_timestamp_seconds, "wurzel_step_timestamp_seconds", event="completed").value
+    assert started > 0
+    assert completed >= started
+
+
+def test_prometheus_middleware_emits_failed_status_and_timestamp(monkeypatch, tmp_path) -> None:
+    _set_argo_context(monkeypatch, tmp_path)
+
+    def call_next(step_cls: type, inputs: set | None, output_dir: Any | None):
+        raise RuntimeError("intentional failure")
+
+    m = PrometheusMiddleware()
+    with pytest.raises(RuntimeError):
+        m(call_next, DummyStep, set(), None)
+
+    assert _sample_by_labels(m.gauge_step_status, "wurzel_step_status", status="started").value == 0
+    assert _sample_by_labels(m.gauge_step_status, "wurzel_step_status", status="succeeded").value == 0
+    assert _sample_by_labels(m.gauge_step_status, "wurzel_step_status", status="failed").value == 1
+    started = _sample_by_labels(m.gauge_step_timestamp_seconds, "wurzel_step_timestamp_seconds", event="started").value
+    failed = _sample_by_labels(m.gauge_step_timestamp_seconds, "wurzel_step_timestamp_seconds", event="failed").value
+    assert started > 0
+    assert failed >= started
+
+
+def test_prometheus_middleware_observability_context_defaults_to_unknown(monkeypatch, tmp_path) -> None:
+    monkeypatch.delenv("HOSTNAME", raising=False)
+    monkeypatch.delenv("WURZEL_RUN_ID", raising=False)
+    monkeypatch.setattr(prometheus_module, "KUBERNETES_NAMESPACE_PATH", tmp_path / "missing-namespace")
+    report = DummyReport(results=1, inputs=1, time_to_save=0.1, time_to_load=0.2, time_to_execute=0.3)
+
+    m = PrometheusMiddleware()
+    _call_successfully(m, [report])
+
+    sample = _sample_by_labels(m.gauge_step_info, "wurzel_step_info", step_name="DummyStep")
+    assert sample.labels["run_id"] == "unknown"
+    assert sample.labels["workflow_name"] == "unknown"
+    assert sample.labels["workflow_namespace"] == "unknown"
+    assert sample.labels["step_pod"] == "unknown"

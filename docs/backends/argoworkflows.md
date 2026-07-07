@@ -366,9 +366,23 @@ container:
 
 **Metrics Collected:**
 
-- `step_duration_seconds` - Histogram of step execution duration
-- `step_executions_total` - Counter of step executions
-- Labels: `step_name`, `run_id` (from `WURZEL_RUN_ID`)
+- Compatibility counters and histograms:
+  `steps_started`, `steps_failed`, `step_inputs`, `step_results`,
+  `step_hist_load`, `step_hist_execute`, `step_hist_save`, and
+  `step_datacontract_metric`.
+- Observability gauges:
+  `wurzel_step_input_items`, `wurzel_step_result_items`,
+  `wurzel_step_duration_seconds`, `wurzel_step_status`,
+  `wurzel_step_timestamp_seconds`, and `wurzel_step_info`.
+- Compatibility labels: `step_name`, `run_id` from `WURZEL_RUN_ID`.
+- Observability labels:
+  `step_name`, `run_id`, `workflow_name`, `workflow_namespace`, and `step_pod`.
+  The Prometheus Pushgateway adds the pipeline `job` label.
+
+For Argo workflows, `run_id` is set from `{{workflow.uid}}`. The Prometheus
+middleware derives the workflow pod and namespace context from the running
+Kubernetes pod, so no additional values file configuration is required for
+Grafana correlation with pod phase, CPU, memory, and resource request metrics.
 
 For more details on middlewares, see the [Middleware Documentation](../executor/middlewares.md).
 
