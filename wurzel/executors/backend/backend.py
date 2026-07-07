@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from wurzel.core.typed_step import TypedStep
 from wurzel.executors.base_executor import BaseStepExecutor
-from wurzel.executors.runtime_context import WURZEL_RUN_ID_ENV, WURZEL_WORKFLOW_NAME_ENV
+from wurzel.executors.runtime_context import WURZEL_RUN_ID_ENV
 
 if TYPE_CHECKING:  # pragma: no cover - only used for type checking
     from wurzel.executors.middlewares.base import BaseMiddleware
@@ -27,10 +27,9 @@ class Backend(BaseStepExecutor):
     framework, while also inheriting all step execution functionality from BaseStepExecutor.
 
     Backend implementations must set Wurzel-owned runtime context in their generated
-    artifacts. ``WURZEL_RUN_ID`` provides a unique identifier for each pipeline run,
-    and ``WURZEL_WORKFLOW_NAME`` provides the backend-neutral workflow or pipeline name.
-    These values can be used for Prometheus labels, logging, and other runtime
-    identification needs.
+    artifacts. ``WURZEL_RUN_ID`` provides a unique identifier for each pipeline run
+    that can be used for Prometheus labels, logging, and other runtime identification
+    needs.
 
     Subclasses register themselves automatically by passing ``backend_name`` as a class
     keyword argument. Once registered, ``Backend.create("name", raw_config)`` will
@@ -149,19 +148,6 @@ class Backend(BaseStepExecutor):
 
         """
         return os.environ.get(WURZEL_RUN_ID_ENV, "")
-
-    @property
-    def workflow_name(self) -> str:
-        """Get the backend-neutral workflow or pipeline name for the current execution.
-
-        This value is set by the backend via the WURZEL_WORKFLOW_NAME environment
-        variable.
-
-        Returns:
-            str: The workflow or pipeline name, or empty string if not set.
-
-        """
-        return os.environ.get(WURZEL_WORKFLOW_NAME_ENV, "")
 
     @classmethod
     def is_available(cls) -> bool:

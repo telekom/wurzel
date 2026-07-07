@@ -128,9 +128,9 @@ Settings use the `PROMETHEUS__` prefix (pydantic-settings applies it automatical
 
 These gauges are intended for dashboards that correlate Wurzel step results with
 Argo workflow pods and Kubernetes resource metrics. They all include
-`step_name`, `run_id`, and `workflow_name` labels. The Prometheus Pushgateway
-supplies the pipeline `job` label. Namespace and pod labels should be added by
-the Prometheus scrape or Pushgateway relabeling configuration.
+`step_name` and `run_id` labels. The Prometheus Pushgateway supplies the
+pipeline `job` label. Namespace, pod, and workflow labels should be added by the
+Prometheus scrape or Pushgateway relabeling configuration.
 
 - `wurzel_step_input_items` — Total input items processed by the step.
 - `wurzel_step_result_items` — Total result items produced by the step.
@@ -141,10 +141,10 @@ the Prometheus scrape or Pushgateway relabeling configuration.
 - `wurzel_step_datacontract_metric` — Data contract metrics by `metric_name`.
 
 The middleware reads backend-neutral Wurzel runtime context only:
-`WURZEL_RUN_ID` and `WURZEL_WORKFLOW_NAME`. Backends are responsible for mapping
-their own runtime information into these Wurzel-owned variables. The middleware
-does not inspect backend-specific environment variables such as Kubernetes pod
-metadata. Local runs use `unknown` for unavailable context labels.
+`WURZEL_RUN_ID`. Backends are responsible for mapping their own runtime
+information into this Wurzel-owned variable. The middleware does not inspect
+backend-specific environment variables such as Kubernetes pod metadata. Local
+runs use `unknown` when the run id is unavailable.
 
 For DVC, export the env vars before `dvc repro`. For Argo, add them to
 `container.env` in your `values.yaml`. See the

@@ -19,7 +19,7 @@ from wurzel.core import TypedStep
 from wurzel.executors.backend.backend import Backend
 from wurzel.executors.backend.values import load_values
 from wurzel.executors.base_executor import BaseStepExecutor
-from wurzel.executors.runtime_context import WURZEL_RUN_ID_ENV, WURZEL_WORKFLOW_NAME_ENV
+from wurzel.executors.runtime_context import WURZEL_RUN_ID_ENV
 
 if TYPE_CHECKING:
     from wurzel.executors.middlewares.base import BaseMiddleware
@@ -87,15 +87,6 @@ def select_pipeline(values: DvcTemplateValues, pipeline_name: str | None) -> Dvc
     return DvcConfig()
 
 
-def select_pipeline_context_name(values: DvcTemplateValues, pipeline_name: str | None) -> str:
-    """Select the backend-neutral context name for a DVC pipeline."""
-    if pipeline_name:
-        return pipeline_name
-    if values.dvc:
-        return next(iter(values.dvc))
-    return "dvc"
-
-
 class DvcBackend(Backend, backend_name="dvc"):
     """DVC-specific backend implementation for the Wurzel abstraction layer.
 
@@ -136,7 +127,6 @@ class DvcBackend(Backend, backend_name="dvc"):
         dont_encapsulate: bool = False,
         middlewares: list[str] | list["BaseMiddleware"] | None = None,
         load_middlewares_from_env: bool = False,
-        workflow_name: str = "dvc",
     ) -> None:
         """Initialize DvcBackend.
 
@@ -159,7 +149,6 @@ class DvcBackend(Backend, backend_name="dvc"):
             dataDir=self.settings.DATA_DIR,
             encapsulateEnv=self.settings.ENCAPSULATE_ENV,
         )
-        self.workflow_context_name = workflow_name or "dvc"
 
     @classmethod
     def from_values(
@@ -172,10 +161,9 @@ class DvcBackend(Backend, backend_name="dvc"):
         """Instantiate the backend from values files."""
         values = load_values(files, DvcTemplateValues)
         config = select_pipeline(values, workflow_name)
-        workflow_context_name = select_pipeline_context_name(values, workflow_name)
         if executor is not None:
-            return cls(config=config, executor=executor, workflow_name=workflow_context_name)
-        return cls(config=config, workflow_name=workflow_context_name)
+            return cls(config=config, executor=executor)
+        return cls(config=config)
 
     def _write_env_file(self, env_vars: dict[str, str]) -> Path:
         """Write env vars to {dataDir}/.wurzel_env as shell exports and return the path."""
@@ -236,7 +224,6 @@ class DvcBackend(Backend, backend_name="dvc"):
             deps_with_run_id = [*deps_with_run_id, env_file]
         cmd = (
             f'{env_source}export {WURZEL_RUN_ID_ENV}="$(cat {shlex.quote(str(run_id_output))})" '
-            f"&& export {WURZEL_WORKFLOW_NAME_ENV}={shlex.quote(self.workflow_context_name)} "
             f'&& echo "${WURZEL_RUN_ID_ENV}" &&  {cli_call}'
         )
 

@@ -20,7 +20,6 @@ class DummyStep:
 
 def _set_wurzel_context(monkeypatch) -> None:
     monkeypatch.setenv("WURZEL_RUN_ID", "argo-run-uid")
-    monkeypatch.setenv("WURZEL_WORKFLOW_NAME", "steps-austria-dev")
 
 
 def _call_successfully(middleware: PrometheusMiddleware, reports: list[DummyReport]) -> list[tuple[Any, Any]]:
@@ -69,8 +68,7 @@ def test_prometheus_middleware_emits_observability_labels(monkeypatch) -> None:
     sample = _sample_by_labels(m.gauge_step_info, "wurzel_step_info", step_name="DummyStep")
     assert sample.value == 1
     assert sample.labels["run_id"] == "argo-run-uid"
-    assert sample.labels["workflow_name"] == "steps-austria-dev"
-    assert set(sample.labels) == {"step_name", "run_id", "workflow_name"}
+    assert set(sample.labels) == {"step_name", "run_id"}
 
 
 def test_prometheus_middleware_emits_input_and_result_gauges(monkeypatch) -> None:
@@ -160,13 +158,11 @@ def test_prometheus_middleware_emits_datacontract_metrics(monkeypatch) -> None:
     )
     assert sample.value == 5.0
     assert sample.labels["run_id"] == "argo-run-uid"
-    assert sample.labels["workflow_name"] == "steps-austria-dev"
-    assert set(sample.labels) == {"step_name", "run_id", "workflow_name", "metric_name"}
+    assert set(sample.labels) == {"step_name", "run_id", "metric_name"}
 
 
 def test_prometheus_middleware_context_defaults_to_unknown(monkeypatch) -> None:
     monkeypatch.delenv("WURZEL_RUN_ID", raising=False)
-    monkeypatch.delenv("WURZEL_WORKFLOW_NAME", raising=False)
     report = DummyReport(results=1, inputs=1, time_to_save=0.1, time_to_load=0.2, time_to_execute=0.3)
 
     m = PrometheusMiddleware()
@@ -174,5 +170,4 @@ def test_prometheus_middleware_context_defaults_to_unknown(monkeypatch) -> None:
 
     sample = _sample_by_labels(m.gauge_step_info, "wurzel_step_info", step_name="DummyStep")
     assert sample.labels["run_id"] == "unknown"
-    assert sample.labels["workflow_name"] == "unknown"
-    assert set(sample.labels) == {"step_name", "run_id", "workflow_name"}
+    assert set(sample.labels) == {"step_name", "run_id"}

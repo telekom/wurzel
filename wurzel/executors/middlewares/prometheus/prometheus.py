@@ -21,7 +21,7 @@ from .settings import PrometheusMiddlewareSettings
 
 log = getLogger(__name__)
 
-CONTEXT_LABELS = ("step_name", "run_id", "workflow_name")
+CONTEXT_LABELS = ("step_name", "run_id")
 
 
 @dataclass
@@ -42,10 +42,9 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
     This middleware collects metrics about step execution including:
     - Gauges for stable per-step input, output, status, timestamp, and duration values
 
-    All metrics include three labels:
+    All metrics include two labels:
     - step_name: The name of the step being executed
     - run_id: Unique identifier for the pipeline run from the Wurzel runtime context
-    - workflow_name: Workflow name from the Wurzel runtime context
 
     The run_id label allows grouping and filtering metrics by pipeline execution,
     making it easy to track all steps from a single run together.

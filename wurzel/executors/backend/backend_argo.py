@@ -46,7 +46,7 @@ from wurzel.core import TypedStep
 from wurzel.executors.backend.backend import Backend
 from wurzel.executors.backend.values import load_values
 from wurzel.executors.base_executor import BaseStepExecutor
-from wurzel.executors.runtime_context import WURZEL_RUN_ID_ENV, WURZEL_WORKFLOW_NAME_ENV
+from wurzel.executors.runtime_context import WURZEL_RUN_ID_ENV
 
 if TYPE_CHECKING:
     from wurzel.executors.middlewares.base import BaseMiddleware
@@ -544,7 +544,6 @@ class ArgoBackend(Backend, backend_name="argo"):
 
         # Add Wurzel runtime context for tracking pipeline runs.
         env_var_list.append(EnvVar(name=WURZEL_RUN_ID_ENV, value="{{workflow.uid}}"))
-        env_var_list.append(EnvVar(name=WURZEL_WORKFLOW_NAME_ENV, value="{{workflow.name}}"))
 
         # Add HF_HOME env var if tokenizer cache is enabled
         tokenizer_cache = self.config.container.tokenizerCache
