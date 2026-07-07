@@ -70,8 +70,7 @@ def test_prometheus_middleware_emits_observability_labels(monkeypatch) -> None:
     assert sample.value == 1
     assert sample.labels["run_id"] == "argo-run-uid"
     assert sample.labels["workflow_name"] == "steps-austria-dev-7vthq"
-    assert sample.labels["step_pod"] == "steps-austria-dev-7vthq-wurzel-run-template-simplesplitterstep-1389639537"
-    assert "workflow_namespace" not in sample.labels
+    assert set(sample.labels) == {"step_name", "run_id", "workflow_name"}
 
 
 def test_prometheus_middleware_emits_input_and_result_gauges(monkeypatch) -> None:
@@ -162,7 +161,7 @@ def test_prometheus_middleware_emits_datacontract_metrics(monkeypatch) -> None:
     assert sample.value == 5.0
     assert sample.labels["run_id"] == "argo-run-uid"
     assert sample.labels["workflow_name"] == "steps-austria-dev-7vthq"
-    assert sample.labels["step_pod"] == "steps-austria-dev-7vthq-wurzel-run-template-simplesplitterstep-1389639537"
+    assert set(sample.labels) == {"step_name", "run_id", "workflow_name", "metric_name"}
 
 
 def test_prometheus_middleware_context_defaults_to_unknown(monkeypatch) -> None:
@@ -176,4 +175,4 @@ def test_prometheus_middleware_context_defaults_to_unknown(monkeypatch) -> None:
     sample = _sample_by_labels(m.gauge_step_info, "wurzel_step_info", step_name="DummyStep")
     assert sample.labels["run_id"] == "unknown"
     assert sample.labels["workflow_name"] == "unknown"
-    assert sample.labels["step_pod"] == "unknown"
+    assert set(sample.labels) == {"step_name", "run_id", "workflow_name"}

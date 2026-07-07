@@ -20,7 +20,7 @@ from .settings import PrometheusMiddlewareSettings
 
 log = getLogger(__name__)
 
-CONTEXT_LABELS = ("step_name", "run_id", "workflow_name", "step_pod")
+CONTEXT_LABELS = ("step_name", "run_id", "workflow_name")
 ARGO_TEMPLATE_SEPARATOR = "-wurzel-run-template-"
 
 
@@ -42,11 +42,10 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
     This middleware collects metrics about step execution including:
     - Gauges for stable per-step input, output, status, timestamp, and duration values
 
-    All metrics include four labels:
+    All metrics include three labels:
     - step_name: The name of the step being executed
     - run_id: Unique identifier for the pipeline run (from WURZEL_RUN_ID env var)
     - workflow_name: Argo workflow name derived from the pod name
-    - step_pod: Kubernetes pod name from HOSTNAME
 
     The run_id label allows grouping and filtering metrics by pipeline execution,
     making it easy to track all steps from a single run together.
@@ -117,19 +116,18 @@ class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance
         )
 
     @staticmethod
-    def _derive_workflow_name(step_pod: str) -> str:
-        if ARGO_TEMPLATE_SEPARATOR not in step_pod:
+    def _derive_workflow_name(hostname: str) -> str:
+        if ARGO_TEMPLATE_SEPARATOR not in hostname:
             return "unknown"
-        workflow_name = step_pod.split(ARGO_TEMPLATE_SEPARATOR, maxsplit=1)[0]
+        workflow_name = hostname.split(ARGO_TEMPLATE_SEPARATOR, maxsplit=1)[0]
         return workflow_name or "unknown"
 
     def _context_labels(self, step_name: str) -> dict[str, str]:
-        step_pod = os.environ.get("HOSTNAME") or "unknown"
+        hostname = os.environ.get("HOSTNAME") or "unknown"
         return {
             "step_name": step_name,
             "run_id": os.environ.get("WURZEL_RUN_ID", "unknown"),
-            "workflow_name": self._derive_workflow_name(step_pod),
-            "step_pod": step_pod,
+            "workflow_name": self._derive_workflow_name(hostname),
         }
 
     def _set_step_status(self, context_labels: dict[str, str], status: str) -> None:
