@@ -128,7 +128,7 @@ def step_env_encapsulation(step_cls: type[TypedStep]):
             secret_value = getattr(inner_settings, field_name, None)
             if isinstance(secret_value, SecretStr):
                 value = secret_value.get_secret_value()
-            elif isinstance(value, (list, dict, set, tuple)):
+            elif isinstance(value, list | dict | set | tuple):
                 value = json.dumps(value)
             else:
                 value = str(value)

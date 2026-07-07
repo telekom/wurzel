@@ -5,15 +5,15 @@
 """S3 markdown sink — dumps the whole document list to S3 as one JSON array."""
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from logging import getLogger
 
 import boto3
 from botocore.exceptions import BotoCoreError, ClientError
 
+from wurzel.core import TypedStep
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import StepFailed
-from wurzel.core import TypedStep
 
 from .settings import S3MarkdownStepSettings
 
@@ -74,7 +74,7 @@ class S3MarkdownStep(TypedStep[S3MarkdownStepSettings, list[MarkdownDataContract
             return inpt
 
         body = json.dumps([doc.model_dump() for doc in inpt], ensure_ascii=False).encode("utf-8")
-        ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%SZ")
+        ts = datetime.now(UTC).strftime("%Y-%m-%dT%H%M%SZ")
         snapshot_key = f"{self.settings.key_prefix}{ts}.json"
         latest_key = f"{self.settings.key_prefix}latest.json"
         metadata = {

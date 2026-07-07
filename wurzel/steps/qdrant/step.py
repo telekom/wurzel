@@ -9,6 +9,7 @@ import itertools
 import re
 from hashlib import sha256
 from logging import getLogger
+from typing import Any, ClassVar, cast
 
 from pandera.typing import DataFrame
 from qdrant_client import QdrantClient, models
@@ -38,7 +39,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
     s: QdrantSettings
     client: QdrantClient
     collection_name: str
-    result_class = QdrantResult
+    result_class: ClassVar[type[QdrantResult]] = QdrantResult
     vector_key = "vector"
 
     def __init__(self) -> None:
@@ -172,7 +173,8 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
             }
             for entry in points
         ]
-        return DataFrame[self.result_class](result_data)
+        result_dataframe_type = cast(Any, DataFrame)[self.result_class]
+        return result_dataframe_type(result_data)
 
     def _insert_embeddings(self, data: DataFrame[EmbeddingResult]):
         log.info("Inserting embeddings", extra={"count": len(data), "collection": self.collection_name})

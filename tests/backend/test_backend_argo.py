@@ -14,6 +14,7 @@ from wurzel.utils import HAS_HERA
 if not HAS_HERA:
     pytest.skip("Hera is not available", allow_module_level=True)
 
+from wurzel.executors import BaseStepExecutor
 from wurzel.executors.backend.backend_argo import (
     ArgoBackend,
     ContainerConfig,
@@ -29,7 +30,6 @@ from wurzel.executors.backend.backend_argo import (
     select_workflow,
 )
 from wurzel.executors.backend.values import ValuesFileError, deep_merge_dicts, load_values
-from wurzel.executors import BaseStepExecutor
 
 from .conftest import DummyFollowStep, DummyStep
 

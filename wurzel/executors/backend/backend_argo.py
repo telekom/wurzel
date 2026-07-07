@@ -251,7 +251,7 @@ class ArgoBackend(Backend, backend_name="argo"):
         workflow_name: str | None = None,
         executor: type[BaseStepExecutor] | None = None,
         dont_encapsulate: bool = False,
-        middlewares: list[str] | list["BaseMiddleware"] | None = None,
+        middlewares: list[str] | list[BaseMiddleware] | None = None,
         load_middlewares_from_env: bool = True,
     ) -> None:
         self.values = values or TemplateValues()
@@ -447,22 +447,31 @@ class ArgoBackend(Backend, backend_name="argo"):
             >>> assert workflow.kind == "Workflow"
 
         """
-        workflow_kwargs = {
-            "name": self.config.name,
-            "namespace": self.config.namespace,
-            "entrypoint": self.config.entrypoint,
-            "annotations": self.config.annotations,
-            "service_account_name": self.config.serviceAccountName,
-            "volumes": self._volumes or None,
-            "security_context": self._build_pod_security_context(),
-            "node_selector": self.config.nodeSelector or None,
-            "pod_spec_patch": self._build_pod_spec_patch(),
-        }
-
         if self.config.schedules:
-            context = CronWorkflow(schedules=self.config.schedules, **workflow_kwargs)
+            context = CronWorkflow(
+                schedules=self.config.schedules,
+                name=self.config.name,
+                namespace=self.config.namespace,
+                entrypoint=self.config.entrypoint,
+                annotations=self.config.annotations,
+                service_account_name=self.config.serviceAccountName,
+                volumes=self._volumes or None,
+                security_context=self._build_pod_security_context(),
+                node_selector=self.config.nodeSelector or None,
+                pod_spec_patch=self._build_pod_spec_patch(),
+            )
         else:
-            context = Workflow(**workflow_kwargs)
+            context = Workflow(
+                name=self.config.name,
+                namespace=self.config.namespace,
+                entrypoint=self.config.entrypoint,
+                annotations=self.config.annotations,
+                service_account_name=self.config.serviceAccountName,
+                volumes=self._volumes or None,
+                security_context=self._build_pod_security_context(),
+                node_selector=self.config.nodeSelector or None,
+                pod_spec_patch=self._build_pod_spec_patch(),
+            )
 
         with context as workflow:
             self.__generate_dag(step, env_vars=env_vars)

@@ -14,9 +14,9 @@ from urllib.parse import urlparse
 
 import requests
 
+from wurzel.core import TypedStep
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import StepFailed
-from wurzel.core import TypedStep
 
 from .settings import WonderfulRAGSettings
 
@@ -257,7 +257,7 @@ class WonderfulRAGStep(TypedStep[WonderfulRAGSettings, list[MarkdownDataContract
         """
         if isinstance(exc, requests.exceptions.ReadTimeout):
             return idempotent
-        if isinstance(exc, (requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError)):
+        if isinstance(exc, requests.exceptions.ConnectTimeout | requests.exceptions.ConnectionError):
             return True
         if isinstance(exc, requests.exceptions.Timeout):
             return idempotent

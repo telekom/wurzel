@@ -259,6 +259,7 @@ class TestDvcBackendGenerateArtifact:
         assert "DummyStep" in data["stages"]
         assert "DummyFollowStep" in data["stages"]
 
+
 class TestDvcBackendIntegration:
     def test_full_workflow_from_yaml(self, sample_dvc_values_file: Path):
         """Test complete workflow: load from YAML and generate artifact."""
