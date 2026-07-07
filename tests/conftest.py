@@ -121,19 +121,13 @@ def reset_prometheus_singleton():
         if hasattr(collector, "_name"):
             name = getattr(collector, "_name", "")
             if name in [
-                "steps_started",
-                "steps_failed",
-                "step_results",
-                "step_inputs",
-                "step_hist_save",
-                "step_hist_load",
-                "step_hist_execute",
                 "wurzel_step_input_items",
                 "wurzel_step_result_items",
                 "wurzel_step_duration_seconds",
                 "wurzel_step_status",
                 "wurzel_step_timestamp_seconds",
                 "wurzel_step_info",
+                "wurzel_step_datacontract_metric",
             ]:
                 collectors_to_remove.append(collector)
 

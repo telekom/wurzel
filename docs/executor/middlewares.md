@@ -124,18 +124,13 @@ Settings use the `PROMETHEUS__` prefix (pydantic-settings applies it automatical
 | `PROMETHEUS__JOB` | `default-job-name` | Job name for metrics |
 | `PROMETHEUS__DISABLE_CREATED_METRIC` | `true` | Disable `*_created` metrics |
 
-**Compatibility metrics emitted** (labels: `step_name`, `run_id` from `WURZEL_RUN_ID`):
-
-- `steps_started`, `steps_failed`, `step_results`, `step_inputs` — Counters
-- `step_hist_load`, `step_hist_execute`, `step_hist_save` — Histograms
-- `step_datacontract_metric` — Gauge for data contract metrics
-
-**Observability metrics emitted**:
+**Metrics emitted**:
 
 These gauges are intended for dashboards that correlate Wurzel step results with
 Argo workflow pods and Kubernetes resource metrics. They all include
-`step_name`, `run_id`, `workflow_name`, `workflow_namespace`, and `step_pod`
-labels. The Prometheus Pushgateway supplies the pipeline `job` label.
+`step_name`, `run_id`, `workflow_name`, and `step_pod` labels. The Prometheus
+Pushgateway supplies the pipeline `job` label. Namespace labels should be added
+by the Prometheus scrape or Pushgateway relabeling configuration.
 
 - `wurzel_step_input_items` — Total input items processed by the step.
 - `wurzel_step_result_items` — Total result items produced by the step.
@@ -143,10 +138,10 @@ labels. The Prometheus Pushgateway supplies the pipeline `job` label.
 - `wurzel_step_status` — Current step status by `status` (`started`, `succeeded`, `failed`).
 - `wurzel_step_timestamp_seconds` — Step lifecycle timestamps by `event` (`started`, `completed`, `failed`).
 - `wurzel_step_info` — Static value of `1` with the correlation labels.
+- `wurzel_step_datacontract_metric` — Data contract metrics by `metric_name`.
 
 For Argo runs, the middleware derives `step_pod` from `HOSTNAME`,
-`workflow_name` from the pod name prefix before `-wurzel-run-template-`, and
-`workflow_namespace` from the Kubernetes service account namespace file. Local
+`workflow_name` from the pod name prefix before `-wurzel-run-template-`. Local
 or non-Kubernetes runs use `unknown` for unavailable context labels.
 
 For DVC, export the env vars before `dvc repro`. For Argo, add them to
