@@ -60,8 +60,8 @@ def test_format_env_snippet_prefers_current_env_values():
     assert "SIMPLESPLITTERSTEP__BATCH_SIZE=256" in snippet
 
 
-def test_validate_env_vars_reports_missing(env):
-    env.clear()
+def test_validate_env_vars_reports_missing(env, monkeypatch):
+    monkeypatch.delenv("MANUALMARKDOWNSTEP__FOLDER_PATH", raising=False)
     issues = cmd_env.validate_env_vars(pipelinedemo.pipeline, allow_extra_fields=False)
     missing = {issue.env_var for issue in issues}
     assert "MANUALMARKDOWNSTEP__FOLDER_PATH" in missing

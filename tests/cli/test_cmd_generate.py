@@ -6,12 +6,12 @@ from __future__ import annotations
 
 import pytest
 
-from wurzel.backend.backend import Backend
 from wurzel.cli import cmd_generate
+from wurzel.executors.backend.backend import Backend
 from wurzel.utils import HAS_HERA
 
 if HAS_HERA:
-    from wurzel.backend.backend_argo import ArgoBackend
+    from wurzel.executors.backend.backend_argo import ArgoBackend
 else:  # pragma: no cover - optional dependency guard
     ArgoBackend = None
 
@@ -62,7 +62,7 @@ def test_resolve_backend_instance_inits_argo_without_values(monkeypatch):
 
 @pytest.mark.skipif(not HAS_HERA, reason="Argo backend requires Hera extras")
 def test_resolve_backend_instance_passes_executor_to_argo_from_values(monkeypatch, tmp_path):
-    from wurzel.step_executor import PrometheusStepExecutor
+    from wurzel.executors import BaseStepExecutor
 
     values_file = tmp_path / "values.yaml"
     values_file.write_text("workflows: {}")
@@ -78,10 +78,10 @@ def test_resolve_backend_instance_passes_executor_to_argo_from_values(monkeypatc
         ArgoBackend,
         [values_file],
         "demo",
-        executor=PrometheusStepExecutor,
+        executor=BaseStepExecutor,
     )
 
-    assert captured["executor"] is PrometheusStepExecutor
+    assert captured["executor"] is BaseStepExecutor
 
 
 def test_resolve_backend_instance_for_non_argo_backend(tmp_path):
@@ -152,3 +152,18 @@ def test_cmd_generate_main_writes_to_output(monkeypatch, tmp_path):
 
     assert result == "artifact-yaml"
     assert output_path.read_text(encoding="utf-8") == "artifact-yaml"
+
+
+class DummyBackend:
+    def generate_artifact(self, step):  # noqa: ARG002
+        return "ok"
+
+
+class DummyStep:
+    def traverse(self):
+        return []
+
+
+def test_cmd_generate_runs():
+    res = cmd_generate.main(DummyStep(), DummyBackend)
+    assert res == "ok"

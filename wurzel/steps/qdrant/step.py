@@ -9,12 +9,13 @@ import itertools
 import re
 from hashlib import sha256
 from logging import getLogger
+from typing import Any, ClassVar, cast
 
 from pandera.typing import DataFrame
 from qdrant_client import QdrantClient, models
 
+from wurzel.core import TypedStep, step_history
 from wurzel.exceptions import CustomQdrantException, StepFailed
-from wurzel.step import TypedStep, step_history
 from wurzel.steps.data import EmbeddingResult
 from wurzel.utils import HAS_TLSH
 
@@ -38,7 +39,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
     s: QdrantSettings
     client: QdrantClient
     collection_name: str
-    result_class = QdrantResult
+    result_class: ClassVar[type[QdrantResult]] = QdrantResult
     vector_key = "vector"
 
     def __init__(self) -> None:
@@ -93,7 +94,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         payload = {
             "url": row["url"],
             "text": row["text"],
-            **self.get_available_hashes(row["text"]),
+            **self.get_available_hashes(str(row["text"])),
             "keywords": row["keywords"],
             "history": str(step_history.get()),
             "metadata": row.get("metadata", None),
@@ -165,19 +166,21 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
         """
         result_data = [
             {
-                **entry.payload,
+                **dict(entry.payload or {}),
                 self.vector_key: entry.vector,
                 "collection": self.collection_name,
                 "id": entry.id,
             }
             for entry in points
         ]
-        return DataFrame[self.result_class](result_data)
+        result_dataframe_type = cast(Any, DataFrame)[self.result_class]
+        return result_dataframe_type(result_data)
 
     def _insert_embeddings(self, data: DataFrame[EmbeddingResult]):
         log.info("Inserting embeddings", extra={"count": len(data), "collection": self.collection_name})
 
-        points = [self._create_point(row) for _, row in data.iterrows()]
+        rows = data.to_dict(orient="records")
+        points = [self._create_point(row) for row in rows]
 
         self._upsert_points(points)
 

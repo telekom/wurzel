@@ -41,7 +41,7 @@ def test_docling_step(real_data_path, expected_md_start, expected_contract_count
     contracts = docling_step.run({})
     assert len(contracts) == expected_contract_count, f"Expected {expected_contract_count} contracts, got {len(contracts)}"
     if contracts:
-        actual_md = contracts[0]["md"].strip()
+        actual_md = contracts[0].md.strip()
         assert actual_md.startswith(expected_md_start), "Markdown content does not match expected start."
 
 

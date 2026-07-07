@@ -5,7 +5,7 @@
 import pytest
 from pydantic import Field
 
-from wurzel.step.settings import SettingsBase, SettingsLeaf
+from wurzel.core.settings import SettingsBase, SettingsLeaf
 
 
 class BSettings(SettingsLeaf):

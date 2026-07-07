@@ -98,7 +98,7 @@ dvc repro
 Use the DVC backend directly in Python:
 
 ```python
-from wurzel.backend.backend_dvc import DvcBackend
+from wurzel.executors.backend.backend_dvc import DvcBackend
 from wurzel.steps.embedding import EmbeddingStep
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.steps.qdrant.step import QdrantConnectorStep

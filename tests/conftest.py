@@ -7,6 +7,7 @@ from logging import getLogger
 from pathlib import Path
 
 import pytest
+from prometheus_client import REGISTRY
 from pydantic import BaseModel
 
 log = getLogger(__name__)
@@ -106,3 +107,33 @@ def pytest_collection_modifyitems(config, items):
             continue
         if not do_rep_tests and has_repeatability_marker:
             item.add_marker(pytest.mark.skip(reason="only running --repeatability tests"))
+
+
+@pytest.fixture(scope="function", autouse=True)
+def reset_prometheus_singleton():
+    """Reset prometheus collectors between tests to prevent registry conflicts."""
+    yield
+
+    # Clean up after each test
+    # pylint: disable=protected-access
+    collectors_to_remove = []
+    for collector in list(REGISTRY._collector_to_names.keys()):
+        if hasattr(collector, "_name"):
+            name = getattr(collector, "_name", "")
+            if name in [
+                "steps_started",
+                "steps_failed",
+                "step_results",
+                "step_inputs",
+                "step_hist_save",
+                "step_hist_load",
+                "step_hist_execute",
+            ]:
+                collectors_to_remove.append(collector)
+
+    for collector in collectors_to_remove:
+        try:
+            REGISTRY.unregister(collector)
+        except Exception:  # pylint: disable=broad-exception-caught
+            # Collector might not be registered, that's fine
+            pass

@@ -13,8 +13,8 @@ from pymilvus.exceptions import MilvusException
 from pymilvus.milvus_client import MilvusClient
 from pymilvus.milvus_client.index import IndexParams
 
+from wurzel.core import TypedStep
 from wurzel.exceptions import NoPreviousCollection, StepFailed
-from wurzel.step import TypedStep
 from wurzel.steps.data import EmbeddingResult
 
 from .data import Result as MilvusResult

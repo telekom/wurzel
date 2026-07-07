@@ -8,18 +8,15 @@
 from logging import getLogger
 from typing import TypedDict
 
-import numpy as np
 from joblib import Parallel, delayed
 from pandera.typing import DataFrame
 
+from wurzel.core import TypedStep
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import EmbeddingAPIException, SplittException, StepFailed
-from wurzel.step import TypedStep
 from wurzel.steps.data import EmbeddingMultiVectorResult
 from wurzel.steps.embedding import EmbeddingStep
-
-# Local application/library specific imports
-from .settings import EmbeddingSettings
+from wurzel.steps.embedding.settings import EmbeddingSettings
 
 log = getLogger(__name__)
 
@@ -29,11 +26,12 @@ class _EmbeddedMultiVector(TypedDict):
 
     text: str
     url: str
-    vectors: np.ndarray
+    vectors: list[list[float]]
+    keywords: str
     splits: list[str]
 
 
-class EmbeddingMultiVectorStep(
+class EmbeddingMultiVectorStep(  # ty: ignore[invalid-generic-class]
     EmbeddingStep,
     TypedStep[
         EmbeddingSettings,
@@ -45,7 +43,7 @@ class EmbeddingMultiVectorStep(
     and returning DataFrame[EmbeddingMultiVectorResult].
     """
 
-    def run(self, inpt: list[MarkdownDataContract]) -> DataFrame[EmbeddingMultiVectorResult]:
+    def run(self, inpt: list[MarkdownDataContract]) -> DataFrame[EmbeddingMultiVectorResult]:  # ty: ignore[invalid-method-override]
         """Executes the embedding step by processing a list of MarkdownDataContract objects,
         generating embeddings for each document, and returning the results as a DataFrame.
 
@@ -66,7 +64,7 @@ class EmbeddingMultiVectorStep(
 
         def process_document(doc):
             try:
-                return self._get_embedding(doc)
+                return self._get_multivector_embedding(doc)
             except EmbeddingAPIException as err:
                 log.warning(
                     f"Skipped because EmbeddingAPIException: {err.message}",
@@ -86,7 +84,7 @@ class EmbeddingMultiVectorStep(
 
         return DataFrame[EmbeddingMultiVectorResult](DataFrame[EmbeddingMultiVectorResult](rows))
 
-    def _get_embedding(self, doc: MarkdownDataContract) -> _EmbeddedMultiVector:
+    def _get_multivector_embedding(self, doc: MarkdownDataContract) -> _EmbeddedMultiVector:
         """Generates an embedding for a given text and context.
 
         Parameters

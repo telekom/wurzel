@@ -124,8 +124,16 @@ workflows:
 
       # Runtime environment variables (step settings)
       env:
+        # Step-specific settings
         MANUALMARKDOWNSTEP__FOLDER_PATH: "examples/pipeline/demo-data"
         SIMPLESPLITTERSTEP__BATCH_SIZE: "100"
+
+        # Middleware configuration (optional)
+        # Enable Prometheus middleware for metrics collection
+        MIDDLEWARES: "prometheus"
+        PROMETHEUS__GATEWAY: "prometheus-pushgateway.monitoring.svc.cluster.local:9091"
+        PROMETHEUS__JOB: "wurzel-pipeline"  # optional
+        PROMETHEUS__DISABLE_CREATED_METRIC: "true"  # optional
 
       # Environment from Kubernetes Secrets/ConfigMaps
       envFrom:
@@ -327,6 +335,43 @@ When enabled, the `HF_HOME` environment variable is automatically set to the `mo
 | `endpoint` | string | `s3.amazonaws.com` | S3 endpoint URL |
 | `defaultMode` | int | `null` | File permissions (decimal) |
 
+### Middleware Configuration
+
+Middlewares (like Prometheus for metrics collection) are configured via environment variables in the `container.env` section. Middlewares must be enabled and configured at **generate-time** in your `values.yaml` file.
+
+#### Enabling Prometheus Middleware
+
+To enable Prometheus middleware for metrics collection, add the following to your `container.env` section:
+
+```yaml
+container:
+  env:
+    # Enable Prometheus middleware
+    MIDDLEWARES: "prometheus"
+    PROMETHEUS__GATEWAY: "prometheus-pushgateway.monitoring.svc.cluster.local:9091"
+
+    # Optional Prometheus settings
+    PROMETHEUS__JOB: "wurzel-pipeline"
+    PROMETHEUS__DISABLE_CREATED_METRIC: "true"
+```
+
+**Available Prometheus Settings:**
+
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `MIDDLEWARES` | - | Comma-separated list of middleware names (e.g., `"prometheus"`) |
+| `PROMETHEUS__GATEWAY` | `localhost:9091` | Prometheus Pushgateway endpoint (host:port) |
+| `PROMETHEUS__JOB` | `default-job-name` | Job name for Prometheus metrics |
+| `PROMETHEUS__DISABLE_CREATED_METRIC` | `true` | Disable `*_created` metrics |
+
+**Metrics Collected:**
+
+- `step_duration_seconds` - Histogram of step execution duration
+- `step_executions_total` - Counter of step executions
+- Labels: `step_name`, `run_id` (from `WURZEL_RUN_ID`)
+
+For more details on middlewares, see the [Middleware Documentation](../executor/middlewares.md).
+
 ### Runtime Environment Variables
 
 Step settings are configured via environment variables at **runtime** (when the workflow executes). These can be set in three ways:
@@ -366,7 +411,7 @@ container:
 Use the Argo backend directly in Python:
 
 ```python
-from wurzel.backend.backend_argo import ArgoBackend
+from wurzel.executors.backend.backend_argo import ArgoBackend
 from wurzel.steps.embedding import EmbeddingStep
 from wurzel.steps.manual_markdown import ManualMarkdownStep
 from wurzel.steps.qdrant.step import QdrantConnectorStep

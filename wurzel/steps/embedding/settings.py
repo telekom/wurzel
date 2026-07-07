@@ -55,7 +55,7 @@ class EmbeddingSettings(SplitterSettings):
     STEPWORDS_PATH: Path = Path("data/german_stopwords_full.txt")
     N_JOBS: int = Field(1, gt=0)
     PREFIX_MAP: Annotated[dict[re.Pattern, str], WrapValidator(_wrap_validator_model_mapping)] = Field(
-        default={"e5-": "query: ", "DPR|dpr": ""}
+        default={re.compile("e5-"): "query: ", re.compile("DPR|dpr"): ""}
     )
     CLEAN_MD_BEFORE_EMBEDDING: bool = True
     TOKENIZER_MODEL: str = Field("gpt-3.5-turbo", description="The tokenizer model to use for splitting documents.")

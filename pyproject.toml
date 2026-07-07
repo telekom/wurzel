@@ -5,7 +5,8 @@ description = "Pick, choose and chain your RAG tools in a pythonic way"
 authors = [
     {name ="Thomas Weigel", email="thomas.weigel@telekom.de"},
     {name ="Paul Bauriegel", email="paul.bauriegel@telekom.de"},
-    {name ="Maximilian Erren", email="maximilian.erren@telekom.de"}
+    {name ="Maximilian Erren", email="maximilian.erren@telekom.de"},
+    {name ="Sam Heymann", email="sam.heymann@telekom.de"}
 ]
 readme = "README.md"
 requires-python = ">= 3.11, < 3.13"
@@ -91,6 +92,9 @@ sftp = [
 s3 = [
     "boto3>=1.34",
 ]
+supabase = [
+    "supabase>=2.0.0",
+]
 argo = [
     "hera >=5.20.1",
 ]
@@ -100,6 +104,7 @@ lint = [
     "pre-commit>=4.1,<4.6",
     "reuse==6.2.0",
     "ruff==0.14.10",
+    "ty>=0.0.34",
 ]
 test = [
     "pytest>=8.4,<9.1",
@@ -126,8 +131,8 @@ docs = [
     "pygments>=2.16.0",
 ]
 
-all = ["wurzel[qdrant,milvus,tlsh,docling,argo,openai,splitter,embedding,scraperapi,sftp,s3]"]
-dev = ["wurzel[lint,test,all]"]
+all = ["wurzel[qdrant,milvus,tlsh,docling,argo,openai,splitter,embedding,scraperapi,sftp,s3,supabase]"]
+dev = ["wurzel[docs,lint,test,all]"]
 
 [project.scripts]
 wurzel = "wurzel.cli._main:main"
@@ -135,12 +140,6 @@ wurzel = "wurzel.cli._main:main"
 [project.urls]
 "Release notes" = "https://github.com/telekom/wurzel/releases/"
 Source = "https://github.com/telekom/wurzel"
-
-
-
-
-
-
 
 [build-system]
 requires = ["setuptools>=78.1.0", "wheel"]
@@ -158,10 +157,6 @@ wurzel = ["data/*", "utils/to_markdown/*"]
 
 [tool.setuptools.dynamic]
 version = {file = "VERSION"}
-
-[tool.mypy]
-python_version = "3.11 | 3.12"
-disable_error_code = ["import-untyped"]
 
 [tool.pylint.'MESSAGES CONTROL']
 max-line-length = 140
@@ -203,7 +198,7 @@ prerelease_token = "dev"
 
 [tool.ruff]
 
-target-version = "py39"
+target-version = "py311"
 line-length = 140
 
 [tool.ruff.lint]
@@ -237,8 +232,11 @@ ignore = [
 quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
-docstring-code-format = true
+docstring-code-format = false
 line-ending = "auto"
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.ty.analysis]
+allowed-unresolved-imports = ["tlsh"]

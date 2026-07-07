@@ -8,9 +8,9 @@ import subprocess
 import tempfile
 import threading
 from pathlib import Path
+from typing import Any
 
 # Related third-party imports
-import lxml.etree
 import lxml.html
 from mistletoe import Document
 from mistletoe.block_token import ThematicBreak
@@ -123,10 +123,10 @@ def remove_images(markdown: str) -> str:
         # Adjust for excessive newlines
         return re.sub(r"\n\n+", "\n\n", rendered)
 
-    def _remove_image_from_document(doc: Document) -> Document:
+    def _remove_image_from_document(doc: Any) -> Any:
         if not hasattr(doc, "children") or not doc.children:
             return doc
-        doc.children = [_remove_image_from_document(x) for x in doc.children if not isinstance(x, (Image, ThematicBreak))]
+        doc.children = [_remove_image_from_document(x) for x in doc.children if not isinstance(x, Image | ThematicBreak)]
         return doc
 
     doc = Document(markdown)
@@ -134,8 +134,8 @@ def remove_images(markdown: str) -> str:
     return _to_markdown(cleaned)
 
 
-def clean_tree(div: lxml.etree.ElementBase) -> lxml.etree.ElementBase:
-    """Cleans the lxml.html tree from html unneded html obstacales."""
+def clean_tree(div: Any) -> Any:
+    """Clean an ``lxml.html`` tree by removing non-content elements."""
     # Remove all link or script tags
     for tag in ["script", "link", "style", "svg", "footer"]:
         for bad in div.xpath("//" + tag):
@@ -221,7 +221,7 @@ def normalize_urls(html_content: str, base_url: str = "https://www.magenta.at"):
     return html2str(tree)
 
 
-def html2str(html: lxml) -> str:
+def html2str(html: Any) -> str:
     """Convert an lxml HTML element to a string.
 
     Args:
