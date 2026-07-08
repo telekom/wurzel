@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 
 from wurzel.core.typed_step import TypedStep
 from wurzel.executors.base_executor import BaseStepExecutor
+from wurzel.executors.runtime_context import WURZEL_RUN_ID_ENV
 
 if TYPE_CHECKING:  # pragma: no cover - only used for type checking
     from wurzel.executors.middlewares.base import BaseMiddleware
@@ -25,10 +26,10 @@ class Backend(BaseStepExecutor):
     method to convert a `TypedStep` into the appropriate format required by the target
     framework, while also inheriting all step execution functionality from BaseStepExecutor.
 
-    The backend implementations must set the ``WURZEL_RUN_ID`` environment variable in their
-    generated artifacts. This provides a unique identifier for each pipeline run that can
-    be used for Prometheus job names, logging, and other runtime identification needs.
-    For Argo Workflows, this should be set to ``{{workflow.uid}}``.
+    Backend implementations must set Wurzel-owned runtime context in their generated
+    artifacts. ``WURZEL_RUN_ID`` provides a unique identifier for each pipeline run
+    that can be used for Prometheus labels, logging, and other runtime identification
+    needs.
 
     Subclasses register themselves automatically by passing ``backend_name`` as a class
     keyword argument. Once registered, ``Backend.create("name", raw_config)`` will
@@ -139,15 +140,14 @@ class Backend(BaseStepExecutor):
     def run_id(self) -> str:
         """Get the unique run ID for the current pipeline execution.
 
-        This ID is set by the workflow orchestrator via the WURZEL_RUN_ID environment variable.
-        For Argo Workflows, this is typically the workflow.uid.
+        This ID is set by the backend via the WURZEL_RUN_ID environment variable.
         For DVC, this is generated at pipeline execution time.
 
         Returns:
             str: The unique run ID, or empty string if not set.
 
         """
-        return os.environ.get("WURZEL_RUN_ID", "")
+        return os.environ.get(WURZEL_RUN_ID_ENV, "")
 
     @classmethod
     def is_available(cls) -> bool:

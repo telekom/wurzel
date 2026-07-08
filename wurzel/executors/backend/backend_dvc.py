@@ -19,6 +19,7 @@ from wurzel.core import TypedStep
 from wurzel.executors.backend.backend import Backend
 from wurzel.executors.backend.values import load_values
 from wurzel.executors.base_executor import BaseStepExecutor
+from wurzel.executors.runtime_context import WURZEL_RUN_ID_ENV
 
 if TYPE_CHECKING:
     from wurzel.executors.middlewares.base import BaseMiddleware
@@ -221,7 +222,10 @@ class DvcBackend(Backend, backend_name="dvc"):
         env_source = f". {shlex.quote(str(env_file))} && " if env_file else ""
         if env_file:
             deps_with_run_id = [*deps_with_run_id, env_file]
-        cmd = f'{env_source}export WURZEL_RUN_ID="$(cat {shlex.quote(str(run_id_output))})" && echo "$WURZEL_RUN_ID" &&  {cli_call}'
+        cmd = (
+            f'{env_source}export {WURZEL_RUN_ID_ENV}="$(cat {shlex.quote(str(run_id_output))})" '
+            f'&& echo "${WURZEL_RUN_ID_ENV}" &&  {cli_call}'
+        )
 
         return result | {
             step.__class__.__name__: {
@@ -252,7 +256,8 @@ class DvcBackend(Backend, backend_name="dvc"):
         # Add the run_id stage that generates WURZEL_RUN_ID
         run_id_output = self.config.dataDir / ".wurzel_run_id"
         run_id_cmd = (
-            f'export WURZEL_RUN_ID="dvc-$(date +%Y%m%d-%H%M%S)-$$" && echo "$WURZEL_RUN_ID" > {run_id_output} && export WURZEL_RUN_ID'
+            f'export {WURZEL_RUN_ID_ENV}="dvc-$(date +%Y%m%d-%H%M%S)-$$" '
+            f'&& echo "${WURZEL_RUN_ID_ENV}" > {run_id_output} && export {WURZEL_RUN_ID_ENV}'
         )
         run_id_stage = {
             "generate_run_id": {

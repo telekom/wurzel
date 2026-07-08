@@ -366,9 +366,22 @@ container:
 
 **Metrics Collected:**
 
-- `step_duration_seconds` - Histogram of step execution duration
-- `step_executions_total` - Counter of step executions
-- Labels: `step_name`, `run_id` (from `WURZEL_RUN_ID`)
+- `wurzel_step_input_items` and `wurzel_step_result_items` for per-step item counts.
+- `wurzel_step_duration_seconds` for `load`, `execute`, `save`, and `total` phases.
+- `wurzel_step_status` for `started`, `succeeded`, and `failed` status.
+- `wurzel_step_timestamp_seconds` for `started`, `completed`, and `failed` lifecycle events.
+- `wurzel_step_info` for static step metadata.
+- `wurzel_step_datacontract_metric` for data contract metrics by `metric_name`.
+- Labels: `step_name` and `run_id`.
+  The Prometheus Pushgateway adds the pipeline `job` label. Namespace, pod, and
+  workflow labels should be added by scrape or Pushgateway relabeling.
+
+For Argo workflows, `run_id` is set from `{{workflow.uid}}`. The Prometheus
+middleware reads the backend-neutral Wurzel runtime context. The Argo backend
+maps `{{workflow.uid}}` to `WURZEL_RUN_ID`, so the middleware does not inspect
+Kubernetes-specific environment variables. Namespace, pod, and workflow labels
+can still be added by scrape or Pushgateway relabeling for Grafana correlation
+with pod phase, CPU, memory, and resource request metrics.
 
 For more details on middlewares, see the [Middleware Documentation](../executor/middlewares.md).
 

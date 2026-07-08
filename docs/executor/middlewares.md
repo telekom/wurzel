@@ -124,11 +124,27 @@ Settings use the `PROMETHEUS__` prefix (pydantic-settings applies it automatical
 | `PROMETHEUS__JOB` | `default-job-name` | Job name for metrics |
 | `PROMETHEUS__DISABLE_CREATED_METRIC` | `true` | Disable `*_created` metrics |
 
-**Metrics emitted** (labels: `step_name`, `run_id` from `WURZEL_RUN_ID`):
+**Metrics emitted**:
 
-- `steps_started`, `steps_failed`, `step_results`, `step_inputs` — Counters
-- `step_hist_load`, `step_hist_execute`, `step_hist_save` — Histograms
-- `step_datacontract_metric` — Gauge for data contract metrics
+These gauges are intended for dashboards that correlate Wurzel step results with
+Argo workflow pods and Kubernetes resource metrics. They all include
+`step_name` and `run_id` labels. The Prometheus Pushgateway supplies the
+pipeline `job` label. Namespace, pod, and workflow labels should be added by the
+Prometheus scrape or Pushgateway relabeling configuration.
+
+- `wurzel_step_input_items` — Total input items processed by the step.
+- `wurzel_step_result_items` — Total result items produced by the step.
+- `wurzel_step_duration_seconds` — Step duration by `phase` (`load`, `execute`, `save`, `total`).
+- `wurzel_step_status` — Current step status by `status` (`started`, `succeeded`, `failed`).
+- `wurzel_step_timestamp_seconds` — Step lifecycle timestamps by `event` (`started`, `completed`, `failed`).
+- `wurzel_step_info` — Static value of `1` with the Wurzel runtime context labels.
+- `wurzel_step_datacontract_metric` — Data contract metrics by `metric_name`.
+
+The middleware reads backend-neutral Wurzel runtime context only:
+`WURZEL_RUN_ID`. Backends are responsible for mapping their own runtime
+information into this Wurzel-owned variable. The middleware does not inspect
+backend-specific environment variables such as Kubernetes pod metadata. Local
+runs use `unknown` when the run id is unavailable.
 
 For DVC, export the env vars before `dvc repro`. For Argo, add them to
 `container.env` in your `values.yaml`. See the

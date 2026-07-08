@@ -46,6 +46,7 @@ from wurzel.core import TypedStep
 from wurzel.executors.backend.backend import Backend
 from wurzel.executors.backend.values import load_values
 from wurzel.executors.base_executor import BaseStepExecutor
+from wurzel.executors.runtime_context import WURZEL_RUN_ID_ENV
 
 if TYPE_CHECKING:
     from wurzel.executors.middlewares.base import BaseMiddleware
@@ -541,8 +542,8 @@ class ArgoBackend(Backend, backend_name="argo"):
         merged_env = {**manifest_env_vars, **self.config.container.env}  # container.env wins
         env_var_list = [EnvVar(name=name, value=str(value)) for name, value in merged_env.items()]
 
-        # Add WURZEL_RUN_ID for tracking pipeline runs
-        env_var_list.append(EnvVar(name="WURZEL_RUN_ID", value="{{workflow.uid}}"))
+        # Add Wurzel runtime context for tracking pipeline runs.
+        env_var_list.append(EnvVar(name=WURZEL_RUN_ID_ENV, value="{{workflow.uid}}"))
 
         # Add HF_HOME env var if tokenizer cache is enabled
         tokenizer_cache = self.config.container.tokenizerCache
