@@ -11,6 +11,7 @@ from wurzel.core import NoSettings, TypedStep
 from wurzel.datacontract.common import MarkdownDataContract
 from wurzel.executors.backend import Backend
 from wurzel.executors.backend.backend_dvc import DvcBackend
+from wurzel.executors.runtime_context import WURZEL_RUN_ID_ENV, WurzelRuntimeContext
 from wurzel.utils import HAS_HERA
 
 if HAS_HERA:
@@ -33,14 +34,14 @@ class TestBackendRunId:
     def test_backend_run_id_reads_from_environment(self, monkeypatch):
         """Test that run_id property reads from WURZEL_RUN_ID environment variable."""
         test_run_id = "test-run-12345"
-        monkeypatch.setenv("WURZEL_RUN_ID", test_run_id)
+        monkeypatch.setenv(WURZEL_RUN_ID_ENV, test_run_id)
 
         backend = Backend()
         assert backend.run_id == test_run_id
 
     def test_backend_run_id_returns_empty_when_not_set(self, monkeypatch):
         """Test that run_id returns empty string when WURZEL_RUN_ID is not set."""
-        monkeypatch.delenv("WURZEL_RUN_ID", raising=False)
+        monkeypatch.delenv(WURZEL_RUN_ID_ENV, raising=False)
 
         backend = Backend()
         assert backend.run_id == ""
@@ -49,11 +50,30 @@ class TestBackendRunId:
         """Test that run_id reflects changes to environment variable."""
         backend = Backend()
 
-        monkeypatch.setenv("WURZEL_RUN_ID", "run-1")
+        monkeypatch.setenv(WURZEL_RUN_ID_ENV, "run-1")
         assert backend.run_id == "run-1"
 
-        monkeypatch.setenv("WURZEL_RUN_ID", "run-2")
+        monkeypatch.setenv(WURZEL_RUN_ID_ENV, "run-2")
         assert backend.run_id == "run-2"
+
+
+class TestWurzelRuntimeContext:
+    def test_runtime_context_reads_wurzel_owned_environment(self, monkeypatch):
+        """Test that runtime context reads only Wurzel-owned environment keys."""
+        monkeypatch.setenv(WURZEL_RUN_ID_ENV, "run-123")
+
+        context = WurzelRuntimeContext.from_env()
+
+        assert context.run_id == "run-123"
+        assert context.metric_labels() == {"run_id": "run-123"}
+
+    def test_runtime_context_defaults_to_unknown(self, monkeypatch):
+        """Test missing Wurzel runtime context values use unknown."""
+        monkeypatch.delenv(WURZEL_RUN_ID_ENV, raising=False)
+
+        context = WurzelRuntimeContext.from_env()
+
+        assert context.metric_labels() == {"run_id": "unknown"}
 
 
 class TestDvcBackendRunId:
@@ -154,7 +174,7 @@ class TestArgoBackendRunId:
         assert "{{workflow.uid}}" in yaml_output
 
     def test_argo_run_id_in_environment_variables(self):
-        """Test that WURZEL_RUN_ID is set as an environment variable in Argo tasks."""
+        """Test that Wurzel runtime context is set in Argo task environment variables."""
         backend = ArgoBackend()
         step = DummyStep()
 
