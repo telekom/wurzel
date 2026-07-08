@@ -19,7 +19,9 @@ class DummyStep:
 
 
 def _set_wurzel_context(monkeypatch) -> None:
-    monkeypatch.setenv("WURZEL_RUN_ID", "argo-run-uid")
+    from wurzel.executors.runtime_context import WURZEL_RUN_ID_ENV
+
+    monkeypatch.setenv(WURZEL_RUN_ID_ENV, "argo-run-uid")
 
 
 def _call_successfully(middleware: PrometheusMiddleware, reports: list[DummyReport]) -> list[tuple[Any, Any]]:
