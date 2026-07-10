@@ -106,7 +106,7 @@ class SecurityContextConfig(BaseModel):
     fsGroupChangePolicy: Literal["OnRootMismatch", "Always"] | None = None
     supplementalGroups: list[int] = Field(default_factory=list)
     allowPrivilegeEscalation: bool | None = False
-    readOnlyRootFilesystem: bool | None = None
+    readOnlyRootFilesystem: bool | None = True
     dropCapabilities: list[str] = Field(default_factory=lambda: ["ALL"])
     seccompProfileType: Literal["RuntimeDefault", "Localhost"] = "RuntimeDefault"
     seccompLocalhostProfile: str | None = None
@@ -119,6 +119,8 @@ class ResourcesConfig(BaseModel):
     cpu_limit: str | None = None
     memory_request: str = "128Mi"
     memory_limit: str = "512Mi"
+    ephemeral_storage_request: str | None = None
+    ephemeral_storage_limit: str | None = None
 
 
 class TokenizerCacheConfig(BaseModel):
@@ -177,6 +179,7 @@ class WorkflowConfig(BaseModel):
     name: str = "wurzel"
     namespace: str = "argo-workflows"
     schedules: list[str] | None = None
+    useGenerateNameForWorkflow: bool = True
     entrypoint: str = "wurzel-pipeline"
     serviceAccountName: str = "wurzel-service-account"
     dataDir: Path = Path("/usr/app")
@@ -202,6 +205,20 @@ class WorkflowConfig(BaseModel):
     def schedule(self) -> str | None:
         """Return the first configured schedule for legacy callers."""
         return self.schedules[0] if self.schedules else None
+
+    @model_validator(mode="after")
+    def validate_workflow_naming_with_created_tokenizer_pvc(self) -> WorkflowConfig:
+        """Prevent PVC ownerReference collisions for plain Workflow manifests."""
+        tokenizer_cache = self.container.tokenizerCache
+        if self.schedules:
+            return self
+        if tokenizer_cache.enabled and tokenizer_cache.createPvc and not self.useGenerateNameForWorkflow:
+            raise ValueError(
+                "tokenizerCache.createPvc=true with plain Workflow requires "
+                "useGenerateNameForWorkflow=true to avoid PVC ownerReference collisions "
+                "across reruns"
+            )
+        return self
 
 
 class TemplateValues(BaseModel):
@@ -390,6 +407,8 @@ class ArgoBackend(Backend, backend_name="argo"):
             cpu_limit=res.cpu_limit,
             memory_request=res.memory_request,
             memory_limit=res.memory_limit,
+            ephemeral_request=res.ephemeral_storage_request,
+            ephemeral_limit=res.ephemeral_storage_limit,
         )
 
     def _build_pod_spec_patch(self) -> str | None:
@@ -448,31 +467,44 @@ class ArgoBackend(Backend, backend_name="argo"):
             >>> assert workflow.kind == "Workflow"
 
         """
+        namespace = self.config.namespace
+        entrypoint = self.config.entrypoint
+        annotations = self.config.annotations
+        service_account_name = self.config.serviceAccountName
+        volumes = self._volumes or None
+        pod_security_context = self._build_pod_security_context()
+        node_selector = self.config.nodeSelector or None
+        pod_spec_patch = self._build_pod_spec_patch()
+
         if self.config.schedules:
             context = CronWorkflow(
                 schedules=self.config.schedules,
                 name=self.config.name,
-                namespace=self.config.namespace,
-                entrypoint=self.config.entrypoint,
-                annotations=self.config.annotations,
-                service_account_name=self.config.serviceAccountName,
-                volumes=self._volumes or None,
-                security_context=self._build_pod_security_context(),
-                node_selector=self.config.nodeSelector or None,
-                pod_spec_patch=self._build_pod_spec_patch(),
+                namespace=namespace,
+                entrypoint=entrypoint,
+                annotations=annotations,
+                service_account_name=service_account_name,
+                volumes=volumes,
+                security_context=pod_security_context,
+                node_selector=node_selector,
+                pod_spec_patch=pod_spec_patch,
             )
         else:
-            context = Workflow(
-                name=self.config.name,
-                namespace=self.config.namespace,
-                entrypoint=self.config.entrypoint,
-                annotations=self.config.annotations,
-                service_account_name=self.config.serviceAccountName,
-                volumes=self._volumes or None,
-                security_context=self._build_pod_security_context(),
-                node_selector=self.config.nodeSelector or None,
-                pod_spec_patch=self._build_pod_spec_patch(),
-            )
+            workflow_kwargs: dict[str, Any] = {
+                "namespace": namespace,
+                "entrypoint": entrypoint,
+                "annotations": annotations,
+                "service_account_name": service_account_name,
+                "volumes": volumes,
+                "security_context": pod_security_context,
+                "node_selector": node_selector,
+                "pod_spec_patch": pod_spec_patch,
+            }
+            if self.config.useGenerateNameForWorkflow:
+                workflow_kwargs["generate_name"] = f"{self.config.name}-"
+            else:
+                workflow_kwargs["name"] = self.config.name
+            context = Workflow(**workflow_kwargs)
 
         with context as workflow:
             self.__generate_dag(step, env_vars=env_vars)

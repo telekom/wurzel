@@ -120,7 +120,7 @@ class TestSecurityContextConfig:
         assert config.runAsGroup is None
         assert config.fsGroup is None
         assert config.allowPrivilegeEscalation is False
-        assert config.readOnlyRootFilesystem is None
+        assert config.readOnlyRootFilesystem is True
         assert config.dropCapabilities == ["ALL"]
         assert config.seccompProfileType == "RuntimeDefault"
         assert config.seccompLocalhostProfile is None
@@ -149,6 +149,8 @@ class TestResourcesConfig:
         assert config.cpu_limit is None
         assert config.memory_request == "128Mi"
         assert config.memory_limit == "512Mi"
+        assert config.ephemeral_storage_request is None
+        assert config.ephemeral_storage_limit is None
 
     def test_custom_values(self):
         config = ResourcesConfig(
@@ -156,11 +158,15 @@ class TestResourcesConfig:
             cpu_limit="1",
             memory_request="256Mi",
             memory_limit="1Gi",
+            ephemeral_storage_request="1Gi",
+            ephemeral_storage_limit="2Gi",
         )
         assert config.cpu_request == "200m"
         assert config.cpu_limit == "1"
         assert config.memory_request == "256Mi"
         assert config.memory_limit == "1Gi"
+        assert config.ephemeral_storage_request == "1Gi"
+        assert config.ephemeral_storage_limit == "2Gi"
 
 
 class TestContainerConfig:
@@ -211,6 +217,7 @@ class TestWorkflowConfig:
         assert config.name == "wurzel"
         assert config.namespace == "argo-workflows"
         assert config.schedules is None
+        assert config.useGenerateNameForWorkflow is True
         assert config.entrypoint == "wurzel-pipeline"
         assert config.dataDir == Path("/usr/app")
         assert isinstance(config.container, ContainerConfig)
@@ -229,6 +236,22 @@ class TestWorkflowConfig:
         )
         assert config.podSecurityContext.runAsUser == 1000
         assert config.podSecurityContext.fsGroup == 2000
+
+    def test_raises_on_workflow_fixed_name_with_created_tokenizer_pvc(self):
+        with pytest.raises(
+            ValueError,
+            match="tokenizerCache.createPvc=true with plain Workflow requires useGenerateNameForWorkflow=true",
+        ):
+            WorkflowConfig(
+                schedules=None,
+                useGenerateNameForWorkflow=False,
+                container=ContainerConfig(
+                    tokenizerCache=TokenizerCacheConfig(
+                        enabled=True,
+                        createPvc=True,
+                    )
+                ),
+            )
 
 
 class TestTemplateValues:
@@ -790,6 +813,7 @@ class TestArgoBackendGenerateWorkflow:
             name=workflow_name,
             namespace=namespace,
             serviceAccountName=service_account,
+            useGenerateNameForWorkflow=False,
         )
         backend = ArgoBackend(config=config)
         step = DummyStep()
@@ -810,6 +834,8 @@ class TestArgoBackendGenerateWorkflow:
 
         assert workflow.kind == "Workflow"
         assert workflow.kind != "CronWorkflow"
+        assert workflow.generate_name == "wurzel-"
+        assert workflow.name is None
 
     def test_workflow_with_schedule_is_cron(self):
         """Explicit test that schedules parameter creates a CronWorkflow."""
@@ -857,6 +883,8 @@ class TestArgoBackendGenerateWorkflow:
         else:
             assert workflow_dict["kind"] == "Workflow"
             assert "schedules" not in workflow_dict["spec"]
+            assert workflow_dict["metadata"]["generateName"] == "wurzel-"
+            assert "name" not in workflow_dict["metadata"]
 
 
 class TestArgoBackendCreateArtifactFromStep:
@@ -1219,6 +1247,36 @@ class TestArgoBackendSecurityContext:
             assert "cpu" not in resources.get("limits", {})
             assert resources.get("limits", {}).get("memory")
 
+    def test_ephemeral_storage_resources(self):
+        config = WorkflowConfig(
+            container=ContainerConfig(
+                resources=ResourcesConfig(
+                    cpu_request="100m",
+                    memory_request="256Mi",
+                    memory_limit="1Gi",
+                    ephemeral_storage_request="1Gi",
+                    ephemeral_storage_limit="2Gi",
+                )
+            )
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            templates = spec["workflowSpec"].get("templates", [])
+        else:
+            templates = spec.get("templates", [])
+
+        container_templates = [t for t in templates if "container" in t]
+        assert len(container_templates) > 0
+        for template in container_templates:
+            resources = template["container"].get("resources", {})
+            assert resources.get("requests", {}).get("ephemeral-storage") == "1Gi"
+            assert resources.get("limits", {}).get("ephemeral-storage") == "2Gi"
+
     def test_default_node_selector_in_workflow(self):
         """Test that generated workflows select a Kubernetes architecture."""
         backend = ArgoBackend()
@@ -1506,7 +1564,8 @@ class TestArgoBackendWorkflowCreationCornerCases:
 
         # Verify it's a normal Workflow
         assert workflow_dict["kind"] == "Workflow"
-        assert workflow_dict["metadata"]["name"] == "test-normal-workflow"
+        assert workflow_dict["metadata"]["generateName"] == "test-normal-workflow-"
+        assert "name" not in workflow_dict["metadata"]
         assert workflow_dict["metadata"]["namespace"] == "test-ns"
 
         # Normal Workflow should NOT have schedule in spec
