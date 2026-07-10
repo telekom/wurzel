@@ -467,44 +467,44 @@ class ArgoBackend(Backend, backend_name="argo"):
             >>> assert workflow.kind == "Workflow"
 
         """
+        namespace = self.config.namespace
+        entrypoint = self.config.entrypoint
+        annotations = self.config.annotations
+        service_account_name = self.config.serviceAccountName
+        volumes = self._volumes or None
+        pod_security_context = self._build_pod_security_context()
+        node_selector = self.config.nodeSelector or None
+        pod_spec_patch = self._build_pod_spec_patch()
+
         if self.config.schedules:
             context = CronWorkflow(
                 schedules=self.config.schedules,
                 name=self.config.name,
-                namespace=self.config.namespace,
-                entrypoint=self.config.entrypoint,
-                annotations=self.config.annotations,
-                service_account_name=self.config.serviceAccountName,
-                volumes=self._volumes or None,
-                security_context=self._build_pod_security_context(),
-                node_selector=self.config.nodeSelector or None,
-                pod_spec_patch=self._build_pod_spec_patch(),
+                namespace=namespace,
+                entrypoint=entrypoint,
+                annotations=annotations,
+                service_account_name=service_account_name,
+                volumes=volumes,
+                security_context=pod_security_context,
+                node_selector=node_selector,
+                pod_spec_patch=pod_spec_patch,
             )
         else:
+            workflow_kwargs: dict[str, Any] = {
+                "namespace": namespace,
+                "entrypoint": entrypoint,
+                "annotations": annotations,
+                "service_account_name": service_account_name,
+                "volumes": volumes,
+                "security_context": pod_security_context,
+                "node_selector": node_selector,
+                "pod_spec_patch": pod_spec_patch,
+            }
             if self.config.useGenerateNameForWorkflow:
-                context = Workflow(
-                    generate_name=f"{self.config.name}-",
-                    namespace=self.config.namespace,
-                    entrypoint=self.config.entrypoint,
-                    annotations=self.config.annotations,
-                    service_account_name=self.config.serviceAccountName,
-                    volumes=self._volumes or None,
-                    security_context=self._build_pod_security_context(),
-                    node_selector=self.config.nodeSelector or None,
-                    pod_spec_patch=self._build_pod_spec_patch(),
-                )
+                workflow_kwargs["generate_name"] = f"{self.config.name}-"
             else:
-                context = Workflow(
-                    name=self.config.name,
-                    namespace=self.config.namespace,
-                    entrypoint=self.config.entrypoint,
-                    annotations=self.config.annotations,
-                    service_account_name=self.config.serviceAccountName,
-                    volumes=self._volumes or None,
-                    security_context=self._build_pod_security_context(),
-                    node_selector=self.config.nodeSelector or None,
-                    pod_spec_patch=self._build_pod_spec_patch(),
-                )
+                workflow_kwargs["name"] = self.config.name
+            context = Workflow(**workflow_kwargs)
 
         with context as workflow:
             self.__generate_dag(step, env_vars=env_vars)
