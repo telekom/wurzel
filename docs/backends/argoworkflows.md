@@ -262,6 +262,7 @@ argo list --label workflows.argoproj.io/cron-workflow=my-scheduled-pipeline
 | `name` | string | `wurzel` | Name of the Workflow/CronWorkflow |
 | `namespace` | string | `argo-workflows` | Kubernetes namespace |
 | `schedules` | list[string]/null | `null` | Cron schedules for CronWorkflow. Set to `null` to create a normal Workflow instead |
+| `useGenerateNameForWorkflow` | bool | `true` | For plain Workflow manifests, emit `metadata.generateName` instead of a fixed `metadata.name` to avoid name/PVC collisions across reruns |
 | `entrypoint` | string | `wurzel-pipeline` | DAG entrypoint name |
 | `serviceAccountName` | string | `wurzel-service-account` | Kubernetes service account |
 | `dataDir` | path | `/usr/app` | Data directory inside containers |
@@ -289,7 +290,7 @@ argo list --label workflows.argoproj.io/cron-workflow=my-scheduled-pipeline
 | `runAsUser` | int | `null` | UID to run as |
 | `runAsGroup` | int | `null` | GID to run as |
 | `allowPrivilegeEscalation` | bool | `false` | Allow privilege escalation |
-| `readOnlyRootFilesystem` | bool | `null` | Read-only root filesystem |
+| `readOnlyRootFilesystem` | bool | `true` | Read-only root filesystem |
 | `dropCapabilities` | list[str] | `["ALL"]` | Linux capabilities to drop |
 | `seccompProfileType` | string | `RuntimeDefault` | Seccomp profile type |
 
@@ -301,6 +302,8 @@ argo list --label workflows.argoproj.io/cron-workflow=my-scheduled-pipeline
 | `cpu_limit` | string/null | `null` | Optional CPU limit |
 | `memory_request` | string | `128Mi` | Memory request |
 | `memory_limit` | string | `512Mi` | Memory limit |
+| `ephemeral_storage_request` | string/null | `null` | Optional ephemeral-storage request (required by some policies when using emptyDir) |
+| `ephemeral_storage_limit` | string/null | `null` | Optional ephemeral-storage limit (required by some policies when using emptyDir) |
 
 #### Tokenizer Cache Options
 
@@ -326,6 +329,7 @@ When enabled, the `HF_HOME` environment variable is automatically set to the `mo
 !!! note "createPvc vs claimName"
     - **`createPvc: false`** (default): Uses an existing PVC specified by `claimName`. You must create the PVC separately.
     - **`createPvc: true`**: Creates a workflow-scoped PVC via Argo's `volumeClaimTemplates`. The PVC is created when the workflow starts and deleted when it completes. This is useful for temporary caches but **not** for persistent model storage across runs.
+    - For plain `Workflow` manifests, keep `useGenerateNameForWorkflow: true` when `createPvc: true` to avoid PVC ownerReference collisions on reruns.
 
 #### S3 Artifact Options
 
