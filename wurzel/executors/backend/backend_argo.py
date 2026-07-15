@@ -296,10 +296,12 @@ class ArgoBackend(Backend, backend_name="argo"):
             for mapping in secret_mount.mappings:
                 mount_path = secret_mount.destination / mapping.value
                 mounts.append(
-                    VolumeMount(
-                        name=volume_name,
-                        mount_path=mount_path.as_posix(),
-                        sub_path=mapping.key,
+                    VolumeMount.model_validate(
+                        {
+                            "name": volume_name,
+                            "mountPath": mount_path.as_posix(),
+                            "subPath": mapping.key,
+                        }
                     )
                 )
 
@@ -327,10 +329,12 @@ class ArgoBackend(Backend, backend_name="argo"):
                     )
                 )
             mounts.append(
-                VolumeMount(
-                    name=volume_name,
-                    mount_path=tokenizer_cache.mountPath,
-                    read_only=tokenizer_cache.readOnly,
+                VolumeMount.model_validate(
+                    {
+                        "name": volume_name,
+                        "mountPath": tokenizer_cache.mountPath,
+                        "readOnly": tokenizer_cache.readOnly,
+                    }
                 )
             )
 
