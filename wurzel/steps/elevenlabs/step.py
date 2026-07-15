@@ -4,6 +4,11 @@
 
 """ElevenLabs Knowledge Base connector step for pushing markdown documents."""
 
+# pylint: disable=duplicate-code
+# Each connector step in wurzel/steps/ is an intentionally independent module
+# rather than sharing a base class, so the retry/back-off logic, error
+# formatting, and session-init pattern are duplicated by design.
+
 import random
 import time
 from logging import getLogger

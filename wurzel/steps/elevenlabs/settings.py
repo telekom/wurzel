@@ -4,6 +4,11 @@
 
 """Settings for the ElevenLabs Knowledge Base connector step."""
 
+# pylint: disable=duplicate-code
+# Each connector step in wurzel/steps/ is an intentionally independent module
+# rather than sharing a base class, so the common TIMEOUT/PUSH_ENABLED field +
+# validator pattern is duplicated by design.
+
 from typing import Self
 
 from pydantic import Field, SecretStr, model_validator
