@@ -17,7 +17,7 @@ from urllib.parse import urlparse
 
 import requests
 
-from wurzel.core import TypedStep
+from wurzel.core import TypedStep, step_history
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import StepFailed
 
@@ -37,7 +37,15 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
 
     Document names are derived deterministically from each document's URL (mirroring
     its path), so re-running the step against the same input updates existing
-    documents in place instead of creating duplicates.
+    documents in place instead of creating duplicates. Names are additionally scoped
+    by NAME_PREFIX and a tag derived from ``wurzel.core.step_history`` identifying the
+    current invocation's upstream lineage - stable across successive runs of the same
+    pipeline, but distinct across different upstream sources. This matters because
+    wurzel calls ``run()`` once per upstream file, not once per pipeline run: a step
+    with more than one ``dependsOn``, or a single upstream step that shards its output
+    across files, causes multiple separate invocations within one run, each seeing only
+    its own slice of the data. The history tag ensures each invocation only ever sees
+    and manages its own lineage's documents, never another invocation's.
 
     When PUSH_ENABLED is False the step returns the input data immediately
     without making any API calls.
@@ -46,6 +54,8 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
     are in the knowledge base but not in the input, so the knowledge base mirrors
     the input. Requires NAME_PREFIX (the knowledge base is a single flat namespace
     shared by every integration in the workspace) and is skipped on any push failure.
+    Scoped by the history tag described above, so pruning one invocation's stale
+    documents never touches a different invocation's documents within the same run.
 
     Environment Variables:
         ELEVENLABSKNOWLEDGEBASESTEP__API_KEY:          API key for authentication (required when PUSH_ENABLED is True)
@@ -133,16 +143,45 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
                 time.sleep(delay)
         raise RuntimeError("unreachable: retry loop exited without returning or raising")
 
+    def _history_tag(self) -> str:
+        """Scope tag derived from ``step_history``, identifying this invocation's upstream lineage.
+
+        Set by the wurzel Executor (via a ContextVar) right before ``run()`` is called,
+        encoding the chain of upstream steps/files that produced this invocation's
+        input. It is stable across successive runs of the same pipeline (built only
+        from step class names, never a run id or timestamp) but differs across
+        distinct upstream sources - so if this step is fed by more than one source in
+        a single run (multiple ``dependsOn``, or one upstream step sharding its output
+        across files), each invocation gets a different tag. Used by both
+        ``_generate_name`` and ``_list_existing`` so one invocation's create/update/
+        prune decisions never consider a different invocation's documents.
+
+        Falls back to "" (no extra scoping, matching behavior with no history) when
+        unset - e.g. when the step is instantiated directly instead of run through
+        the wurzel Executor.
+        """
+        history = step_history.get()
+        if history is None:
+            return ""
+        tag = "-".join(history.get())
+        return f"{tag}/" if tag else ""
+
     def _list_existing(self) -> dict[str, str]:
         """Return {name: document_id} for existing text documents in our namespace.
 
         Scoped to ``types=text`` (we only ever create text documents) - a plain
-        metadata filter, applied server-side. NAME_PREFIX filtering is done
-        client-side instead of via the API's ``search`` parameter: that is backed
-        by search infrastructure which is not guaranteed to return every matching
-        document (observed in practice missing a document that plainly existed),
-        which would cause us to create a duplicate instead of updating it. Every
-        text document is paginated through and matched by prefix here instead.
+        metadata filter, applied server-side. NAME_PREFIX + history-tag filtering
+        (see ``_history_tag``) is done client-side instead of via the API's
+        ``search`` parameter: that is backed by search infrastructure which is not
+        guaranteed to return every matching document (observed in practice missing
+        a document that plainly existed), which would cause us to create a
+        duplicate instead of updating it. Every text document is paginated through
+        and matched by prefix here instead.
+
+        The history tag additionally scopes this to the current invocation's own
+        upstream lineage, so if this step is invoked more than once within a single
+        run, one invocation's view of "existing" - and therefore its prune
+        decisions - never includes documents belonging to a different invocation.
 
         If two documents share the same name - e.g. a duplicate left over from
         exactly that kind of missed match - the extra copy is deleted so
@@ -154,6 +193,7 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
         first place - a document on an unfetched page would look "new" and get
         created a second time.
         """
+        scope = f"{self.settings.NAME_PREFIX}{self._history_tag()}"
         existing: dict[str, str] = {}
         cursor: str | None = None
         while True:
@@ -172,7 +212,7 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
                     # as one of ours, or it could get PATCHed or pruned.
                     continue
                 name = doc["name"]
-                if self.settings.NAME_PREFIX and not name.startswith(self.settings.NAME_PREFIX):
+                if scope and not name.startswith(scope):
                     continue
                 if name in existing:
                     log.warning(f"Duplicate document name {name!r}: keeping {existing[name]}, deleting {doc['id']}")
@@ -191,13 +231,18 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
         """Mirror the URL path as the document name so the same URL always maps to the same document.
 
         e.g. https://example.com/tmcz/baze/magenta-wi-fi -> tmcz/baze/magenta-wi-fi
+
+        Prefixed with NAME_PREFIX and a history-derived scope tag (see
+        ``_history_tag``), so distinct upstream sources feeding this step within
+        one run never collide in the name-matching namespace used for
+        update-in-place and pruning.
         """
         name = f"document_{idx:04d}"
         if doc.url:
             path = urlparse(doc.url).path.strip("/")
             if path:
                 name = path
-        return f"{self.settings.NAME_PREFIX}{name}" if self.settings.NAME_PREFIX else name
+        return f"{self.settings.NAME_PREFIX}{self._history_tag()}{name}"
 
     def _create(self, name: str, content: str) -> str:
         """POST /knowledge-base/text - create a new text document, returns its id."""
@@ -231,9 +276,11 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
         """Delete documents that are in the knowledge base but not in the input.
 
         Only ever considers documents returned by ``_list_existing`` - i.e. within
-        our ``types=text`` + NAME_PREFIX namespace - so it never touches documents
-        created outside this step. Best-effort: per-document failures are logged,
-        not raised. Returns the number of documents actually pruned.
+        our ``types=text`` + NAME_PREFIX + history-tag namespace - so it never
+        touches documents created outside this step, nor documents belonging to a
+        different invocation within the same run. Best-effort: per-document
+        failures are logged, not raised. Returns the number of documents actually
+        pruned.
         """
         stale = {name: doc_id for name, doc_id in existing.items() if name not in processed_names}
         if not stale:

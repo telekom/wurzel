@@ -9,6 +9,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
+from wurzel.core import step_history
+from wurzel.core.history import History
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import StepFailed
 from wurzel.steps.elevenlabs import ElevenLabsKnowledgeBaseStep
@@ -71,6 +73,23 @@ def two_docs():
         MarkdownDataContract(md="# Doc 1", url="https://example.com/doc1", keywords=""),
         MarkdownDataContract(md="# Doc 2", url="https://example.com/doc2", keywords=""),
     ]
+
+
+@pytest.fixture
+def history_scope():
+    """Sets step_history for the duration of a test, resetting it afterward.
+
+    step_history is a module-level ContextVar - left unset it stays None (the
+    default, matching a step run outside the wurzel Executor). Tests using this
+    fixture must reset it themselves rather than relying on test isolation,
+    since pytest runs tests sequentially in the same context.
+    """
+
+    def _set(*chain: str) -> None:
+        step_history.set(History(*chain))
+
+    yield _set
+    step_history.set(None)
 
 
 # ── Init ──────────────────────────────────────────────────────────────────────
@@ -137,6 +156,82 @@ class TestGenerateName:
 
     def test_stable_across_calls(self, step, sample_doc):
         assert step._generate_name(sample_doc, 0) == step._generate_name(sample_doc, 0)
+
+    def test_includes_history_tag_when_set(self, step, history_scope):
+        history_scope("SourceA", "ElevenLabsKnowledgeBase")
+        doc = MarkdownDataContract(md="content", url="https://example.com/a", keywords="")
+
+        assert step._generate_name(doc, 0) == "SourceA-ElevenLabsKnowledgeBase/a"
+
+    def test_no_history_tag_when_unset(self, step):
+        doc = MarkdownDataContract(md="content", url="https://example.com/a", keywords="")
+
+        assert step._generate_name(doc, 0) == "a"
+
+    def test_history_tag_combines_with_name_prefix(self, elevenlabs_env, history_scope):
+        elevenlabs_env.set("NAME_PREFIX", "wurzel/")
+        history_scope("SourceA")
+        step = ElevenLabsKnowledgeBaseStep()
+        doc = MarkdownDataContract(md="content", url="https://example.com/a", keywords="")
+
+        assert step._generate_name(doc, 0) == "wurzel/SourceA/a"
+        step.finalize()
+
+
+# ── History-scoped isolation ────────────────────────────────────────────────────
+
+
+class TestHistoryScopedIsolation:
+    """Covers the reviewer concern: wurzel calls run() once per upstream file, so a
+    step with multiple dependsOn (or one upstream step sharding its output across
+    files) gets invoked more than once within a single run. Without scoping,
+    prune from one invocation could delete another invocation's just-created
+    documents - reproduced for real against the live API before this fix.
+    """
+
+    def test_list_existing_scoped_to_own_history(self, elevenlabs_env, requests_mock, history_scope):
+        elevenlabs_env.set("NAME_PREFIX", "wurzel/")
+        history_scope("SourceB")
+        step = ElevenLabsKnowledgeBaseStep()
+        requests_mock.get(
+            KB,
+            json=kb_list_payload(
+                ("wurzel/SourceA/shared-name", "doc-a"),
+                ("wurzel/SourceB/shared-name", "doc-b"),
+            ),
+        )
+
+        existing = step._list_existing()
+
+        assert existing == {"wurzel/SourceB/shared-name": "doc-b"}
+        step.finalize()
+
+    def test_prune_does_not_touch_a_different_invocations_document(self, elevenlabs_env, requests_mock, history_scope):
+        elevenlabs_env.set("NAME_PREFIX", "wurzel/")
+        elevenlabs_env.set("PRUNE_STALE", "true")
+
+        # Invocation 1: source A creates its document.
+        history_scope("SourceA")
+        step_a = ElevenLabsKnowledgeBaseStep()
+        doc_a = MarkdownDataContract(md="# A", url="https://example.com/shared-name", keywords="")
+        requests_mock.get(KB, json=kb_list_payload())
+        requests_mock.post(KB_TEXT, json=kb_create_payload("doc-a", "wurzel/SourceA/shared-name"))
+        step_a.run([doc_a])
+        step_a.finalize()
+
+        # Invocation 2: source B, same run, different history/lineage. The listing
+        # reflects source A's document now existing in the workspace.
+        history_scope("SourceB")
+        step_b = ElevenLabsKnowledgeBaseStep()
+        doc_b = MarkdownDataContract(md="# B", url="https://example.com/shared-name", keywords="")
+        requests_mock.get(KB, json=kb_list_payload(("wurzel/SourceA/shared-name", "doc-a")))
+        requests_mock.post(KB_TEXT, json=kb_create_payload("doc-b", "wurzel/SourceB/shared-name"))
+        delete_mock = requests_mock.delete(f"{KB}/doc-a", text="")
+
+        step_b.run([doc_b])
+        step_b.finalize()
+
+        assert not delete_mock.called  # source A's document must survive source B's prune
 
 
 # ── Create / update ────────────────────────────────────────────────────────────
