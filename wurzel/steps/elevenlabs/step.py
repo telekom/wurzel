@@ -75,8 +75,6 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
         super().__init__()
         self._session: requests.Session | None = None
         if self.settings.PUSH_ENABLED:
-            if self.settings.API_KEY is None:
-                raise ValueError("API_KEY is required when PUSH_ENABLED is True")
             self._session = requests.Session()
             self._session.headers.update({"xi-api-key": self.settings.API_KEY.get_secret_value()})
 
