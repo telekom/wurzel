@@ -183,6 +183,11 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
         run, one invocation's view of "existing" - and therefore its prune
         decisions - never includes documents belonging to a different invocation.
 
+        Also scoped to PARENT_FOLDER_ID when set: ``_create`` files new documents
+        under that folder, so listing must query the same folder or every
+        previously-created document would look "new" on the next run and get
+        duplicated instead of updated in place.
+
         If two documents share the same name - e.g. a duplicate left over from
         exactly that kind of missed match - the extra copy is deleted so
         duplicates self-heal instead of accumulating silently across runs.
@@ -198,6 +203,8 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
         cursor: str | None = None
         while True:
             params: dict[str, Any] = {"page_size": self.settings.PAGE_SIZE, "types": ["text"]}
+            if self.settings.PARENT_FOLDER_ID:
+                params["parent_folder_id"] = self.settings.PARENT_FOLDER_ID
             if cursor:
                 params["cursor"] = cursor
             try:

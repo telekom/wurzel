@@ -4,6 +4,7 @@
 
 """Unit tests for ElevenLabsKnowledgeBaseStep using requests-mock for HTTP fixtures."""
 
+import re
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -346,6 +347,23 @@ class TestListPagination:
         assert get_request.qs.get("types") == ["text"]
         step.finalize()
 
+    def test_parent_folder_id_included_in_list_params(self, elevenlabs_env, sample_doc, requests_mock):
+        """`_create` files new documents under PARENT_FOLDER_ID, so listing must be
+        scoped to the same folder - otherwise every document created there looks
+        "new" again on the next run and gets duplicated instead of updated in
+        place (reproduced against a real KB: https://github.com/telekom/wurzel/pull/247).
+        """
+        elevenlabs_env.set("PARENT_FOLDER_ID", "folder-1")
+        step = ElevenLabsKnowledgeBaseStep()
+        requests_mock.get(KB, json=kb_list_payload())
+        requests_mock.post(KB_TEXT, json=kb_create_payload("doc-1"))
+
+        step.run([sample_doc])
+
+        get_request = next(r for r in requests_mock.request_history if r.method == "GET")
+        assert get_request.qs.get("parent_folder_id") == ["folder-1"]
+        step.finalize()
+
     def test_name_prefix_filters_client_side(self, elevenlabs_env, sample_doc, requests_mock):
         """Out-of-prefix documents must never enter `existing` at all.
 
@@ -579,6 +597,123 @@ class TestPruneStale:
         assert not delete_mock.called
         assert "Skipping prune" in caplog.text
         step.finalize()
+
+
+# ── Re-running against a persistent KB ──────────────────────────────────────────
+
+
+class StatefulFakeKB:
+    """A minimal, stateful in-memory KB backing GET/POST/PATCH/DELETE, so a
+    second `step.run()` call sees documents created by a first one - unlike the
+    other tests here, which only ever mock a single request/response in
+    isolation. Needed to catch bugs that only show up across repeated runs
+    (https://github.com/telekom/wurzel/pull/247#issuecomment-5002614933:
+    documents were never recognized as already existing, so every run just
+    kept creating new copies instead of updating in place).
+    """
+
+    def __init__(self):
+        self.docs: dict[str, dict] = {}
+        self._next_id = 1
+
+    def register(self, requests_mock):
+        requests_mock.get(KB, json=self._list)
+        requests_mock.post(KB_TEXT, json=self._create)
+        requests_mock.patch(re.compile(rf"{re.escape(KB)}/(?!text)([^/?]+)"), json=self._update)
+        requests_mock.delete(re.compile(rf"{re.escape(KB)}/([^/?]+)"), text=self._delete)
+
+    def _list(self, request, context):
+        parent_folder_id = request.qs.get("parent_folder_id", [None])[0]
+        page_size = int(request.qs.get("page_size", ["100"])[0])
+        cursor = request.qs.get("cursor", [None])[0]
+        items = [(doc_id, d) for doc_id, d in self.docs.items() if d["parent_folder_id"] == parent_folder_id]
+        start = int(cursor) if cursor else 0
+        page = items[start : start + page_size]
+        next_start = start + page_size
+        has_more = next_start < len(items)
+        return {
+            "documents": [{"id": doc_id, "name": d["name"], "type": "text"} for doc_id, d in page],
+            "has_more": has_more,
+            "next_cursor": str(next_start) if has_more else None,
+        }
+
+    def _create(self, request, context):
+        doc_id = f"doc-{self._next_id}"
+        self._next_id += 1
+        body = request.json()
+        self.docs[doc_id] = {"name": body["name"], "content": body["text"], "parent_folder_id": body.get("parent_folder_id")}
+        return kb_create_payload(doc_id, body["name"])
+
+    def _update(self, request, context):
+        doc_id = request.path.rsplit("/", 1)[-1]
+        self.docs[doc_id]["content"] = request.json()["content"]
+        return {}
+
+    def _delete(self, request, context):
+        self.docs.pop(request.path.rsplit("/", 1)[-1], None)
+        return ""
+
+
+class TestSecondRun:
+    """Runs the step twice against a StatefulFakeKB - the scenario a Telekom
+    reviewer reported as broken on PR #247: re-running the step (their
+    pipeline's normal, periodic operation) didn't update existing documents in
+    place, it just kept creating new ones, doubling the knowledge base every
+    run. Root cause: `_list_existing` never scoped its GET by PARENT_FOLDER_ID,
+    even though `_create` files new documents under it - so once a document
+    was filed under a folder, every later run's listing failed to see it and
+    treated it as brand new. See `test_parent_folder_id_included_in_list_params`
+    for the direct regression test on that request; these exercise the
+    same fix through two full `run()` calls instead of a single one.
+    """
+
+    def test_second_run_updates_in_place_and_prunes(self, elevenlabs_env, requests_mock):
+        elevenlabs_env.set("NAME_PREFIX", "wurzel/")
+        elevenlabs_env.set("PRUNE_STALE", "true")
+        kb = StatefulFakeKB()
+        kb.register(requests_mock)
+        docs = [MarkdownDataContract(md=f"# Doc {i}", url=f"https://example.com/doc{i}", keywords="") for i in range(3)]
+
+        ElevenLabsKnowledgeBaseStep().run(docs)
+        assert len(kb.docs) == 3
+
+        # Second run, unchanged input: must update in place, not duplicate.
+        ElevenLabsKnowledgeBaseStep().run(docs)
+        assert len(kb.docs) == 3, f"expected update-in-place, got duplicates: {kb.docs}"
+        patch_count = sum(1 for r in requests_mock.request_history if r.method == "PATCH")
+        assert patch_count == 3
+
+        # Third run, one doc removed from the source: must prune it.
+        ElevenLabsKnowledgeBaseStep().run(docs[:2])
+        assert len(kb.docs) == 2, f"expected the removed doc to be pruned, got: {kb.docs}"
+
+    def test_second_run_with_parent_folder_id_does_not_duplicate(self, elevenlabs_env, requests_mock):
+        elevenlabs_env.set("PARENT_FOLDER_ID", "folder-1")
+        kb = StatefulFakeKB()
+        kb.register(requests_mock)
+        docs = [MarkdownDataContract(md=f"# Doc {i}", url=f"https://example.com/doc{i}", keywords="") for i in range(5)]
+
+        ElevenLabsKnowledgeBaseStep().run(docs)
+        assert len(kb.docs) == 5
+
+        ElevenLabsKnowledgeBaseStep().run(docs)
+        assert len(kb.docs) == 5, f"expected update-in-place, got {len(kb.docs)} docs (the reported bug: docs doubled)"
+
+    def test_second_run_at_scale_beyond_one_page(self, elevenlabs_env, requests_mock):
+        """The report showed ~1600 existing documents - comfortably more than one
+        PAGE_SIZE page - so listing must paginate through everything, not just
+        the first page, before deciding what's already there.
+        """
+        elevenlabs_env.set("NAME_PREFIX", "wurzel/")
+        kb = StatefulFakeKB()
+        kb.register(requests_mock)
+        docs = [MarkdownDataContract(md=f"# Doc {i}", url=f"https://example.com/doc{i}", keywords="") for i in range(250)]
+
+        ElevenLabsKnowledgeBaseStep().run(docs)
+        assert len(kb.docs) == 250
+
+        ElevenLabsKnowledgeBaseStep().run(docs)
+        assert len(kb.docs) == 250, f"expected update-in-place across all pages, got {len(kb.docs)} docs"
 
 
 # ── Failure scenarios ──────────────────────────────────────────────────────────
