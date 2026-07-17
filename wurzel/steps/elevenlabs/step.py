@@ -260,7 +260,11 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
 
     def _delete(self, document_id: str) -> None:
         """DELETE /knowledge-base/{id} - remove a document."""
-        self._request("DELETE", f"{KNOWLEDGE_BASE_PATH}/{document_id}", params={"force": self.settings.PRUNE_FORCE})
+        self._request(
+            "DELETE",
+            f"{KNOWLEDGE_BASE_PATH}/{document_id}",
+            params={"force": str(self.settings.PRUNE_FORCE).lower()},
+        )
 
     def _format_error(self, e: requests.exceptions.RequestException) -> str:
         """Format a request exception into a readable error message."""
