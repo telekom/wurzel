@@ -1,6 +1,6 @@
 [project]
 name = "wurzel"
-version = "3.1.0"
+version = "3.2.0"
 description = "Pick, choose and chain your RAG tools in a pythonic way"
 authors = [
     {name ="Thomas Weigel", email="thomas.weigel@telekom.de"},
