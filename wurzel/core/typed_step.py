@@ -8,6 +8,7 @@ from logging import getLogger
 from pathlib import Path
 from types import NoneType
 from typing import (
+    Any,
     Generic,
     Self,
     TypeAlias,
@@ -130,7 +131,7 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
                 list_or_type = NoneType
             return containers, cast(type, list_or_type)  # list_or_type is now a type.
         if origin_t in cls._supported_containers:
-            containers.insert(0, origin_t)
+            containers.insert(0, cast(type[Iterable], origin_t))
         else:
             raise StaticTypeError(f"{origin_t} is not a supported container")
         if len(get_args(list_or_type)) == 1:
@@ -194,10 +195,10 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
             # construct type using only list instead of List
             return_annotation = run_retur_orig
             for container in run_retur_cons or []:
-                return_annotation = container[return_annotation]
+                return_annotation = cast(Any, container)[return_annotation]
             input_annotation = run_input_orig
             for container in run_input_cons or []:
-                input_annotation = container[input_annotation]
+                input_annotation = cast(Any, container)[input_annotation]
             # Check if inputs was in list
             if input_annotation != expected_run_input:
                 raise StaticTypeError(
