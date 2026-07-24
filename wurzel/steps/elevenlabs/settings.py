@@ -27,6 +27,14 @@ class ElevenLabsKnowledgeBaseSettings(Settings):
             list/prune query so unrelated documents in the same workspace are
             never touched.
         PARENT_FOLDER_ID: Optional knowledge base folder to file new documents under.
+        FOLDER_PER_SOURCE: When True, file documents into a subfolder named after the
+            originating source step (the first step in this invocation's step_history
+            lineage - see ElevenLabsKnowledgeBaseStep._source_category), created under
+            PARENT_FOLDER_ID if it doesn't already exist. Requires PARENT_FOLDER_ID: the
+            knowledge base root is a single flat namespace shared by every integration in
+            the workspace, and the API enforces no uniqueness on folder names, so an
+            unprefixed category folder created there could collide with an unrelated
+            folder created by something else entirely.
         TIMEOUT: Request timeout in seconds.
         PUSH_ENABLED: When False, skip pushing to ElevenLabs and return the input data unchanged.
         PRUNE_STALE: When True, delete documents present in the knowledge base but
@@ -47,6 +55,7 @@ class ElevenLabsKnowledgeBaseSettings(Settings):
         ELEVENLABSKNOWLEDGEBASESTEP__BASE_URL:         ElevenLabs API base URL
         ELEVENLABSKNOWLEDGEBASESTEP__NAME_PREFIX:      Prefix for generated document names
         ELEVENLABSKNOWLEDGEBASESTEP__PARENT_FOLDER_ID: Knowledge base folder id for new documents
+        ELEVENLABSKNOWLEDGEBASESTEP__FOLDER_PER_SOURCE: File documents into a per-source-step subfolder (default: False)
         ELEVENLABSKNOWLEDGEBASESTEP__TIMEOUT:          Request timeout in seconds
         ELEVENLABSKNOWLEDGEBASESTEP__PUSH_ENABLED:     Whether to push documents (default: True)
         ELEVENLABSKNOWLEDGEBASESTEP__PRUNE_STALE:      Delete documents absent from input (default: False)
@@ -71,6 +80,10 @@ class ElevenLabsKnowledgeBaseSettings(Settings):
     PARENT_FOLDER_ID: str | None = Field(
         default=None,
         description="Knowledge base folder id to file new documents under",
+    )
+    FOLDER_PER_SOURCE: bool = Field(
+        default=False,
+        description="When True, file documents into a subfolder named after the originating source step",
     )
     TIMEOUT: int = Field(
         default=120,
@@ -124,4 +137,17 @@ class ElevenLabsKnowledgeBaseSettings(Settings):
         """
         if self.PRUNE_STALE and not self.NAME_PREFIX:
             raise ValueError("NAME_PREFIX is required when PRUNE_STALE is True")
+        return self
+
+    @model_validator(mode="after")
+    def validate_parent_folder_id_when_categorizing(self) -> Self:
+        """Require PARENT_FOLDER_ID whenever FOLDER_PER_SOURCE is enabled.
+
+        Without it, category folders would be created at the knowledge base root - the same
+        flat namespace shared by every integration in the workspace - where an unprefixed,
+        server-side-undeduplicated folder name could collide with an unrelated folder created
+        by something else entirely.
+        """
+        if self.FOLDER_PER_SOURCE and not self.PARENT_FOLDER_ID:
+            raise ValueError("PARENT_FOLDER_ID is required when FOLDER_PER_SOURCE is True")
         return self

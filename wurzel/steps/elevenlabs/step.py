@@ -11,6 +11,7 @@
 
 import random
 import time
+from collections.abc import Iterator
 from logging import getLogger
 from typing import Any
 from urllib.parse import urlparse
@@ -26,6 +27,7 @@ from .settings import ElevenLabsKnowledgeBaseSettings
 log = getLogger(__name__)
 
 KNOWLEDGE_BASE_PATH = "/v1/convai/knowledge-base"
+KNOWLEDGE_BASE_FOLDER_PATH = f"{KNOWLEDGE_BASE_PATH}/folder"
 
 
 class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, list[MarkdownDataContract], list[MarkdownDataContract]]):
@@ -57,23 +59,37 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
     Scoped by the history tag described above, so pruning one invocation's stale
     documents never touches a different invocation's documents within the same run.
 
+    Folder-per-source (optional, gated by FOLDER_PER_SOURCE): rather than filing every
+    document directly under PARENT_FOLDER_ID, resolve (creating if missing) a subfolder
+    named after this invocation's originating source step - see ``_source_category`` -
+    and file into that instead. Intended for pipelines where PARENT_FOLDER_ID accumulates
+    documents from many distinct sources (e.g. FAQ, Sales Catalog): each source gets its
+    own subfolder instead of thousands of documents sharing one flat namespace. Folder ids
+    are cached per category for the lifetime of the step instance (see ``_resolve_category_folder_id``),
+    since a single instance's run() may be invoked many times per execution (once per
+    upstream file, as above). Requires PARENT_FOLDER_ID (enforced by a settings validator):
+    without it, category folders would be created at the knowledge base root, where an
+    unprefixed, server-side-undeduplicated folder name could collide with unrelated content.
+
     Environment Variables:
-        ELEVENLABSKNOWLEDGEBASESTEP__API_KEY:          API key for authentication (required when PUSH_ENABLED is True)
-        ELEVENLABSKNOWLEDGEBASESTEP__BASE_URL:         ElevenLabs API base URL (default: https://api.elevenlabs.io)
-        ELEVENLABSKNOWLEDGEBASESTEP__NAME_PREFIX:      Prefix for generated document names (default: "", required when PRUNE_STALE is True)
-        ELEVENLABSKNOWLEDGEBASESTEP__PARENT_FOLDER_ID: Knowledge base folder id for new documents
-        ELEVENLABSKNOWLEDGEBASESTEP__TIMEOUT:          Request timeout in seconds (default: 120)
-        ELEVENLABSKNOWLEDGEBASESTEP__PUSH_ENABLED:     Whether to push to ElevenLabs (default: True)
-        ELEVENLABSKNOWLEDGEBASESTEP__PRUNE_STALE:      Delete documents absent from input, mirroring it (default: False)
-        ELEVENLABSKNOWLEDGEBASESTEP__PRUNE_FORCE:      Force-delete documents attached to agents (default: False)
-        ELEVENLABSKNOWLEDGEBASESTEP__PAGE_SIZE:        Page size when listing existing documents (default: 100)
-        ELEVENLABSKNOWLEDGEBASESTEP__MAX_RETRIES:      Max attempts per HTTP call (default: 3)
-        ELEVENLABSKNOWLEDGEBASESTEP__RETRY_BACKOFF:    Base back-off seconds - 0.5s, 1s, 2s, ... (default: 0.5)
+        ELEVENLABSKNOWLEDGEBASESTEP__API_KEY:           API key for authentication (required when PUSH_ENABLED is True)
+        ELEVENLABSKNOWLEDGEBASESTEP__BASE_URL:          ElevenLabs API base URL (default: https://api.elevenlabs.io)
+        ELEVENLABSKNOWLEDGEBASESTEP__NAME_PREFIX:       Prefix for generated document names (default: "", required when PRUNE_STALE is True)
+        ELEVENLABSKNOWLEDGEBASESTEP__PARENT_FOLDER_ID:  Knowledge base folder id for new documents
+        ELEVENLABSKNOWLEDGEBASESTEP__FOLDER_PER_SOURCE: Per-source-step subfolder (default: False, requires PARENT_FOLDER_ID)
+        ELEVENLABSKNOWLEDGEBASESTEP__TIMEOUT:           Request timeout in seconds (default: 120)
+        ELEVENLABSKNOWLEDGEBASESTEP__PUSH_ENABLED:      Whether to push to ElevenLabs (default: True)
+        ELEVENLABSKNOWLEDGEBASESTEP__PRUNE_STALE:       Delete documents absent from input, mirroring it (default: False)
+        ELEVENLABSKNOWLEDGEBASESTEP__PRUNE_FORCE:       Force-delete documents attached to agents (default: False)
+        ELEVENLABSKNOWLEDGEBASESTEP__PAGE_SIZE:         Page size when listing existing documents (default: 100)
+        ELEVENLABSKNOWLEDGEBASESTEP__MAX_RETRIES:       Max attempts per HTTP call (default: 3)
+        ELEVENLABSKNOWLEDGEBASESTEP__RETRY_BACKOFF:     Base back-off seconds - 0.5s, 1s, 2s, ... (default: 0.5)
     """
 
     def __init__(self) -> None:
         super().__init__()
         self._session: requests.Session | None = None
+        self._category_folder_cache: dict[str, str] = {}
         if self.settings.PUSH_ENABLED:
             self._session = requests.Session()
             self._session.headers.update({"xi-api-key": self.settings.API_KEY.get_secret_value()})  # ty: ignore[unresolved-attribute]
@@ -164,45 +180,24 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
         tag = "-".join(history.get())
         return f"{tag}/" if tag else ""
 
-    def _list_existing(self) -> dict[str, str]:
-        """Return {name: document_id} for existing text documents in our namespace.
+    def _iter_documents(self, doc_type: str, parent_folder_id: str | None) -> Iterator[dict[str, Any]]:
+        """Yield every document of ``doc_type`` scoped to ``parent_folder_id``, across all pages.
 
-        Scoped to ``types=text`` (we only ever create text documents) - a plain
-        metadata filter, applied server-side. NAME_PREFIX + history-tag filtering
-        (see ``_history_tag``) is done client-side instead of via the API's
-        ``search`` parameter: that is backed by search infrastructure which is not
-        guaranteed to return every matching document (observed in practice missing
-        a document that plainly existed), which would cause us to create a
-        duplicate instead of updating it. Every text document is paginated through
-        and matched by prefix here instead.
+        Scoped to ``types=[doc_type]`` server-side, plus a defensive client-side check
+        (`type` is the discriminator between text/url/file/folder documents - a leaked
+        document of a different type must never be treated as one of ours). Shared by
+        ``_list_existing`` (``doc_type="text"``) and ``_find_folder`` (``doc_type="folder"``).
 
-        The history tag additionally scopes this to the current invocation's own
-        upstream lineage, so if this step is invoked more than once within a single
-        run, one invocation's view of "existing" - and therefore its prune
-        decisions - never includes documents belonging to a different invocation.
-
-        Also scoped to PARENT_FOLDER_ID when set: ``_create`` files new documents
-        under that folder, so listing must query the same folder or every
-        previously-created document would look "new" on the next run and get
-        duplicated instead of updated in place.
-
-        If two documents share the same name - e.g. a duplicate left over from
-        exactly that kind of missed match - the extra copy is deleted so
-        duplicates self-heal instead of accumulating silently across runs.
-
-        Raises StepFailed (rather than falling back to an empty/partial result)
-        if the listing can't be completed even after retries: proceeding with an
-        incomplete view of what already exists is what causes duplicates in the
-        first place - a document on an unfetched page would look "new" and get
-        created a second time.
+        Raises StepFailed (rather than falling back to an empty/partial result) if a page
+        can't be fetched even after retries: proceeding with an incomplete listing is what
+        causes duplicates in the first place - a document on an unfetched page would look
+        "new" and get created a second time.
         """
-        scope = f"{self.settings.NAME_PREFIX}{self._history_tag()}"
-        existing: dict[str, str] = {}
         cursor: str | None = None
         while True:
-            params: dict[str, Any] = {"page_size": self.settings.PAGE_SIZE, "types": ["text"]}
-            if self.settings.PARENT_FOLDER_ID:
-                params["parent_folder_id"] = self.settings.PARENT_FOLDER_ID
+            params: dict[str, Any] = {"page_size": self.settings.PAGE_SIZE, "types": [doc_type]}
+            if parent_folder_id:
+                params["parent_folder_id"] = parent_folder_id
             if cursor:
                 params["cursor"] = cursor
             try:
@@ -210,27 +205,128 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
             except requests.exceptions.RequestException as e:
                 raise StepFailed(f"Could not list existing knowledge base documents: {self._format_error(e)}") from e
             for doc in result.get("documents", []):
-                if doc.get("type") != "text":
-                    # Defensive: don't trust the server-side `types=text` filter alone
-                    # (`type` is the discriminator between text/url/file/folder
-                    # documents) - a leaked non-text document must never be treated
-                    # as one of ours, or it could get PATCHed or pruned.
+                if doc.get("type") != doc_type:
                     continue
-                name = doc["name"]
-                if scope and not name.startswith(scope):
-                    continue
-                if name in existing:
-                    log.warning(f"Duplicate document name {name!r}: keeping {existing[name]}, deleting {doc['id']}")
-                    try:
-                        self._delete(doc["id"])
-                    except requests.exceptions.RequestException as e:
-                        log.warning(f"Failed to delete duplicate {doc['id']} for {name!r}: {self._format_error(e)}")
-                    continue
-                existing[name] = doc["id"]
+                yield doc
             cursor = result.get("next_cursor")
             if not result.get("has_more") or not cursor:
                 break
+
+    def _list_existing(self, parent_folder_id: str | None) -> dict[str, str]:
+        """Return {name: document_id} for existing text documents in our namespace.
+
+        NAME_PREFIX + history-tag filtering (see ``_history_tag``) is done client-side
+        instead of via the API's ``search`` parameter: that is backed by search
+        infrastructure which is not guaranteed to return every matching document
+        (observed in practice missing a document that plainly existed), which would
+        cause us to create a duplicate instead of updating it. Every text document is
+        paginated through and matched by prefix here instead.
+
+        The history tag additionally scopes this to the current invocation's own
+        upstream lineage, so if this step is invoked more than once within a single
+        run, one invocation's view of "existing" - and therefore its prune
+        decisions - never includes documents belonging to a different invocation.
+
+        ``parent_folder_id`` must be the same folder ``_create`` files new documents
+        under (the resolved category folder when FOLDER_PER_SOURCE is enabled,
+        otherwise PARENT_FOLDER_ID directly) - otherwise every previously-created
+        document would look "new" on the next run and get duplicated instead of
+        updated in place.
+
+        If two documents share the same name - e.g. a duplicate left over from
+        exactly that kind of missed match - the extra copy is deleted so
+        duplicates self-heal instead of accumulating silently across runs.
+        """
+        scope = f"{self.settings.NAME_PREFIX}{self._history_tag()}"
+        existing: dict[str, str] = {}
+        for doc in self._iter_documents("text", parent_folder_id):
+            name = doc["name"]
+            if scope and not name.startswith(scope):
+                continue
+            if name in existing:
+                log.warning(f"Duplicate document name {name!r}: keeping {existing[name]}, deleting {doc['id']}")
+                try:
+                    self._delete(doc["id"])
+                except requests.exceptions.RequestException as e:
+                    log.warning(f"Failed to delete duplicate {doc['id']} for {name!r}: {self._format_error(e)}")
+                continue
+            existing[name] = doc["id"]
         return existing
+
+    def _find_folder(self, name: str, parent_folder_id: str | None) -> str | None:
+        """Return the id of an existing folder named ``name`` directly under ``parent_folder_id``, or None.
+
+        The ElevenLabs API enforces no uniqueness on folder names - creating a folder
+        with a name/parent that already exists succeeds and produces a second, distinct
+        folder rather than an error or the existing one. If more than one match turns up
+        here (e.g. left over from a previous run that crashed after creating a folder but
+        before caching its id), the lowest id is kept deterministically and a warning is
+        logged. Unlike duplicate text documents, extras are never auto-deleted: a folder
+        may hold real nested content, so deleting the "wrong" one risks losing it.
+        """
+        matches = {doc["id"] for doc in self._iter_documents("folder", parent_folder_id) if doc["name"] == name}
+        if not matches:
+            return None
+        if len(matches) > 1:
+            log.warning(f"Multiple folders named {name!r} under parent {parent_folder_id!r}: {sorted(matches)}")
+        return sorted(matches)[0]
+
+    def _create_folder(self, name: str, parent_folder_id: str | None) -> str:
+        """POST /knowledge-base/folder - create a new folder, returns its id.
+
+        Not retried on a read timeout: the server may already have created it, and
+        since the API doesn't dedupe folder names (see ``_find_folder``), blindly
+        retrying risks creating a second folder with the same name.
+        """
+        payload: dict[str, Any] = {"name": name}
+        if parent_folder_id:
+            payload["parent_folder_id"] = parent_folder_id
+        result = self._request("POST", KNOWLEDGE_BASE_FOLDER_PATH, idempotent=False, json=payload)
+        return result["id"]
+
+    def _resolve_category_folder_id(self, category: str) -> str:
+        """Get-or-create the subfolder for ``category``, cached for the life of this step instance.
+
+        A single step instance's run() may be invoked many times within one execution -
+        once per upstream file, per the class docstring - so every invocation for the same
+        category would otherwise repeat the same folder lookup, and risk an unnecessary
+        extra folder being created, since the API doesn't dedupe folder names itself.
+        """
+        cached = self._category_folder_cache.get(category)
+        if cached is not None:
+            return cached
+        folder_id = self._find_folder(category, self.settings.PARENT_FOLDER_ID)
+        if folder_id is None:
+            folder_id = self._create_folder(category, self.settings.PARENT_FOLDER_ID)
+            log.info(f"Created category folder {category!r}: {folder_id}")
+        self._category_folder_cache[category] = folder_id
+        return folder_id
+
+    def _source_category(self) -> str | None:
+        """The originating source step's name, derived from step_history, for FOLDER_PER_SOURCE.
+
+        Reads the full flattened chain (``"-".join(history.get())``) rather than indexing
+        ``history.get()[0]`` directly: once this invocation's history has round-tripped
+        through disk (i.e. any step sits between the true source and this one), the wurzel
+        Executor's on-disk filename encoding collapses everything upstream into a single
+        compound entry - e.g. ``["SourceA-Splitter", "ElevenLabsKnowledgeBase"]`` instead of
+        ``["SourceA", "Splitter", "ElevenLabsKnowledgeBase"]`` - so ``[0]`` would return
+        "SourceA-Splitter", not the true origin "SourceA". Joining first and then splitting
+        on the same separator recovers the original ordering losslessly regardless of that
+        fragmentation (step names come from Python class names, which can never themselves
+        contain "-", so splitting on it is unambiguous), and always yields the very first
+        step in the lineage - the same source step ``_history_tag`` already treats the
+        joined string as authoritative for.
+
+        Falls back to None (no categorization for this invocation) when step_history is
+        unset - e.g. when the step is instantiated directly instead of run through the
+        wurzel Executor.
+        """
+        history = step_history.get()
+        if history is None:
+            return None
+        chain = "-".join(history.get())
+        return chain.split("-")[0] if chain else None
 
     def _generate_name(self, doc: MarkdownDataContract, idx: int) -> str:
         """Mirror the URL path as the document name so the same URL always maps to the same document.
@@ -249,11 +345,11 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
                 name = path
         return f"{self.settings.NAME_PREFIX}{self._history_tag()}{name}"
 
-    def _create(self, name: str, content: str) -> str:
+    def _create(self, name: str, content: str, parent_folder_id: str | None) -> str:
         """POST /knowledge-base/text - create a new text document, returns its id."""
         payload: dict[str, Any] = {"text": content, "name": name}
-        if self.settings.PARENT_FOLDER_ID:
-            payload["parent_folder_id"] = self.settings.PARENT_FOLDER_ID
+        if parent_folder_id:
+            payload["parent_folder_id"] = parent_folder_id
         # Not retried on a read timeout: the server may already have created it,
         # and re-sending would create a duplicate.
         result = self._request("POST", f"{KNOWLEDGE_BASE_PATH}/text", idempotent=False, json=payload)
@@ -314,7 +410,15 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
             log.warning("No documents to process")
             return inpt
 
-        existing = self._list_existing()
+        parent_folder_id = self.settings.PARENT_FOLDER_ID
+        if self.settings.FOLDER_PER_SOURCE:
+            category = self._source_category()
+            if category:
+                parent_folder_id = self._resolve_category_folder_id(category)
+            else:
+                log.warning("FOLDER_PER_SOURCE is enabled but no step_history is set; filing documents without a category folder")
+
+        existing = self._list_existing(parent_folder_id)
         log.info(f"Processing {len(inpt)} documents for ElevenLabs Knowledge Base")
 
         success_count = 0
@@ -330,7 +434,7 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
                     self._update(existing_id, doc.md)
                     log.info(f"Updated: {name}")
                 else:
-                    existing[name] = self._create(name, doc.md)
+                    existing[name] = self._create(name, doc.md, parent_folder_id)
                     log.info(f"Created: {name}")
                 success_count += 1
             except requests.exceptions.RequestException as e:
