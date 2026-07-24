@@ -21,6 +21,7 @@ from wurzel.steps.elevenlabs import ElevenLabsKnowledgeBaseStep
 BASE_URL = "https://api.elevenlabs.io"
 KB = f"{BASE_URL}/v1/convai/knowledge-base"
 KB_TEXT = f"{KB}/text"
+KB_FOLDER = f"{KB}/folder"
 
 
 # ── Response shape helpers ────────────────────────────────────────────────────
@@ -38,6 +39,21 @@ def kb_list_payload(*docs: tuple[str, str], has_more: bool = False, next_cursor:
 def kb_create_payload(doc_id: str, name: str = "doc") -> dict:
     """Response from POST /knowledge-base/text."""
     return {"id": doc_id, "name": name, "folder_path": []}
+
+
+def register_kb_listing(requests_mock, *, folders: tuple[tuple[str, str], ...] = (), texts: tuple[tuple[str, str], ...] = ()) -> None:
+    """Mock GET /knowledge-base to return `folders` or `texts` depending on the `types` query param.
+
+    Needed because folder resolution (``_find_folder``) and text-document listing
+    (``_list_existing``) share the same GET endpoint, distinguished only by `types`.
+    """
+
+    def _respond(request, _context):
+        if request.qs.get("types") == ["folder"]:
+            return kb_list_payload(*folders, doc_type="folder")
+        return kb_list_payload(*texts, doc_type="text")
+
+    requests_mock.get(KB, json=_respond)
 
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
@@ -202,7 +218,7 @@ class TestHistoryScopedIsolation:
             ),
         )
 
-        existing = step._list_existing()
+        existing = step._list_existing(None)
 
         assert existing == {"wurzel/SourceB/shared-name": "doc-b"}
         step.finalize()
@@ -740,6 +756,223 @@ class TestFailureScenarios:
         result = step.run(two_docs)
 
         assert result == two_docs
+
+
+# ── Folder-per-source: category derivation ─────────────────────────────────────
+
+
+class TestSourceCategory:
+    def test_none_when_history_unset(self, step):
+        assert step._source_category() is None
+
+    def test_first_segment_of_two_step_chain(self, step, history_scope):
+        history_scope("SourceA", "ElevenLabsKnowledgeBase")
+        assert step._source_category() == "SourceA"
+
+    def test_recovers_true_origin_despite_disk_fragmentation(self, step, history_scope):
+        """Reproduces the on-disk filename round-trip: once an intermediate step (e.g. a
+        splitter) sits between the true source and this step, base_executor.load()
+        re-parses the stored filename stem as a SINGLE atomic History entry rather than
+        splitting it back into per-step components - so history.get() here looks like
+        ["SourceA-Splitter", "ElevenLabsKnowledgeBase"], not
+        ["SourceA", "Splitter", "ElevenLabsKnowledgeBase"]. Indexing [0] would incorrectly
+        return "SourceA-Splitter"; joining then re-splitting must still recover the true
+        original source, "SourceA".
+        """
+        history_scope("SourceA-Splitter", "ElevenLabsKnowledgeBase")
+        assert step._source_category() == "SourceA"
+
+    def test_single_element_history_returns_own_name(self, step, history_scope):
+        history_scope("ElevenLabsKnowledgeBase")
+        assert step._source_category() == "ElevenLabsKnowledgeBase"
+
+
+# ── Folder-per-source: get-or-create resolution ─────────────────────────────────
+
+
+class TestResolveCategoryFolder:
+    def test_creates_folder_when_missing(self, elevenlabs_env, requests_mock):
+        elevenlabs_env.set("PARENT_FOLDER_ID", "root-1")
+        step = ElevenLabsKnowledgeBaseStep()
+        register_kb_listing(requests_mock, folders=())
+        create_mock = requests_mock.post(KB_FOLDER, json=kb_create_payload("folder-1", "SourceA"))
+
+        folder_id = step._resolve_category_folder_id("SourceA")
+
+        assert folder_id == "folder-1"
+        assert create_mock.called_once
+        assert create_mock.last_request.json() == {"name": "SourceA", "parent_folder_id": "root-1"}
+        step.finalize()
+
+    def test_reuses_existing_folder(self, elevenlabs_env, requests_mock):
+        elevenlabs_env.set("PARENT_FOLDER_ID", "root-1")
+        step = ElevenLabsKnowledgeBaseStep()
+        register_kb_listing(requests_mock, folders=[("SourceA", "folder-existing")])
+        create_mock = requests_mock.post(KB_FOLDER, json=kb_create_payload("folder-new"))
+
+        folder_id = step._resolve_category_folder_id("SourceA")
+
+        assert folder_id == "folder-existing"
+        assert not create_mock.called
+        step.finalize()
+
+    def test_caches_across_calls(self, elevenlabs_env, requests_mock):
+        elevenlabs_env.set("PARENT_FOLDER_ID", "root-1")
+        step = ElevenLabsKnowledgeBaseStep()
+        register_kb_listing(requests_mock, folders=())
+        requests_mock.post(KB_FOLDER, json=kb_create_payload("folder-1", "SourceA"))
+
+        first = step._resolve_category_folder_id("SourceA")
+        second = step._resolve_category_folder_id("SourceA")
+
+        assert first == second == "folder-1"
+        get_requests = [r for r in requests_mock.request_history if r.method == "GET"]
+        assert len(get_requests) == 1  # second call served from cache, no re-list
+        post_requests = [r for r in requests_mock.request_history if r.method == "POST"]
+        assert len(post_requests) == 1  # and no second create
+        step.finalize()
+
+    def test_multiple_matches_logs_warning_and_never_deletes(self, elevenlabs_env, requests_mock, caplog):
+        """The API enforces no uniqueness on folder names (confirmed against the real API),
+        so duplicates can happen. Unlike duplicate text documents, a duplicate folder is
+        never auto-deleted - it might hold real nested content - just deterministically
+        resolved (lowest id) with a warning logged.
+        """
+        elevenlabs_env.set("PARENT_FOLDER_ID", "root-1")
+        step = ElevenLabsKnowledgeBaseStep()
+        register_kb_listing(requests_mock, folders=[("SourceA", "folder-b"), ("SourceA", "folder-a")])
+        delete_mock = requests_mock.delete(re.compile(rf"{re.escape(KB)}/folder-"), text="")
+
+        with caplog.at_level("WARNING"):
+            folder_id = step._resolve_category_folder_id("SourceA")
+
+        assert folder_id == "folder-a"  # lowest id, deterministic
+        assert not delete_mock.called
+        assert "Multiple folders named" in caplog.text
+        step.finalize()
+
+    def test_folder_create_not_retried_on_read_timeout(self, elevenlabs_env, requests_mock):
+        """Mirrors the text-document create: the folder may already exist server-side
+        after a read timeout, and since folder names aren't deduped, retrying risks a
+        second folder with the same name.
+        """
+        elevenlabs_env.set("PARENT_FOLDER_ID", "root-1")
+        step = ElevenLabsKnowledgeBaseStep()
+        register_kb_listing(requests_mock, folders=())
+        requests_mock.post(KB_FOLDER, exc=requests.exceptions.ReadTimeout("slow"))
+
+        with pytest.raises(requests.exceptions.ReadTimeout):
+            step._resolve_category_folder_id("SourceA")
+
+        post_requests = [r for r in requests_mock.request_history if r.method == "POST"]
+        assert len(post_requests) == 1  # not retried
+        step.finalize()
+
+
+# ── Folder-per-source: end-to-end via run() ──────────────────────────────────────
+
+
+class TestFolderPerSource:
+    def test_disabled_by_default_matches_prior_behavior(self, elevenlabs_env, sample_doc, requests_mock, history_scope):
+        elevenlabs_env.set("PARENT_FOLDER_ID", "root-1")
+        history_scope("SourceA")
+        step = ElevenLabsKnowledgeBaseStep()
+        requests_mock.get(KB, json=kb_list_payload())
+        requests_mock.post(KB_TEXT, json=kb_create_payload("doc-1"))
+
+        step.run([sample_doc])
+
+        assert not [r for r in requests_mock.request_history if r.url == KB_FOLDER]
+        post_request = next(r for r in requests_mock.request_history if r.method == "POST")
+        assert post_request.json()["parent_folder_id"] == "root-1"
+        step.finalize()
+
+    def test_validator_requires_parent_folder_id(self, elevenlabs_env):
+        elevenlabs_env.set("FOLDER_PER_SOURCE", "true")
+        with pytest.raises(ValueError, match="PARENT_FOLDER_ID is required"):
+            ElevenLabsKnowledgeBaseStep()
+
+    def test_files_documents_into_resolved_category_folder(self, elevenlabs_env, sample_doc, requests_mock, history_scope):
+        elevenlabs_env.set("PARENT_FOLDER_ID", "root-1")
+        elevenlabs_env.set("FOLDER_PER_SOURCE", "true")
+        history_scope("SourceA")
+        step = ElevenLabsKnowledgeBaseStep()
+        register_kb_listing(requests_mock, folders=(), texts=())
+        requests_mock.post(KB_FOLDER, json=kb_create_payload("folder-a", "SourceA"))
+        requests_mock.post(KB_TEXT, json=kb_create_payload("doc-1"))
+
+        step.run([sample_doc])
+
+        folder_create = next(r for r in requests_mock.request_history if r.method == "POST" and r.url == KB_FOLDER)
+        assert folder_create.json() == {"name": "SourceA", "parent_folder_id": "root-1"}
+        doc_create = next(r for r in requests_mock.request_history if r.method == "POST" and r.url == KB_TEXT)
+        assert doc_create.json()["parent_folder_id"] == "folder-a"
+        # The text listing must be scoped to the *resolved* category folder, not the raw
+        # PARENT_FOLDER_ID - otherwise a document filed under it on a prior run would look
+        # "new" every time (the same class of bug fixed for PARENT_FOLDER_ID itself in
+        # https://github.com/telekom/wurzel/pull/247, reproduced here for category folders).
+        text_list_get = next(r for r in requests_mock.request_history if r.method == "GET" and r.qs.get("types") == ["text"])
+        assert text_list_get.qs.get("parent_folder_id") == ["folder-a"]
+        step.finalize()
+
+    def test_reuses_existing_category_folder(self, elevenlabs_env, sample_doc, requests_mock, history_scope):
+        elevenlabs_env.set("PARENT_FOLDER_ID", "root-1")
+        elevenlabs_env.set("FOLDER_PER_SOURCE", "true")
+        history_scope("SourceA")
+        step = ElevenLabsKnowledgeBaseStep()
+        register_kb_listing(requests_mock, folders=[("SourceA", "folder-existing")])
+        folder_create = requests_mock.post(KB_FOLDER, json=kb_create_payload("folder-new"))
+        requests_mock.post(KB_TEXT, json=kb_create_payload("doc-1"))
+
+        step.run([sample_doc])
+
+        assert not folder_create.called
+        doc_create = next(r for r in requests_mock.request_history if r.method == "POST" and r.url == KB_TEXT)
+        assert doc_create.json()["parent_folder_id"] == "folder-existing"
+        step.finalize()
+
+    def test_falls_back_without_history(self, elevenlabs_env, sample_doc, requests_mock, caplog):
+        """No step_history (e.g. the step run directly, outside the wurzel Executor) means
+        categorization can't be derived - this must fall back to filing directly under
+        PARENT_FOLDER_ID rather than raising, or silently filing at the KB root.
+        """
+        elevenlabs_env.set("PARENT_FOLDER_ID", "root-1")
+        elevenlabs_env.set("FOLDER_PER_SOURCE", "true")
+        step = ElevenLabsKnowledgeBaseStep()
+        requests_mock.get(KB, json=kb_list_payload())
+        requests_mock.post(KB_TEXT, json=kb_create_payload("doc-1"))
+
+        with caplog.at_level("WARNING"):
+            step.run([sample_doc])
+
+        assert not [r for r in requests_mock.request_history if r.url == KB_FOLDER]
+        doc_create = next(r for r in requests_mock.request_history if r.method == "POST" and r.url == KB_TEXT)
+        assert doc_create.json()["parent_folder_id"] == "root-1"
+        assert "no step_history is set" in caplog.text
+        step.finalize()
+
+    def test_caches_across_multiple_run_calls_on_same_instance(self, elevenlabs_env, requests_mock, history_scope):
+        """A single step instance's run() may be invoked many times per execution - once per
+        upstream file/shard, per the class docstring - so the category folder should only
+        be resolved (listed, and created if missing) once across those calls, not on every
+        invocation.
+        """
+        elevenlabs_env.set("PARENT_FOLDER_ID", "root-1")
+        elevenlabs_env.set("FOLDER_PER_SOURCE", "true")
+        history_scope("SourceA")
+        step = ElevenLabsKnowledgeBaseStep()
+        register_kb_listing(requests_mock, folders=())
+        requests_mock.post(KB_FOLDER, json=kb_create_payload("folder-a", "SourceA"))
+        requests_mock.post(KB_TEXT, [{"json": kb_create_payload("doc-1")}, {"json": kb_create_payload("doc-2")}])
+        doc_a = MarkdownDataContract(md="# A", url="https://example.com/a", keywords="")
+        doc_b = MarkdownDataContract(md="# B", url="https://example.com/b", keywords="")
+
+        step.run([doc_a])
+        step.run([doc_b])
+
+        folder_creates = [r for r in requests_mock.request_history if r.method == "POST" and r.url == KB_FOLDER]
+        assert len(folder_creates) == 1  # second run() reused the cached folder id
+        step.finalize()
 
 
 # ── Push disabled ──────────────────────────────────────────────────────────────
