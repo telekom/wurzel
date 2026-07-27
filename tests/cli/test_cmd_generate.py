@@ -165,5 +165,5 @@ class DummyStep:
 
 
 def test_cmd_generate_runs():
-    res = cmd_generate.main(DummyStep(), DummyBackend)
+    res = generate.main(DummyStep(), DummyBackend)
     assert res == "ok"

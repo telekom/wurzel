@@ -16,7 +16,7 @@ from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
 if TYPE_CHECKING:
-    from wurzel.step import TypedStep
+    from wurzel.core import TypedStep
 
 
 class EnvVarRequirement(BaseModel):

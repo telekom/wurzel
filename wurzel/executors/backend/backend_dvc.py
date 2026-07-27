@@ -162,7 +162,7 @@ class DvcBackend(Backend, backend_name="dvc"):
         values = load_values(files, DvcTemplateValues)
         config = select_pipeline(values, workflow_name)
         if executor is not None:
-            return cls(config=config, executer=executor)
+            return cls(config=config, executor=executor)
         return cls(config=config)
 
     def _write_env_file(self, env_vars: dict[str, str]) -> Path:

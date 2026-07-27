@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from inspect import getfile
 from types import NoneType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from wurzel.cli.shared.callbacks import step_callback  # pylint: disable=unused-import
 
@@ -33,16 +33,17 @@ def main(step: type[TypedStep], gen_env=False):
     ins = WZ(step)
     set_cls: Settings = ins.settings_class
     env_prefix = step.__name__.upper()
-    data = {
+    settings_data: dict[str, Any] = {
+        "env_prefix": env_prefix,
+    }
+    data: dict[str, Any] = {
         "Name": step.__name__,
         "Input": "None" if ins.input_model_class == NoneType else ins.input_model_class,
         "Output": ins.output_model_type,
-        "settings": {
-            "env_prefix": env_prefix,
-        },
+        "settings": settings_data,
     }
     if set_cls != NoneType and set_cls is not None and set_cls != NoSettings:
-        data["settings"]["fields"] = {k: str(v) for k, v in set_cls.model_fields.items()}
+        settings_data["fields"] = {k: str(v) for k, v in set_cls.model_fields.items()}
     if gen_env:
         from pydantic_core import PydanticUndefined  # pylint: disable=import-outside-toplevel
 

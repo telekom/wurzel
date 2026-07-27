@@ -247,4 +247,3 @@ from wurzel.step_executor import PrometheusStepExecutor
 with PrometheusStepExecutor() as exc:  # DeprecationWarning
     exc(MyStep, set(inputs), output)
 ```
-

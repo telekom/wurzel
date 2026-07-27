@@ -259,6 +259,8 @@ def test_generate_with_malformed_yaml_raises_bad_parameter(tmp_path):
             values=[malformed_file],
             pipeline_name=None,
         )
+
+
 def test_run_with_middleware_string(tmp_path, env):
     """Test running with middleware specified as comma-separated string."""
     out = tmp_path / "out"
