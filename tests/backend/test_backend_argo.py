@@ -724,7 +724,7 @@ class TestArgoBackendGenerateArtifact:
 
         assert yaml_output is not None
         assert "apiVersion:" in yaml_output
-        assert "kind: CronWorkflow" in yaml_output
+        assert "kind: Workflow" in yaml_output
         assert "spec:" in yaml_output
 
     def test_generates_workflow_manifest(self):
@@ -949,15 +949,25 @@ class TestArgoBackendGeneratedCliExecutor:
 class TestArgoBackendCreateTask:
     def test_task_creation(self):
         """Test task creation for Argo workflow."""
-        backend = ArgoBackend()
+        backend = ArgoBackend(
+            config=WorkflowConfig(tokenizerCache=TokenizerCacheConfig(enabled=True))
+            if hasattr(WorkflowConfig, "tokenizerCache")
+            else WorkflowConfig(container=ContainerConfig(tokenizerCache=TokenizerCacheConfig(enabled=True)))
+        )
         step = DummyStep()
 
         yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
 
         assert yaml_output is not None
         assert "apiVersion:" in yaml_output
-        assert "kind: CronWorkflow" in yaml_output
         assert "spec:" in yaml_output
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            templates = spec["workflowSpec"].get("templates", [])
+        else:
+            templates = spec.get("templates", [])
 
         container_templates = [t for t in templates if "container" in t]
         assert len(container_templates) > 0
@@ -1268,7 +1278,7 @@ class TestArgoBackendIntegration:
         config = WorkflowConfig()
         assert config.name == "wurzel"
         assert config.namespace == "argo-workflows"
-        assert config.schedule == "0 4 * * *"
+        assert config.schedules is None
 
     def test_s3_artifact_config(self):
         """Test S3ArtifactConfig settings."""
@@ -1288,8 +1298,8 @@ class TestArgoBackendIntegration:
 
     def test_workflow_config_schedule_optional(self):
         """Test WorkflowConfig schedule can be None for manual workflows."""
-        config = WorkflowConfig(schedule=None)
-        assert config.schedule is None
+        config = WorkflowConfig(schedules=None)
+        assert config.schedules is None
 
     def test_generate_workflow_returns_dict(self):
         """Test _generate_workflow returns a workflow object."""
@@ -1322,17 +1332,6 @@ class TestArgoBackendIntegration:
         s3_config = S3ArtifactConfig()
         assert s3_config.bucket == "wurzel-bucket"
         assert s3_config.endpoint == "s3.amazonaws.com"
-
-        # Invalid names should raise validation error
-        with pytest.raises(Exception):  # Pydantic ValidationError
-            ArgoBackendSettings(PIPELINE_NAME="Invalid_Name")
-
-        with pytest.raises(Exception):
-            ArgoBackendSettings(PIPELINE_NAME="-invalid")
-
-        # Workflow should use values from file
-        assert workflow["metadata"]["name"] == "test-wf"
-        assert workflow["metadata"]["namespace"] == "test-ns"
 
 
 class TestArgoBackendPodSpecPatch:

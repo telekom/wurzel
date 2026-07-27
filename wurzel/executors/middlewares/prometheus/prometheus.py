@@ -5,10 +5,12 @@
 """Prometheus metrics middleware for step execution."""
 
 import os
+import time
+from dataclasses import dataclass
 from typing import Any
 
 from loguru import logger
-from prometheus_client import REGISTRY, CollectorRegistry, Counter, Gauge, Histogram, push_to_gateway
+from prometheus_client import REGISTRY, CollectorRegistry, Gauge, push_to_gateway
 
 from wurzel.core.typed_step import TypedStep
 from wurzel.executors.runtime_context import WurzelRuntimeContext
@@ -16,6 +18,20 @@ from wurzel.path import PathToFolderWithBaseModels
 
 from ..base import BaseMiddleware, ExecuteStepCallable
 from .settings import PrometheusMiddlewareSettings
+
+CONTEXT_LABELS = ("step_name", "run_id")
+
+
+@dataclass
+class StepMetricTotals:
+    """Aggregated metrics from one Wurzel step invocation."""
+
+    results: float
+    inputs: float
+    time_to_save: float
+    time_to_load: float
+    time_to_execute: float
+    contract_metrics: dict[str, float]
 
 
 class PrometheusMiddleware(BaseMiddleware):  # pylint: disable=too-many-instance-attributes

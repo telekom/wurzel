@@ -93,9 +93,6 @@ sftp = [
 supabase = [
     "supabase>=2.0.0",
 ]
-supabase = [
-    "supabase>=2.0.0",
-]
 argo = [
     "hera >=5.20.1",
 ]

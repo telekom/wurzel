@@ -9,7 +9,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 from functools import cache
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import yaml
 from hera.workflows import (
@@ -46,6 +46,9 @@ from wurzel.executors.backend.backend import Backend
 from wurzel.executors.backend.values import load_values
 from wurzel.executors.base_executor import BaseStepExecutor
 from wurzel.executors.runtime_context import WURZEL_RUN_ID_ENV
+
+if TYPE_CHECKING:
+    from wurzel.executors.middlewares.base import BaseMiddleware
 
 
 def default_argo_step_executor(_config: WorkflowConfig | None = None) -> type[BaseStepExecutor]:
@@ -111,70 +114,6 @@ class ResourcesConfig(BaseModel):
 
     cpu_request: str = "100m"
     cpu_limit: str | None = None
-    memory_request: str = "128Mi"
-    memory_limit: str = "512Mi"
-
-
-class TokenizerCacheConfig(BaseModel):
-    """Configuration for mounting a persistent volume for tokenizer model cache.
-
-    When enabled, mounts a PVC to the container and sets the HF_HOME environment
-    variable so HuggingFace tokenizers use the shared cache.
-    """
-
-    enabled: bool = False
-    claimName: str = "tokenizer-cache-pvc"
-    mountPath: str = "/cache/huggingface"
-    readOnly: bool = True
-    createPvc: bool = False
-    storageSize: str = "10Gi"
-    storageClassName: str | None = None
-    accessModes: list[str] = Field(default_factory=lambda: ["ReadWriteOnce"])
-
-
-class ContainerConfig(BaseModel):
-    """Runtime configuration applied to workflow containers."""
-
-    image: str = "ghcr.io/telekom/wurzel"
-    env: dict[str, str] = Field(default_factory=dict)
-    envFrom: list[EnvFromConfig] = Field(default_factory=list)
-    secretRef: list[str] = Field(default_factory=list)
-    configMapRef: list[str] = Field(default_factory=list)
-    mountSecrets: list[SecretMount] = Field(default_factory=list)
-    tokenizerCache: TokenizerCacheConfig = Field(default_factory=TokenizerCacheConfig)
-    annotations: dict[str, str] = Field(default_factory=lambda: {})
-    securityContext: SecurityContextConfig = Field(default_factory=SecurityContextConfig)
-    resources: ResourcesConfig = Field(default_factory=ResourcesConfig)
-
-
-class SecretKeyRef(BaseModel):
-    """Reference to a key inside a Kubernetes Secret."""
-
-    name: str
-    key: str
-
-
-class S3ArtifactConfig(BaseModel):
-    """Storage destination for artifacts exchanged between steps."""
-
-    runAsNonRoot: bool = True
-    runAsUser: int | None = None
-    runAsGroup: int | None = None
-    fsGroup: int | None = None
-    fsGroupChangePolicy: Literal["OnRootMismatch", "Always"] | None = None
-    supplementalGroups: list[int] = Field(default_factory=list)
-    allowPrivilegeEscalation: bool | None = False
-    readOnlyRootFilesystem: bool | None = None
-    dropCapabilities: list[str] = Field(default_factory=lambda: ["ALL"])
-    seccompProfileType: Literal["RuntimeDefault", "Localhost"] = "RuntimeDefault"
-    seccompLocalhostProfile: str | None = None
-
-
-class ResourcesConfig(BaseModel):
-    """Container resource requests/limits using Hera's Resources API."""
-
-    cpu_request: str = "100m"
-    cpu_limit: str = "500m"
     memory_request: str = "128Mi"
     memory_limit: str = "512Mi"
 
@@ -300,7 +239,8 @@ class ArgoBackend(Backend, backend_name="argo"):
         a CronWorkflow.
         """
         schedule = raw_config.pop("schedule", None) if raw_config else None
-        cfg = WorkflowConfig(schedule=schedule, **raw_config) if raw_config else WorkflowConfig(schedule=schedule)
+        schedules = [schedule] if schedule else None
+        cfg = WorkflowConfig(schedules=schedules, **raw_config) if raw_config else WorkflowConfig(schedules=schedules)
         return cls(config=cfg)
 
     def __init__(
@@ -529,6 +469,7 @@ class ArgoBackend(Backend, backend_name="argo"):
                 service_account_name=self.config.serviceAccountName,
                 volumes=self._volumes or None,
                 security_context=self._build_pod_security_context(),
+                node_selector=self.config.nodeSelector or None,
                 pod_spec_patch=self._build_pod_spec_patch(),
             )
 
