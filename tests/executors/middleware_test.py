@@ -23,6 +23,13 @@ class DummyStep(TypedStep[None, None, MarkdownDataContract]):
         return MarkdownDataContract(md="test", keywords="test", url="test")
 
 
+class AsyncDummyStep(TypedStep[None, None, MarkdownDataContract]):
+    """Async dummy step for testing middleware compatibility."""
+
+    async def run(self, inpt: None) -> MarkdownDataContract:
+        return MarkdownDataContract(md="test-async", keywords="test", url="test")
+
+
 class TrackerMiddleware(BaseMiddleware):
     """Middleware that tracks execution for testing."""
 
@@ -69,6 +76,19 @@ def test_middleware_chain_single(tmp_path: Path):
         assert tracker.calls[1] == ("after", "DummyStep")
 
     assert tracker.exited
+
+
+def test_middleware_chain_single_with_async_step(tmp_path: Path):
+    """Test executor with middleware and async step implementation."""
+    tracker = TrackerMiddleware()
+
+    with BaseStepExecutor(middlewares=[tracker], load_middlewares_from_env=False) as exc:
+        result = exc(AsyncDummyStep, None, tmp_path)
+        assert result
+        assert result[0][0].md == "test-async"
+        assert len(tracker.calls) == 2
+        assert tracker.calls[0] == ("before", "AsyncDummyStep")
+        assert tracker.calls[1] == ("after", "AsyncDummyStep")
 
 
 def test_middleware_chain_multiple(tmp_path: Path):

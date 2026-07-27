@@ -7,7 +7,7 @@
 from logging import getLogger
 from typing import Any
 
-import requests
+import httpx
 
 from wurzel.core import TypedStep
 from wurzel.datacontract import MarkdownDataContract
@@ -38,11 +38,11 @@ class DecagonKnowledgeBaseStep(TypedStep[DecagonSettings, list[MarkdownDataContr
 
     def __init__(self) -> None:
         super().__init__()
-        self._session: requests.Session | None = None
+        self._session: httpx.Client | None = None
         if self.settings.PUSH_ENABLED:
             if self.settings.API_KEY is None:
                 raise ValueError("API_KEY is required when PUSH_ENABLED is True")
-            self._session = requests.Session()
+            self._session = httpx.Client()
             self._session.headers.update(
                 {
                     "Content-Type": "application/json",
@@ -107,14 +107,15 @@ class DecagonKnowledgeBaseStep(TypedStep[DecagonSettings, list[MarkdownDataContr
 
         return doc.md.split("\n")[0].strip()[:100] or "Untitled"
 
-    def _format_error(self, e: requests.exceptions.RequestException) -> str:
+    def _format_error(self, e: httpx.HTTPError) -> str:
         """Format a request exception into a readable error message."""
-        if hasattr(e, "response") and e.response is not None:
+        response = getattr(e, "response", None)
+        if response is not None:
             try:
-                detail = e.response.json().get("detail", str(e))
-                return f"{e.response.status_code}: {detail}"
+                detail = response.json().get("detail", str(e))
+                return f"{response.status_code}: {detail}"
             except (ValueError, KeyError):
-                return f"{e.response.status_code}: {e.response.text or str(e)}"
+                return f"{response.status_code}: {response.text or str(e)}"
         return str(e)
 
     def run(self, inpt: list[MarkdownDataContract]) -> list[MarkdownDataContract]:
@@ -134,7 +135,7 @@ class DecagonKnowledgeBaseStep(TypedStep[DecagonSettings, list[MarkdownDataContr
         for doc in inpt:
             try:
                 chunks = self._chunk_content(doc.md, self._extract_title(doc))
-            except requests.exceptions.RequestException as e:
+            except httpx.HTTPError as e:
                 log.error(f"Failed to chunk {doc.url}: {self._format_error(e)}")
                 failed_count += 1
                 continue
@@ -143,7 +144,7 @@ class DecagonKnowledgeBaseStep(TypedStep[DecagonSettings, list[MarkdownDataContr
                 try:
                     self._create_article(chunk, doc, idx, len(chunks))
                     success_count += 1
-                except requests.exceptions.RequestException as e:
+                except httpx.HTTPError as e:
                     log.error(f"Failed to create article for {doc.url} chunk {idx + 1}/{len(chunks)}: {self._format_error(e)}")
                     failed_count += 1
 
