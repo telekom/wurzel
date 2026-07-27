@@ -60,8 +60,6 @@ from wurzel.executors.middlewares.otel import OtelMiddleware, OtelMiddlewareSett
 class FetchDocumentStep:
     """Minimal stub that satisfies the step_cls.__name__ contract."""
 
-    __name__ = "FetchDocumentStep"
-
 
 # ─── Step logic ───────────────────────────────────────────────────────────────
 

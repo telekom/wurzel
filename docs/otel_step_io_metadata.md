@@ -48,13 +48,49 @@ The `LoggingInstrumentor` auto-injects `trace_id` and `span_id` into all Python 
 ### Basic Setup
 
 ```python
+from pathlib import Path
+from pydantic import BaseModel
+
+from wurzel.core.typed_step import TypedStep
 from wurzel.executors.middlewares.otel import OtelMiddleware, OtelMiddlewareSettings
+from wurzel.core.settings import Settings
+
+
+class MySettings(Settings):
+    """Settings for MyStep."""
+
+    pass
+
+
+class MyInput(BaseModel):
+    """Input schema for MyStep."""
+
+    pass
+
+
+class MyOutput(BaseModel):
+    """Output schema for MyStep."""
+
+    pass
+
+
+class MyStep(TypedStep[MySettings, MyInput, MyOutput]):
+    """Example step."""
+
+    def run(self, inputs: MyInput) -> MyOutput:
+        return MyOutput()
+
+
+def execute_step(step_cls, inputs, output_dir):
+    """Stub executor - simplified for documentation."""
+    return []
+
 
 settings = OtelMiddlewareSettings(
     ENDPOINT="localhost:14317",  # OTel Collector
     SERVICE_NAME="my-pipeline",
-    PROJECT_NAME="my-project",   # Routed to Phoenix project
-    TENANT="team-a",             # Multi-tenant isolation
+    PROJECT_NAME="my-project",  # Routed to Phoenix project
+    TENANT="team-a",  # Multi-tenant isolation
     ENABLED=True,
 )
 
@@ -100,6 +136,8 @@ export OTEL__TENANT="team-a"                # Multi-tenant routing
 
 Given this execution:
 ```python
+from pathlib import Path
+
 input_paths = {Path("/data/docs/2025-01"), Path("/data/docs/2025-02")}
 output_dir = Path("/data/processed/2025-q1")
 ```

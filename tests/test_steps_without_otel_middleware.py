@@ -14,8 +14,6 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
-
 from wurzel.core.typed_step import TypedStep
 from wurzel.datacontract import PydanticModel
 from wurzel.executors.base_executor import BaseStepExecutor
@@ -153,9 +151,7 @@ class TestStepsWithoutOtelMiddleware:
 
         # Manually apply disabled middleware
         result2 = disabled_middleware(
-            call_next=lambda step_cls, inputs, output_dir: executor2(
-                step_cls, inputs, output_dir
-            ),
+            call_next=lambda step_cls, inputs, output_dir: executor2(step_cls, inputs, output_dir),
             step_cls=SimpleStep,
             inputs=None,
             output_dir=None,

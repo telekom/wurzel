@@ -137,6 +137,7 @@ class OtelMiddleware(BaseMiddleware):
         if not self.settings.ENABLED:
             return call_next(step_cls, inputs, output_dir)
 
+        assert self._provider is not None, "OtelMiddleware: provider not initialized"
         tracer = self._provider.get_tracer(_INSTRUMENTATION_SCOPE)
         span_name = f"wurzel.step.{step_cls.__name__}"
         context = WurzelRuntimeContext.from_env()
@@ -160,35 +161,35 @@ class OtelMiddleware(BaseMiddleware):
             start_time = time.time()
             try:
                 result = call_next(step_cls, inputs, output_dir)
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001
                 span.record_exception(exc)
                 span.set_status(StatusCode.ERROR, str(exc))
                 raise
-            else:
-                # Record execution results
-                duration_ms = (time.time() - start_time) * 1000
-                result_count = len(result) if result else 0
-                span.set_attribute("wurzel.execution.duration_ms", duration_ms)
-                span.set_attribute("wurzel.execution.result_count", result_count)
 
-                # Add completion event with structured metadata
-                event_attrs: dict[str, Any] = {
-                    "result_count": result_count,
-                    "duration_ms": duration_ms,
-                }
-                if inputs:
-                    event_attrs["input_count"] = len(inputs)
-                if output_dir:
-                    event_attrs["output_dir"] = str(output_dir)
+            # Record execution results
+            duration_ms = (time.time() - start_time) * 1000
+            result_count = len(result) if result else 0
+            span.set_attribute("wurzel.execution.duration_ms", duration_ms)
+            span.set_attribute("wurzel.execution.result_count", result_count)
 
-                span.add_event(
-                    "step_completed",
-                    attributes=event_attrs,
-                    timestamp=int(time.time() * 1e9),  # OTel expects nanoseconds
-                )
+            # Add completion event with structured metadata
+            event_attrs: dict[str, Any] = {
+                "result_count": result_count,
+                "duration_ms": duration_ms,
+            }
+            if inputs:
+                event_attrs["input_count"] = len(inputs)
+            if output_dir:
+                event_attrs["output_dir"] = str(output_dir)
 
-                span.set_status(StatusCode.OK)
-                return result
+            span.add_event(
+                "step_completed",
+                attributes=event_attrs,
+                timestamp=int(time.time() * 1e9),  # OTel expects nanoseconds
+            )
+
+            span.set_status(StatusCode.OK)
+            return result
 
     def __exit__(self, *exc_details: Any) -> bool:
         """Uninstrument all libraries and flush/shutdown the tracer provider."""
@@ -223,6 +224,6 @@ class OtelMiddleware(BaseMiddleware):
         for instrumentor in self._instrumentors:
             try:
                 instrumentor.uninstrument()
-            except Exception:  # noqa: BLE001 — best-effort cleanup
+            except Exception:  # pylint: disable=broad-exception-caught
                 log.debug("Failed to uninstrument %s", type(instrumentor).__name__, exc_info=True)
         self._instrumentors = []
