@@ -424,7 +424,7 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
             log.info("Push disabled, returning input data without pushing to ElevenLabs")
             return inpt
 
-        if not inpt:
+        if not inpt and not self.settings.PRUNE_STALE:
             log.warning("No documents to process")
             return inpt
 

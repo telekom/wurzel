@@ -542,6 +542,19 @@ class TestPruneStale:
 
         assert not delete_mock.called
 
+    def test_empty_input_prunes_all_stale_documents(self, elevenlabs_env, requests_mock):
+        elevenlabs_env.set("NAME_PREFIX", "wurzel/")
+        elevenlabs_env.set("PRUNE_STALE", "true")
+        step = ElevenLabsKnowledgeBaseStep()
+        requests_mock.get(KB, json=kb_list_payload(("wurzel/stale/doc", "doc-stale")))
+        delete_mock = requests_mock.delete(f"{KB}/doc-stale", text="")
+
+        result = step.run([])
+
+        assert result == []
+        assert delete_mock.called_once
+        step.finalize()
+
     def test_prune_enabled_deletes_stale_document(self, elevenlabs_env, sample_doc, requests_mock, caplog):
         elevenlabs_env.set("NAME_PREFIX", "wurzel/")
         elevenlabs_env.set("PRUNE_STALE", "true")
