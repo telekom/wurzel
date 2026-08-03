@@ -28,13 +28,9 @@ class ElevenLabsKnowledgeBaseSettings(Settings):
             never touched.
         PARENT_FOLDER_ID: Optional knowledge base folder to file new documents under.
         FOLDER_PER_SOURCE: When True, file documents into a subfolder named after the
-            originating source step (the first step in this invocation's step_history
-            lineage - see ElevenLabsKnowledgeBaseStep._source_category), created under
-            PARENT_FOLDER_ID if it doesn't already exist. Requires PARENT_FOLDER_ID: the
-            knowledge base root is a single flat namespace shared by every integration in
-            the workspace, and the API enforces no uniqueness on folder names, so an
-            unprefixed category folder created there could collide with an unrelated
-            folder created by something else entirely.
+            originating source step (see ElevenLabsKnowledgeBaseStep._source_category),
+            created under PARENT_FOLDER_ID. Requires PARENT_FOLDER_ID (see
+            validate_parent_folder_id_when_categorizing).
         TIMEOUT: Request timeout in seconds.
         PUSH_ENABLED: When False, skip pushing to ElevenLabs and return the input data unchanged.
         PRUNE_STALE: When True, delete documents present in the knowledge base but
@@ -143,10 +139,8 @@ class ElevenLabsKnowledgeBaseSettings(Settings):
     def validate_parent_folder_id_when_categorizing(self) -> Self:
         """Require PARENT_FOLDER_ID whenever FOLDER_PER_SOURCE is enabled.
 
-        Without it, category folders would be created at the knowledge base root - the same
-        flat namespace shared by every integration in the workspace - where an unprefixed,
-        server-side-undeduplicated folder name could collide with an unrelated folder created
-        by something else entirely.
+        Otherwise category folders land at the shared knowledge base root, where an
+        unprefixed, server-undeduplicated folder name could collide with unrelated content.
         """
         if self.FOLDER_PER_SOURCE and not self.PARENT_FOLDER_ID:
             raise ValueError("PARENT_FOLDER_ID is required when FOLDER_PER_SOURCE is True")

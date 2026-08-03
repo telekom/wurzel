@@ -59,17 +59,12 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
     Scoped by the history tag described above, so pruning one invocation's stale
     documents never touches a different invocation's documents within the same run.
 
-    Folder-per-source (optional, gated by FOLDER_PER_SOURCE): rather than filing every
-    document directly under PARENT_FOLDER_ID, resolve (creating if missing) a subfolder
-    named after this invocation's originating source step - see ``_source_category`` -
-    and file into that instead. Intended for pipelines where PARENT_FOLDER_ID accumulates
-    documents from many distinct sources (e.g. FAQ, Sales Catalog): each source gets its
-    own subfolder instead of thousands of documents sharing one flat namespace. Folder ids
-    are cached per category for the lifetime of the step instance (see ``_resolve_category_folder_id``),
-    since a single instance's run() may be invoked many times per execution (once per
-    upstream file, as above). Requires PARENT_FOLDER_ID (enforced by a settings validator):
-    without it, category folders would be created at the knowledge base root, where an
-    unprefixed, server-side-undeduplicated folder name could collide with unrelated content.
+    Folder-per-source (optional, gated by FOLDER_PER_SOURCE): file each invocation's
+    documents into a subfolder named after its originating source step (see
+    ``_source_category``) instead of directly under PARENT_FOLDER_ID, so a step fed by
+    many sources (e.g. FAQ, Sales Catalog) doesn't pile everything into one flat
+    namespace. Folder ids are cached per source for the step instance's lifetime, since
+    run() is called once per upstream file. Requires PARENT_FOLDER_ID.
 
     Environment Variables:
         ELEVENLABSKNOWLEDGEBASESTEP__API_KEY:           API key for authentication (required when PUSH_ENABLED is True)
@@ -181,17 +176,13 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
         return f"{tag}/" if tag else ""
 
     def _iter_documents(self, doc_type: str, parent_folder_id: str | None) -> Iterator[dict[str, Any]]:
-        """Yield every document of ``doc_type`` scoped to ``parent_folder_id``, across all pages.
+        """Yield every document of ``doc_type`` under ``parent_folder_id``, across all pages.
 
-        Scoped to ``types=[doc_type]`` server-side, plus a defensive client-side check
-        (`type` is the discriminator between text/url/file/folder documents - a leaked
-        document of a different type must never be treated as one of ours). Shared by
-        ``_list_existing`` (``doc_type="text"``) and ``_find_folder`` (``doc_type="folder"``).
-
-        Raises StepFailed (rather than falling back to an empty/partial result) if a page
-        can't be fetched even after retries: proceeding with an incomplete listing is what
-        causes duplicates in the first place - a document on an unfetched page would look
-        "new" and get created a second time.
+        Filters on ``type`` client-side as well as via the server ``types`` param - a
+        leaked document of another type must never be treated as one of ours. Raises
+        StepFailed if any page fails to fetch rather than returning a partial list: a
+        document missed on an unfetched page would look "new" and be created again.
+        Shared by ``_list_existing`` (text) and ``_find_folder`` (folder).
         """
         cursor: str | None = None
         while True:
@@ -215,27 +206,15 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
     def _list_existing(self, parent_folder_id: str | None) -> dict[str, str]:
         """Return {name: document_id} for existing text documents in our namespace.
 
-        NAME_PREFIX + history-tag filtering (see ``_history_tag``) is done client-side
-        instead of via the API's ``search`` parameter: that is backed by search
-        infrastructure which is not guaranteed to return every matching document
-        (observed in practice missing a document that plainly existed), which would
-        cause us to create a duplicate instead of updating it. Every text document is
-        paginated through and matched by prefix here instead.
+        Filters by NAME_PREFIX + history tag (see ``_history_tag``) client-side rather
+        than via the API ``search`` param, which is not guaranteed to return every match
+        (observed missing documents that existed) and would cause duplicate creates. The
+        history tag also scopes this to the current invocation's lineage, so one
+        invocation never sees another's documents.
 
-        The history tag additionally scopes this to the current invocation's own
-        upstream lineage, so if this step is invoked more than once within a single
-        run, one invocation's view of "existing" - and therefore its prune
-        decisions - never includes documents belonging to a different invocation.
-
-        ``parent_folder_id`` must be the same folder ``_create`` files new documents
-        under (the resolved category folder when FOLDER_PER_SOURCE is enabled,
-        otherwise PARENT_FOLDER_ID directly) - otherwise every previously-created
-        document would look "new" on the next run and get duplicated instead of
-        updated in place.
-
-        If two documents share the same name - e.g. a duplicate left over from
-        exactly that kind of missed match - the extra copy is deleted so
-        duplicates self-heal instead of accumulating silently across runs.
+        ``parent_folder_id`` must be the same folder ``_create`` writes to, or every
+        existing document looks "new" next run and gets duplicated. Duplicate names
+        self-heal: the extra copy is deleted.
         """
         scope = f"{self.settings.NAME_PREFIX}{self._history_tag()}"
         existing: dict[str, str] = {}
@@ -254,17 +233,14 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
         return existing
 
     def _find_folder(self, name: str, parent_folder_id: str | None) -> str | None:
-        """Return the id of an existing folder named ``name`` directly under ``parent_folder_id``, or None.
+        """Return the id of an existing folder named ``name`` under ``parent_folder_id``, or None.
 
-        The ElevenLabs API enforces no uniqueness on folder names - creating a folder
-        with a name/parent that already exists succeeds and produces a second, distinct
-        folder rather than an error or the existing one. If more than one match turns up
-        here (e.g. left over from a previous run that crashed after creating a folder but
-        before caching its id), the lowest id is kept deterministically and the extras are
-        deleted - same self-heal as duplicate text documents in ``_list_existing``. Category
-        folders under PARENT_FOLDER_ID are fully managed by this step, so removing the
-        extras is safe: any nested docs belonging to this pipeline are recreated on the
-        next push into the kept folder. Deletion is best-effort; failures are logged.
+        The API does not dedupe folder names, so duplicates can exist (e.g. a run that
+        crashed after creating a folder before caching its id). The lowest id is kept and
+        the extras deleted - the same self-heal as duplicate text documents. These
+        category folders are fully managed by this step, so removing extras is safe: any
+        nested docs are recreated on the next push. Deletion is best-effort; failures are
+        logged.
         """
         matches = {doc["id"] for doc in self._iter_documents("folder", parent_folder_id) if doc["name"] == name}
         if not matches:
@@ -280,11 +256,10 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
         return kept
 
     def _create_folder(self, name: str, parent_folder_id: str | None) -> str:
-        """POST /knowledge-base/folder - create a new folder, returns its id.
+        """POST /knowledge-base/folder - create a folder, returns its id.
 
-        Not retried on a read timeout: the server may already have created it, and
-        since the API doesn't dedupe folder names (see ``_find_folder``), blindly
-        retrying risks creating a second folder with the same name.
+        Not retried on read timeout: the server may already have created it, and since
+        the API doesn't dedupe folder names, retrying risks a duplicate.
         """
         payload: dict[str, Any] = {"name": name}
         if parent_folder_id:
@@ -295,12 +270,10 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
     def _resolve_parent_folder_id(self) -> str | None:
         """Determine the folder new documents are filed under for this invocation.
 
-        Defaults to PARENT_FOLDER_ID. When FOLDER_PER_SOURCE is enabled, resolves
-        (creating if missing) a per-source-step subfolder under it - see
-        ``_resolve_category_folder_id`` and ``_source_category``. Falls back to
-        PARENT_FOLDER_ID with a warning when no step_history is set (e.g. the step
-        run directly instead of through the wurzel Executor), so there is no source
-        step to categorize by.
+        Returns PARENT_FOLDER_ID unless FOLDER_PER_SOURCE is enabled, in which case it
+        resolves (creating if missing) a per-source subfolder. Falls back to
+        PARENT_FOLDER_ID with a warning when there is no step_history to derive a source
+        from (e.g. run outside the wurzel Executor).
         """
         if not self.settings.FOLDER_PER_SOURCE:
             return self.settings.PARENT_FOLDER_ID
@@ -311,12 +284,11 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
         return self._resolve_category_folder_id(category)
 
     def _resolve_category_folder_id(self, category: str) -> str:
-        """Get-or-create the subfolder for ``category``, cached for the life of this step instance.
+        """Get-or-create the subfolder for ``category``, cached for the step instance's lifetime.
 
-        A single step instance's run() may be invoked many times within one execution -
-        once per upstream file, per the class docstring - so every invocation for the same
-        category would otherwise repeat the same folder lookup, and risk an unnecessary
-        extra folder being created, since the API doesn't dedupe folder names itself.
+        run() may be invoked many times per execution (once per upstream file), so the
+        cache avoids repeating the lookup - and avoids risking an extra folder, since the
+        API doesn't dedupe folder names.
         """
         cached = self._category_folder_cache.get(category)
         if cached is not None:
@@ -329,24 +301,14 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
         return folder_id
 
     def _source_category(self) -> str | None:
-        """The originating source step's name, derived from step_history, for FOLDER_PER_SOURCE.
+        """The originating source step's name (first step in step_history), or None if unset.
 
-        Reads the full flattened chain (``"-".join(history.get())``) rather than indexing
-        ``history.get()[0]`` directly: once this invocation's history has round-tripped
-        through disk (i.e. any step sits between the true source and this one), the wurzel
-        Executor's on-disk filename encoding collapses everything upstream into a single
-        compound entry - e.g. ``["SourceA-Splitter", "ElevenLabsKnowledgeBase"]`` instead of
-        ``["SourceA", "Splitter", "ElevenLabsKnowledgeBase"]`` - so ``[0]`` would return
-        "SourceA-Splitter", not the true origin "SourceA". Joining first and then splitting
-        on the same separator recovers the original ordering losslessly regardless of that
-        fragmentation (step names come from Python class names, which can never themselves
-        contain "-", so splitting on it is unambiguous), and always yields the very first
-        step in the lineage - the same source step ``_history_tag`` already treats the
-        joined string as authoritative for.
-
-        Falls back to None (no categorization for this invocation) when step_history is
-        unset - e.g. when the step is instantiated directly instead of run through the
-        wurzel Executor.
+        Uses ``"-".join(history.get()).split("-")[0]`` rather than ``history.get()[0]``:
+        once history round-trips through disk the Executor collapses upstream steps into
+        one compound entry (e.g. "SourceA-Splitter"), so ``[0]`` would not be the true
+        origin. Step names are class names and never contain "-", so re-splitting the
+        joined chain recovers the first step unambiguously. None when step_history is
+        unset (e.g. run outside the wurzel Executor).
         """
         history = step_history.get()
         if history is None:
