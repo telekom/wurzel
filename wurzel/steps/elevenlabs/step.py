@@ -284,6 +284,24 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
         result = self._request("POST", KNOWLEDGE_BASE_FOLDER_PATH, idempotent=False, json=payload)
         return result["id"]
 
+    def _resolve_parent_folder_id(self) -> str | None:
+        """Determine the folder new documents are filed under for this invocation.
+
+        Defaults to PARENT_FOLDER_ID. When FOLDER_PER_SOURCE is enabled, resolves
+        (creating if missing) a per-source-step subfolder under it - see
+        ``_resolve_category_folder_id`` and ``_source_category``. Falls back to
+        PARENT_FOLDER_ID with a warning when no step_history is set (e.g. the step
+        run directly instead of through the wurzel Executor), so there is no source
+        step to categorize by.
+        """
+        if not self.settings.FOLDER_PER_SOURCE:
+            return self.settings.PARENT_FOLDER_ID
+        category = self._source_category()
+        if not category:
+            log.warning("FOLDER_PER_SOURCE is enabled but no step_history is set; filing documents without a category folder")
+            return self.settings.PARENT_FOLDER_ID
+        return self._resolve_category_folder_id(category)
+
     def _resolve_category_folder_id(self, category: str) -> str:
         """Get-or-create the subfolder for ``category``, cached for the life of this step instance.
 
@@ -410,13 +428,7 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
             log.warning("No documents to process")
             return inpt
 
-        parent_folder_id = self.settings.PARENT_FOLDER_ID
-        if self.settings.FOLDER_PER_SOURCE:
-            category = self._source_category()
-            if category:
-                parent_folder_id = self._resolve_category_folder_id(category)
-            else:
-                log.warning("FOLDER_PER_SOURCE is enabled but no step_history is set; filing documents without a category folder")
+        parent_folder_id = self._resolve_parent_folder_id()
 
         existing = self._list_existing(parent_folder_id)
         log.info(f"Processing {len(inpt)} documents for ElevenLabs Knowledge Base")
