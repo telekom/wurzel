@@ -29,7 +29,7 @@ Scenarios covered:
      splitter) - the disk-fragmentation edge case described in _source_category's
      docstring.
   6. Pre-existing duplicate folders (the API enforces no uniqueness on folder names) are
-     resolved deterministically and never auto-deleted.
+     resolved deterministically; extras are deleted so duplicates self-heal.
   7. With no step_history set (the step run directly, outside the wurzel Executor),
      FOLDER_PER_SOURCE falls back to filing directly under PARENT_FOLDER_ID.
   8. With FOLDER_PER_SOURCE left at its default (False), behavior is unchanged from
@@ -336,7 +336,7 @@ def scenario_multi_hop_history_fragmentation() -> None:
 
 
 def scenario_duplicate_folder_collision() -> None:
-    print("\n=== Scenario: pre-existing duplicate folders are resolved deterministically, never deleted ===")  # noqa: T201
+    print("\n=== Scenario: pre-existing duplicate folders are resolved deterministically; extras deleted ===")  # noqa: T201
     with requests_mock.Mocker() as m:
         kb = SimulatedKnowledgeBase()
         kb.register(m)
@@ -345,13 +345,15 @@ def scenario_duplicate_folder_collision() -> None:
             folder_a = kb.seed_folder("FAQ", parent_folder_id="root")
             folder_b = kb.seed_folder("FAQ", parent_folder_id="root")
             expected = sorted([folder_a, folder_b])[0]
+            discarded = sorted([folder_a, folder_b])[1]
 
             step = ElevenLabsKnowledgeBaseStep()
             with as_invocation("FAQStep"):
                 step.run([make_doc("FAQ", 0)])
 
-            check(folder_a in kb.documents and folder_b in kb.documents, "both duplicate folders still exist - neither was auto-deleted")
-            check(len(kb.documents_in(expected)) == 1, f"the new document was filed into the deterministically-chosen folder ({expected})")
+            check(expected in kb.documents, f"kept the deterministically-chosen folder ({expected})")
+            check(discarded not in kb.documents, f"deleted the duplicate folder ({discarded})")
+            check(len(kb.documents_in(expected)) == 1, f"the new document was filed into the kept folder ({expected})")
             step.finalize()
 
 

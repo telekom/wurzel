@@ -845,11 +845,10 @@ class TestResolveCategoryFolder:
         assert len(post_requests) == 1  # and no second create
         step.finalize()
 
-    def test_multiple_matches_logs_warning_and_never_deletes(self, elevenlabs_env, requests_mock, caplog):
+    def test_multiple_matches_keeps_lowest_id_and_deletes_extras(self, elevenlabs_env, requests_mock, caplog):
         """The API enforces no uniqueness on folder names (confirmed against the real API),
-        so duplicates can happen. Unlike duplicate text documents, a duplicate folder is
-        never auto-deleted - it might hold real nested content - just deterministically
-        resolved (lowest id) with a warning logged.
+        so duplicates can happen. Like duplicate text documents, extras are deleted so
+        duplicates self-heal: lowest id is kept deterministically, the rest are removed.
         """
         elevenlabs_env.set("PARENT_FOLDER_ID", "root-1")
         step = ElevenLabsKnowledgeBaseStep()
@@ -860,8 +859,9 @@ class TestResolveCategoryFolder:
             folder_id = step._resolve_category_folder_id("SourceA")
 
         assert folder_id == "folder-a"  # lowest id, deterministic
-        assert not delete_mock.called
-        assert "Multiple folders named" in caplog.text
+        assert delete_mock.called
+        assert f"{KB}/folder-b" in delete_mock.last_request.url
+        assert "keeping folder-a, deleting" in caplog.text
         step.finalize()
 
     def test_folder_create_not_retried_on_read_timeout(self, elevenlabs_env, requests_mock):

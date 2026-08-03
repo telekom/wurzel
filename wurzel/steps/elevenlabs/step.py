@@ -260,16 +260,24 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
         with a name/parent that already exists succeeds and produces a second, distinct
         folder rather than an error or the existing one. If more than one match turns up
         here (e.g. left over from a previous run that crashed after creating a folder but
-        before caching its id), the lowest id is kept deterministically and a warning is
-        logged. Unlike duplicate text documents, extras are never auto-deleted: a folder
-        may hold real nested content, so deleting the "wrong" one risks losing it.
+        before caching its id), the lowest id is kept deterministically and the extras are
+        deleted - same self-heal as duplicate text documents in ``_list_existing``. Category
+        folders under PARENT_FOLDER_ID are fully managed by this step, so removing the
+        extras is safe: any nested docs belonging to this pipeline are recreated on the
+        next push into the kept folder. Deletion is best-effort; failures are logged.
         """
         matches = {doc["id"] for doc in self._iter_documents("folder", parent_folder_id) if doc["name"] == name}
         if not matches:
             return None
-        if len(matches) > 1:
-            log.warning(f"Multiple folders named {name!r} under parent {parent_folder_id!r}: {sorted(matches)}")
-        return sorted(matches)[0]
+        kept, *extras = sorted(matches)
+        if extras:
+            log.warning(f"Duplicate folder name {name!r} under parent {parent_folder_id!r}: keeping {kept}, deleting {extras}")
+            for folder_id in extras:
+                try:
+                    self._delete(folder_id)
+                except requests.exceptions.RequestException as e:
+                    log.warning(f"Failed to delete duplicate folder {folder_id} for {name!r}: {self._format_error(e)}")
+        return kept
 
     def _create_folder(self, name: str, parent_folder_id: str | None) -> str:
         """POST /knowledge-base/folder - create a new folder, returns its id.
