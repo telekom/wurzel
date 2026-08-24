@@ -238,10 +238,10 @@ class TypedStep(Step, Generic[SETTS, INCONTRACT, OUTCONTRACT]):
         instance._static_type_check_run()
 
         # Sadly we cant use type() or types.new_class for this.
-        class InCls(PathToFolderWithBaseModels[instance.input_model_type]):
+        class InCls(PathToFolderWithBaseModels[instance.input_model_type]):  # ty: ignore[invalid-type-form]
             """Used internally."""
 
-        class OutCls(PathToFolderWithBaseModels[instance.output_model_type]):
+        class OutCls(PathToFolderWithBaseModels[instance.output_model_type]):  # ty: ignore[invalid-type-form]
             """Used internally."""
 
         instance._internal_input_class = InCls
