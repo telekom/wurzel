@@ -119,6 +119,8 @@ class ResourcesConfig(BaseModel):
     cpu_limit: str | None = None
     memory_request: str = "128Mi"
     memory_limit: str = "512Mi"
+    ephemeral_request: str | None = None
+    ephemeral_limit: str | None = None
 
 
 class TokenizerCacheConfig(BaseModel):
@@ -394,6 +396,8 @@ class ArgoBackend(Backend, backend_name="argo"):
             cpu_limit=res.cpu_limit,
             memory_request=res.memory_request,
             memory_limit=res.memory_limit,
+            ephemeral_request=res.ephemeral_request,
+            ephemeral_limit=res.ephemeral_limit,
         )
 
     def _build_pod_spec_patch(self) -> str | None:

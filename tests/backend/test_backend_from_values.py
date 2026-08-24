@@ -261,6 +261,8 @@ class TestArgoBackendFromValues:
                             "cpu_limit": "1000m",
                             "memory_request": "256Mi",
                             "memory_limit": "1Gi",
+                            "ephemeral_request": "1Gi",
+                            "ephemeral_limit": "2Gi",
                         }
                     },
                 }
@@ -274,6 +276,8 @@ class TestArgoBackendFromValues:
         assert backend.config.container.resources.cpu_limit == "1000m"
         assert backend.config.container.resources.memory_request == "256Mi"
         assert backend.config.container.resources.memory_limit == "1Gi"
+        assert backend.config.container.resources.ephemeral_request == "1Gi"
+        assert backend.config.container.resources.ephemeral_limit == "2Gi"
 
     def test_from_values_generate_artifact(self, tmp_path):
         """Test that ArgoBackend created from values can generate artifacts."""
