@@ -149,6 +149,8 @@ class TestResourcesConfig:
         assert config.cpu_limit is None
         assert config.memory_request == "128Mi"
         assert config.memory_limit == "512Mi"
+        assert config.ephemeral_request is None
+        assert config.ephemeral_limit is None
 
     def test_custom_values(self):
         config = ResourcesConfig(
@@ -156,11 +158,15 @@ class TestResourcesConfig:
             cpu_limit="1",
             memory_request="256Mi",
             memory_limit="1Gi",
+            ephemeral_request="1Gi",
+            ephemeral_limit="2Gi",
         )
         assert config.cpu_request == "200m"
         assert config.cpu_limit == "1"
         assert config.memory_request == "256Mi"
         assert config.memory_limit == "1Gi"
+        assert config.ephemeral_request == "1Gi"
+        assert config.ephemeral_limit == "2Gi"
 
 
 class TestContainerConfig:
@@ -1218,6 +1224,35 @@ class TestArgoBackendSecurityContext:
             assert resources.get("requests", {}).get("memory")
             assert "cpu" not in resources.get("limits", {})
             assert resources.get("limits", {}).get("memory")
+
+    def test_ephemeral_storage_in_generated_workflow(self):
+        """Test that ephemeral storage requests and limits are rendered into the workflow."""
+        config = WorkflowConfig(
+            container=ContainerConfig(
+                resources=ResourcesConfig(
+                    ephemeral_request="1Gi",
+                    ephemeral_limit="2Gi",
+                ),
+            ),
+        )
+        backend = ArgoBackend(config=config)
+        step = DummyStep()
+        yaml_output = backend.generate_artifact(step)
+        workflow = yaml.safe_load(yaml_output)
+
+        spec = workflow.get("spec", {})
+        if "workflowSpec" in spec:
+            templates = spec["workflowSpec"].get("templates", [])
+        else:
+            templates = spec.get("templates", [])
+
+        container_templates = [t for t in templates if "container" in t]
+        assert len(container_templates) > 0
+
+        for template in container_templates:
+            resources = template["container"].get("resources", {})
+            assert resources.get("requests", {}).get("ephemeral-storage") == "1Gi"
+            assert resources.get("limits", {}).get("ephemeral-storage") == "2Gi"
 
     def test_default_node_selector_in_workflow(self):
         """Test that generated workflows select a Kubernetes architecture."""

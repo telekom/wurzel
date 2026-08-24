@@ -301,6 +301,8 @@ argo list --label workflows.argoproj.io/cron-workflow=my-scheduled-pipeline
 | `cpu_limit` | string/null | `null` | Optional CPU limit |
 | `memory_request` | string | `128Mi` | Memory request |
 | `memory_limit` | string | `512Mi` | Memory limit |
+| `ephemeral_request` | string/null | `null` | Ephemeral storage request |
+| `ephemeral_limit` | string/null | `null` | Ephemeral storage limit |
 
 #### Tokenizer Cache Options
 
