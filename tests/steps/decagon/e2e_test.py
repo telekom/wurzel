@@ -6,8 +6,8 @@
 
 from unittest.mock import MagicMock, patch
 
+import httpx
 import pytest
-import requests
 
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import StepFailed
@@ -37,7 +37,7 @@ def sample_doc():
 @pytest.fixture
 def mock_session(decagon_env):
     """Create a step with mocked session."""
-    with patch("wurzel.steps.decagon.step.requests.Session") as mock_session_cls:
+    with patch("wurzel.steps.decagon.step.httpx.Client") as mock_session_cls:
         mock_session = MagicMock()
         mock_session_cls.return_value = mock_session
         step = DecagonKnowledgeBaseStep()
@@ -50,7 +50,7 @@ class TestDecagonKnowledgeBaseStepInit:
 
     def test_init_sets_headers(self, decagon_env):
         """Test that init sets proper authorization headers."""
-        with patch("wurzel.steps.decagon.step.requests.Session") as mock_session_cls:
+        with patch("wurzel.steps.decagon.step.httpx.Client") as mock_session_cls:
             mock_session = MagicMock()
             mock_session_cls.return_value = mock_session
             step = DecagonKnowledgeBaseStep()
@@ -64,7 +64,7 @@ class TestDecagonKnowledgeBaseStepInit:
     def test_init_skips_session_when_push_disabled(self, env):
         """Test that no session is created when PUSH_ENABLED is False."""
         env.set("PUSH_ENABLED", "false")
-        with patch("wurzel.steps.decagon.step.requests.Session") as mock_session_cls:
+        with patch("wurzel.steps.decagon.step.httpx.Client") as mock_session_cls:
             step = DecagonKnowledgeBaseStep()
             mock_session_cls.assert_not_called()
             step.finalize()
@@ -126,7 +126,7 @@ class TestSuccessfulProcessing:
     def test_push_disabled_returns_input_without_api_calls(self, env, sample_doc):
         """Test that PUSH_ENABLED=False returns input without any API calls."""
         env.set("PUSH_ENABLED", "false")
-        with patch("wurzel.steps.decagon.step.requests.Session") as mock_session_cls:
+        with patch("wurzel.steps.decagon.step.httpx.Client") as mock_session_cls:
             step = DecagonKnowledgeBaseStep()
             result = step.run([sample_doc])
 
@@ -142,7 +142,7 @@ class TestChunkingFailure:
         """Test that chunking failure raises StepFailed when all fail."""
         step, mock_sess = mock_session
 
-        mock_sess.post.side_effect = requests.exceptions.ConnectionError("Connection failed")
+        mock_sess.post.side_effect = httpx.RequestError("Connection failed")
 
         with pytest.raises(StepFailed, match="All 1 chunks failed"):
             step.run([sample_doc])
@@ -168,7 +168,7 @@ class TestChunkingFailure:
         mock_sess.post.side_effect = [
             chunk_response,
             article_response,
-            requests.exceptions.ConnectionError("Failed"),
+            httpx.RequestError("Failed"),
         ]
 
         result = step.run(docs)
@@ -189,8 +189,11 @@ class TestArticleCreationFailure:
         error_response = MagicMock()
         error_response.status_code = 500
         error_response.json.return_value = {"detail": "Server error"}
-        exc = requests.exceptions.HTTPError()
-        exc.response = error_response
+        exc = httpx.HTTPStatusError(
+            "Server error",
+            request=httpx.Request("POST", "https://api.test.decagon.ai/article/new"),
+            response=error_response,
+        )
 
         mock_sess.post.side_effect = [chunk_response, exc]
 
@@ -205,7 +208,7 @@ class TestArticleCreationFailure:
         chunk_response.json.return_value = {"chunks": ["chunk1", "chunk2"]}
         chunk_response.raise_for_status = MagicMock()
 
-        exc = requests.exceptions.ConnectionError("Failed")
+        exc = httpx.RequestError("Failed")
 
         mock_sess.post.side_effect = [chunk_response, exc, exc]
 
@@ -224,7 +227,7 @@ class TestArticleCreationFailure:
         success_response.json.return_value = {"article_id": 789}
         success_response.raise_for_status = MagicMock()
 
-        exc = requests.exceptions.ConnectionError("Failed")
+        exc = httpx.RequestError("Failed")
 
         mock_sess.post.side_effect = [chunk_response, success_response, exc]
 
@@ -308,8 +311,11 @@ class TestFormatError:
         response.status_code = 400
         response.json.return_value = {"detail": "Bad request"}
 
-        exc = requests.exceptions.HTTPError()
-        exc.response = response
+        exc = httpx.HTTPStatusError(
+            "Bad request",
+            request=httpx.Request("POST", "https://api.test.decagon.ai/article/new"),
+            response=response,
+        )
 
         assert step._format_error(exc) == "400: Bad request"
 
@@ -322,8 +328,11 @@ class TestFormatError:
         response.json.side_effect = ValueError("Not JSON")
         response.text = "Internal Server Error"
 
-        exc = requests.exceptions.HTTPError()
-        exc.response = response
+        exc = httpx.HTTPStatusError(
+            "Internal Server Error",
+            request=httpx.Request("POST", "https://api.test.decagon.ai/article/new"),
+            response=response,
+        )
 
         assert step._format_error(exc) == "500: Internal Server Error"
 
@@ -331,7 +340,7 @@ class TestFormatError:
         """Test error formatting when no response attached."""
         step, _ = mock_session
 
-        exc = requests.exceptions.ConnectionError("Connection refused")
+        exc = httpx.RequestError("Connection refused")
 
         assert step._format_error(exc) == "Connection refused"
 
@@ -344,8 +353,11 @@ class TestFormatError:
         response.json.side_effect = ValueError()
         response.text = ""
 
-        exc = requests.exceptions.HTTPError("Service Unavailable")
-        exc.response = response
+        exc = httpx.HTTPStatusError(
+            "Service Unavailable",
+            request=httpx.Request("POST", "https://api.test.decagon.ai/article/new"),
+            response=response,
+        )
 
         result = step._format_error(exc)
         assert "503" in result
@@ -356,7 +368,7 @@ class TestFinalize:
 
     def test_finalize_closes_session(self, decagon_env):
         """Test that finalize closes the session."""
-        with patch("wurzel.steps.decagon.step.requests.Session") as mock_session_cls:
+        with patch("wurzel.steps.decagon.step.httpx.Client") as mock_session_cls:
             mock_session = MagicMock()
             mock_session_cls.return_value = mock_session
 
@@ -368,7 +380,7 @@ class TestFinalize:
     def test_finalize_no_session_when_push_disabled(self, env):
         """Test that finalize is safe when no session was created."""
         env.set("PUSH_ENABLED", "false")
-        with patch("wurzel.steps.decagon.step.requests.Session") as mock_session_cls:
+        with patch("wurzel.steps.decagon.step.httpx.Client") as mock_session_cls:
             step = DecagonKnowledgeBaseStep()
             step.finalize()  # should not raise
             mock_session_cls.assert_not_called()

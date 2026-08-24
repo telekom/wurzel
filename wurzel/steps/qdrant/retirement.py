@@ -7,7 +7,7 @@
 from datetime import UTC, datetime, timedelta
 from logging import getLogger
 
-import requests
+import httpx
 from qdrant_client import QdrantClient
 
 from .settings import QdrantSettings
@@ -69,11 +69,11 @@ class CollectionRetirer:
         url = f"{self._settings.URI}/telemetry?details_level={details_level}"
         headers = {"api-key": self._settings.APIKEY.get_secret_value()}
         try:
-            response = requests.get(url, headers=headers, timeout=self._settings.REQUEST_TIMEOUT)
+            response = httpx.get(url, headers=headers, timeout=self._settings.REQUEST_TIMEOUT)
             response.raise_for_status()
             parsed = TelemetryResponse.model_validate(response.json())
             return parsed.result.collections.collections or []
-        except requests.RequestException as e:
+        except httpx.HTTPError as e:
             raise RuntimeError(f"Failed to fetch telemetry from Qdrant: {e}") from e
 
     def _retire_or_log(self, collection_name: str) -> None:

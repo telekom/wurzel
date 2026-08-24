@@ -26,6 +26,15 @@ def test_run_ok(tmp_path):
     BaseStepExecutor().execute_step(MyStep, (A(i=9),), tmp_path / "out.json")
 
 
+def test_run_ok_async(tmp_path):
+    class MyAsyncStep(TypedStep[NoSettings, A, A]):
+        async def run(self, inpt: A) -> A:
+            return A(i=inpt.i + 1)
+
+    result = BaseStepExecutor().execute_step(MyAsyncStep, (A(i=9),), tmp_path / "out.json")
+    assert result[0][0] == A(i=10)
+
+
 @pytest.mark.parametrize(
     "return_value",
     [

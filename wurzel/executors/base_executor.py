@@ -4,6 +4,8 @@
 
 """Base Executor."""
 
+import asyncio
+import inspect
 import json
 import os
 import time
@@ -336,7 +338,11 @@ class BaseStepExecutor:
                 token = step_history.set(history)
                 ctx.run(step_history.set, history)
                 try:
-                    res = ctx.run(run, inpt)
+                    run_result = ctx.run(run, inpt)
+                    if inspect.isawaitable(run_result):
+                        res = self._run_awaitable(run_result)
+                    else:
+                        res = run_result
                 finally:
                     step_history.reset(token)
                 run_time = time.time() - run_start
@@ -372,6 +378,15 @@ class BaseStepExecutor:
             step.finalize()
         except ValidationError as err:
             raise ContractFailedException(f"{inputs} does not conform the data contract of {step.input_model_class.__name__}") from err
+
+    @staticmethod
+    def _run_awaitable(awaitable: Any) -> Any:
+        """Run a coroutine/awaitable and return its result.
+
+        This keeps execute_step synchronous while supporting async step.run
+        implementations transparently.
+        """
+        return asyncio.run(awaitable)
 
     def execute_step(
         self,

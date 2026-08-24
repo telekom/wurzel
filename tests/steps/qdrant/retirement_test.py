@@ -247,7 +247,7 @@ def test_get_telemetry_success(env, dummy_collection):
 
     with patch("wurzel.steps.qdrant.step.QdrantClient") as mock_client:
         mock_client.return_value = client
-        with patch("wurzel.steps.qdrant.retirement.requests.get", return_value=mock_response) as mock_get:
+        with patch("wurzel.steps.qdrant.retirement.httpx.get", return_value=mock_response) as mock_get:
             step = QdrantConnectorStep()
             retirer = CollectionRetirer(step.client, step.settings)
             result = retirer._get_telemetry(details_level=3)
@@ -338,7 +338,7 @@ def test_get_telemetry_unexpected_response(env, dummy_collection, response_body,
 
     with patch("wurzel.steps.qdrant.step.QdrantClient") as mock_client:
         mock_client.return_value = client
-        with patch("wurzel.steps.qdrant.retirement.requests.get", return_value=mock_response):
+        with patch("wurzel.steps.qdrant.retirement.httpx.get", return_value=mock_response):
             step = QdrantConnectorStep()
             retirer = CollectionRetirer(step.client, step.settings)
             if expected_exception is not None:

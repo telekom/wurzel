@@ -46,7 +46,8 @@ dependencies = [
 
 [project.optional-dependencies]
 qdrant = [
-    "qdrant-client==1.15.1"
+    "qdrant-client==1.15.1",
+    "httpx>=0.27,<1",
 ]
 docling = [
     "docling==2.30.0"
@@ -117,6 +118,7 @@ test = [
     "pytest-xdist==3.*",
     "pytest-mock==3.*",
     "requests-mock==1.*",
+    "httpx>=0.27,<1",
     "moto[s3]>=5.0",
     #"milvus-lite==2.*", # used for miluvs mock no support for windows https://github.com/milvus-io/milvus-lite/issues/176
 ]
