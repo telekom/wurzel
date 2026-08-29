@@ -1,8 +1,8 @@
 # SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
 #
 # SPDX-License-Identifier: Apache-2.0
-# pylint: disable=duplicate-code
-"""Helpers for CLI environment commands."""
+
+"""Environment variable requirement collection and validation for pipelines."""
 
 from __future__ import annotations
 
@@ -15,8 +15,8 @@ from pydantic import BaseModel, SecretStr, ValidationError
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
-if TYPE_CHECKING:  # pragma: no cover - typing imports only
-    from wurzel.core.typed_step import TypedStep
+if TYPE_CHECKING:
+    from wurzel.core import TypedStep
 
 
 class EnvVarRequirement(BaseModel):

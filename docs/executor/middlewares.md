@@ -8,145 +8,242 @@ pattern and execute in the configured order around the core executor.
 
 You can enable middlewares in two ways:
 
-1. By passing names or instances to `BaseStepExecutor`:
+from wurzel.step_executor import BaseStepExecutor
 
-```python
-from wurzel.executors.base_executor import BaseStepExecutor
+# Option 1: Via constructor
+with BaseStepExecutor(middlewares=['prometheus']) as exc:
+    exc(MyStep, set(inputs), output)
 
-# Using names registered in the middleware registry
-with BaseStepExecutor(middlewares=["prometheus"]) as exc:
-    pass
-
-# Or provide middleware instances directly
-from wurzel.executors.middlewares.base import BaseMiddleware
-
-
-class NoopMiddleware(BaseMiddleware):
-    def __call__(self, call_next, step_cls, inputs, output_dir):
-        return call_next(step_cls, inputs, output_dir)
-
-
-with BaseStepExecutor(middlewares=[NoopMiddleware()]) as exc:
-    pass
+# Option 2: Via environment variable
+# export MIDDLEWARES=prometheus
+with BaseStepExecutor() as exc:
+    exc(MyStep, set(inputs), output)
 ```
 
-1. By setting the `MIDDLEWARES` environment variable to a comma-separated
-  list of middleware names (the executor will load them from the built-in
-  registry):
+## Using Middlewares
+
+### Via Constructor
+
+```python
+from wurzel.step_executor import BaseStepExecutor
+
+# Single middleware
+with BaseStepExecutor(middlewares=['prometheus']) as exc:
+    exc(MyStep, set(inputs), output)
+
+# Multiple middlewares (executed in order)
+with BaseStepExecutor(middlewares=['prometheus', 'custom']) as exc:
+    exc(MyStep, set(inputs), output)
+```
+
+### Via Environment Variable
 
 ```bash
-# Via CLI flag
-wurzel run --middlewares prometheus my.module.MyStep
-
-# Via environment variable (comma-separated)
+# Enable single middleware
 export MIDDLEWARES=prometheus
-wurzel run my.module.MyStep
+python -m wurzel run MyStep
+
+# Enable multiple middlewares (comma-separated)
+export MIDDLEWARES=prometheus,otel,custom
+python -m wurzel run MyStep
 ```
 
-Discover available middlewares at any time:
+### Via CLI
 
 ```bash
-wurzel middlewares list
-wurzel middlewares inspect prometheus
+# New --middlewares flag
+wurzel run MyStep --middlewares prometheus
+
+# Multiple middlewares
+wurzel run MyStep --middlewares prometheus,custom
 ```
 
-## Writing a custom middleware
+## Built-in Middlewares
 
-Subclass `BaseMiddleware` and implement `__call__`. Always forward to `call_next`
-to keep the chain intact.
+### Discovering Available Middlewares
 
-```python
-import logging
+To see all available middlewares in your installation:
 
-from wurzel.executors.middlewares.base import BaseMiddleware, MiddlewareChain
-
-log = logging.getLogger(__name__)
-
-
-class TimingMiddleware(BaseMiddleware):
-    """Records wall-clock time around step execution."""
-
-    def __call__(self, call_next, step_cls, inputs, output_dir):
-        import time
-
-        start = time.monotonic()
-        result = call_next(step_cls, inputs, output_dir)
-        log.info("%s took %.3fs", step_cls.__name__, time.monotonic() - start)
-        return result
-
-
-chain = MiddlewareChain([TimingMiddleware()])
-print(len(chain.middlewares))
-#> 1
+```bash
+wurzel list-middlewares
 ```
 
-## Registry
+This will output something like:
 
-Built-in middlewares are registered by name so they can be referenced by string:
+```text
+Available middlewares:
+  - prometheus
+```
+
+### Prometheus Middleware
+
+Collects metrics about step execution:
+- Steps started/failed counters
+- Input/output counts
+- Load/execute/save time histograms
+
+**Configuration (via environment variables):**
+```bash
+export PROMETHEUS_GATEWAY=localhost:9091
+export PROMETHEUS_JOB=my-job-name
+export PROMETHEUS_DISABLE_CREATED_METRIC=True
+```
+
+**Usage:**
+```python
+with BaseStepExecutor(middlewares=['prometheus']) as exc:
+    exc(MyStep, set(inputs), output)
+```
+
+## Creating Custom Middlewares
+
+### 1. Create Middleware Class
 
 ```python
-from wurzel.executors.middlewares import get_registry
+from wurzel.step_executor.middlewares import BaseMiddleware
 
+class MyCustomMiddleware(BaseMiddleware):
+    """Custom middleware example."""
+
+    def __init__(self, my_setting: str = "default"):
+        super().__init__()
+        self.my_setting = my_setting
+
+    def execute(self, next_call, step_cls, inputs, output_dir):
+        """Execute with custom logic."""
+        # Pre-processing
+        print(f"Starting {step_cls.__name__}")
+
+        try:
+            # Call next middleware or executor
+            result = next_call(step_cls, inputs, output_dir)
+
+            # Post-processing
+            print(f"Completed {step_cls.__name__}")
+            return result
+        except Exception as e:
+            # Error handling
+            print(f"Failed {step_cls.__name__}: {e}")
+            raise
+
+    def __enter__(self):
+        """Setup resources."""
+        print("Middleware initialized")
+        return self
+
+    def __exit__(self, *exc_details):
+        """Cleanup resources."""
+        print("Middleware cleanup")
+```
+
+### 2. Register Middleware
+
+```python
+from wurzel.step_executor.middlewares import get_registry
+
+# Register your middleware
 registry = get_registry()
-print("prometheus" in registry.list_available())
-#> True
+registry.register("custom", MyCustomMiddleware)
 ```
 
-Register a custom middleware the same way:
+### 3. Use Middleware
 
 ```python
-from wurzel.executors.middlewares import get_registry
-from wurzel.executors.middlewares.base import BaseMiddleware
-
-
-class NoopMiddleware(BaseMiddleware):
-    """Passes through without modification."""
-
-    def __call__(self, call_next, step_cls, inputs, output_dir):
-        return call_next(step_cls, inputs, output_dir)
-
-
-registry = get_registry()
-registry.register("noop", NoopMiddleware)
-print("noop" in registry.list_available())
-#> True
+# Now you can use it like built-in middlewares
+with BaseStepExecutor(middlewares=['custom']) as exc:
+    exc(MyStep, set(inputs), output)
 ```
 
-## Prometheus middleware
+## Middleware Configuration
 
-Pushes step execution metrics to a Prometheus Pushgateway.
-Settings use the `PROMETHEUS__` prefix (pydantic-settings applies it automatically):
+### Per-Middleware Settings
 
-| Environment Variable | Default | Description |
-|---|---|---|
-| `MIDDLEWARES` | - | Comma-separated list of middlewares to enable |
-| `PROMETHEUS__GATEWAY` | `localhost:9091` | Pushgateway endpoint (`host:port`) |
-| `PROMETHEUS__JOB` | `default-job-name` | Job name for metrics |
-| `PROMETHEUS__DISABLE_CREATED_METRIC` | `true` | Disable `*_created` metrics |
+Each middleware can have its own settings class:
 
-**Metrics emitted**:
+```python
+from wurzel.step.settings import Settings
+from pydantic import Field
 
-These gauges are intended for dashboards that correlate Wurzel step results with
-Argo workflow pods and Kubernetes resource metrics. They all include
-`step_name` and `run_id` labels. The Prometheus Pushgateway supplies the
-pipeline `job` label. Namespace, pod, and workflow labels should be added by the
-Prometheus scrape or Pushgateway relabeling configuration.
+class MyMiddlewareSettings(Settings):
+    """Settings for my middleware."""
 
-- `wurzel_step_input_items` — Total input items processed by the step.
-- `wurzel_step_result_items` — Total result items produced by the step.
-- `wurzel_step_duration_seconds` — Step duration by `phase` (`load`, `execute`, `save`, `total`).
-- `wurzel_step_status` — Current step status by `status` (`started`, `succeeded`, `failed`).
-- `wurzel_step_timestamp_seconds` — Step lifecycle timestamps by `event` (`started`, `completed`, `failed`).
-- `wurzel_step_info` — Static value of `1` with the Wurzel runtime context labels.
-- `wurzel_step_datacontract_metric` — Data contract metrics by `metric_name`.
+    MY_SETTING: str = Field("default", description="My setting")
+    MY_NUMBER: int = Field(42, description="A number")
 
-The middleware reads backend-neutral Wurzel runtime context only:
-`WURZEL_RUN_ID`. Backends are responsible for mapping their own runtime
-information into this Wurzel-owned variable. The middleware does not inspect
-backend-specific environment variables such as Kubernetes pod metadata. Local
-runs use `unknown` when the run id is unavailable.
+class MyMiddleware(BaseMiddleware):
+    def __init__(self):
+        super().__init__()
+        self.settings = MyMiddlewareSettings()
+```
 
-For DVC, export the env vars before `dvc repro`. For Argo, add them to
-`container.env` in your `values.yaml`. See the
-[Argo backend docs](../backends/argoworkflows.md#middleware-configuration) for
-a YAML example.
+Settings are loaded from environment variables:
+```bash
+export MY_SETTING=custom_value
+export MY_NUMBER=100
+```
+
+## Advanced Usage
+
+### Programmatic Middleware Chain
+
+```python
+from wurzel.step_executor.middlewares import MiddlewareChain, PrometheusMiddleware
+
+# Build custom chain
+chain = MiddlewareChain()
+chain.add(PrometheusMiddleware())
+chain.add(MyCustomMiddleware())
+
+# Use with executor
+executor = BaseStepExecutor(middlewares=[])  # Empty, we'll set manually
+executor._BaseStepExecutor__middleware_chain = chain
+
+with executor as exc:
+    exc(MyStep, set(inputs), output)
+```
+
+### Conditional Middleware Loading
+
+```python
+import os
+
+middlewares = []
+if os.environ.get("ENABLE_METRICS") == "true":
+    middlewares.append("prometheus")
+if os.environ.get("ENABLE_TRACING") == "true":
+    middlewares.append("otel")
+
+with BaseStepExecutor(middlewares=middlewares) as exc:
+    exc(MyStep, set(inputs), output)
+```
+
+## Testing Middlewares
+
+```python
+import pytest
+from wurzel.step_executor import BaseStepExecutor
+from wurzel.step_executor.middlewares import get_registry
+
+def test_custom_middleware():
+    """Test custom middleware."""
+    # Register middleware
+    registry = get_registry()
+    registry.register("test", MyCustomMiddleware)
+
+    # Use middleware
+    with BaseStepExecutor(middlewares=['test']) as exc:
+        result = exc(MyStep, set(), output_path)
+        assert result
+```
+
+## Backward Compatibility
+
+The old `PrometheusStepExecutor` is still available but deprecated. It will be removed in a future version. Please migrate to the new middleware pattern.
+
+```python
+# This still works but shows a deprecation warning
+from wurzel.step_executor import PrometheusStepExecutor
+
+with PrometheusStepExecutor() as exc:  # DeprecationWarning
+    exc(MyStep, set(inputs), output)
+```
