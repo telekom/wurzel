@@ -3,23 +3,25 @@
 
 ## Qdrant Collection Retirement
 
-To avoid unbounded growth of collections, the `QdrantConnectorStep` implements logic to retire (delete) older collections based on usage and aliasing.
+To avoid unbounded growth of collections, the `QdrantConnectorStep` retires (deletes) older versioned collections based on history length and aliases only.
+
+Qdrant telemetry `last_responded` is not used: cluster events can refresh that stamp when `searches.count` is 0, which blocked deletion of unused collections.
 
 **Retention Rules:**
 
 - Retains the most recent `COLLECTION_HISTORY_LEN` versioned collections.
 - Skips deletion if collection is aliased.
-- Skips deletion if collection was accessed within `COLLECTION_USAGE_RETENTION_DAYS`.
+- The live collection is protected by its alias (for example `austria` → `austria_vN`).
 
 **Configuration Flags:**
 
 | Setting                           | Description                                                              |
 |-----------------------------------|--------------------------------------------------------------------------|
 | `COLLECTION_HISTORY_LEN`          | Number of latest versions to retain                                      |
-| `COLLECTION_USAGE_RETENTION_DAYS` | Protects recently accessed collections from deletion                     |
 | `COLLECTION_RETIRE_DRY_RUN`       | When `true`, only logs deletions; doesn’t actually delete anything       |
 | `ENABLE_COLLECTION_RETIREMENT`    | When `false`, disables retirement logic entirely (no deletion performed) |
-| `TELEMETRY_DETAILS_LEVEL`         | Controls how detailed the telemetry info fetched from Qdrant should be.  |
+
+`COLLECTION_USAGE_RETENTION_DAYS`, `TELEMETRY_DETAILS_LEVEL`, and `REQUEST_TIMEOUT` are unused and kept only so existing env vars still validate.
 
 
 ::: wurzel.steps.qdrant.step_multi_vector
