@@ -1,0 +1,105 @@
+/* SPDX-FileCopyrightText: 2024 Deutsche Telekom AG
+ *
+ * SPDX-License-Identifier: CC0-1.0
+ */
+
+/* Additional custom styles */
+.md-typeset h1,
+.md-typeset h2 {
+  border-bottom: 2px solid var(--telekom-magenta);
+  padding-bottom: 0.5rem;
+}
+
+.md-typeset h3 {
+  color: var(--telekom-magenta);
+}
+
+/* Override button link styling */
+.md-typeset .md-button,
+.md-typeset a.md-button {
+  color: white !important;
+  background-color: var(--telekom-magenta) !important;
+  border: 1px solid var(--telekom-magenta) !important;
+  padding: 0.5rem 1rem !important;
+  border-radius: 4px !important;
+  display: inline-block !important;
+  text-decoration: none !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+}
+
+.md-typeset .md-button:hover,
+.md-typeset a.md-button:hover {
+  color: white !important;
+  background-color: #B8005C !important;
+  border-color: #B8005C !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 8px rgba(226, 0, 116, 0.3) !important;
+  text-decoration: none !important;
+}
+
+.md-typeset .md-button:focus,
+.md-typeset a.md-button:focus {
+  color: white !important;
+  background-color: #B8005C !important;
+  outline: none !important;
+}
+
+.md-typeset .md-button:visited,
+.md-typeset a.md-button:visited {
+  color: white !important;
+}
+
+/* Custom table styling */
+.md-typeset table:not([class]) {
+  border: 1px solid var(--telekom-light-grey);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.md-typeset table:not([class]) th {
+  background-color: var(--telekom-magenta);
+  color: var(--telekom-white);
+  font-weight: 600;
+}
+
+.md-typeset table:not([class]) tr:nth-child(even) {
+  background-color: rgba(226, 0, 116, 0.05);
+}
+
+/* Documentation sections */
+.doc-section {
+  border-left: 4px solid var(--telekom-magenta);
+  padding-left: 1rem;
+  margin: 2rem 0;
+}
+
+.doc-section h2 {
+  color: var(--telekom-magenta);
+  margin-top: 0;
+}
+
+/* Status badges */
+.status-badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-badge.active {
+  background-color: var(--telekom-green);
+  color: white;
+}
+
+.status-badge.deprecated {
+  background-color: var(--telekom-orange);
+  color: white;
+}
+
+.status-badge.beta {
+  background-color: var(--telekom-cyan);
+  color: white;
+}

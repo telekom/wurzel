@@ -1,0 +1,55 @@
+<!--
+# SPDX-FileCopyrightText: 2024 Deutsche Telekom AG
+#
+# SPDX-License-Identifier: CC0-1.0
+-->
+
+{% extends "base.html" %}
+
+{% block extrahead %}
+  <!-- Telekom Magenta brand colors -->
+  <style>
+    :root {
+      --md-primary-fg-color: #E20074;
+      --md-primary-fg-color--light: #FF0090;
+      --md-primary-fg-color--dark: #B8005C;
+      --md-accent-fg-color: #00ADE6;
+    }
+  </style>
+
+  <!-- Add Telekom favicon -->
+  <link rel="icon" type="image/x-icon" href="{{ 'assets/images/favicon.ico' | url }}">
+
+  <!-- Add custom fonts if available -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+{% endblock %}
+
+{% block header %}
+  {{ super() }}
+  <!-- Custom header without team badge -->
+{% endblock %}
+
+{% block footer %}
+  <!-- Custom footer with Telekom branding -->
+  <footer class="md-footer">
+    <div class="md-footer-meta md-typeset">
+      <div class="md-footer-meta__inner md-grid">
+        <div class="md-footer-copyright">
+          <div class="md-footer-copyright__highlight">
+            Copyright &copy; {{ config.copyright.split("Copyright &copy; ")[1] if "Copyright &copy;" in config.copyright else "2025 Knowledge Management Team - Telekom" }}
+          </div>
+
+        </div>
+        {% if config.repo_url %}
+          <div class="md-footer-social">
+            <a href="{{ config.repo_url }}" target="_blank" rel="noopener" title="{{ config.repo_name }}" class="md-footer-social__link">
+              {% include ".icons/fontawesome/brands/github.svg" %}
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </footer>
+{% endblock %}
