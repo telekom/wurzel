@@ -21,8 +21,6 @@ Qdrant telemetry `last_responded` is not used: cluster events can refresh that s
 | `COLLECTION_RETIRE_DRY_RUN`       | When `true`, only logs deletions; doesn’t actually delete anything       |
 | `ENABLE_COLLECTION_RETIREMENT`    | When `false`, disables retirement logic entirely (no deletion performed) |
 
-`COLLECTION_USAGE_RETENTION_DAYS`, `TELEMETRY_DETAILS_LEVEL`, and `REQUEST_TIMEOUT` are unused and kept only so existing env vars still validate.
-
 
 ::: wurzel.steps.qdrant.step_multi_vector
     handler: python
