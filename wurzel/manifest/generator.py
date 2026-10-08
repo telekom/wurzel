@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -59,7 +59,7 @@ class ManifestGenerator:
         return Backend.create(name, raw_config)
 
     @contextmanager
-    def _env_override(self, extra: dict[str, str]) -> Iterator[None]:
+    def _env_override(self, extra: dict[str, str]) -> Generator[None, None, None]:
         """Temporarily inject env vars, restoring originals on exit."""
         original = {k: os.environ.get(k) for k in extra}
         os.environ.update(extra)
