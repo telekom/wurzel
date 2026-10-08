@@ -25,6 +25,15 @@ def _docs() -> list[MarkdownDataContract]:
     ]
 
 
+def _run_and_finalize(docs: list[MarkdownDataContract] | None = None) -> tuple[S3MarkdownStep, list[MarkdownDataContract]]:
+    """Executor-shaped helper: run() once, then finalize() (the S3 write)."""
+    docs = _docs() if docs is None else docs
+    step = S3MarkdownStep()
+    out = step.run(docs)
+    step.finalize()
+    return step, out
+
+
 @pytest.fixture
 def aws_creds(env):
     """Fake creds so boto3/moto are happy; bare settings env for direct construction."""
@@ -54,7 +63,7 @@ def test_writes_latest_and_timestamped_snapshot(s3_bucket, env):
     env.update({"BUCKET": BUCKET, "PREFIX": "kb", "REGION": REGION})
     docs = _docs()
 
-    out = S3MarkdownStep().run(docs)
+    _, out = _run_and_finalize(docs)
 
     keys = _list_keys(s3_bucket)
     assert "kb/latest.json" in keys
@@ -69,9 +78,47 @@ def test_writes_latest_and_timestamped_snapshot(s3_bucket, env):
     assert out == docs  # passthrough
 
 
+def test_run_does_not_write_until_finalize(s3_bucket, env):
+    env.update({"BUCKET": BUCKET, "PREFIX": "kb", "REGION": REGION})
+    step = S3MarkdownStep()
+    step.run(_docs())
+    assert _list_keys(s3_bucket) == []  # buffered only
+    step.finalize()
+    assert "kb/latest.json" in _list_keys(s3_bucket)
+
+
+def test_fan_in_writes_once_with_combined_latest(s3_bucket, env):
+    """Several upstreams call run() once each; latest.json must be the union, not last-writer-wins."""
+    env.update({"BUCKET": BUCKET, "PREFIX": "kb", "REGION": REGION})
+    faq = [
+        MarkdownDataContract(md="# FAQ", keywords="faq", url="https://magenta.at/faq", metadata=None),
+    ]
+    news = [
+        MarkdownDataContract(md="# News", keywords="news", url="https://newsroom.magenta.at/1", metadata=None),
+    ]
+    step = S3MarkdownStep()
+    assert step.run(faq) == faq
+    assert step.run(news) == news
+    assert _list_keys(s3_bucket) == []  # still no S3 write
+    step.finalize()
+
+    keys = _list_keys(s3_bucket)
+    assert "kb/latest.json" in keys
+    ts_keys = [k for k in keys if k != "kb/latest.json"]
+    assert len(ts_keys) == 1, f"expected one combined snapshot, got {ts_keys}"
+
+    latest_body = json.loads(s3_bucket.get_object(Bucket=BUCKET, Key="kb/latest.json")["Body"].read())
+    snap_body = json.loads(s3_bucket.get_object(Bucket=BUCKET, Key=ts_keys[0])["Body"].read())
+    expected = [d.model_dump() for d in faq + news]
+    assert latest_body == expected
+    assert snap_body == expected
+    head = s3_bucket.head_object(Bucket=BUCKET, Key="kb/latest.json")
+    assert head["Metadata"]["record-count"] == "2"
+
+
 def test_metadata_field_preserved(s3_bucket, env):
     env.update({"BUCKET": BUCKET, "PREFIX": "kb", "REGION": REGION})
-    S3MarkdownStep().run(_docs())
+    _run_and_finalize()
     body = json.loads(s3_bucket.get_object(Bucket=BUCKET, Key="kb/latest.json")["Body"].read())
     assert body[0]["metadata"] == {"char_len": 6}
     assert body[1]["metadata"] is None
@@ -79,7 +126,7 @@ def test_metadata_field_preserved(s3_bucket, env):
 
 def test_provenance_object_metadata(s3_bucket, env):
     env.update({"BUCKET": BUCKET, "PREFIX": "kb", "REGION": REGION, "TENANT": "cz"})
-    S3MarkdownStep().run(_docs())
+    _run_and_finalize()
     head = s3_bucket.head_object(Bucket=BUCKET, Key="kb/latest.json")
     meta = head["Metadata"]  # boto3 strips the x-amz-meta- prefix and lowercases keys
     assert meta["record-count"] == "2"
@@ -90,7 +137,7 @@ def test_provenance_object_metadata(s3_bucket, env):
 def test_empty_prefix_writes_to_bucket_root(s3_bucket, env):
     # PREFIX="" (default) → keys at the bucket root, no leading slash.
     env.update({"BUCKET": BUCKET, "PREFIX": "", "REGION": REGION})
-    S3MarkdownStep().run(_docs())
+    _run_and_finalize()
     keys = sorted(o["Key"] for o in s3_bucket.list_objects_v2(Bucket=BUCKET).get("Contents", []))
     assert "latest.json" in keys
     assert not any(k.startswith("/") for k in keys)  # no leading-slash keys
@@ -101,24 +148,37 @@ def test_empty_prefix_writes_to_bucket_root(s3_bucket, env):
 def test_skip_is_noop_passthrough(env):
     env.set("SKIP", "true")  # no bucket / creds required
     docs = _docs()
-    out = S3MarkdownStep().run(docs)
+    step = S3MarkdownStep()
+    out = step.run(docs)
+    step.finalize()  # must stay a no-op
     assert out == docs
 
 
 def test_empty_input_does_not_write(s3_bucket, env):
     # Never clobber latest.json with an empty array when the upstream yields nothing.
     env.update({"BUCKET": BUCKET, "PREFIX": "kb", "REGION": REGION})
-    out = S3MarkdownStep().run([])
+    _, out = _run_and_finalize([])
     assert out == []
     assert _list_keys(s3_bucket) == []  # nothing written
 
 
+def test_empty_batch_among_fan_in_is_omitted(s3_bucket, env):
+    env.update({"BUCKET": BUCKET, "PREFIX": "kb", "REGION": REGION})
+    docs = _docs()
+    step = S3MarkdownStep()
+    step.run([])
+    step.run(docs)
+    step.finalize()
+    body = json.loads(s3_bucket.get_object(Bucket=BUCKET, Key="kb/latest.json")["Body"].read())
+    assert body == [d.model_dump() for d in docs]
+
+
 def test_put_error_raises_stepfailed(aws_creds, env):
-    # Bucket does not exist under moto → PutObject fails → StepFailed.
+    # Bucket does not exist under moto → PutObject fails → StepFailed on finalize.
     with mock_aws():
         env.update({"BUCKET": "does-not-exist", "PREFIX": "kb", "REGION": REGION})
         with pytest.raises(StepFailed):
-            S3MarkdownStep().run(_docs())
+            _run_and_finalize()
 
 
 def test_step_scoped_credentials_passed_to_client(env, mocker):
