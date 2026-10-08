@@ -19,7 +19,7 @@ from wurzel.exceptions import CustomQdrantException, StepFailed
 from wurzel.steps.data import EmbeddingResult
 from wurzel.utils import HAS_TLSH
 
-from .data import QdrantResult
+from .data import QdrantMultiVectorResult, QdrantResult
 from .retirement import CollectionRetirer
 from .settings import QdrantSettings
 
@@ -39,7 +39,7 @@ class QdrantConnectorStep(TypedStep[QdrantSettings, DataFrame[EmbeddingResult], 
     s: QdrantSettings
     client: QdrantClient
     collection_name: str
-    result_class: ClassVar[type[QdrantResult]] = QdrantResult
+    result_class: ClassVar[type[QdrantResult] | type[QdrantMultiVectorResult]] = QdrantResult
     vector_key = "vector"
 
     def __init__(self) -> None:
