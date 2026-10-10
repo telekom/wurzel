@@ -1,0 +1,83 @@
+# SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
+#
+# SPDX-License-Identifier: Apache-2.0
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OTel Collector configuration
+#
+# Span attributes used for routing
+# ─────────────────────────────────────────────────────────────────────────────
+#   project.name   Set via OTEL__PROJECT_NAME.  Phoenix reads this resource
+#                  attribute to route the trace into the named project.
+#
+#   tenant         Set via OTEL__TENANT.  The routing connector below inspects
+#                  this span attribute and fans out to a tenant-specific
+#                  exporter pipeline.  Add more entries to the table to support
+#                  additional tenants.
+#
+# Inbound:   OTLP gRPC on 0.0.0.0:4317   (Python app → collector)
+# Outbound:  OTLP HTTP  → Arize Phoenix  (http://phoenix:6006/v1/traces)
+# ─────────────────────────────────────────────────────────────────────────────
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  batch:
+    timeout: 1s
+    send_batch_size: 64
+
+exporters:
+  # Default exporter — all tenants land in the same Phoenix instance.
+  # For true multi-tenant isolation, duplicate this block and point each
+  # copy at a different Phoenix endpoint or use different project headers.
+  otlphttp/default:
+    endpoint: http://phoenix:6006
+    tls:
+      insecure: true
+
+  # Example: a dedicated exporter for a specific tenant.
+  # Uncomment and point at a separate collector / Phoenix instance as needed.
+  # otlphttp/tenant_a:
+  #   endpoint: http://phoenix-tenant-a:6006
+  #   tls:
+  #     insecure: true
+
+# ── Routing connector ────────────────────────────────────────────────────────
+# Routes spans based on the "tenant" resource attribute injected by
+# OtelMiddleware (OTEL__TENANT env var).
+#
+# Spans that carry a non-empty tenant value are sent to traces/tenanted.
+# Everything else falls through to traces/default.
+#
+# To add a new tenant, append a row to the table and wire up the matching
+# pipeline + exporter.
+connectors:
+  routing:
+    default_pipelines: [traces/default]
+    error_mode: ignore
+    table:
+      - statement: route() where resource.attributes["tenant"] != nil and resource.attributes["tenant"] != ""
+        pipelines: [traces/tenanted]
+
+service:
+  pipelines:
+    # Ingress pipeline: receive from the app, batch, then hand to the router.
+    traces/in:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [routing]
+
+    # Default route — spans without a tenant value.
+    traces/default:
+      receivers: [routing]
+      exporters: [otlphttp/default]
+
+    # Tenanted route — spans that carry a non-empty "tenant" attribute.
+    # Wire this to a different exporter for true isolation.
+    traces/tenanted:
+      receivers: [routing]
+      exporters: [otlphttp/default]   # swap for otlphttp/tenant_a etc.

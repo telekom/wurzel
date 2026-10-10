@@ -63,3 +63,11 @@ path = [
 precedence = "override"
 SPDX-FileCopyrightText = "2020 suntong"
 SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = [
+    "examples/phoenix/otel-collector-config.yaml",
+    ]
+precedence = "override"
+SPDX-FileCopyrightText = "2025 Deutsche Telekom AG (opensource@telekom.de)"
+SPDX-License-Identifier = "Apache-2.0"
