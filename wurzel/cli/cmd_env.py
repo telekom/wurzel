@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
 #
 # SPDX-License-Identifier: Apache-2.0
+# pylint: disable=duplicate-code
 """Helpers for CLI environment commands."""
 
 from __future__ import annotations

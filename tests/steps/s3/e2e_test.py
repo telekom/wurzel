@@ -6,13 +6,13 @@
 
 import json
 
-import boto3
 import pytest
-from moto import mock_aws
 
 from wurzel.datacontract import MarkdownDataContract
 from wurzel.exceptions import StepFailed
-from wurzel.steps.s3 import S3MarkdownStep
+
+boto3 = pytest.importorskip("boto3")
+mock_aws = pytest.importorskip("moto").mock_aws
 
 BUCKET = "test-kb-bucket"
 REGION = "eu-central-1"
@@ -23,6 +23,12 @@ def _docs() -> list[MarkdownDataContract]:
         MarkdownDataContract(md="# A\ntext a", keywords="k1,k2", url="https://x/a", metadata={"char_len": 6}),
         MarkdownDataContract(md="# B\ntext b", keywords="", url="https://x/b", metadata=None),
     ]
+
+
+def _make_s3_step():
+    from wurzel.steps.s3 import S3MarkdownStep
+
+    return S3MarkdownStep()
 
 
 @pytest.fixture
@@ -54,7 +60,7 @@ def test_writes_latest_and_timestamped_snapshot(s3_bucket, env):
     env.update({"BUCKET": BUCKET, "PREFIX": "kb", "REGION": REGION})
     docs = _docs()
 
-    out = S3MarkdownStep().run(docs)
+    out = _make_s3_step().run(docs)
 
     keys = _list_keys(s3_bucket)
     assert "kb/latest.json" in keys
@@ -71,7 +77,7 @@ def test_writes_latest_and_timestamped_snapshot(s3_bucket, env):
 
 def test_metadata_field_preserved(s3_bucket, env):
     env.update({"BUCKET": BUCKET, "PREFIX": "kb", "REGION": REGION})
-    S3MarkdownStep().run(_docs())
+    _make_s3_step().run(_docs())
     body = json.loads(s3_bucket.get_object(Bucket=BUCKET, Key="kb/latest.json")["Body"].read())
     assert body[0]["metadata"] == {"char_len": 6}
     assert body[1]["metadata"] is None
@@ -79,7 +85,7 @@ def test_metadata_field_preserved(s3_bucket, env):
 
 def test_provenance_object_metadata(s3_bucket, env):
     env.update({"BUCKET": BUCKET, "PREFIX": "kb", "REGION": REGION, "TENANT": "cz"})
-    S3MarkdownStep().run(_docs())
+    _make_s3_step().run(_docs())
     head = s3_bucket.head_object(Bucket=BUCKET, Key="kb/latest.json")
     meta = head["Metadata"]  # boto3 strips the x-amz-meta- prefix and lowercases keys
     assert meta["record-count"] == "2"
@@ -90,7 +96,7 @@ def test_provenance_object_metadata(s3_bucket, env):
 def test_empty_prefix_writes_to_bucket_root(s3_bucket, env):
     # PREFIX="" (default) → keys at the bucket root, no leading slash.
     env.update({"BUCKET": BUCKET, "PREFIX": "", "REGION": REGION})
-    S3MarkdownStep().run(_docs())
+    _make_s3_step().run(_docs())
     keys = sorted(o["Key"] for o in s3_bucket.list_objects_v2(Bucket=BUCKET).get("Contents", []))
     assert "latest.json" in keys
     assert not any(k.startswith("/") for k in keys)  # no leading-slash keys
@@ -101,14 +107,14 @@ def test_empty_prefix_writes_to_bucket_root(s3_bucket, env):
 def test_skip_is_noop_passthrough(env):
     env.set("SKIP", "true")  # no bucket / creds required
     docs = _docs()
-    out = S3MarkdownStep().run(docs)
+    out = _make_s3_step().run(docs)
     assert out == docs
 
 
 def test_empty_input_does_not_write(s3_bucket, env):
     # Never clobber latest.json with an empty array when the upstream yields nothing.
     env.update({"BUCKET": BUCKET, "PREFIX": "kb", "REGION": REGION})
-    out = S3MarkdownStep().run([])
+    out = _make_s3_step().run([])
     assert out == []
     assert _list_keys(s3_bucket) == []  # nothing written
 
@@ -118,7 +124,7 @@ def test_put_error_raises_stepfailed(aws_creds, env):
     with mock_aws():
         env.update({"BUCKET": "does-not-exist", "PREFIX": "kb", "REGION": REGION})
         with pytest.raises(StepFailed):
-            S3MarkdownStep().run(_docs())
+            _make_s3_step().run(_docs())
 
 
 def test_step_scoped_credentials_passed_to_client(env, mocker):
@@ -133,7 +139,7 @@ def test_step_scoped_credentials_passed_to_client(env, mocker):
         }
     )
     fake = mocker.patch("wurzel.steps.s3.step.boto3.client")
-    S3MarkdownStep()._build_client()
+    _make_s3_step()._build_client()
     _, kwargs = fake.call_args
     assert kwargs["aws_access_key_id"] == "AKIASTEPSCOPED"  # pragma: allowlist secret
     assert kwargs["aws_secret_access_key"] == "stepscopedsecret"  # pragma: allowlist secret
@@ -145,7 +151,7 @@ def test_credentials_fall_back_to_chain_when_unset(env, monkeypatch, mocker):
     monkeypatch.delenv("AWS_SECRET_ACCESS_KEY", raising=False)
     env.update({"BUCKET": BUCKET, "REGION": REGION})
     fake = mocker.patch("wurzel.steps.s3.step.boto3.client")
-    S3MarkdownStep()._build_client()
+    _make_s3_step()._build_client()
     _, kwargs = fake.call_args
     assert "aws_access_key_id" not in kwargs
     assert "aws_secret_access_key" not in kwargs

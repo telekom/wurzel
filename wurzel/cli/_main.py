@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
 #
 # SPDX-License-Identifier: Apache-2.0
+# pylint: disable=duplicate-code
 
 """CLI Entry."""
 
@@ -30,10 +31,12 @@ app = typer.Typer(
 from wurzel.cli import (  # pylint: disable=wrong-import-position
     cmd_manifest,
     cmd_middlewares,
+    completion_command,
 )
 
 app.add_typer(cmd_middlewares.app, name="middlewares")
 app.add_typer(cmd_manifest.app, name="manifest")
+app.add_typer(completion_command.app, name="completion")
 
 log = logging.getLogger(__name__)
 console = Console()
