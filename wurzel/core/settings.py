@@ -4,7 +4,8 @@
 
 import inspect
 import json
-from typing import Any, TypeAlias, Union, cast, get_origin
+from collections.abc import Callable
+from typing import Any, TypeAlias, Union, cast, get_args, get_origin
 
 from pydantic import create_model, model_validator
 from pydantic_core import InitErrorDetails, PydanticUndefined, ValidationError
@@ -66,27 +67,24 @@ class SettingsBase(_PydanticBaseSettings):
             data = json.loads(data)
         if isinstance(data, dict):
             for key, field in cls.model_fields.items():
+                annotation = field.annotation
+                origin = get_origin(annotation)
+                args = get_args(annotation)
                 if key in data:
-                    if get_origin(field.annotation) is dict:
+                    if origin is dict:
                         continue
-                    if isinstance(data[key], str) and inspect.isclass(field.annotation) and issubclass(field.annotation, SettingsBase):
+                    if isinstance(data[key], str) and inspect.isclass(annotation) and issubclass(annotation, SettingsBase):
                         data[key] = json.loads(data[key])
                     # if annotation is optional and not a SettingsBase
-                    elif (
-                        hasattr(field.annotation, "__origin__")
-                        and field.annotation.__origin__ == Union
-                        and data[key]
-                        and inspect.isclass(field.annotation.__args__[0])
-                        and not issubclass(field.annotation.__args__[0], SettingsBase)
-                    ):
-                        data[key] = field.annotation.__args__[0](data[key])
+                    elif origin is Union and data[key] and inspect.isclass(args[0]) and not issubclass(args[0], SettingsBase):
+                        data[key] = args[0](data[key])
                         continue
                     continue
                 # Is not a typing.<Dict | List | anything> and inherits from _SettingsBase
-                if get_origin(field.annotation) is None:
-                    if issubclass(field.annotation, SettingsLeaf):
+                if origin is None:
+                    if inspect.isclass(annotation) and issubclass(annotation, SettingsLeaf):
                         try:
-                            data[key] = field.annotation.with_prefix(f"{key}__")()
+                            data[key] = annotation.with_prefix(f"{key}__")()
                         except ValidationError as verr:
                             raise ValidationError.from_exception_data(
                                 verr.title,
@@ -100,12 +98,10 @@ class SettingsBase(_PydanticBaseSettings):
                                     for err in verr.errors()
                                 ],
                             )
-                    elif issubclass(field.annotation, SettingsLeaf):
-                        data[key] = field.annotation()
                 elif field.default != PydanticUndefined:
                     data[key] = field.default
                 elif field.default_factory is not None:
-                    data[key] = field.default_factory()
+                    data[key] = cast(Callable[[], Any], field.default_factory)()
                 elif hasattr(cls, key):
                     data[key] = getattr(cls, key)
         return data
@@ -119,11 +115,11 @@ class SettingsLeaf(SettingsBase):
     """
 
     @classmethod
-    def with_prefix(cls, prefix: str) -> "SettingsLeaf":
+    def with_prefix(cls, prefix: str) -> type["SettingsLeaf"]:
         """Returns a new class with env_prefix set."""
         cpy = create_model(prefix + "." + cls.__class__.__name__, __base__=cls)
         cpy.model_config["env_prefix"] = prefix
-        return cast("SettingsLeaf", cpy)
+        return cpy
 
 
 class Settings(SettingsLeaf):

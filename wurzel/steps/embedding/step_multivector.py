@@ -43,7 +43,7 @@ class EmbeddingMultiVectorStep(  # ty: ignore[invalid-generic-class]
     and returning DataFrame[EmbeddingMultiVectorResult].
     """
 
-    def run(self, inpt: list[MarkdownDataContract]) -> DataFrame[EmbeddingMultiVectorResult]:  # ty: ignore[invalid-method-override]
+    def run(self, inpt: list[MarkdownDataContract]) -> DataFrame[EmbeddingMultiVectorResult]:  # ty: ignore[incompatible-method-override]
         """Executes the embedding step by processing a list of MarkdownDataContract objects,
         generating embeddings for each document, and returning the results as a DataFrame.
 
