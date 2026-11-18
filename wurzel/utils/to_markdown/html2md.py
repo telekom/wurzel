@@ -4,6 +4,7 @@
 
 import platform
 import re
+import shlex
 import subprocess
 import tempfile
 import threading
@@ -90,13 +91,25 @@ def to_markdown(html: str, settings: MarkdownConverterSettings | None = None, bi
     if not settings:
         settings = MarkdownConverterSettings()
 
+    cleaned_html = clean_html(html)
+    flags = shlex.split(settings.HTML2MD_BINARY_FLAGS)
     with tempfile.NamedTemporaryFile(delete=False, suffix=".html", mode="w+") as file:
-        cleaned_html = clean_html(html)
-        file.write(cleaned_html)
-        file.close()
-        convert_cmd = f'"{binary_path.absolute()}" {settings.HTML2MD_BINARY_FLAGS} -i "{file.name}"'
-        status_code, markdown = subprocess.getstatusoutput(convert_cmd, encoding="utf8")
-        Path(file.name).unlink()
+        input_path = Path(file.name)
+    try:
+        input_path.write_text(cleaned_html, encoding="utf8")
+        result = subprocess.run(
+            [str(binary_path.absolute()), *flags, "-i", str(input_path)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            encoding="utf8",
+            check=False,
+        )
+    except OSError as exc:
+        raise MarkdownConvertFailed(f"Could not run {binary_path}: {exc}") from exc
+    finally:
+        input_path.unlink()
+    status_code = result.returncode
+    markdown = result.stdout.removesuffix("\n")
     if status_code != 0:
         raise MarkdownConvertFailed(f"{binary_path} returned {status_code} ({markdown} based on {html})")
     if not markdown.replace(" ", "").replace("\n", ""):

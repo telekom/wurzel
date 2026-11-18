@@ -1,9 +1,13 @@
 # SPDX-FileCopyrightText: 2025 Deutsche Telekom AG (opensource@telekom.de)
 #
 # SPDX-License-Identifier: Apache-2.0
+from pathlib import Path
+from subprocess import PIPE, STDOUT, CompletedProcess
+
 import lxml.html
 import pytest
 
+from wurzel.exceptions import MarkdownConvertFailed
 from wurzel.utils import MarkdownConverterSettings
 from wurzel.utils.to_markdown.html2md import clean_tree, html2str, normalize_urls, normalize_urls_in_tree, to_markdown
 
@@ -338,3 +342,28 @@ def test_to_markdown_handles_single_row_table(to_markdown_settings: MarkdownConv
 
     # For a single row without headers, it should still create a table
     assert "| Only | One | Row |" in result
+
+
+@pytest.mark.parametrize("returncode, output", [(0, "# Heading\n\n"), (1, "converter error\n"), (0, "\n")])
+def test_to_markdown_invokes_binary_directly(monkeypatch, tmp_path, returncode, output):
+    """Check direct invocation, output handling, and temporary file cleanup."""
+    binary = tmp_path / "converter with spaces"
+    settings = MarkdownConverterSettings(HTML2MD_BINARY_FLAGS='-T --label "two words"')
+    input_path = None
+
+    def run(args, **kwargs):
+        nonlocal input_path
+        assert args[:-1] == [str(binary), "-T", "--label", "two words", "-i"]
+        assert kwargs == {"stdout": PIPE, "stderr": STDOUT, "encoding": "utf8", "check": False}
+        input_path = Path(args[-1])
+        assert "<h1>Heading</h1>" in input_path.read_text(encoding="utf8")
+        return CompletedProcess(args, returncode, stdout=output)
+
+    monkeypatch.setattr("wurzel.utils.to_markdown.html2md.subprocess.run", run)
+    if returncode or not output.strip():
+        with pytest.raises(MarkdownConvertFailed):
+            to_markdown("<h1>Heading</h1>", settings=settings, binary_path=binary)
+    else:
+        assert to_markdown("<h1>Heading</h1>", settings=settings, binary_path=binary) == "# Heading\n"
+    assert input_path is not None
+    assert not input_path.exists()
