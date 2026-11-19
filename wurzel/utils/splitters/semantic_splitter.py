@@ -123,7 +123,7 @@ class WurzelMarkdownRenderer(markdown_renderer.MarkdownRenderer):
     """Fix For markdown_renderer.MarkdownRenderer."""
 
     # pylint: disable=unused-argument, arguments-differ
-    def render_table_cell(self, token: block_token.TableCell, max_line_length: int) -> str:  # ty: ignore[invalid-method-override]
+    def render_table_cell(self, token: block_token.TableCell, max_line_length: int) -> str:  # ty: ignore[incompatible-method-override]
         """Renders the content of a table cell.
 
         Args:
@@ -136,7 +136,7 @@ class WurzelMarkdownRenderer(markdown_renderer.MarkdownRenderer):
         """
         return self.render_inner(token)
 
-    def render_table_row(self, token: block_token.TableRow, max_line_length: int) -> str:  # ty: ignore[invalid-method-override]
+    def render_table_row(self, token: block_token.TableRow, max_line_length: int) -> str:  # ty: ignore[incompatible-method-override]
         """Renders a table row from the given token.
 
         Args:

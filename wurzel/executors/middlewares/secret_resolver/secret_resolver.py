@@ -27,7 +27,7 @@ print(middleware._providers[0].provider_name)
 from __future__ import annotations
 
 import os
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any
 
@@ -78,7 +78,7 @@ class SecretResolverMiddleware(BaseMiddleware):
 
     @staticmethod
     @contextmanager
-    def _env_override(overrides: dict[str, str]) -> Iterator[None]:
+    def _env_override(overrides: dict[str, str]) -> Generator[None, None, None]:
         """Temporarily replace env vars with resolved values, restoring originals on exit."""
         original = {k: os.environ.get(k) for k in overrides}
         os.environ.update(overrides)

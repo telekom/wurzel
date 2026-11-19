@@ -87,7 +87,9 @@ class ElevenLabsKnowledgeBaseStep(TypedStep[ElevenLabsKnowledgeBaseSettings, lis
         self._category_folder_cache: dict[str, str] = {}
         if self.settings.PUSH_ENABLED:
             self._session = requests.Session()
-            self._session.headers.update({"xi-api-key": self.settings.API_KEY.get_secret_value()})  # ty: ignore[unresolved-attribute]
+            api_key = self.settings.API_KEY
+            assert api_key is not None  # Guaranteed by settings validation.
+            self._session.headers.update({"xi-api-key": api_key.get_secret_value()})
 
     def _request(self, method: str, endpoint: str, idempotent: bool = True, **kwargs: Any) -> dict[str, Any]:
         """Make a request to the ElevenLabs API, retrying transient failures.

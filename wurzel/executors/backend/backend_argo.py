@@ -266,7 +266,6 @@ class ArgoBackend(Backend, backend_name="argo"):
             middlewares=middlewares,
             load_middlewares_from_env=load_middlewares_from_env,
         )
-        self.executor: type[BaseStepExecutor] = selected_executor
         self._volumes, self._volume_mounts = self._build_volumes()
 
     @classmethod

@@ -52,7 +52,9 @@ class QdrantConnectorMultiVectorStep(  # ty: ignore[invalid-generic-class]
             replication_factor=self.settings.REPLICATION_FACTOR,
         )
 
-    def run(self, inpt: DataFrame[EmbeddingMultiVectorResult]) -> DataFrame[QdrantMultiVectorResult]:  # ty: ignore[invalid-method-override]
+    def run(
+        self, inpt: DataFrame[EmbeddingMultiVectorResult]
+    ) -> DataFrame[QdrantMultiVectorResult]:  # ty: ignore[incompatible-method-override]
         log.debug(f"Creating Qdrant collection {self.collection_name}")
         if not self.client.collection_exists(self.collection_name):
             self._create_collection(len(inpt["vectors"].loc[0][0]))

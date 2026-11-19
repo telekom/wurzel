@@ -319,10 +319,7 @@ class BaseStepExecutor:
         # pylint: disable=protected-access
         if output_path:
             output_path = step._internal_output_class(output_path)
-        run: Callable[[Any], Any] = cast(
-            Callable[[Any], Any],
-            pydantic.validate_call(validate_return=True)(cast(Callable[..., Any], step.run)),
-        )
+        run: Callable[[Any], Any] = pydantic.validate_call(validate_return=True)(cast(Callable[..., Any], step.run))
         was_called_once = False
         try:
             for (inpt, history), load_time in self._load_data(step, inputs, output_path):
