@@ -51,7 +51,7 @@ repos:
     rev: v3.3.7
     hooks:
       - id: pylint
-        entry: uv run --all-extras pylint
+        entry: uv run pylint
         files: ^wurzel/
         language: system
         args: ["--enable","spelling"]
