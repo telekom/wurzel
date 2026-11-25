@@ -58,7 +58,10 @@ jobs:
 
       - name: Wait for MinIO
         # The quick-start manifest ships a MinIO deployment used as the artifact repository.
-        run: kubectl -n ${{ env.ARGO_NAMESPACE }} wait --for=condition=available deployment/minio --timeout=60s || true
+        # Must not be swallowed: the wait sidecar uploads step artifacts to MinIO and hangs if it is down.
+        run: |
+          kubectl -n ${{ env.ARGO_NAMESPACE }} rollout status deployment/minio --timeout=180s
+          kubectl -n ${{ env.ARGO_NAMESPACE }} wait --for=condition=ready pod -l app=minio --timeout=180s
 
       - name: Create MinIO credentials secret
         # Matches the Argo quick-start-minimal default credentials. Idempotent via --dry-run | apply.
@@ -120,4 +123,4 @@ jobs:
           echo "=== Pod logs ==="
           kubectl -n ${{ env.ARGO_NAMESPACE }} get pods \
             --selector='workflows.argoproj.io/workflow=wurzel-e2e-test' -o name \
-            | xargs -I{} kubectl -n ${{ env.ARGO_NAMESPACE }} logs {} --all-containers || true
+            | xargs -r -I{} kubectl -n ${{ env.ARGO_NAMESPACE }} logs {} --all-containers || true

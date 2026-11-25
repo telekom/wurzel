@@ -73,7 +73,8 @@ def _wait_for_workflow(name: str, timeout: int = WORKFLOW_TIMEOUT) -> str:
         if phase in ("Succeeded", "Failed", "Error"):
             return phase
         time.sleep(5)
-    raise TimeoutError(f"Workflow '{name}' did not finish within {timeout}s. Last phase: {_workflow_phase(name)}")
+    message = _kubectl("get", "workflow", name, "-o", "jsonpath={.status.message}").stdout.strip()
+    raise TimeoutError(f"Workflow '{name}' did not finish within {timeout}s. Last phase: {_workflow_phase(name)}. Message: {message}")
 
 
 # ---------------------------------------------------------------------------
