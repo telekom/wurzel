@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 name: Argo Workflows E2E Tests
+# Trigger E2E re-run on current main.
 
 permissions:
   contents: read
