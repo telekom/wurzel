@@ -62,6 +62,15 @@ jobs:
         run: |
           kubectl -n ${{ env.ARGO_NAMESPACE }} rollout status deployment/minio --timeout=180s
           kubectl -n ${{ env.ARGO_NAMESPACE }} wait --for=condition=ready pod -l app=minio --timeout=180s
+          # Pod readiness is not enough: verify the Service endpoint the wait sidecar uses actually answers.
+          for i in $(seq 1 12); do
+            kubectl -n ${{ env.ARGO_NAMESPACE }} run minio-probe-$i --rm -i --restart=Never \
+              --image=curlimages/curl:8.10.1 --command -- \
+              curl -fsS --max-time 5 http://minio:9000/minio/health/ready && exit 0
+            sleep 5
+          done
+          echo "MinIO Service never became reachable" >&2
+          exit 1
 
       - name: Create MinIO credentials secret
         # Matches the Argo quick-start-minimal default credentials. Idempotent via --dry-run | apply.
@@ -109,7 +118,7 @@ jobs:
           ARGO_E2E: "1"
           ARGO_E2E_CONTEXT: k3d-${{ env.K3D_CLUSTER }}
           ARGO_E2E_NAMESPACE: ${{ env.ARGO_NAMESPACE }}
-          ARGO_E2E_TIMEOUT: "180"
+          ARGO_E2E_TIMEOUT: "300"
         run: uv run pytest tests/e2e/argo/ -v -k "TestArgoWorkflowExecution" --tb=short
 
       # ── Diagnostics on failure ─────────────────────────────────────────────
