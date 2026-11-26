@@ -27,7 +27,7 @@ env:
   ARGO_NAMESPACE: argo
   ARGO_VERSION: v3.6.4
   E2E_IMAGE: wurzel-e2e:test
-  MINIO_IMAGE: quay.io/minio/minio:RELEASE.2022-11-17T23-20-09Z
+  MINIO_IMAGE: bitnamilegacy/minio:2025.7.23-debian-12-r5
 
 jobs:
   argo-e2e:
@@ -50,7 +50,8 @@ jobs:
 
       - name: Pre-load MinIO image into cluster
         # The quick-start manifest references minio/minio on Docker Hub, which is no longer pullable
-        # ("pull access denied"), so MinIO never started. Use the same release from quay.io instead.
+        # ("pull access denied"), and quay.io/minio/minio is not anonymously pullable either, so MinIO
+        # never started. bitnamilegacy/minio is a public replacement (patched in after the manifest is applied).
         run: |
           for i in 1 2 3 4 5; do
             docker pull ${{ env.MINIO_IMAGE }} && break
@@ -65,7 +66,16 @@ jobs:
           kubectl create namespace ${{ env.ARGO_NAMESPACE }}
           kubectl apply -n ${{ env.ARGO_NAMESPACE }} \
             -f https://github.com/argoproj/argo-workflows/releases/download/${{ env.ARGO_VERSION }}/quick-start-minimal.yaml
-          kubectl -n ${{ env.ARGO_NAMESPACE }} set image deployment/minio main=${{ env.MINIO_IMAGE }}
+          # Bitnami's image uses different env vars/entrypoint than the upstream one in the manifest.
+          kubectl -n ${{ env.ARGO_NAMESPACE }} patch deployment minio --type=json -p '[
+            {"op":"replace","path":"/spec/template/spec/containers/0/image","value":"${{ env.MINIO_IMAGE }}"},
+            {"op":"remove","path":"/spec/template/spec/containers/0/command"},
+            {"op":"remove","path":"/spec/template/spec/containers/0/lifecycle"},
+            {"op":"replace","path":"/spec/template/spec/containers/0/env","value":[
+              {"name":"MINIO_ROOT_USER","value":"admin"},
+              {"name":"MINIO_ROOT_PASSWORD","value":"password"},
+              {"name":"MINIO_DEFAULT_BUCKETS","value":"my-bucket"}]}
+          ]'
           kubectl -n ${{ env.ARGO_NAMESPACE }} rollout status deployment/workflow-controller --timeout=120s
           kubectl -n ${{ env.ARGO_NAMESPACE }} rollout status deployment/argo-server --timeout=120s
 
