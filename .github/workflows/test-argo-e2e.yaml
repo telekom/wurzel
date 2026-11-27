@@ -27,6 +27,8 @@ env:
   ARGO_NAMESPACE: argo
   ARGO_VERSION: v3.6.4
   E2E_IMAGE: wurzel-e2e:test
+  # The upstream MinIO image in the Argo quick-start manifest (minio/minio on Docker Hub) is no longer pullable.
+  MINIO_IMAGE: bitnamilegacy/minio:2025.7.23-debian-12-r5
 
 jobs:
   argo-e2e:
@@ -53,12 +55,23 @@ jobs:
           kubectl create namespace ${{ env.ARGO_NAMESPACE }}
           kubectl apply -n ${{ env.ARGO_NAMESPACE }} \
             -f https://github.com/argoproj/argo-workflows/releases/download/${{ env.ARGO_VERSION }}/quick-start-minimal.yaml
+          # Bitnami's image uses different env vars/entrypoint than the upstream one in the manifest.
+          kubectl -n ${{ env.ARGO_NAMESPACE }} patch deployment minio --type=json -p '[
+            {"op":"replace","path":"/spec/template/spec/containers/0/image","value":"${{ env.MINIO_IMAGE }}"},
+            {"op":"remove","path":"/spec/template/spec/containers/0/command"},
+            {"op":"remove","path":"/spec/template/spec/containers/0/lifecycle"},
+            {"op":"replace","path":"/spec/template/spec/containers/0/env","value":[
+              {"name":"MINIO_ROOT_USER","value":"admin"},
+              {"name":"MINIO_ROOT_PASSWORD","value":"password"},
+              {"name":"MINIO_DEFAULT_BUCKETS","value":"my-bucket"}]}
+          ]'
           kubectl -n ${{ env.ARGO_NAMESPACE }} rollout status deployment/workflow-controller --timeout=120s
           kubectl -n ${{ env.ARGO_NAMESPACE }} rollout status deployment/argo-server --timeout=120s
 
       - name: Wait for MinIO
         # The quick-start manifest ships a MinIO deployment used as the artifact repository.
-        run: kubectl -n ${{ env.ARGO_NAMESPACE }} wait --for=condition=available deployment/minio --timeout=60s || true
+        # Must not be swallowed: the wait sidecar uploads step artifacts to MinIO and hangs if it is down.
+        run: kubectl -n ${{ env.ARGO_NAMESPACE }} rollout status deployment/minio --timeout=180s
 
       - name: Create MinIO credentials secret
         # Matches the Argo quick-start-minimal default credentials. Idempotent via --dry-run | apply.
