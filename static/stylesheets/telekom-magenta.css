@@ -1,0 +1,242 @@
+/* SPDX-FileCopyrightText: 2024 Deutsche Telekom AG
+ *
+ * SPDX-License-Identifier: CC0-1.0
+ */
+:root {
+  /* Telekom Brand Colors */
+  --md-primary-fg-color: #E20074;        /* Telekom Magenta */
+  --md-primary-fg-color--light: #FF0090; /* Light Magenta */
+  --md-primary-fg-color--dark: #B8005C;  /* Dark Magenta */
+  --md-accent-fg-color: #00ADE6;         /* Telekom Cyan */
+  --md-accent-fg-color--transparent: #00ADE61A;
+
+  /* Additional Telekom Colors */
+  --telekom-magenta: #E20074;
+  --telekom-cyan: #00ADE6;
+  --telekom-green: #00C853;
+  --telekom-orange: #FF6600;
+  --telekom-yellow: #FFD320;
+  --telekom-grey: #5A5A5A;
+  --telekom-light-grey: #F0F0F0;
+  --telekom-white: #FFFFFF;
+}
+
+/* Custom color scheme */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: var(--telekom-magenta);
+  --md-primary-fg-color--light: #FF0090;
+  --md-primary-fg-color--dark: #B8005C;
+  --md-accent-fg-color: var(--telekom-cyan);
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: var(--telekom-magenta);
+  --md-primary-fg-color--light: #FF0090;
+  --md-primary-fg-color--dark: #B8005C;
+  --md-accent-fg-color: var(--telekom-cyan);
+}
+
+/* Header customization */
+.md-header {
+  background: linear-gradient(135deg, var(--telekom-magenta) 0%, #B8005C 100%);
+  box-shadow: 0 2px 4px rgba(226, 0, 116, 0.2);
+}
+
+.md-header__title {
+  font-weight: 700;
+  color: var(--telekom-white);
+}
+
+.md-header-nav__title {
+  color: var(--telekom-white);
+}
+
+/* Navigation styling */
+.md-tabs__link {
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+}
+
+.md-tabs__link:hover,
+.md-tabs__link--active {
+  color: var(--telekom-white);
+  border-bottom: 2px solid var(--telekom-cyan);
+}
+
+/* Sidebar navigation */
+.md-nav__title {
+  color: var(--telekom-magenta);
+  font-weight: 600;
+}
+
+.md-nav__link--active {
+  color: var(--telekom-magenta);
+  font-weight: 600;
+}
+
+.md-nav__link:hover {
+  color: var(--telekom-magenta);
+}
+
+/* Content area customization */
+.md-content__inner {
+  padding-bottom: 2rem;
+}
+
+/* Button styling */
+.md-button {
+  background-color: var(--telekom-magenta) !important;
+  border-color: var(--telekom-magenta) !important;
+  color: var(--telekom-white) !important;
+  text-decoration: none !important;
+}
+
+.md-button:hover {
+  background-color: #B8005C !important;
+  border-color: #B8005C !important;
+  color: var(--telekom-white) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(226, 0, 116, 0.3);
+}
+
+.md-button:focus {
+  background-color: #B8005C !important;
+  color: var(--telekom-white) !important;
+}
+
+.md-button--primary {
+  background-color: var(--telekom-magenta) !important;
+  border-color: var(--telekom-magenta) !important;
+  color: var(--telekom-white) !important;
+}
+
+.md-button--primary:hover {
+  background-color: #B8005C !important;
+  border-color: #B8005C !important;
+  color: var(--telekom-white) !important;
+}
+
+/* Code blocks */
+.md-typeset .highlight {
+  border-left: 4px solid var(--telekom-magenta);
+}
+
+/* Admonitions */
+.md-typeset .admonition.note {
+  border-color: var(--telekom-cyan);
+}
+
+.md-typeset .admonition.tip {
+  border-color: var(--telekom-green);
+}
+
+.md-typeset .admonition.warning {
+  border-color: var(--telekom-orange);
+}
+
+.md-typeset .admonition.danger {
+  border-color: var(--telekom-magenta);
+}
+
+/* Links */
+.md-typeset a {
+  color: var(--telekom-magenta);
+}
+
+.md-typeset a:hover {
+  color: #B8005C;
+}
+
+/* Search */
+.md-search__input {
+  border-radius: 4px;
+}
+
+.md-search__input:focus {
+  border-color: var(--telekom-magenta);
+  box-shadow: 0 0 0 2px rgba(226, 0, 116, 0.2);
+}
+
+/* Footer */
+.md-footer {
+  background: linear-gradient(135deg, var(--telekom-grey) 0%, #404040 100%);
+}
+
+.md-footer-meta {
+  background-color: var(--telekom-grey);
+}
+
+/* Custom knowledge management styling */
+.km-hero {
+  background: linear-gradient(135deg, var(--telekom-magenta) 0%, var(--telekom-cyan) 100%);
+  color: var(--telekom-white);
+  padding: 3rem 2rem;
+  text-align: center;
+  margin-bottom: 2rem;
+  border-radius: 8px;
+}
+
+.km-hero h1 {
+  color: var(--telekom-white);
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.km-hero p {
+  font-size: 1.2rem;
+  opacity: 0.9;
+}
+
+.km-card {
+  border: 1px solid var(--telekom-light-grey);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+  background: var(--telekom-white);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.km-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(226, 0, 116, 0.15);
+  border-color: var(--telekom-magenta);
+}
+
+.km-card h3 {
+  color: var(--telekom-magenta);
+  margin-top: 0;
+}
+
+/* Team branding */
+.team-badge {
+  display: inline-block;
+  background: var(--telekom-magenta);
+  color: var(--telekom-white);
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+  .km-hero {
+    padding: 2rem 1rem;
+  }
+
+  .km-hero h1 {
+    font-size: 2rem;
+  }
+
+  .km-card {
+    padding: 1rem;
+  }
+}
+
+/* Dark mode adjustments */
+[data-md-color-scheme="slate"] .km-card {
+  background: var(--md-default-bg-color);
+  border-color: var(--md-default-fg-color--lightest);
+}
