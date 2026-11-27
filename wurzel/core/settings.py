@@ -76,17 +76,17 @@ class SettingsBase(_PydanticBaseSettings):
                         hasattr(field.annotation, "__origin__")
                         and field.annotation.__origin__ == Union
                         and data[key]
-                        and inspect.isclass(field.annotation.__args__[0])
-                        and not issubclass(field.annotation.__args__[0], SettingsBase)
+                        and inspect.isclass(field.annotation.__args__[0])  # ty: ignore[unresolved-attribute]
+                        and not issubclass(field.annotation.__args__[0], SettingsBase)  # ty: ignore[unresolved-attribute]
                     ):
-                        data[key] = field.annotation.__args__[0](data[key])
+                        data[key] = field.annotation.__args__[0](data[key])  # ty: ignore[unresolved-attribute]
                         continue
                     continue
                 # Is not a typing.<Dict | List | anything> and inherits from _SettingsBase
                 if get_origin(field.annotation) is None:
-                    if issubclass(field.annotation, SettingsLeaf):
+                    if issubclass(field.annotation, SettingsLeaf):  # ty: ignore[invalid-argument-type]
                         try:
-                            data[key] = field.annotation.with_prefix(f"{key}__")()
+                            data[key] = field.annotation.with_prefix(f"{key}__")()  # ty: ignore[call-non-callable]
                         except ValidationError as verr:
                             raise ValidationError.from_exception_data(
                                 verr.title,
@@ -100,12 +100,12 @@ class SettingsBase(_PydanticBaseSettings):
                                     for err in verr.errors()
                                 ],
                             )
-                    elif issubclass(field.annotation, SettingsLeaf):
+                    elif issubclass(field.annotation, SettingsLeaf):  # ty: ignore[invalid-argument-type]
                         data[key] = field.annotation()
                 elif field.default != PydanticUndefined:
                     data[key] = field.default
                 elif field.default_factory is not None:
-                    data[key] = field.default_factory()
+                    data[key] = field.default_factory()  # ty: ignore[missing-argument]
                 elif hasattr(cls, key):
                     data[key] = getattr(cls, key)
         return data
